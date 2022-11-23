@@ -286,10 +286,10 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		xh := uint32(random.GetRandomInt32(0, 10))
 
 		gachaItem := new(proto.GachaItem)
-		gachaItem.GachaItem_ = &proto.ItemParam{
+		gachaItem.TokenItemList = []*proto.ItemParam{{
 			ItemId: itemId,
 			Count:  1,
-		}
+		}}
 		// 星尘
 		if xc != 0 {
 			g.AddUserItem(player.PlayerID, []*UserItem{{

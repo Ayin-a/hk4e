@@ -99,7 +99,7 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			logger.LOG.Error("parse rsa priv key error: %v", err)
 			return nil
 		}
-		clientSeedBase64 := req.GetClientSeed()
+		clientSeedBase64 := req.GetClientRandKey()
 		clientSeedEnc, err := base64.StdEncoding.DecodeString(clientSeedBase64)
 		if err != nil {
 			logger.LOG.Error("parse client seed base64 error: %v", err)
@@ -109,8 +109,8 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 		clientSeedEncCopy := make([]byte, len(clientSeedEnc))
 		copy(clientSeedEncCopy, clientSeedEnc)
 		endec.Xor(clientSeedEncCopy, []byte{0x9f, 0x26, 0xb2, 0x17, 0x61, 0x5f, 0xc8, 0x00})
-		rsp.EncryptedSeed = base64.StdEncoding.EncodeToString(clientSeedEncCopy)
-		rsp.SeedSignature = "bm90aGluZyBoZXJl"
+		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(clientSeedEncCopy)
+		rsp.Sign = "bm90aGluZyBoZXJl"
 		// do
 		clientSeed, err := endec.RsaDecrypt(clientSeedEnc, signPrivkey)
 		if err != nil {
@@ -141,8 +141,8 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			logger.LOG.Error("rsa sign error: %v", err)
 			return rsp
 		}
-		rsp.EncryptedSeed = base64.StdEncoding.EncodeToString(seedEnc)
-		rsp.SeedSignature = base64.StdEncoding.EncodeToString(seedSign)
+		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)
+		rsp.Sign = base64.StdEncoding.EncodeToString(seedSign)
 	}
 	return rsp
 }

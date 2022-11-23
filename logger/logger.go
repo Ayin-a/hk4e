@@ -2,8 +2,9 @@ package logger
 
 import (
 	"bytes"
-	"flswld.com/common/config"
 	"fmt"
+	"hk4e/common/config"
+	"log"
 	"os"
 	"path"
 	"runtime"
@@ -28,33 +29,35 @@ const (
 var LOG *Logger = nil
 
 type Logger struct {
-	level           int
-	method          int
-	trackLine       bool
-	file            *os.File
-	chanLogBaseInfo chan logBaseInfo
+	level       int
+	method      int
+	trackLine   bool
+	file        *os.File
+	logInfoChan chan *LogInfo
 }
 
-type logBaseInfo struct {
+type LogInfo struct {
 	logLevel    int
 	msg         string
-	anySlice    []any
+	param       []any
 	fileInfo    string
 	funcInfo    string
 	lineInfo    int
 	goroutineId string
 }
 
-func InitLogger() {
+func InitLogger(name string) {
+	log.SetFlags(0)
 	LOG = new(Logger)
 	LOG.level = getLevelInt(config.CONF.Logger.Level)
 	LOG.method = getMethodInt(config.CONF.Logger.Method)
 	LOG.trackLine = config.CONF.Logger.TrackLine
-	LOG.chanLogBaseInfo = make(chan logBaseInfo)
+	LOG.logInfoChan = make(chan *LogInfo, 1000)
 	if LOG.method == FILE || LOG.method == BOTH {
-		file, err := os.OpenFile("./log.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		file, err := os.OpenFile("./"+name+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
-			panic(fmt.Errorf("open file failed ! err: %v", err))
+			info := fmt.Sprintf("open log file error: %v\n", err)
+			panic(info)
 		}
 		LOG.file = file
 	}
@@ -63,106 +66,94 @@ func InitLogger() {
 
 func (l *Logger) doLog() {
 	for {
-		baseInfo := <-l.chanLogBaseInfo
-
+		logInfo := <-l.logInfoChan
 		timeNow := time.Now()
 		timeNowStr := timeNow.Format("2006-01-02 15:04:05.000")
-
-		var logInfoStr = "[" + timeNowStr + "]" + " " +
-			"[" + l.getLevelStr(baseInfo.logLevel) + "]" + " "
+		logHeader := "[" + timeNowStr + "]" + " " +
+			"[" + l.getLevelStr(logInfo.logLevel) + "]" + " "
 		if l.trackLine {
-			logInfoStr += "[" +
-				"line:" + baseInfo.fileInfo + ":" + strconv.FormatInt(int64(baseInfo.lineInfo), 10) +
-				" func:" + baseInfo.funcInfo +
-				" goroutine:" + baseInfo.goroutineId +
+			logHeader += "[" +
+				"line:" + logInfo.fileInfo + ":" + strconv.FormatInt(int64(logInfo.lineInfo), 10) +
+				" func:" + logInfo.funcInfo +
+				" goroutine:" + logInfo.goroutineId +
 				"]" + " "
 		}
-
-		logStr := fmt.Sprint(logInfoStr)
-		logStr += fmt.Sprintf(baseInfo.msg, baseInfo.anySlice...)
-		logStr += fmt.Sprintln()
-
+		logStr := logHeader + fmt.Sprintf(logInfo.msg, logInfo.param...) + "\n"
 		red := string([]byte{27, 91, 51, 49, 109})
 		reset := string([]byte{27, 91, 48, 109})
 		if l.method == CONSOLE {
-			if baseInfo.logLevel == ERROR {
-				fmt.Print(red, logStr, reset)
+			if logInfo.logLevel == ERROR {
+				log.Print(red, logStr, reset)
 			} else {
-				fmt.Print(logStr)
+				log.Print(logStr)
 			}
 		} else if l.method == FILE {
 			_, _ = l.file.WriteString(logStr)
 		} else if l.method == BOTH {
-			if baseInfo.logLevel == ERROR {
-				fmt.Print(red, logStr, reset)
+			if logInfo.logLevel == ERROR {
+				log.Print(red, logStr, reset)
 			} else {
-				fmt.Print(logStr)
+				log.Print(logStr)
 			}
 			_, _ = l.file.WriteString(logStr)
 		}
 	}
 }
 
-func (l *Logger) Debug(msg string, a ...any) {
+func (l *Logger) Debug(msg string, param ...any) {
 	if l.level > DEBUG {
 		return
 	}
-	baseInfo := new(logBaseInfo)
-	baseInfo.logLevel = DEBUG
-	baseInfo.msg = msg
-	baseInfo.anySlice = a
-
+	logInfo := new(LogInfo)
+	logInfo.logLevel = DEBUG
+	logInfo.msg = msg
+	logInfo.param = param
 	if l.trackLine {
 		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		baseInfo.fileInfo = fileInfo
-		baseInfo.funcInfo = funcInfo
-		baseInfo.lineInfo = lineInfo
-		baseInfo.goroutineId = l.getGoroutineId()
+		logInfo.fileInfo = fileInfo
+		logInfo.funcInfo = funcInfo
+		logInfo.lineInfo = lineInfo
+		logInfo.goroutineId = l.getGoroutineId()
 	}
-
-	l.chanLogBaseInfo <- *baseInfo
+	l.logInfoChan <- logInfo
 	return
 }
 
-func (l *Logger) Info(msg string, a ...any) {
+func (l *Logger) Info(msg string, param ...any) {
 	if l.level > INFO {
 		return
 	}
-	baseInfo := new(logBaseInfo)
-	baseInfo.logLevel = INFO
-	baseInfo.msg = msg
-	baseInfo.anySlice = a
-
+	logInfo := new(LogInfo)
+	logInfo.logLevel = INFO
+	logInfo.msg = msg
+	logInfo.param = param
 	if l.trackLine {
 		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		baseInfo.fileInfo = fileInfo
-		baseInfo.funcInfo = funcInfo
-		baseInfo.lineInfo = lineInfo
-		baseInfo.goroutineId = l.getGoroutineId()
+		logInfo.fileInfo = fileInfo
+		logInfo.funcInfo = funcInfo
+		logInfo.lineInfo = lineInfo
+		logInfo.goroutineId = l.getGoroutineId()
 	}
-
-	l.chanLogBaseInfo <- *baseInfo
+	l.logInfoChan <- logInfo
 	return
 }
 
-func (l *Logger) Error(msg string, a ...any) {
+func (l *Logger) Error(msg string, param ...any) {
 	if l.level > ERROR {
 		return
 	}
-	baseInfo := new(logBaseInfo)
-	baseInfo.logLevel = ERROR
-	baseInfo.msg = msg
-	baseInfo.anySlice = a
-
+	logInfo := new(LogInfo)
+	logInfo.logLevel = ERROR
+	logInfo.msg = msg
+	logInfo.param = param
 	if l.trackLine {
 		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		baseInfo.fileInfo = fileInfo
-		baseInfo.funcInfo = funcInfo
-		baseInfo.lineInfo = lineInfo
-		baseInfo.goroutineId = l.getGoroutineId()
+		logInfo.fileInfo = fileInfo
+		logInfo.funcInfo = funcInfo
+		logInfo.lineInfo = lineInfo
+		logInfo.goroutineId = l.getGoroutineId()
 	}
-
-	l.chanLogBaseInfo <- *baseInfo
+	l.logInfoChan <- logInfo
 	return
 }
 

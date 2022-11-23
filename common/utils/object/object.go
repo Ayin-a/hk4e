@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func ObjectDeepCopy(src, dest any) error {
+func DeepCopy(src, dest any) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
 		return err

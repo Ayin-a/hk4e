@@ -14,6 +14,6 @@ hk4e game server
 * mongodb
 * nats-server
 
-1. 启动dispatch `cd dispatch/cmd && go run .`
-1. 启动gate `cd gate/cmd && go run .`
-1. 启动gs `cd gs/cmd && go run .`
+1. 启动dispatch `cmd/dispatch && go run .`
+1. 启动gate `cd cmd/gate && go run .`
+1. 启动gs `cd cmd/gs && go run .`

@@ -1,5 +1,10 @@
 CUR_DIR=$(shell pwd)
 
+.PHONY: build
+# build
+build:
+	mkdir -p bin/ && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./cmd/...
+
 .PHONY: dev_tool
 # 安装工具
 dev_tool:
@@ -11,7 +16,3 @@ dev_tool:
 gen:
 	cd protocol/proto && make gen
 
-.PHONY: build
-# build
-build:
-	mkdir -p bin/ && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./cmd/...

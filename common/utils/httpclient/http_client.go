@@ -3,7 +3,7 @@ package httpclient
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -31,7 +31,7 @@ func Get[T any](url string, token string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := ioutil.ReadAll(rsp.Body)
+	data, err := io.ReadAll(rsp.Body)
 	_ = rsp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func Post[T any](url string, body any, token string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	rspData, err := ioutil.ReadAll(rsp.Body)
+	rspData, err := io.ReadAll(rsp.Body)
 	_ = rsp.Body.Close()
 	if err != nil {
 		return nil, err

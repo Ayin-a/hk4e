@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"hk4e/logger"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -55,7 +54,7 @@ func (g *GameDataConfig) loadOpenConfig() {
 	folderNames := []string{"Talent/EquipTalents", "Talent/AvatarTalents"}
 	for _, v := range folderNames {
 		dirPath := g.binPrefix + v
-		fileList, err := ioutil.ReadDir(dirPath)
+		fileList, err := os.ReadDir(dirPath)
 		if err != nil {
 			logger.LOG.Error("open dir error: %v", err)
 			return

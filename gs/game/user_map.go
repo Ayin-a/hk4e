@@ -89,7 +89,7 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
 			if err != nil {
 				logger.LOG.Error("parse pos y error: %v", err)
-				posYInt = 0
+				posYInt = 300
 			}
 
 			// 传送玩家

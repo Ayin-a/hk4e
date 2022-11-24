@@ -3,7 +3,6 @@ package config
 import (
 	appConfig "hk4e/common/config"
 	"hk4e/logger"
-	"io/ioutil"
 	"os"
 )
 
@@ -141,7 +140,7 @@ func (g *GameDataConfig) WriteWorldTerrain(data []byte) {
 		logger.LOG.Error("open game data world static dir error: %v", err)
 		return
 	}
-	err = ioutil.WriteFile(resourcePath+"/WorldStatic/world_terrain.bin", data, 0644)
+	err = os.WriteFile(resourcePath+"/WorldStatic/world_terrain.bin", data, 0644)
 	if err != nil {
 		logger.LOG.Error("write world terrain file error: %v", err)
 		return

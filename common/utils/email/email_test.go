@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
@@ -259,7 +258,7 @@ func TestEmailTextAttachment(t *testing.T) {
 	} else if mt != "text/plain" {
 		t.Fatal("Message missing text/plain")
 	}
-	plainText, err := ioutil.ReadAll(text)
+	plainText, err := io.ReadAll(text)
 	if err != nil {
 		t.Fatal("Could not read plain text component of message: ", err)
 	}
@@ -325,7 +324,7 @@ func TestEmailTextHtmlAttachment(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not read plain text component of message: ", err)
 	}
-	plainText, err := ioutil.ReadAll(part)
+	plainText, err := io.ReadAll(part)
 	if err != nil {
 		t.Fatal("Could not read plain text component of message: ", err)
 	}
@@ -875,7 +874,7 @@ func Test_quotedPrintDecode(t *testing.T) {
 		"There are some wacky parts like =, and this input assumes UNIX line breaks so\r\n" +
 		"it can come out a little weird.  Also, we need to support unicode so here's a fish: 🐟\r\n")
 	qp := quotedprintable.NewReader(bytes.NewReader(text))
-	got, err := ioutil.ReadAll(qp)
+	got, err := io.ReadAll(qp)
 	if err != nil {
 		t.Fatal("quotePrintDecode: ", err)
 	}
@@ -892,7 +891,7 @@ func Benchmark_base64Wrap(b *testing.B) {
 		panic(err)
 	}
 	for i := 0; i <= b.N; i++ {
-		base64Wrap(ioutil.Discard, file)
+		base64Wrap(io.Discard, file)
 	}
 }
 

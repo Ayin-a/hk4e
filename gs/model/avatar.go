@@ -3,6 +3,7 @@ package model
 import (
 	gdc "hk4e/gs/config"
 	"hk4e/gs/constant"
+	"hk4e/logger"
 	"time"
 )
 
@@ -84,7 +85,11 @@ func (p *Player) AddAvatar(avatarId uint32) {
 	} else {
 		skillDepotId = avatarDataConfig.SkillDepotId
 	}
-	avatarSkillDepotDataConfig := gdc.CONF.AvatarSkillDepotDataMap[skillDepotId]
+	avatarSkillDepotDataConfig, ok := gdc.CONF.AvatarSkillDepotDataMap[skillDepotId]
+	if !ok {
+		logger.LOG.Error("avatarSkillDepotDataConfig error, skillDepotId: %v", skillDepotId)
+		return
+	}
 	avatar := &Avatar{
 		AvatarId:            avatarId,
 		Level:               1,

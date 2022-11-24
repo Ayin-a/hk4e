@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"hk4e/logger"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -37,7 +36,7 @@ func (g *GameDataConfig) loadScenePoints() {
 	g.ScenePointEntries = make(map[string]*ScenePointEntry)
 	g.ScenePointIdList = make([]int32, 0)
 	dirPath := g.binPrefix + "Scene/Point"
-	fileList, err := ioutil.ReadDir(dirPath)
+	fileList, err := os.ReadDir(dirPath)
 	if err != nil {
 		logger.LOG.Error("open dir error: %v", err)
 		return

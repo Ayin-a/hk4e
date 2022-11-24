@@ -34,6 +34,9 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	}
 	player := r.gameManager.userManager.GetOnlineUser(userId)
 	if player == nil {
+		// 当gs重启后玩家并未退出gate 会持续触发nil
+		r.gameManager.ReconnectPlayer(userId)
+
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
 	}

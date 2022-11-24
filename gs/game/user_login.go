@@ -363,7 +363,10 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	// 添加选定的主角
 	player.AddAvatar(mainCharAvatarId)
 	// 添加初始武器
-	avatarDataConfig := gdc.CONF.AvatarDataMap[int32(mainCharAvatarId)]
+	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(mainCharAvatarId)]
+	if !ok {
+		logger.LOG.Error("avatarDataConfig error, mainCharAvatarId: %v", mainCharAvatarId)
+	}
 	weaponId := uint64(g.snowflake.GenId())
 	player.AddWeapon(uint32(avatarDataConfig.InitialWeapon), weaponId)
 	// 角色装上初始武器

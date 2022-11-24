@@ -116,7 +116,6 @@ func (l *Logger) Debug(msg string, param ...any) {
 		logInfo.goroutineId = l.getGoroutineId()
 	}
 	l.logInfoChan <- logInfo
-	return
 }
 
 func (l *Logger) Info(msg string, param ...any) {
@@ -135,7 +134,6 @@ func (l *Logger) Info(msg string, param ...any) {
 		logInfo.goroutineId = l.getGoroutineId()
 	}
 	l.logInfoChan <- logInfo
-	return
 }
 
 func (l *Logger) Error(msg string, param ...any) {
@@ -154,7 +152,6 @@ func (l *Logger) Error(msg string, param ...any) {
 		logInfo.goroutineId = l.getGoroutineId()
 	}
 	l.logInfoChan <- logInfo
-	return
 }
 
 func getLevelInt(level string) (ret int) {

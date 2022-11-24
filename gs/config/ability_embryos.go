@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"hk4e/logger"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -24,7 +23,7 @@ type AbilityEmbryoEntry struct {
 
 func (g *GameDataConfig) loadAbilityEmbryos() {
 	dirPath := g.binPrefix + "Avatar"
-	fileList, err := ioutil.ReadDir(dirPath)
+	fileList, err := os.ReadDir(dirPath)
 	if err != nil {
 		logger.LOG.Error("open dir error: %v", err)
 		return

@@ -50,6 +50,7 @@ type Player struct {
 	DropInfo         *DropInfo             `bson:"dropInfo"`         // 掉落信息
 	MainCharAvatarId uint32                `bson:"mainCharAvatarId"` // 主角id
 	ChatMsgMap       map[uint32][]*ChatMsg `bson:"chatMsgMap"`       // 聊天信息
+	IsGM             uint8                 `bson:"isGM"`             // 管理员权限等级
 	// 在线数据
 	EnterSceneToken       uint32                `bson:"-"` // 玩家的世界进入令牌
 	DbState               int                   `bson:"-"` // 数据库存档状态

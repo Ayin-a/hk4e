@@ -75,43 +75,28 @@ func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.PullPrivateChatRsp, player.PlayerID, 0, pullPrivateChatRsp)
 }
 
-func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user send private chat, uid: %v", player.PlayerID)
-	req := payloadMsg.(*proto.PrivateChatReq)
-	targetUid := req.TargetUid
-	content := req.Content
-
-	// TODO 同步阻塞待优化
-	targetPlayer := g.userManager.LoadTempOfflineUserSync(targetUid)
-	if targetPlayer == nil {
-		return
-	}
+// SendPrivateChat 发送私聊文本消息给玩家
+func (g *GameManager) SendPrivateChat(player, targetPlayer *model.Player, content any) {
 	chatInfo := &proto.ChatInfo{
 		Time:     uint32(time.Now().Unix()),
 		Sequence: 101,
 		ToUid:    targetPlayer.PlayerID,
 		Uid:      player.PlayerID,
 		IsRead:   false,
-		Content:  nil,
 	}
+
+	// 根据传入的值判断消息类型
 	switch content.(type) {
-	case *proto.PrivateChatReq_Text:
-		text := content.(*proto.PrivateChatReq_Text).Text
-		if len(text) == 0 {
-			return
-		}
+	case string:
+		// 文本消息
 		chatInfo.Content = &proto.ChatInfo_Text{
-			Text: text,
+			Text: content.(string),
 		}
-		// 输入命令 会检测是否为命令的
-		g.commandManager.InputCommand(text)
-	case *proto.PrivateChatReq_Icon:
-		icon := content.(*proto.PrivateChatReq_Icon).Icon
+	case int, int32, uint32:
+		// 图标消息
 		chatInfo.Content = &proto.ChatInfo_Icon{
-			Icon: icon,
+			Icon: content.(uint32),
 		}
-	default:
-		return
 	}
 
 	// 消息加入自己的队列
@@ -121,6 +106,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	}
 	msgList = append(msgList, g.ConvChatInfoToChatMsg(chatInfo))
 	player.ChatMsgMap[targetPlayer.PlayerID] = msgList
+
 	// 消息加入目标玩家的队列
 	msgList, exist = targetPlayer.ChatMsgMap[player.PlayerID]
 	if !exist {
@@ -129,6 +115,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	msgList = append(msgList, g.ConvChatInfoToChatMsg(chatInfo))
 	targetPlayer.ChatMsgMap[player.PlayerID] = msgList
 
+	// 如果目标玩家在线发送消息
 	if targetPlayer.Online {
 		// PacketPrivateChatNotify
 		privateChatNotify := new(proto.PrivateChatNotify)
@@ -140,6 +127,43 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	privateChatNotify := new(proto.PrivateChatNotify)
 	privateChatNotify.ChatInfo = chatInfo
 	g.SendMsg(cmd.PrivateChatNotify, player.PlayerID, 0, privateChatNotify)
+}
+
+func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user send private chat, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.PrivateChatReq)
+	targetUid := req.TargetUid
+	content := req.Content
+
+	// TODO 同步阻塞待优化
+	targetPlayer := g.userManager.LoadTempOfflineUserSync(targetUid)
+	if targetPlayer == nil {
+		return
+	}
+
+	// 根据发送的类型发送消息
+	switch content.(type) {
+	case *proto.PrivateChatReq_Text:
+		text := content.(*proto.PrivateChatReq_Text).Text
+		if len(text) == 0 {
+			return
+		}
+
+		// 发送私聊文本消息
+		g.SendPrivateChat(player, targetPlayer, text)
+
+		// 输入命令 会检测是否为命令的
+		g.commandManager.InputCommand(player, text)
+
+	case *proto.PrivateChatReq_Icon:
+		icon := content.(*proto.PrivateChatReq_Icon).Icon
+
+		// 发送私聊图标消息
+		g.SendPrivateChat(player, targetPlayer, icon)
+
+	default:
+		return
+	}
 
 	// PacketPrivateChatRsp
 	privateChatRsp := new(proto.PrivateChatRsp)

@@ -1,10 +1,11 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 // 接口路由管理器

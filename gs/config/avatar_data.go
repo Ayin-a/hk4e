@@ -2,10 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/common/utils/endec"
-	"hk4e/logger"
 	"os"
 	"strings"
+
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
 )
 
 type AvatarData struct {

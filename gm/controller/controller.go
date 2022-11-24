@@ -1,11 +1,13 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"hk4e/common/config"
-	"hk4e/logger"
 	"net/http"
 	"strconv"
+
+	"hk4e/common/config"
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Controller struct {

@@ -2,12 +2,13 @@ package game
 
 import (
 	"encoding/json"
-	"hk4e/gs/dao"
-	"hk4e/gs/model"
-	"hk4e/logger"
-	"hk4e/protocol/proto"
 	"sync"
 	"time"
+
+	"hk4e/gs/dao"
+	"hk4e/gs/model"
+	"hk4e/pkg/logger"
+	"hk4e/protocol/proto"
 )
 
 type UserManager struct {

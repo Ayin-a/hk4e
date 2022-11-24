@@ -3,8 +3,9 @@ package net
 import (
 	"bytes"
 	"encoding/binary"
-	"hk4e/common/utils/endec"
-	"hk4e/logger"
+
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
 )
 
 /*

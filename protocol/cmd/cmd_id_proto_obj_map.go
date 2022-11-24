@@ -1,10 +1,12 @@
 package cmd
 
 import (
-	pb "google.golang.org/protobuf/proto"
-	"hk4e/logger"
-	"hk4e/protocol/proto"
 	"reflect"
+
+	"hk4e/pkg/logger"
+	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 type CmdProtoMap struct {

@@ -2,7 +2,6 @@ package service
 
 import (
 	"hk4e/dispatch/dao"
-	"hk4e/dispatch/entity/gm"
 )
 
 type Service struct {
@@ -37,7 +36,7 @@ func (f *Service) UserPasswordChange(uid uint32) bool {
 }
 
 // 封号
-func (f *Service) ForbidUser(info *gm.ForbidUserInfo) bool {
+func (f *Service) ForbidUser(info *ForbidUserInfo) bool {
 	if info == nil {
 		return false
 	}

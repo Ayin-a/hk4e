@@ -1,17 +1,19 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
-	"hk4e/common/utils/object"
-	"hk4e/common/utils/random"
+	"strconv"
+	"time"
+
 	gdc "hk4e/gs/config"
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
+	"hk4e/pkg/object"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"strconv"
-	"time"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {

@@ -2,10 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/logger"
 	"os"
 	"strconv"
 	"strings"
+
+	"hk4e/pkg/logger"
 )
 
 type ScenePointEntry struct {

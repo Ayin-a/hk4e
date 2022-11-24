@@ -2,11 +2,13 @@ package region
 
 import (
 	"encoding/base64"
-	pb "google.golang.org/protobuf/proto"
-	"hk4e/common/utils/endec"
-	"hk4e/logger"
-	"hk4e/protocol/proto"
 	"os"
+
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
+	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func LoadRsaKey() (signRsaKey []byte, encRsaKeyMap map[string][]byte, pwdRsaKey []byte) {

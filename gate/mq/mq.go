@@ -1,12 +1,13 @@
 package mq
 
 import (
+	"hk4e/common/config"
+	"hk4e/pkg/logger"
+	"hk4e/protocol/cmd"
+
 	"github.com/nats-io/nats.go"
 	"github.com/vmihailenco/msgpack/v5"
 	pb "google.golang.org/protobuf/proto"
-	"hk4e/common/config"
-	"hk4e/logger"
-	"hk4e/protocol/cmd"
 )
 
 type MessageQueue struct {

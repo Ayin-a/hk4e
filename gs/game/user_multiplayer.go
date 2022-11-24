@@ -1,13 +1,15 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
+	"time"
+
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.Message) {

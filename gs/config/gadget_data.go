@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/gs/constant"
-	"hk4e/logger"
 	"os"
+
+	"hk4e/gs/constant"
+	"hk4e/pkg/logger"
 )
 
 type GadgetData struct {

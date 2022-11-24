@@ -10,3 +10,8 @@ dev_tool:
 # gen 生成代码
 gen:
 	cd protocol/proto && make gen
+
+.PHONY: build
+# build
+build:
+	mkdir -p bin/ && CGO_ENABLED=0 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./cmd/...

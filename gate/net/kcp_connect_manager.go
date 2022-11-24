@@ -3,14 +3,15 @@ package net
 import (
 	"bytes"
 	"encoding/binary"
-	"hk4e/common/config"
-	"hk4e/common/utils/random"
-	"hk4e/gate/kcp"
-	"hk4e/logger"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"hk4e/common/config"
+	"hk4e/gate/kcp"
+	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 )
 
 type KcpXorKey struct {

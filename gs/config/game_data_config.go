@@ -1,9 +1,10 @@
 package config
 
 import (
-	appConfig "hk4e/common/config"
-	"hk4e/logger"
 	"os"
+
+	appConfig "hk4e/common/config"
+	"hk4e/pkg/logger"
 )
 
 var CONF *GameDataConfig = nil

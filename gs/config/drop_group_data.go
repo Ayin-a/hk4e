@@ -1,10 +1,12 @@
 package config
 
 import (
-	"github.com/jszwec/csvutil"
-	"hk4e/logger"
 	"os"
 	"strings"
+
+	"hk4e/pkg/logger"
+
+	"github.com/jszwec/csvutil"
 )
 
 type Drop struct {

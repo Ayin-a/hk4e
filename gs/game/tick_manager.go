@@ -1,13 +1,14 @@
 package game
 
 import (
-	"hk4e/common/utils/random"
+	"time"
+
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
 )
 
 // 游戏服务器定时帧管理器

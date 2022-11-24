@@ -1,6 +1,6 @@
 package constant
 
-import "hk4e/common/utils/endec"
+import "hk4e/pkg/endec"
 
 var GameConstantConst *GameConstant
 

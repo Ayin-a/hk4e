@@ -1,10 +1,11 @@
 package model
 
 import (
+	"time"
+
 	gdc "hk4e/gs/config"
 	"hk4e/gs/constant"
-	"hk4e/logger"
-	"time"
+	"hk4e/pkg/logger"
 )
 
 type Avatar struct {

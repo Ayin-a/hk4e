@@ -1,18 +1,19 @@
 package forward
 
 import (
+	"os"
+	"runtime"
+	"sync"
+	"time"
+
 	"hk4e/common/config"
 	"hk4e/common/region"
 	"hk4e/gate/entity/gm"
 	"hk4e/gate/kcp"
 	"hk4e/gate/net"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"os"
-	"runtime"
-	"sync"
-	"time"
 )
 
 const (

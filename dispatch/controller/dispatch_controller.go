@@ -3,15 +3,17 @@ package controller
 import (
 	"bytes"
 	"encoding/base64"
-	"github.com/gin-gonic/gin"
-	"hk4e/common/utils/endec"
-	"hk4e/dispatch/entity/api"
-	"hk4e/logger"
 	"math"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+
+	"hk4e/dispatch/api"
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 func (c *Controller) query_security_file(context *gin.Context) {

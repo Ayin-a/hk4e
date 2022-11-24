@@ -3,7 +3,7 @@ package game
 import (
 	gdc "hk4e/gs/config"
 	"hk4e/gs/constant"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )

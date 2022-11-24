@@ -1,10 +1,12 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"hk4e/logger"
 	"net/http"
 	"os"
+
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 func (c *Controller) headDataVersions(context *gin.Context) {

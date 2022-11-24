@@ -2,7 +2,8 @@ package aoi
 
 import (
 	"fmt"
-	"hk4e/logger"
+
+	"hk4e/pkg/logger"
 )
 
 // aoi管理模块

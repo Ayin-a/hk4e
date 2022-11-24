@@ -2,8 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/logger"
 	"os"
+
+	"hk4e/pkg/logger"
 )
 
 type GatherData struct {

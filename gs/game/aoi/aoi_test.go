@@ -1,15 +1,16 @@
 package aoi
 
 import (
-	"hk4e/common/config"
-	"hk4e/logger"
 	"testing"
+
+	"hk4e/common/config"
+	"hk4e/pkg/logger"
 )
 
 func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 	filePath := "./application.toml"
 	config.InitConfig(filePath)
-	logger.InitLogger("")
+	logger.InitLogger("", config.CONF.Logger)
 	aoiManager := NewAoiManager(
 		-150, 150, 3,
 		-150, 150, 3,

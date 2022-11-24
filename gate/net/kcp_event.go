@@ -1,6 +1,6 @@
 package net
 
-import "hk4e/logger"
+import "hk4e/pkg/logger"
 
 const (
 	KcpXorKeyChange = iota

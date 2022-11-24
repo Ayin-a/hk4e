@@ -2,6 +2,9 @@ package config
 
 import (
 	"fmt"
+
+	"hk4e/pkg/logger"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -9,18 +12,11 @@ var CONF *Config = nil
 
 // 配置
 type Config struct {
-	HttpPort int      `toml:"http_port"`
-	Logger   Logger   `toml:"logger"`
-	Database Database `toml:"database"`
-	Hk4e     Hk4e     `toml:"hk4e"`
-	MQ       MQ       `toml:"mq"`
-}
-
-// 日志配置
-type Logger struct {
-	Level     string `toml:"level"`
-	Method    string `toml:"method"`
-	TrackLine bool   `toml:"track_line"`
+	HttpPort int           `toml:"http_port"`
+	Logger   logger.Config `toml:"logger"`
+	Database Database      `toml:"database"`
+	Hk4e     Hk4e          `toml:"hk4e"`
+	MQ       MQ            `toml:"mq"`
 }
 
 // 数据库配置

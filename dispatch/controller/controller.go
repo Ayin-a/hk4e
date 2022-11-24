@@ -2,14 +2,16 @@ package controller
 
 import (
 	"encoding/base64"
-	"github.com/gin-gonic/gin"
-	pb "google.golang.org/protobuf/proto"
+	"net/http"
+	"strconv"
+
 	"hk4e/common/config"
 	"hk4e/common/region"
 	"hk4e/dispatch/dao"
-	"hk4e/logger"
-	"net/http"
-	"strconv"
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
+	pb "google.golang.org/protobuf/proto"
 )
 
 type Controller struct {

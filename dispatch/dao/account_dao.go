@@ -2,12 +2,14 @@ package dao
 
 import (
 	"context"
+
+	dbEntity "hk4e/dispatch/model"
+	"hk4e/pkg/logger"
+
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	dbEntity "hk4e/dispatch/entity/db"
-	"hk4e/logger"
 )
 
 func (d *Dao) GetNextYuanShenUid() (uint64, error) {

@@ -1,16 +1,18 @@
 package game
 
 import (
-	"github.com/golang-jwt/jwt/v4"
-	pb "google.golang.org/protobuf/proto"
+	"time"
+
 	"hk4e/common/config"
-	"hk4e/common/utils/random"
 	gdc "hk4e/gs/config"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	pb "google.golang.org/protobuf/proto"
 )
 
 type UserInfo struct {

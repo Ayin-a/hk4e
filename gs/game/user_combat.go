@@ -1,11 +1,12 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
 	"hk4e/gs/model"
-	"hk4e/logger"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {

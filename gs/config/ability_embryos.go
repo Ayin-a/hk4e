@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/logger"
 	"os"
 	"strings"
+
+	"hk4e/pkg/logger"
 )
 
 type AvatarConfigAbility struct {

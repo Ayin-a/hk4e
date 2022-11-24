@@ -2,10 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"hk4e/common/utils/endec"
-	"hk4e/gs/constant"
-	"hk4e/logger"
 	"os"
+
+	"hk4e/gs/constant"
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
 )
 
 type InherentProudSkillOpens struct {

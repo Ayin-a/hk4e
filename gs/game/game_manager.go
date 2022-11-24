@@ -1,14 +1,15 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
-	"hk4e/common/utils/alg"
 	"hk4e/gate/entity/gm"
 	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
-	"hk4e/logger"
+	"hk4e/pkg/alg"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 type GameManager struct {

@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-	"hk4e/common/utils/endec"
-	"hk4e/gate/kcp"
-	"hk4e/gate/net"
-	"hk4e/logger"
-	"hk4e/protocol/proto"
 	"strconv"
 	"strings"
+
+	"hk4e/gate/kcp"
+	"hk4e/gate/net"
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
+	"hk4e/protocol/proto"
 )
 
 func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerTokenReq) (rsp *proto.GetPlayerTokenRsp) {

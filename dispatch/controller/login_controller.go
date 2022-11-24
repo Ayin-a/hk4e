@@ -3,18 +3,20 @@ package controller
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	appConfig "hk4e/common/config"
-	"hk4e/common/utils/endec"
-	"hk4e/common/utils/httpclient"
-	"hk4e/common/utils/random"
-	"hk4e/dispatch/entity/api"
-	"hk4e/dispatch/entity/db"
-	"hk4e/logger"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	appConfig "hk4e/common/config"
+	"hk4e/dispatch/api"
+	db "hk4e/dispatch/model"
+	"hk4e/pkg/endec"
+	"hk4e/pkg/httpclient"
+	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
+
+	"github.com/gin-gonic/gin"
 )
 
 type SdkUserLoginReq struct {

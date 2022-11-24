@@ -1,8 +1,9 @@
 package controller
 
 import (
+	"hk4e/pkg/logger"
+
 	"github.com/gin-gonic/gin"
-	"hk4e/logger"
 )
 
 type GmCmdReq struct {

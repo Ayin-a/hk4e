@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// 游戏服务器定时帧管理器
+
 type TickManager struct {
 	ticker      *time.Ticker
 	tickCount   uint64
@@ -77,7 +79,7 @@ func (t *TickManager) onTick10Minute(now int64) {
 }
 
 func (t *TickManager) onTickMinute(now int64) {
-	t.gameManager.ServerAnnounceNotify(100, "test123")
+	//t.gameManager.ServerAnnounceNotify(100, "test123")
 	for _, world := range t.gameManager.worldManager.worldMap {
 		for _, player := range world.playerMap {
 			// 随机物品
@@ -149,6 +151,7 @@ func (t *TickManager) onTick5Second(now int64) {
 		}
 		for _, player := range world.playerMap {
 			if world.multiplayer {
+				// 多人世界其他玩家的坐标位置广播
 				// PacketWorldPlayerLocationNotify
 				worldPlayerLocationNotify := new(proto.WorldPlayerLocationNotify)
 				for _, worldPlayer := range world.playerMap {
@@ -201,6 +204,7 @@ func (t *TickManager) onTick5Second(now int64) {
 func (t *TickManager) onTickSecond(now int64) {
 	for _, world := range t.gameManager.worldManager.worldMap {
 		for _, player := range world.playerMap {
+			// 世界里所有玩家的网络延迟广播
 			// PacketWorldPlayerRTTNotify
 			worldPlayerRTTNotify := new(proto.WorldPlayerRTTNotify)
 			worldPlayerRTTNotify.PlayerRttList = make([]*proto.PlayerRTTInfo, 0)
@@ -214,12 +218,14 @@ func (t *TickManager) onTickSecond(now int64) {
 }
 
 func (t *TickManager) onTick100MilliSecond(now int64) {
-	// AttackHandler
+	// 伤害处理和转发
 	for _, world := range t.gameManager.worldManager.worldMap {
 		for _, scene := range world.sceneMap {
 			scene.AttackHandler(t.gameManager)
 		}
 	}
+
+	// 服务器控制的模拟AI移动
 
 	//bigWorldOwner := t.gameManager.userManager.GetOnlineUser(1)
 	//bigWorld := t.gameManager.worldManager.GetBigWorld()

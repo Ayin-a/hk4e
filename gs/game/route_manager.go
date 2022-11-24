@@ -7,6 +7,8 @@ import (
 	"hk4e/protocol/cmd"
 )
 
+// 接口路由管理器
+
 type HandlerFunc func(player *model.Player, payloadMsg pb.Message)
 
 type RouteManager struct {

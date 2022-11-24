@@ -1,5 +1,7 @@
 package game
 
+// 本地事件队列管理器
+
 const (
 	LoadLoginUserFromDbFinish = iota
 	CheckUserExistOnRegFromDbFinish

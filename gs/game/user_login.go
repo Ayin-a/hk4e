@@ -42,17 +42,17 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
 
-	// TODO 薄荷标记
-	if world.IsBigWorld() {
-		bigWorld := world.GetSceneById(3)
-		for pos := range g.worldManager.worldStatic.terrain {
-			bigWorld.CreateEntityGadget(&model.Vector{
-				X: float64(pos.X),
-				Y: float64(pos.Y),
-				Z: float64(pos.Z),
-			}, 3003009)
-		}
-	}
+	//// TODO 薄荷标记
+	//if world.IsBigWorld() {
+	//	bigWorld := world.GetSceneById(3)
+	//	for pos := range g.worldManager.worldStatic.terrain {
+	//		bigWorld.CreateEntityGadget(&model.Vector{
+	//			X: float64(pos.X),
+	//			Y: float64(pos.Y),
+	//			Z: float64(pos.Z),
+	//		}, 3003009)
+	//	}
+	//}
 
 	// PacketPlayerDataNotify
 	playerDataNotify := new(proto.PlayerDataNotify)

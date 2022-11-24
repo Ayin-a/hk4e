@@ -9,7 +9,7 @@ import (
 )
 
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	//logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
+	logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -18,7 +18,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.CombatInvokeEntry]()
 	for _, entry := range req.InvokeList {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
 			scene.AddAttack(&Attack{
@@ -145,42 +145,42 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				player.Rot.X = float64(motionInfo.Rot.X)
 				player.Rot.Y = float64(motionInfo.Rot.Y)
 				player.Rot.Z = float64(motionInfo.Rot.Z)
-				// TODO 采集大地图地形数据
-				if world.IsBigWorld() && scene.id == 3 && player.PlayerID != 1 {
-					if motionInfo.State == proto.MotionState_MOTION_STATE_WALK ||
-						motionInfo.State == proto.MotionState_MOTION_STATE_RUN ||
-						motionInfo.State == proto.MotionState_MOTION_STATE_DASH ||
-						motionInfo.State == proto.MotionState_MOTION_STATE_CLIMB {
-						logger.LOG.Debug("set terr motionInfo: %v", motionInfo)
-						exist := g.worldManager.worldStatic.GetTerrain(int16(motionInfo.Pos.X), int16(motionInfo.Pos.Y), int16(motionInfo.Pos.Z))
-						g.worldManager.worldStatic.SetTerrain(int16(motionInfo.Pos.X), int16(motionInfo.Pos.Y), int16(motionInfo.Pos.Z))
-						if !exist {
-							// TODO 薄荷标记
-							// 只给附近aoi区域的玩家广播消息
-							surrPlayerList := make([]*model.Player, 0)
-							entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-							for _, entityId := range entityIdList {
-								entity := scene.GetEntity(entityId)
-								if entity == nil {
-									continue
-								}
-								if entity.avatarEntity != nil {
-									otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
-									surrPlayerList = append(surrPlayerList, otherPlayer)
-								}
-							}
-							pos := &model.Vector{
-								X: float64(int16(motionInfo.Pos.X)),
-								Y: float64(int16(motionInfo.Pos.Y)),
-								Z: float64(int16(motionInfo.Pos.Z)),
-							}
-							gadgetEntityId := scene.CreateEntityGadget(pos, 3003009)
-							for _, otherPlayer := range surrPlayerList {
-								g.AddSceneEntityNotify(otherPlayer, proto.VisionType_VISION_TYPE_BORN, []uint32{gadgetEntityId}, false)
-							}
-						}
-					}
-				}
+				//// TODO 采集大地图地形数据
+				//if world.IsBigWorld() && scene.id == 3 && player.PlayerID != 1 {
+				//	if motionInfo.State == proto.MotionState_MOTION_STATE_WALK ||
+				//		motionInfo.State == proto.MotionState_MOTION_STATE_RUN ||
+				//		motionInfo.State == proto.MotionState_MOTION_STATE_DASH ||
+				//		motionInfo.State == proto.MotionState_MOTION_STATE_CLIMB {
+				//		logger.LOG.Debug("set terr motionInfo: %v", motionInfo)
+				//		exist := g.worldManager.worldStatic.GetTerrain(int16(motionInfo.Pos.X), int16(motionInfo.Pos.Y), int16(motionInfo.Pos.Z))
+				//		g.worldManager.worldStatic.SetTerrain(int16(motionInfo.Pos.X), int16(motionInfo.Pos.Y), int16(motionInfo.Pos.Z))
+				//		if !exist {
+				//			// TODO 薄荷标记
+				//			// 只给附近aoi区域的玩家广播消息
+				//			surrPlayerList := make([]*model.Player, 0)
+				//			entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+				//			for _, entityId := range entityIdList {
+				//				entity := scene.GetEntity(entityId)
+				//				if entity == nil {
+				//					continue
+				//				}
+				//				if entity.avatarEntity != nil {
+				//					otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+				//					surrPlayerList = append(surrPlayerList, otherPlayer)
+				//				}
+				//			}
+				//			pos := &model.Vector{
+				//				X: float64(int16(motionInfo.Pos.X)),
+				//				Y: float64(int16(motionInfo.Pos.Y)),
+				//				Z: float64(int16(motionInfo.Pos.Z)),
+				//			}
+				//			gadgetEntityId := scene.CreateEntityGadget(pos, 3003009)
+				//			for _, otherPlayer := range surrPlayerList {
+				//				g.AddSceneEntityNotify(otherPlayer, proto.VisionType_VISION_TYPE_BORN, []uint32{gadgetEntityId}, false)
+				//			}
+				//		}
+				//	}
+				//}
 			}
 			// 更新场景实体的位置信息
 			sceneEntity := scene.GetEntity(entityMoveInfo.EntityId)
@@ -198,7 +198,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				sceneEntity.moveState = uint16(motionInfo.State)
 				sceneEntity.lastMoveSceneTimeMs = entityMoveInfo.SceneTime
 				sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
-				//logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
+				logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
 			}
 			invokeHandler.addEntry(entry.ForwardType, entry)
 		default:
@@ -246,7 +246,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
+	logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -255,7 +255,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 
@@ -299,7 +299,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
-	//logger.LOG.Debug("user client ability ok, uid: %v", player.PlayerID)
+	logger.LOG.Debug("user client ability ok, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -308,7 +308,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 

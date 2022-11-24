@@ -25,7 +25,7 @@ type GameManager struct {
 	userManager *UserManager
 	// 世界管理器
 	worldManager *WorldManager
-	// 游戏服务器tick
+	// 游戏服务器定时帧管理器
 	tickManager *TickManager
 }
 
@@ -41,11 +41,7 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	r.worldManager = NewWorldManager(r.snowflake)
 	r.tickManager = NewTickManager(r)
 
-	//r.worldManager.worldStatic.InitTerrain()
-	//r.worldManager.worldStatic.Pathfinding()
-	//r.worldManager.worldStatic.ConvPathVectorListToAiMoveVectorList()
-
-	// 大世界的主人
+	// 创建一个公共的开放世界的AI
 	r.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "大世界的主人"}, 1, 0)
 	bigWorldOwner := r.userManager.GetOnlineUser(1)
 	bigWorldOwner.SceneLoadState = model.SceneEnterDone

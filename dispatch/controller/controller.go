@@ -40,28 +40,16 @@ func NewController(dao *dao.Dao) (r *Controller) {
 		return nil
 	}
 	r.regionListBase64 = base64.StdEncoding.EncodeToString(regionListModify)
-	r.runEngine()
+	go r.registerRouter()
 	return r
 }
 
-func (c *Controller) runEngine() {
+func (c *Controller) registerRouter() {
 	if config.CONF.Logger.Level == "DEBUG" {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	go func() {
-		engine := c.registerRouter()
-		port := config.CONF.HttpPort
-		addr := ":" + strconv.FormatInt(int64(port), 10)
-		err := engine.Run(addr)
-		if err != nil {
-			logger.LOG.Error("gin run error: %v", err)
-		}
-	}()
-}
-
-func (c *Controller) registerRouter() *gin.Engine {
 	engine := gin.Default()
 	{
 		// 404
@@ -140,5 +128,10 @@ func (c *Controller) registerRouter() *gin.Engine {
 		engine.GET("/pictures/gt/a330cf996/slice/86f9db021.png", c.slicePng)
 		engine.GET("/static/ant/sprite2x.1.2.6.png", c.sprite2xPng)
 	}
-	return engine
+	port := config.CONF.HttpPort
+	addr := ":" + strconv.Itoa(port)
+	err := engine.Run(addr)
+	if err != nil {
+		logger.LOG.Error("gin run error: %v", err)
+	}
 }

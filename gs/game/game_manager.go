@@ -6,7 +6,6 @@ import (
 	"hk4e/gate/entity/gm"
 	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
-	"hk4e/gs/model"
 	"hk4e/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
@@ -27,6 +26,8 @@ type GameManager struct {
 	worldManager *WorldManager
 	// 游戏服务器定时帧管理器
 	tickManager *TickManager
+	// 命令管理器
+	commandManager *CommandManager
 }
 
 func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *GameManager) {
@@ -40,13 +41,7 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	r.userManager = NewUserManager(dao, r.localEventManager.localEventChan)
 	r.worldManager = NewWorldManager(r.snowflake)
 	r.tickManager = NewTickManager(r)
-
-	// 创建一个公共的开放世界的AI
-	r.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "大世界的主人"}, 1, 0)
-	bigWorldOwner := r.userManager.GetOnlineUser(1)
-	bigWorldOwner.SceneLoadState = model.SceneEnterDone
-	bigWorldOwner.DbState = model.DbNormal
-	r.worldManager.InitBigWorld(bigWorldOwner)
+	r.commandManager = NewCommandManager(r)
 
 	return r
 }
@@ -72,7 +67,14 @@ func (g *GameManager) Start() {
 }
 
 func (g *GameManager) Stop() {
-	g.worldManager.worldStatic.SaveTerrain()
+	// 踢出所有在线玩家
+	for userId := range g.userManager.GetAllOnlineUserList() {
+		g.DisconnectPlayer(userId)
+	}
+	// 保存玩家数据
+	g.userManager.SaveUser()
+
+	//g.worldManager.worldStatic.SaveTerrain()
 }
 
 // 发送消息给客户端

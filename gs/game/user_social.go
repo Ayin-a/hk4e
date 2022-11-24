@@ -143,7 +143,12 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 	// PacketGetPlayerFriendListRsp
 	getPlayerFriendListRsp := new(proto.GetPlayerFriendListRsp)
 	getPlayerFriendListRsp.FriendList = make([]*proto.FriendBrief, 0)
-	for uid := range player.FriendList {
+
+	// 获取包含系统的临时好友列表
+	// 用于实现好友列表内的系统且不更改原先的内容
+	tempFriendList := g.commandManager.GetFriendList(player.FriendList)
+
+	for uid := range tempFriendList {
 		// TODO 同步阻塞待优化
 		var onlineState proto.FriendOnlineState
 		online := g.userManager.GetUserOnlineState(uid)
@@ -265,6 +270,17 @@ func (g *GameManager) AskAddFriendReq(player *model.Player, payloadMsg pb.Messag
 	g.SendMsg(cmd.AskAddFriendRsp, player.PlayerID, player.ClientSeq, askAddFriendRsp)
 }
 
+func (g *GameManager) AddFriend(player *model.Player, targetUid uint32) {
+	player.FriendList[targetUid] = true
+	// TODO 同步阻塞待优化
+	targetPlayer := g.userManager.LoadTempOfflineUserSync(targetUid)
+	if targetPlayer == nil {
+		logger.LOG.Error("agree friend apply target player is nil, uid: %v", player.PlayerID)
+		return
+	}
+	targetPlayer.FriendList[player.PlayerID] = true
+}
+
 func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user deal friend apply, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.DealAddFriendReq)
@@ -272,14 +288,7 @@ func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Messa
 	result := req.DealAddFriendResult
 
 	if result == proto.DealAddFriendResultType_DEAL_ADD_FRIEND_RESULT_TYPE_ACCEPT {
-		player.FriendList[targetUid] = true
-		// TODO 同步阻塞待优化
-		targetPlayer := g.userManager.LoadTempOfflineUserSync(targetUid)
-		if targetPlayer == nil {
-			logger.LOG.Error("agree friend apply target player is nil, uid: %v", player.PlayerID)
-			return
-		}
-		targetPlayer.FriendList[player.PlayerID] = true
+		g.AddFriend(player, targetUid)
 	}
 	delete(player.FriendApplyList, targetUid)
 

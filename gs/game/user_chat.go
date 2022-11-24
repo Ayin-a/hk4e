@@ -103,6 +103,8 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 		chatInfo.Content = &proto.ChatInfo_Text{
 			Text: text,
 		}
+		// 输入命令 会检测是否为命令的
+		g.commandManager.InputCommand(text)
 	case *proto.PrivateChatReq_Icon:
 		icon := content.(*proto.PrivateChatReq_Icon).Icon
 		chatInfo.Content = &proto.ChatInfo_Icon{

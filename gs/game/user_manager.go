@@ -241,60 +241,64 @@ func (u *UserManager) StartAutoSaveUser() {
 	go func() {
 		ticker := time.NewTicker(time.Minute * 5)
 		for {
-			logger.LOG.Info("auto save user start")
-			playerMapTemp := make(map[uint32]*model.Player)
-			u.playerMapLock.RLock()
-			for k, v := range u.playerMap {
-				playerMapTemp[k] = v
-			}
-			u.playerMapLock.RUnlock()
-			logger.LOG.Info("copy user map finish")
-			insertList := make([]*model.Player, 0)
-			deleteList := make([]uint32, 0)
-			updateList := make([]*model.Player, 0)
-			for k, v := range playerMapTemp {
-				switch v.DbState {
-				case model.DbInsert:
-					insertList = append(insertList, v)
-					playerMapTemp[k].DbState = model.DbNormal
-				case model.DbDelete:
-					deleteList = append(deleteList, v.PlayerID)
-					delete(playerMapTemp, k)
-				case model.DbUpdate:
-					updateList = append(updateList, v)
-					playerMapTemp[k].DbState = model.DbNormal
-				case model.DbNormal:
-					continue
-				case model.DbOffline:
-					updateList = append(updateList, v)
-					delete(playerMapTemp, k)
-				}
-			}
-			insertListJson, err := json.Marshal(insertList)
-			logger.LOG.Debug("insertList: %v", string(insertListJson))
-			deleteListJson, err := json.Marshal(deleteList)
-			logger.LOG.Debug("deleteList: %v", string(deleteListJson))
-			updateListJson, err := json.Marshal(updateList)
-			logger.LOG.Debug("updateList: %v", string(updateListJson))
-			logger.LOG.Info("db state init finish")
-			err = u.dao.InsertPlayerList(insertList)
-			if err != nil {
-				logger.LOG.Error("insert player list error: %v", err)
-			}
-			err = u.dao.DeletePlayerList(deleteList)
-			if err != nil {
-				logger.LOG.Error("delete player error: %v", err)
-			}
-			err = u.dao.UpdatePlayerList(updateList)
-			if err != nil {
-				logger.LOG.Error("update player error: %v", err)
-			}
-			logger.LOG.Info("db write finish")
-			u.playerMapLock.Lock()
-			u.playerMap = playerMapTemp
-			u.playerMapLock.Unlock()
-			logger.LOG.Info("auto save user finish")
+			u.SaveUser()
 			<-ticker.C
 		}
 	}()
+}
+
+func (u *UserManager) SaveUser() {
+	logger.LOG.Info("auto save user start")
+	playerMapTemp := make(map[uint32]*model.Player)
+	u.playerMapLock.RLock()
+	for k, v := range u.playerMap {
+		playerMapTemp[k] = v
+	}
+	u.playerMapLock.RUnlock()
+	logger.LOG.Info("copy user map finish")
+	insertList := make([]*model.Player, 0)
+	deleteList := make([]uint32, 0)
+	updateList := make([]*model.Player, 0)
+	for k, v := range playerMapTemp {
+		switch v.DbState {
+		case model.DbInsert:
+			insertList = append(insertList, v)
+			playerMapTemp[k].DbState = model.DbNormal
+		case model.DbDelete:
+			deleteList = append(deleteList, v.PlayerID)
+			delete(playerMapTemp, k)
+		case model.DbUpdate:
+			updateList = append(updateList, v)
+			playerMapTemp[k].DbState = model.DbNormal
+		case model.DbNormal:
+			continue
+		case model.DbOffline:
+			updateList = append(updateList, v)
+			delete(playerMapTemp, k)
+		}
+	}
+	insertListJson, err := json.Marshal(insertList)
+	logger.LOG.Debug("insertList: %v", string(insertListJson))
+	deleteListJson, err := json.Marshal(deleteList)
+	logger.LOG.Debug("deleteList: %v", string(deleteListJson))
+	updateListJson, err := json.Marshal(updateList)
+	logger.LOG.Debug("updateList: %v", string(updateListJson))
+	logger.LOG.Info("db state init finish")
+	err = u.dao.InsertPlayerList(insertList)
+	if err != nil {
+		logger.LOG.Error("insert player list error: %v", err)
+	}
+	err = u.dao.DeletePlayerList(deleteList)
+	if err != nil {
+		logger.LOG.Error("delete player error: %v", err)
+	}
+	err = u.dao.UpdatePlayerList(updateList)
+	if err != nil {
+		logger.LOG.Error("update player error: %v", err)
+	}
+	logger.LOG.Info("db write finish")
+	u.playerMapLock.Lock()
+	u.playerMap = playerMapTemp
+	u.playerMapLock.Unlock()
+	logger.LOG.Info("auto save user finish")
 }

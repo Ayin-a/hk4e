@@ -41,6 +41,8 @@ require github.com/golang-jwt/jwt/v4 v4.4.0
 // csv
 require github.com/jszwec/csvutil v1.7.1
 
+require github.com/spf13/cobra v1.6.1
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -63,7 +65,6 @@ require (
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/templexxx/cpu v0.0.1 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect

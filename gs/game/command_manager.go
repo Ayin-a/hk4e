@@ -13,16 +13,21 @@ import (
 // 0 为普通玩家 数越大权限越大
 type CommandPerm uint8
 
+const (
+	CommandPermNormal = CommandPerm(iota) // 普通玩家
+	CommandPermGM                         // 管理员
+)
+
 // CommandFunc 命令执行函数
 type CommandFunc func(*Command)
 
 // Command 命令结构体
 // 给下层执行命令时提供数据
 type Command struct {
-	Executor *model.Player // 执行者
-	Text     string        // 命令原始文本
-	Name     string        // 命令前缀
-	Args     []string      // 命令参数
+	Executor *model.Player     // 执行者
+	Text     string            // 命令原始文本
+	Name     string            // 命令前缀
+	Args     map[string]string // 命令参数
 }
 
 // CommandManager 命令管理器
@@ -61,23 +66,42 @@ func (c *CommandManager) InitRouter() {
 	c.commandPermMap = make(map[string]CommandPerm)
 	{
 		// 权限等级 0: 普通玩家
-		c.RegisterRouter("help", 0, c.HelpCommand)
-		c.RegisterRouter("op", 0, c.OpCommand)
+		c.RegisterRouter(CommandPermNormal, c.HelpCommand, "help")
+		c.RegisterRouter(CommandPermNormal, c.OpCommand, "op")
+		c.RegisterRouter(CommandPermNormal, c.TeleportCommand, "teleport", "tp")
 	}
 	// GM命令
 	{
 		// 权限等级 1: GM 1级
-		c.RegisterRouter("nmsl", 1, c.HelpCommand)
+		c.RegisterRouter(CommandPermGM, c.HelpCommand, "nmsl")
 	}
 }
 
 // RegisterRouter 注册命令路由
-func (c *CommandManager) RegisterRouter(cmdName string, cmdPerm CommandPerm, cmdFunc CommandFunc) {
-	// 命令名统一转为小写
-	cmdName = strings.ToLower(cmdName)
-	// 记录命令
-	c.commandFuncRouter[cmdName] = cmdFunc
-	c.commandPermMap[cmdName] = cmdPerm
+func (c *CommandManager) RegisterRouter(cmdPerm CommandPerm, cmdFunc CommandFunc, cmdName ...string) {
+	// 支持一个命令拥有多个别名
+	for _, s := range cmdName {
+		// 命令名统一转为小写
+		s = strings.ToLower(s)
+		// 如果命令已注册则报错 后者覆盖前者
+		if c.HasCommand(s) {
+			logger.LOG.Error("register command repeat, name: %v", s)
+		}
+		// 记录命令
+		c.commandFuncRouter[s] = cmdFunc
+		c.commandPermMap[s] = cmdPerm
+	}
+}
+
+// HasCommand 命令是否已被注册
+func (c *CommandManager) HasCommand(cmdName string) bool {
+	_, cmdFuncOK := c.commandFuncRouter[cmdName]
+	_, cmdPermOK := c.commandPermMap[cmdName]
+	// 判断命令函数和命令权限是否已注册
+	if cmdFuncOK && cmdPermOK {
+		return true
+	}
+	return false
 }
 
 // InputCommand 输入要处理的命令
@@ -114,10 +138,10 @@ func (c *CommandManager) GetFriendList(friendList map[uint32]bool) map[uint32]bo
 func (c *CommandManager) NewCommand(executor *model.Player, text string) *Command {
 	// 将开头的 / 去掉 并 分割出命令的每个参数
 	// 不区分命令的大小写 统一转为小写
-	cmdSplit := strings.Split(strings.ToLower(text[1:]), " ")
+	cmdSplit := strings.Split(strings.ToLower(text[1:]), " -")
 
-	var cmdName string   // 命令名
-	var cmdArgs []string // 命令参数
+	cmdName := ""                                       // 命令名
+	cmdArgs := make(map[string]string, len(cmdSplit)-1) // 命令参数
 
 	// 分割出来啥也没有可能是个空的字符串
 	// 此时将会返回的命令名和命令参数都为空
@@ -125,7 +149,24 @@ func (c *CommandManager) NewCommand(executor *model.Player, text string) *Comman
 		// 首个参数必是命令名
 		cmdName = cmdSplit[0]
 		// 命令名后当然是命令的参数喽
-		cmdArgs = cmdSplit[1:]
+		argSplit := cmdSplit[1:]
+
+		// 我们要将命令的参数转换为键值对
+		// 每个参数之间会有个空格分割
+		for _, s := range argSplit {
+			cmdArg := strings.Split(s, " ")
+
+			// 分割出来的参数只有一个那肯定不是键值对
+			if len(cmdArg) >= 2 {
+				argKey := cmdArg[0]   // 参数的键
+				argValue := cmdArg[1] // 参数的值
+
+				// 记录命令的参数
+				cmdArgs[argKey] = argValue
+			} else {
+				logger.LOG.Debug("command arg error, arg: %v", cmdArg)
+			}
+		}
 	}
 
 	return &Command{executor, text, cmdName, cmdArgs}

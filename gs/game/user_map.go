@@ -28,7 +28,50 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	}
 
 	// 传送玩家
-	newSceneId := req.SceneId
+	sceneId := uint32(transPointConfig.PointData.TranSceneId)
+	transPos := transPointConfig.PointData.TranPos
+	pos := &model.Vector{
+		X: transPos.X,
+		Y: transPos.Y,
+		Z: transPos.Z,
+	}
+	g.TeleportPlayer(player, sceneId, pos)
+
+	// PacketSceneTransToPointRsp
+	sceneTransToPointRsp := new(proto.SceneTransToPointRsp)
+	sceneTransToPointRsp.Retcode = 0
+	sceneTransToPointRsp.PointId = req.PointId
+	sceneTransToPointRsp.SceneId = req.SceneId
+	g.SendMsg(cmd.SceneTransToPointRsp, player.PlayerID, player.ClientSeq, sceneTransToPointRsp)
+}
+
+func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user mark map, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.MarkMapReq)
+	operation := req.Op
+	if operation == proto.MarkMapReq_OPERATION_ADD {
+		logger.LOG.Debug("user mark type: %v", req.Mark.PointType)
+		if req.Mark.PointType == proto.MapMarkPointType_MAP_MARK_POINT_TYPE_NPC {
+			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
+			if err != nil {
+				logger.LOG.Error("parse pos y error: %v", err)
+				posYInt = 300
+			}
+			// 传送玩家
+			pos := &model.Vector{
+				X: float64(req.Mark.Pos.X),
+				Y: float64(posYInt),
+				Z: float64(req.Mark.Pos.Z),
+			}
+			g.TeleportPlayer(player, req.Mark.SceneId, pos)
+		}
+	}
+}
+
+// TeleportPlayer 传送玩家至地图上的某个位置
+func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *model.Vector) {
+	// 传送玩家
+	newSceneId := sceneId
 	oldSceneId := player.SceneId
 	oldPos := &model.Vector{
 		X: player.Pos.X,
@@ -55,9 +98,9 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	} else {
 		oldScene.UpdatePlayerTeamEntity(player)
 	}
-	player.Pos.X = transPointConfig.PointData.TranPos.X
-	player.Pos.Y = transPointConfig.PointData.TranPos.Y
-	player.Pos.Z = transPointConfig.PointData.TranPos.Z
+	player.Pos.X = pos.X
+	player.Pos.Y = pos.Y
+	player.Pos.Z = pos.Z
 	player.SceneId = newSceneId
 	player.SceneLoadState = model.SceneNone
 
@@ -72,75 +115,6 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	}
 	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(constant.EnterReasonConst.TransPoint), oldSceneId, oldPos)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
-
-	// PacketSceneTransToPointRsp
-	sceneTransToPointRsp := new(proto.SceneTransToPointRsp)
-	sceneTransToPointRsp.Retcode = 0
-	sceneTransToPointRsp.PointId = req.PointId
-	sceneTransToPointRsp.SceneId = req.SceneId
-	g.SendMsg(cmd.SceneTransToPointRsp, player.PlayerID, player.ClientSeq, sceneTransToPointRsp)
-}
-
-func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user mark map, uid: %v", player.PlayerID)
-	req := payloadMsg.(*proto.MarkMapReq)
-	operation := req.Op
-	if operation == proto.MarkMapReq_OPERATION_ADD {
-		logger.LOG.Debug("user mark type: %v", req.Mark.PointType)
-		if req.Mark.PointType == proto.MapMarkPointType_MAP_MARK_POINT_TYPE_NPC {
-			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
-			if err != nil {
-				logger.LOG.Error("parse pos y error: %v", err)
-				posYInt = 300
-			}
-
-			// 传送玩家
-			newSceneId := req.Mark.SceneId
-			oldSceneId := player.SceneId
-			oldPos := &model.Vector{
-				X: player.Pos.X,
-				Y: player.Pos.Y,
-				Z: player.Pos.Z,
-			}
-			jumpScene := false
-			if newSceneId != oldSceneId {
-				jumpScene = true
-			}
-			world := g.worldManager.GetWorldByID(player.WorldId)
-			oldScene := world.GetSceneById(oldSceneId)
-			activeAvatarId := player.TeamConfig.GetActiveAvatarId()
-			playerTeamEntity := oldScene.GetPlayerTeamEntity(player.PlayerID)
-			g.RemoveSceneEntityNotifyBroadcast(oldScene, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
-			if jumpScene {
-				// PacketDelTeamEntityNotify
-				delTeamEntityNotify := g.PacketDelTeamEntityNotify(oldScene, player)
-				g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
-
-				oldScene.RemovePlayer(player)
-				newScene := world.GetSceneById(newSceneId)
-				newScene.AddPlayer(player)
-			} else {
-				oldScene.UpdatePlayerTeamEntity(player)
-			}
-			player.Pos.X = float64(req.Mark.Pos.X)
-			player.Pos.Y = float64(posYInt)
-			player.Pos.Z = float64(req.Mark.Pos.Z)
-			player.SceneId = newSceneId
-			player.SceneLoadState = model.SceneNone
-
-			// PacketPlayerEnterSceneNotify
-			var enterType proto.EnterType
-			if jumpScene {
-				logger.LOG.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-				enterType = proto.EnterType_ENTER_TYPE_JUMP
-			} else {
-				logger.LOG.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-				enterType = proto.EnterType_ENTER_TYPE_GOTO
-			}
-			playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(constant.EnterReasonConst.TransPoint), oldSceneId, oldPos)
-			g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
-		}
-	}
 }
 
 func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {

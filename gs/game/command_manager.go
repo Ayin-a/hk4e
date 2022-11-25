@@ -27,7 +27,7 @@ type Command struct {
 
 // CommandManager 命令管理器
 type CommandManager struct {
-	system            *model.Player          // 机器人 目前负责收发命令 以及 大世界
+	system            *model.Player          // 机器人 目前负责收发消息 以及 大世界
 	commandFuncRouter map[string]CommandFunc // 记录命令处理函数
 	commandPermMap    map[string]CommandPerm // 记录命令对应的权限
 	commandTextInput  chan *Command          // 传输要处理的命令文本
@@ -50,8 +50,6 @@ func NewCommandManager(g *GameManager) *CommandManager {
 	// 初始化
 	r.commandTextInput = make(chan *Command, 1000)
 	r.InitRouter() // 初始化路由
-
-	go r.HandleCommand() // 处理传入的命令
 
 	r.gameManager = g
 	return r
@@ -131,20 +129,6 @@ func (c *CommandManager) NewCommand(executor *model.Player, text string) *Comman
 	}
 
 	return &Command{executor, text, cmdName, cmdArgs}
-}
-
-// HandleCommand 处理命令
-func (c *CommandManager) HandleCommand() {
-	// 处理传入 commandTextInput 的所有命令文本
-	// 为了避免主协程阻塞搞了个channel
-
-	for {
-		// 取出要执行的命令
-		cmd := <-c.commandTextInput
-
-		// 执行命令
-		c.ExecCommand(cmd)
-	}
 }
 
 // ExecCommand 执行命令

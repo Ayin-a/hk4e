@@ -62,6 +62,9 @@ func (g *GameManager) Start() {
 			case localEvent := <-g.localEventManager.localEventChan:
 				// 处理本地事件
 				g.localEventManager.LocalEventHandle(localEvent)
+			case command := <-g.commandManager.commandTextInput:
+				// 处理传入的命令 (普通玩家 GM命令)
+				g.commandManager.ExecCommand(command)
 			}
 		}
 	}()

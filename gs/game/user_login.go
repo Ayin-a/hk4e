@@ -30,12 +30,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.OnlineTime = uint32(time.Now().UnixMilli())
 	player.Online = true
 
-	// TODO 3.0.0REL版本 目前存在当前队伍活跃角色非主角时 登录进不去场景的情况 所以暂时先把四号队伍作为仅存在主角的保留队伍
-	team := player.TeamConfig.GetTeamByIndex(3)
-	team.AvatarIdList = []uint32{player.MainCharAvatarId, 0, 0, 0}
-	player.TeamConfig.CurrTeamIndex = 3
-	player.TeamConfig.CurrAvatarIndex = 0
-
 	// 初始化
 	player.InitAll()
 	player.TeamConfig.UpdateTeam()
@@ -94,7 +88,12 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 			Guid:   weapon.Guid,
 			Detail: nil,
 		}
-		if itemDataMapConfig[int32(weapon.ItemId)].ItemEnumType != constant.ItemTypeConst.ITEM_WEAPON {
+		itemData, ok := itemDataMapConfig[int32(weapon.ItemId)]
+		if !ok {
+			logger.LOG.Error("config is nil, itemId: %v", weapon.ItemId)
+			return
+		}
+		if itemData.ItemEnumType != constant.ItemTypeConst.ITEM_WEAPON {
 			continue
 		}
 		affixMap := make(map[uint32]uint32)
@@ -169,7 +168,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	// PacketAvatarDataNotify
 	avatarDataNotify := new(proto.AvatarDataNotify)
-	chooseAvatarId := player.TeamConfig.GetActiveAvatarId()
+	chooseAvatarId := player.MainCharAvatarId
 	avatarDataNotify.CurAvatarTeamId = uint32(player.TeamConfig.GetActiveTeamId())
 	avatarDataNotify.ChooseAvatarGuid = player.AvatarMap[chooseAvatarId].Guid
 	avatarDataNotify.OwnedFlycloakList = player.FlyCloakList
@@ -236,6 +235,10 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 	}
 
 	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
+	if player == nil {
+		logger.LOG.Error("player is nil, uid: %v", userId)
+		return
+	}
 	g.userManager.AddUser(player)
 
 	g.SendMsg(cmd.SetPlayerBornDataRsp, userId, clientSeq, new(proto.SetPlayerBornDataRsp))
@@ -337,37 +340,13 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.DropInfo = model.NewDropInfo()
 	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
 
-	// 选哥哥的福报
-	if mainCharAvatarId == 10000005 {
-		// 添加所有角色
-		allAvatarDataConfig := g.GetAllAvatarDataConfig()
-		for avatarId, avatarDataConfig := range allAvatarDataConfig {
-			player.AddAvatar(uint32(avatarId))
-			// 添加初始武器
-			weaponId := uint64(g.snowflake.GenId())
-			player.AddWeapon(uint32(avatarDataConfig.InitialWeapon), weaponId)
-			// 角色装上初始武器
-			player.WearWeapon(uint32(avatarId), weaponId)
-		}
-		// 添加所有武器
-		allWeaponDataConfig := g.GetAllWeaponDataConfig()
-		for itemId := range allWeaponDataConfig {
-			weaponId := uint64(g.snowflake.GenId())
-			player.AddWeapon(uint32(itemId), weaponId)
-		}
-		// 添加所有道具
-		allItemDataConfig := g.GetAllItemDataConfig()
-		for itemId := range allItemDataConfig {
-			player.AddItem(uint32(itemId), 1)
-		}
-	}
-
 	// 添加选定的主角
 	player.AddAvatar(mainCharAvatarId)
 	// 添加初始武器
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(mainCharAvatarId)]
 	if !ok {
-		logger.LOG.Error("avatarDataConfig error, mainCharAvatarId: %v", mainCharAvatarId)
+		logger.LOG.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
+		return nil
 	}
 	weaponId := uint64(g.snowflake.GenId())
 	player.AddWeapon(uint32(avatarDataConfig.InitialWeapon), weaponId)

@@ -88,7 +88,11 @@ func (t *TickManager) onTickMinute(now int64) {
 			count := random.GetRandomInt32(0, 4)
 			i := int32(0)
 			for itemId := range allItemDataConfig {
-				itemDataConfig := allItemDataConfig[itemId]
+				itemDataConfig, ok := allItemDataConfig[itemId]
+				if !ok {
+					logger.LOG.Error("config is nil, itemId: %v", itemId)
+					return
+				}
 				// TODO 3.0.0REL版本中 发送某些无效家具 可能会导致客户端背包家具界面卡死
 				if itemDataConfig.ItemEnumType == constant.ItemTypeConst.ITEM_FURNITURE {
 					continue

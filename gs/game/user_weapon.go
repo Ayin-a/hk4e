@@ -46,6 +46,10 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	weaponId := uint64(g.snowflake.GenId())
 	player.AddWeapon(itemId, weaponId)
 	weapon := player.GetWeapon(weaponId)
+	if weapon == nil {
+		logger.LOG.Error("weapon is nil, itemId: %v, weaponId: %v", itemId, weaponId)
+		return 0
+	}
 
 	// PacketStoreItemChangeNotify
 	storeItemChangeNotify := new(proto.StoreItemChangeNotify)

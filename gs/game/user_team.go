@@ -290,14 +290,16 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			acb := sceneTeamAvatar.AbilityControlBlock
 			embryoId := 0
 			// add avatar abilities
-			for _, abilityId := range avatarDataConfig.Abilities {
-				embryoId++
-				emb := &proto.AbilityEmbryo{
-					AbilityId:               uint32(embryoId),
-					AbilityNameHash:         uint32(abilityId),
-					AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+			if avatarDataConfig != nil {
+				for _, abilityId := range avatarDataConfig.Abilities {
+					embryoId++
+					emb := &proto.AbilityEmbryo{
+						AbilityId:               uint32(embryoId),
+						AbilityNameHash:         uint32(abilityId),
+						AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+					}
+					acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 				}
-				acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 			}
 			// add default abilities
 			for _, abilityId := range constant.GameConstantConst.DEFAULT_ABILITY_HASHES {

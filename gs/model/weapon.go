@@ -2,6 +2,7 @@ package model
 
 import (
 	gdc "hk4e/gs/config"
+	"hk4e/pkg/logger"
 )
 
 type Weapon struct {
@@ -63,7 +64,11 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 		MainPropId:  0,
 		Guid:        0,
 	}
-	itemDataConfig := gdc.CONF.ItemDataMap[int32(itemId)]
+	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(itemId)]
+	if !ok {
+		logger.LOG.Error("config is nil, itemId: %v", itemId)
+		return
+	}
 	if itemDataConfig.SkillAffix != nil {
 		for _, skillAffix := range itemDataConfig.SkillAffix {
 			if skillAffix > 0 {

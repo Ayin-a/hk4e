@@ -14,8 +14,11 @@ import (
 	"hk4e/gs/dao"
 	"hk4e/gs/game"
 	"hk4e/gs/mq"
+	"hk4e/gs/service"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
+
+	"github.com/nats-io/nats.go"
 )
 
 func Run(ctx context.Context, configFile string) error {
@@ -28,6 +31,13 @@ func Run(ctx context.Context, configFile string) error {
 
 	gdc.InitGameDataConfig()
 
+	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	if err != nil {
+		logger.LOG.Error("connect nats error: %v", err)
+		return err
+	}
+	defer conn.Close()
+
 	db, err := dao.NewDao()
 	if err != nil {
 		panic(err)
@@ -37,7 +47,7 @@ func Run(ctx context.Context, configFile string) error {
 	netMsgInput := make(chan *cmd.NetMsg, 10000)
 	netMsgOutput := make(chan *cmd.NetMsg, 10000)
 
-	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput)
+	messageQueue := mq.NewMessageQueue(conn, netMsgInput, netMsgOutput)
 	messageQueue.Start()
 	defer messageQueue.Close()
 
@@ -47,6 +57,12 @@ func Run(ctx context.Context, configFile string) error {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+
+	s, err := service.NewService(conn)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
 
 	for {
 		select {

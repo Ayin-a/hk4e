@@ -41,7 +41,10 @@ require github.com/golang-jwt/jwt/v4 v4.4.0
 // csv
 require github.com/jszwec/csvutil v1.7.1
 
-require github.com/spf13/cobra v1.6.1
+require (
+	github.com/byebyebruce/natsrpc v0.5.5-0.20221125150611-56cd29a4e335
+	github.com/spf13/cobra v1.6.1
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -50,7 +53,7 @@ require (
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-playground/validator/v10 v10.2.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect

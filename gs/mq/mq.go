@@ -1,7 +1,6 @@
 package mq
 
 import (
-	"hk4e/common/config"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 
@@ -18,16 +17,11 @@ type MessageQueue struct {
 	cmdProtoMap  *cmd.CmdProtoMap
 }
 
-func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *MessageQueue) {
+func NewMessageQueue(conn *nats.Conn, netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *MessageQueue) {
 	r = new(MessageQueue)
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
-	if err != nil {
-		logger.LOG.Error("connect nats error: %v", err)
-		return nil
-	}
 	r.natsConn = conn
 	r.natsMsgChan = make(chan *nats.Msg, 10000)
-	_, err = r.natsConn.ChanSubscribe("GS_HK4E", r.natsMsgChan)
+	_, err := r.natsConn.ChanSubscribe("GS_HK4E", r.natsMsgChan)
 	if err != nil {
 		logger.LOG.Error("nats subscribe error: %v", err)
 		return nil

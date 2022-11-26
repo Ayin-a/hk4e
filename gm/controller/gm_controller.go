@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"net/http"
+
+	"hk4e/gs/api"
 	"hk4e/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -17,5 +20,14 @@ func (c *Controller) gmCmd(context *gin.Context) {
 	if err != nil {
 		return
 	}
+	rep, err := c.rpc.Cmd(context.Request.Context(), &api.CmdRequest{
+		FuncName: gmCmdReq.FuncName,
+		Param:    gmCmdReq.Param,
+	})
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	context.JSON(http.StatusOK, rep)
 	logger.LOG.Info("%v", gmCmdReq)
 }

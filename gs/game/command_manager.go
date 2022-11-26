@@ -113,6 +113,7 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 	// 确保消息文本为 / 开头
 	// 如果不为这个开头那接下来就毫无意义
 	if strings.HasPrefix(text, "/") {
+		logger.LOG.Debug("command input, uid: %v, text: %v", c.GetExecutorId(executor), text)
 
 		// 输入的命令将在其他协程中处理
 		c.commandTextInput <- &CommandMessage{Executor: executor, Text: text}
@@ -122,6 +123,9 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 // HandleCommand 处理命令
 // 主协程接收到命令消息后执行
 func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
+	executor := cmd.Executor
+	logger.LOG.Debug("command handle, uid: %v, text: %v", c.GetExecutorId(executor), cmd.Text)
+
 	// 将开头的 / 去掉 并 分割出命令的每个参数
 	// 不区分命令的大小写 统一转为小写
 	cmdSplit := strings.Split(strings.ToLower(cmd.Text[1:]), " -")
@@ -147,7 +151,9 @@ func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 
 		// 分割出来的参数只有一个那肯定不是键值对
 		if len(cmdArg) < 2 {
-			logger.LOG.Debug("command arg error, arg: %v", cmdArg)
+			logger.LOG.Debug("command arg error, uid: %v, name: %v, arg: %v, text: %v", c.GetExecutorId(executor), cmd.Name, cmdSplit, cmd.Text)
+			c.SendMessage(executor, "格式错误，用法: /[命令名] -[参数名] [参数]。")
+			return
 		}
 
 		argKey := cmdArg[0]   // 参数的键
@@ -181,12 +187,13 @@ func (c *CommandManager) GetFriendList(friendList map[uint32]bool) map[uint32]bo
 // ExecCommand 执行命令
 func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 	executor := cmd.Executor
+	logger.LOG.Debug("command exec, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 
 	// 判断命令是否注册
 	cmdFunc, ok := c.commandFuncRouter[cmd.Name]
 	if !ok {
 		// 玩家可能会执行一些没有的命令仅做调试输出
-		logger.LOG.Debug("exec command not exist, name: %v", cmd.Name)
+		logger.LOG.Debug("exec command not exist, uid: %v, name: %v", c.GetExecutorId(executor), cmd.Name)
 		c.SendMessage(executor, "命令不存在，输入 /help 查看帮助。")
 		return
 	}
@@ -194,22 +201,21 @@ func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 	cmdPerm, ok := c.commandPermMap[cmd.Name]
 	if !ok {
 		// 一般命令权限都会注册 没注册则报error错误
-		logger.LOG.Error("exec command permission not exist, name: %v", cmd.Name)
+		logger.LOG.Error("command exec permission not exist, name: %v", cmd.Name)
 		return
 	}
 
-	// 执行者是否为玩家
-	player, ok := executor.(*model.Player)
 	// 判断玩家的权限是否符合要求
+	player, ok := executor.(*model.Player)
 	if ok && player.IsGM < uint8(cmdPerm) {
 		logger.LOG.Debug("exec command permission denied, uid: %v, isGM: %v", player.PlayerID, player.IsGM)
 		c.SendMessage(player, "权限不足，该命令需要%v级权限。\n你目前的权限等级：%v", cmdPerm, player.IsGM)
 		return
 	}
 
-	logger.LOG.Debug("command start, name: %v, args: $v", cmd.Name, cmd.Args)
+	logger.LOG.Debug("command start, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 	cmdFunc(cmd) // 执行命令
-	logger.LOG.Debug("command done, name: %v, args: $v", cmd.Name, cmd.Args)
+	logger.LOG.Debug("command done, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 }
 
 // SendMessage 发送消息
@@ -229,4 +235,19 @@ func (c *CommandManager) SendMessage(executor any, msg string, param ...any) {
 		// 无效的类型报错
 		logger.LOG.Error("command executor type error, type: %T", executor)
 	}
+}
+
+// GetExecutorId 获取执行者的Id
+// 目前仅用于调试输出
+func (c *CommandManager) GetExecutorId(executor any) (userId any) {
+	switch executor.(type) {
+	case *model.Player:
+		player := executor.(*model.Player)
+		userId = player.PlayerID
+	case string:
+		userId = executor
+	default:
+		userId = fmt.Sprintf("%T", executor)
+	}
+	return
 }

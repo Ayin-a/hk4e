@@ -12,7 +12,7 @@ func (c *CommandManager) HelpCommand(cmd *CommandMessage) {
 
 	c.SendMessage(executor,
 		"===== 帮助 / Help =====\n"+
-			"传送: /tp {-u [UID]} {-s [场景ID]} -x [坐标X] -y [坐标Y] -z [坐标Z]\n",
+			"传送：/tp {-u [UID]} {-s [场景ID]} -x [坐标X] -y [坐标Y] -z [坐标Z]\n",
 	)
 }
 
@@ -25,7 +25,7 @@ func (c *CommandManager) OpCommand(cmd *CommandMessage) {
 	}
 
 	player.IsGM = 1
-	c.SendMessage(player, "权限修改完毕, 现在你是GM啦 %v", cmd.Args)
+	c.SendMessage(player, "权限修改完毕，现在你是GM啦 %v", cmd.Args)
 }
 
 // TeleportCommand 传送玩家命令
@@ -42,7 +42,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 
 	// 判断是否填写必备参数
 	if cmd.Args["x"] == "" || cmd.Args["y"] == "" || cmd.Args["z"] == "" {
-		c.SendMessage(player, "参数不足, 正确用法: /%v {-u [UID]} {-s [场景ID]} -x [坐标X] -y [坐标Y] -z [坐标Z]。", cmd.Name)
+		c.SendMessage(player, "参数不足，正确用法：/%v {-u [UID]} {-s [场景ID]} -x [坐标X] -y [坐标Y] -z [坐标Z]。", cmd.Name)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 					target = user
 					sceneId = target.SceneId
 				} else {
-					c.SendMessage(player, "目标玩家不在线, UID: %v。", v)
+					c.SendMessage(player, "目标玩家不在线，UID: %v。", v)
 					return
 				}
 			}
@@ -116,7 +116,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 
 		// 解析错误的话应该是参数类型问题
 		if err != nil {
-			c.SendMessage("参数 -%v 有误, 类型错误。", k)
+			c.SendMessage("参数 -%v 有误，类型错误。", k)
 			return
 		}
 	}
@@ -125,5 +125,5 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 	game.TeleportPlayer(target, sceneId, pos)
 
 	// 发送消息给执行者
-	c.SendMessage(player, "已将玩家 UID: %v 传送至 场景: %v X: %v Y: %v Z:%v。", target.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
+	c.SendMessage(player, "已将玩家 UID：%v 传送至 场景：%v X：%.2f Y：%.2f Z：%.2f。", target.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
 }

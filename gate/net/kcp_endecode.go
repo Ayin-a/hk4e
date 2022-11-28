@@ -42,7 +42,7 @@ func (k *KcpConnectManager) decodeBinToPayload(data []byte, convId uint64, kcpMs
 		logger.LOG.Error("kcp xor key not exist, convId: %v", convId)
 		return
 	}
-	endec.Xor(data, xorKey.decKey)
+	endec.Xor(data, xorKey)
 	k.decodeRecur(data, convId, kcpMsgList)
 }
 
@@ -183,6 +183,6 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg) (bin []byte) {
 		logger.LOG.Error("kcp xor key not exist, convId: %v", kcpMsg.ConvId)
 		return
 	}
-	endec.Xor(bin, xorKey.encKey)
+	endec.Xor(bin, xorKey)
 	return bin
 }

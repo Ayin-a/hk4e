@@ -13,7 +13,7 @@ type Ec2b struct {
 	temp []byte
 }
 
-func LoadKey(b []byte) (*Ec2b, error) {
+func LoadEc2bKey(b []byte) (*Ec2b, error) {
 	if len(b) < 4+4+16+4+2048 {
 		return nil, fmt.Errorf("invalid ec2b key")
 	}
@@ -88,10 +88,8 @@ func (e *Ec2b) Key() []byte {
 	return b
 }
 
-func (e *Ec2b) Xor(data []byte) {
-	for i := 0; i < len(data); i++ {
-		data[i] ^= e.temp[i%4096]
-	}
+func (e *Ec2b) XorKey() []byte {
+	return e.temp
 }
 
 func keyScramble(key []byte) {

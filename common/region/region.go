@@ -1,6 +1,7 @@
 package region
 
 import (
+	"hk4e/pkg/random"
 	"os"
 
 	"hk4e/pkg/endec"
@@ -32,23 +33,16 @@ func LoadRsaKey() (signRsaKey []byte, encRsaKeyMap map[string][]byte, pwdRsaKey 
 	return signRsaKey, encRsaKeyMap, pwdRsaKey
 }
 
-func InitRegion(kcpAddr string, kcpPort int) (*proto.QueryCurrRegionHttpRsp, *proto.QueryRegionListHttpRsp) {
-	dispatchKey, err := os.ReadFile("key/dispatchKey.bin")
-	if err != nil {
-		logger.LOG.Error("open dispatchKey.bin error: %v", err)
-		return nil, nil
-	}
-	dispatchSeed, err := os.ReadFile("key/dispatchSeed.bin")
-	if err != nil {
-		logger.LOG.Error("open dispatchSeed.bin error: %v", err)
-		return nil, nil
-	}
+func InitRegion(kcpAddr string, kcpPort int) (*proto.QueryCurrRegionHttpRsp, *proto.QueryRegionListHttpRsp, *random.Ec2b) {
+	dispatchEc2b := random.NewEc2b()
+	dispatchEc2bData := dispatchEc2b.Bytes()
+	dispatchXorKey := dispatchEc2b.XorKey()
 	// RegionCurr
 	regionCurr := new(proto.QueryCurrRegionHttpRsp)
 	regionCurr.RegionInfo = &proto.RegionInfo{
 		GateserverIp:   kcpAddr,
 		GateserverPort: uint32(kcpPort),
-		SecretKey:      dispatchSeed,
+		SecretKey:      dispatchEc2bData,
 	}
 	// RegionList
 	customConfigStr := `
@@ -62,7 +56,7 @@ func InitRegion(kcpAddr string, kcpPort int) (*proto.QueryCurrRegionHttpRsp, *pr
 		}
 	`
 	customConfig := []byte(customConfigStr)
-	endec.Xor(customConfig, dispatchKey)
+	endec.Xor(customConfig, dispatchXorKey)
 	serverList := make([]*proto.RegionSimpleInfo, 0)
 	server := &proto.RegionSimpleInfo{
 		Name:        "os_usa",
@@ -73,8 +67,8 @@ func InitRegion(kcpAddr string, kcpPort int) (*proto.QueryCurrRegionHttpRsp, *pr
 	serverList = append(serverList, server)
 	regionList := new(proto.QueryRegionListHttpRsp)
 	regionList.RegionList = serverList
-	regionList.ClientSecretKey = dispatchSeed
+	regionList.ClientSecretKey = dispatchEc2bData
 	regionList.ClientCustomConfigEncrypted = customConfig
 	regionList.EnableLoginPc = true
-	return regionCurr, regionList
+	return regionCurr, regionList, dispatchEc2b
 }

@@ -35,7 +35,7 @@ func Run(ctx context.Context, configFile string) error {
 	forwardManager := forward.NewForwardManager(protoMsgInput, protoMsgOutput, kcpEventInput, kcpEventOutput, netMsgInput, netMsgOutput)
 	forwardManager.Start()
 
-	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput)
+	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput, kcpEventInput)
 	messageQueue.Start()
 	defer messageQueue.Close()
 

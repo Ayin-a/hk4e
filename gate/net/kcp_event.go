@@ -4,6 +4,7 @@ import "hk4e/pkg/logger"
 
 const (
 	KcpXorKeyChange = iota
+	KcpDispatchKeyChange
 	KcpPacketRecvListen
 	KcpPacketSendListen
 	KcpConnForceClose
@@ -38,20 +39,24 @@ func (k *KcpConnectManager) eventHandle() {
 				logger.LOG.Error("conn not exist, convId: %v", event.ConvId)
 				continue
 			}
-			flag, ok := event.EventMessage.(string)
+			key, ok := event.EventMessage.([]byte)
 			if !ok {
 				logger.LOG.Error("event KcpXorKeyChange msg type error")
 				continue
 			}
-			if flag == "ENC" {
-				k.kcpKeyMapLock.Lock()
-				k.kcpKeyMap[event.ConvId].encKey = k.secretKey
-				k.kcpKeyMapLock.Unlock()
-			} else if flag == "DEC" {
-				k.kcpKeyMapLock.Lock()
-				k.kcpKeyMap[event.ConvId].decKey = k.secretKey
-				k.kcpKeyMapLock.Unlock()
+			k.kcpKeyMapLock.Lock()
+			k.kcpKeyMap[event.ConvId] = key
+			k.kcpKeyMapLock.Unlock()
+		case KcpDispatchKeyChange:
+			// 首包加密XOR密钥切换
+			key, ok := event.EventMessage.([]byte)
+			if !ok {
+				logger.LOG.Error("event KcpXorKeyChange msg type error")
+				continue
 			}
+			k.dispatchKeyLock.Lock()
+			k.dispatchKey = key
+			k.dispatchKeyLock.Unlock()
 		case KcpPacketRecvListen:
 			// 收包监听
 			k.connMapLock.RLock()

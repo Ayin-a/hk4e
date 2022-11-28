@@ -84,8 +84,6 @@ func (b *KeyBlock) Seed() uint64 {
 	return b.seed
 }
 
-func (b *KeyBlock) Xor(data []byte) {
-	for i := 0; i < len(data); i++ {
-		data[i] ^= b.data[i%4096]
-	}
+func (b *KeyBlock) XorKey() [4096]byte {
+	return b.data
 }

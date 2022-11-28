@@ -2,38 +2,24 @@ package random
 
 import (
 	"fmt"
-	"os"
 	"testing"
 )
 
 func TestKey(t *testing.T) {
-	fmt.Println("hw")
+	dispatchEc2b := NewEc2b()
+	dispatchEc2bData := dispatchEc2b.Bytes()
+	dispatchEc2bSeed := dispatchEc2b.Seed()
+	_ = dispatchEc2bData
 
-	//dispatchEc2b := NewEc2b()
-	keyBin, err := os.ReadFile("./static/dispatchSeed.bin")
-	if err != nil {
-		panic(err)
-	}
-	dispatchEc2b, err := LoadKey(keyBin)
-	if err != nil {
-		panic(err)
-	}
-	dispatchBin := dispatchEc2b.Bytes()
-	dispatchSeed := dispatchEc2b.Seed()
-	_ = dispatchBin
+	dispatchXorKey := dispatchEc2b.XorKey()
 
 	gateDispatchEc2b := NewEc2b()
-	gateDispatchEc2b.SetSeed(dispatchSeed)
+	gateDispatchEc2b.SetSeed(dispatchEc2bSeed)
 
-	dispatchKey := make([]byte, 4096)
-	dispatchEc2b.Xor(dispatchKey)
+	gateDispatchXorKey := gateDispatchEc2b.XorKey()
 
-	gateDispatchKey := make([]byte, 4096)
-	gateDispatchEc2b.Xor(gateDispatchKey)
-
-	gateXorKey := make([]byte, 4096)
 	keyBlock := NewKeyBlock(uint64(11468049314633205968))
-	keyBlock.Xor(gateXorKey)
+	gateXorKey := keyBlock.XorKey()
 
-	fmt.Println("end")
+	fmt.Println(dispatchXorKey, gateDispatchXorKey, gateXorKey)
 }

@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 	"hk4e/dispatch/controller"
 	"hk4e/pkg/httpclient"
+	"hk4e/pkg/random"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -69,15 +72,16 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 	rsp.Uid = tokenVerifyRsp.PlayerID
 	// TODO 不同的token
 	rsp.Token = "xxx"
-	rsp.AccountType = 1
+	data := make([]byte, 16+32)
+	rand.Read(data)
+	rsp.SecurityCmdBuffer = data[16:]
+	rsp.ClientVersionRandomKey = fmt.Sprintf("%03x-%012x", data[:3], data[4:16])
 	// TODO 要确定一下新注册的号这个值该返回什么
+	rsp.AccountType = 1
 	rsp.IsProficientPlayer = true
-	rsp.SecretKeySeed = 11468049314633205968
-	rsp.SecurityCmdBuffer = f.secretKeyBuffer
 	rsp.PlatformType = 3
 	rsp.ChannelId = 1
 	rsp.CountryCode = "US"
-	rsp.ClientVersionRandomKey = "c25-314dd05b0b5f"
 	rsp.RegPlatform = 3
 	addr, exist := f.getAddrByConvId(convId)
 	if !exist {
@@ -87,7 +91,6 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 	split := strings.Split(addr, ":")
 	rsp.ClientIpStr = split[0]
 	if req.GetKeyId() != 0 {
-		// pre check
 		logger.LOG.Debug("do hk4e 2.8 rsa logic")
 		keyId := strconv.Itoa(int(req.GetKeyId()))
 		encPubPrivKey, exist := f.encRsaKeyMap[keyId]
@@ -111,13 +114,6 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			logger.LOG.Error("parse client seed base64 error: %v", err)
 			return nil
 		}
-		// create error rsp info
-		clientSeedEncCopy := make([]byte, len(clientSeedEnc))
-		copy(clientSeedEncCopy, clientSeedEnc)
-		endec.Xor(clientSeedEncCopy, []byte{0x9f, 0x26, 0xb2, 0x17, 0x61, 0x5f, 0xc8, 0x00})
-		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(clientSeedEncCopy)
-		rsp.Sign = "bm90aGluZyBoZXJl"
-		// do
 		clientSeed, err := endec.RsaDecrypt(clientSeedEnc, signPrivkey)
 		if err != nil {
 			logger.LOG.Error("rsa dec error: %v", err)
@@ -129,7 +125,10 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			logger.LOG.Error("parse client seed to uint64 error: %v", err)
 			return rsp
 		}
-		seedUint64 := uint64(11468049314633205968) ^ clientSeedUint64
+		timeRand := random.GetTimeRand()
+		serverSeedUint64 := timeRand.Uint64()
+		f.setSeedByConvId(convId, serverSeedUint64)
+		seedUint64 := serverSeedUint64 ^ clientSeedUint64
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
 		if err != nil {
@@ -149,6 +148,12 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 		}
 		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)
 		rsp.Sign = base64.StdEncoding.EncodeToString(seedSign)
+		// 开启发包监听
+		f.kcpEventInput <- &net.KcpEvent{
+			ConvId:       convId,
+			EventId:      net.KcpPacketSendListen,
+			EventMessage: "Enable",
+		}
 	}
 	return rsp
 }
@@ -170,6 +175,7 @@ func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (
 	rsp.IsUseAbilityHash = true
 	rsp.AbilityHashCode = 1844674
 	rsp.GameBiz = "hk4e_global"
+
 	rsp.ClientDataVersion = f.regionCurr.RegionInfo.ClientDataVersion
 	rsp.ClientSilenceDataVersion = f.regionCurr.RegionInfo.ClientSilenceDataVersion
 	rsp.ClientMd5 = f.regionCurr.RegionInfo.ClientDataMd5
@@ -177,6 +183,7 @@ func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (
 	rsp.ResVersionConfig = f.regionCurr.RegionInfo.ResVersionConfig
 	rsp.ClientVersionSuffix = f.regionCurr.RegionInfo.ClientVersionSuffix
 	rsp.ClientSilenceVersionSuffix = f.regionCurr.RegionInfo.ClientSilenceVersionSuffix
+
 	rsp.IsScOpen = false
 	rsp.RegisterCps = "mihoyo"
 	rsp.CountryCode = "US"

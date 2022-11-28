@@ -2,6 +2,8 @@ package controller
 
 import (
 	"encoding/base64"
+	"encoding/binary"
+	"github.com/nats-io/nats.go"
 	"net/http"
 	"strconv"
 
@@ -28,7 +30,26 @@ func NewController(dao *dao.Dao) (r *Controller) {
 	r.dao = dao
 	r.regionListBase64 = ""
 	r.regionCurrBase64 = ""
-	regionCurr, regionList := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
+	regionCurr, regionList, dispatchEc2b := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
+
+	// TODO 临时写一下用来传递新的密钥后面改RPC
+	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	if err != nil {
+		logger.LOG.Error("connect nats error: %v", err)
+		return nil
+	}
+	natsMsg := nats.NewMsg("GATE_KEY_HK4E")
+	natsMsg.Data = make([]byte, 8)
+	dispatchEc2bSeed := dispatchEc2b.Seed()
+	binary.BigEndian.PutUint64(natsMsg.Data, dispatchEc2bSeed)
+	err = conn.PublishMsg(natsMsg)
+	if err != nil {
+		logger.LOG.Error("nats publish msg error: %v", err)
+		return nil
+	}
+	conn.Close()
+	logger.LOG.Debug("send new dispatch ec2b seed: %v", dispatchEc2bSeed)
+
 	r.signRsaKey, r.encRsaKeyMap, r.pwdRsaKey = region.LoadRsaKey()
 	regionCurrModify, err := pb.Marshal(regionCurr)
 	if err != nil {

@@ -3,7 +3,6 @@ package net
 import (
 	"bytes"
 	"encoding/binary"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -13,11 +12,6 @@ import (
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 )
-
-type KcpXorKey struct {
-	encKey []byte
-	decKey []byte
-}
 
 type KcpConnectManager struct {
 	openState      bool
@@ -36,10 +30,10 @@ type KcpConnectManager struct {
 	kcpSendListenMap     map[uint64]bool
 	kcpSendListenMapLock sync.RWMutex
 	// key
-	dispatchKey   []byte
-	secretKey     []byte
-	kcpKeyMap     map[uint64]*KcpXorKey
-	kcpKeyMapLock sync.RWMutex
+	dispatchKey     []byte
+	dispatchKeyLock sync.RWMutex
+	kcpKeyMap       map[uint64][]byte
+	kcpKeyMapLock   sync.RWMutex
 	// conv短时间内唯一生成
 	convGenMap     map[uint64]int64
 	convGenMapLock sync.RWMutex
@@ -57,7 +51,7 @@ func NewKcpConnectManager(protoMsgInput chan *ProtoMsg, protoMsgOutput chan *Pro
 	r.kcpRawSendChanMap = make(map[uint64]chan *ProtoMsg)
 	r.kcpRecvListenMap = make(map[uint64]bool)
 	r.kcpSendListenMap = make(map[uint64]bool)
-	r.kcpKeyMap = make(map[uint64]*KcpXorKey)
+	r.kcpKeyMap = make(map[uint64][]byte)
 	r.convGenMap = make(map[uint64]int64)
 	return r
 }
@@ -65,17 +59,7 @@ func NewKcpConnectManager(protoMsgInput chan *ProtoMsg, protoMsgOutput chan *Pro
 func (k *KcpConnectManager) Start() {
 	go func() {
 		// key
-		var err error = nil
-		k.dispatchKey, err = os.ReadFile("key/dispatchKey.bin")
-		if err != nil {
-			logger.LOG.Error("open dispatchKey.bin error")
-			return
-		}
-		k.secretKey, err = os.ReadFile("key/secretKey.bin")
-		if err != nil {
-			logger.LOG.Error("open secretKey.bin error")
-			return
-		}
+		k.dispatchKey = make([]byte, 4096)
 		// kcp
 		port := strconv.FormatInt(int64(config.CONF.Hk4e.KcpPort), 10)
 		listener, err := kcp.ListenWithOptions("0.0.0.0:"+port, nil, 0, 0)
@@ -110,10 +94,9 @@ func (k *KcpConnectManager) Start() {
 				k.connMap[convId] = conn
 				k.connMapLock.Unlock()
 				k.kcpKeyMapLock.Lock()
-				k.kcpKeyMap[convId] = &KcpXorKey{
-					encKey: k.dispatchKey,
-					decKey: k.dispatchKey,
-				}
+				k.dispatchKeyLock.RLock()
+				k.kcpKeyMap[convId] = k.dispatchKey
+				k.dispatchKeyLock.RUnlock()
 				k.kcpKeyMapLock.Unlock()
 				go k.recvHandle(convId)
 				kcpRawSendChan := make(chan *ProtoMsg, 10000)

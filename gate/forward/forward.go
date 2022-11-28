@@ -1,7 +1,7 @@
 package forward
 
 import (
-	"os"
+	"hk4e/pkg/random"
 	"runtime"
 	"sync"
 	"time"
@@ -48,12 +48,14 @@ type ForwardManager struct {
 	// kcpConv -> headMeta
 	convHeadMetaMap     map[uint64]*ClientHeadMeta
 	convHeadMetaMapLock sync.RWMutex
-	secretKeyBuffer     []byte
-	kcpEventInput       chan *net.KcpEvent
-	kcpEventOutput      chan *net.KcpEvent
-	regionCurr          *proto.QueryCurrRegionHttpRsp
-	signRsaKey          []byte
-	encRsaKeyMap        map[string][]byte
+	// kcpConv -> seed
+	convSeedMap     map[uint64]uint64
+	convSeedMapLock sync.RWMutex
+	kcpEventInput   chan *net.KcpEvent
+	kcpEventOutput  chan *net.KcpEvent
+	regionCurr      *proto.QueryCurrRegionHttpRsp
+	signRsaKey      []byte
+	encRsaKeyMap    map[string][]byte
 }
 
 func NewForwardManager(
@@ -70,6 +72,7 @@ func NewForwardManager(
 	r.userIdConvMap = make(map[uint32]uint64)
 	r.convAddrMap = make(map[uint64]string)
 	r.convHeadMetaMap = make(map[uint64]*ClientHeadMeta)
+	r.convSeedMap = make(map[uint64]uint64)
 	r.kcpEventInput = kcpEventInput
 	r.kcpEventOutput = kcpEventOutput
 	return r
@@ -97,23 +100,21 @@ func (f *ForwardManager) kcpEventHandle() {
 				EventId:      net.KcpPacketSendListen,
 				EventMessage: "Disable",
 			}
-			// 登录成功 通知GS初始化相关数据
-			userId, exist := f.getUserIdByConvId(event.ConvId)
+			seed, exist := f.getSeedByConvId(event.ConvId)
 			if !exist {
-				logger.LOG.Error("can not find userId by convId")
+				logger.LOG.Error("can not find seed by convId")
 				continue
 			}
-			headMeta, exist := f.getHeadMetaByConvId(event.ConvId)
-			if !exist {
-				logger.LOG.Error("can not find client head metadata by convId")
-				continue
+			keyBlock := random.NewKeyBlock(seed)
+			xorKey := keyBlock.XorKey()
+			key := make([]byte, 4096)
+			copy(key, xorKey[:])
+			// 改变密钥
+			f.kcpEventInput <- &net.KcpEvent{
+				ConvId:       event.ConvId,
+				EventId:      net.KcpXorKeyChange,
+				EventMessage: key,
 			}
-			netMsg := new(cmd.NetMsg)
-			netMsg.UserId = userId
-			netMsg.EventId = cmd.UserLoginNotify
-			netMsg.ClientSeq = headMeta.seq
-			f.netMsgInput <- netMsg
-			logger.LOG.Info("send to gs user login ok, ConvId: %v, UserId: %v", event.ConvId, netMsg.UserId)
 		case net.KcpConnCloseNotify:
 			// 连接断开通知
 			userId, exist := f.getUserIdByConvId(event.ConvId)
@@ -139,6 +140,7 @@ func (f *ForwardManager) kcpEventHandle() {
 			}
 			f.deleteAddrByConvId(event.ConvId)
 			f.deleteHeadMetaByConvId(event.ConvId)
+			f.deleteSeedByConvId(event.ConvId)
 		case net.KcpConnEstNotify:
 			// 连接建立通知
 			addr, ok := event.EventMessage.(string)
@@ -183,15 +185,9 @@ func (f *ForwardManager) kcpEventHandle() {
 
 func (f *ForwardManager) Start() {
 	// 读取密钥相关文件
-	var err error = nil
-	f.secretKeyBuffer, err = os.ReadFile("key/secretKeyBuffer.bin")
-	if err != nil {
-		logger.LOG.Error("open secretKeyBuffer.bin error")
-		return
-	}
 	f.signRsaKey, f.encRsaKeyMap, _ = region.LoadRsaKey()
 	// region
-	regionCurr, _ := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
+	regionCurr, _, _ := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
 	f.regionCurr = regionCurr
 	// kcp事件监听
 	go f.kcpEventHandle()
@@ -226,12 +222,6 @@ func (f *ForwardManager) sendNetMsgToGameServer() {
 			if getPlayerTokenRsp == nil {
 				continue
 			}
-			// 改变解密密钥
-			f.kcpEventInput <- &net.KcpEvent{
-				ConvId:       protoMsg.ConvId,
-				EventId:      net.KcpXorKeyChange,
-				EventMessage: "DEC",
-			}
 			// 返回数据到客户端
 			resp := new(net.ProtoMsg)
 			resp.ConvId = protoMsg.ConvId
@@ -249,29 +239,30 @@ func (f *ForwardManager) sendNetMsgToGameServer() {
 			if playerLoginRsp == nil {
 				continue
 			}
-			// 改变加密密钥
-			f.kcpEventInput <- &net.KcpEvent{
-				ConvId:       protoMsg.ConvId,
-				EventId:      net.KcpXorKeyChange,
-				EventMessage: "ENC",
+			// 返回数据到客户端
+			resp := new(net.ProtoMsg)
+			resp.ConvId = protoMsg.ConvId
+			resp.CmdId = cmd.PlayerLoginRsp
+			resp.HeadMessage = f.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
+			resp.PayloadMessage = playerLoginRsp
+			f.protoMsgInput <- resp
+			// 登录成功 通知GS初始化相关数据
+			userId, exist := f.getUserIdByConvId(protoMsg.ConvId)
+			if !exist {
+				logger.LOG.Error("can not find userId by convId")
+				continue
 			}
-			// 开启发包监听
-			f.kcpEventInput <- &net.KcpEvent{
-				ConvId:       protoMsg.ConvId,
-				EventId:      net.KcpPacketSendListen,
-				EventMessage: "Enable",
+			headMeta, exist := f.getHeadMetaByConvId(protoMsg.ConvId)
+			if !exist {
+				logger.LOG.Error("can not find client head metadata by convId")
+				continue
 			}
-			go func() {
-				// 保证kcp事件已成功生效
-				time.Sleep(time.Millisecond * 50)
-				// 返回数据到客户端
-				resp := new(net.ProtoMsg)
-				resp.ConvId = protoMsg.ConvId
-				resp.CmdId = cmd.PlayerLoginRsp
-				resp.HeadMessage = f.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
-				resp.PayloadMessage = playerLoginRsp
-				f.protoMsgInput <- resp
-			}()
+			netMsg := new(cmd.NetMsg)
+			netMsg.UserId = userId
+			netMsg.EventId = cmd.UserLoginNotify
+			netMsg.ClientSeq = headMeta.seq
+			f.netMsgInput <- netMsg
+			logger.LOG.Info("send to gs user login ok, ConvId: %v, UserId: %v", protoMsg.ConvId, netMsg.UserId)
 		case cmd.SetPlayerBornDataReq:
 			// 玩家注册请求
 			if connState != ConnAlive {
@@ -478,6 +469,25 @@ func (f *ForwardManager) deleteHeadMetaByConvId(convId uint64) {
 	f.convHeadMetaMapLock.Lock()
 	delete(f.convHeadMetaMap, convId)
 	f.convHeadMetaMapLock.Unlock()
+}
+
+func (f *ForwardManager) getSeedByConvId(convId uint64) (seed uint64, exist bool) {
+	f.convSeedMapLock.RLock()
+	seed, exist = f.convSeedMap[convId]
+	f.convSeedMapLock.RUnlock()
+	return seed, exist
+}
+
+func (f *ForwardManager) setSeedByConvId(convId uint64, seed uint64) {
+	f.convSeedMapLock.Lock()
+	f.convSeedMap[convId] = seed
+	f.convSeedMapLock.Unlock()
+}
+
+func (f *ForwardManager) deleteSeedByConvId(convId uint64) {
+	f.convSeedMapLock.Lock()
+	delete(f.convSeedMap, convId)
+	f.convSeedMapLock.Unlock()
 }
 
 // 改变网关开放状态

@@ -10,6 +10,10 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+func GetTimeRand() *rand.Rand {
+	return rand.New(rand.NewSource(time.Now().UnixNano()))
+}
+
 func GetRandomStr(strLen int) (str string) {
 	baseStr := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	for i := 0; i < strLen; i++ {

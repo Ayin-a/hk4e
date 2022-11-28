@@ -1,8 +1,11 @@
 package mq
 
 import (
+	"encoding/binary"
 	"hk4e/common/config"
+	"hk4e/gate/net"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 
 	"github.com/nats-io/nats.go"
@@ -18,7 +21,7 @@ type MessageQueue struct {
 	cmdProtoMap  *cmd.CmdProtoMap
 }
 
-func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *MessageQueue) {
+func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg, kcpEventInput chan *net.KcpEvent) (r *MessageQueue) {
 	r = new(MessageQueue)
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
 	if err != nil {
@@ -43,7 +46,16 @@ func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg
 	go func() {
 		for {
 			natsMsg := <-keyNatsMsgChan
-			logger.LOG.Error("GATE_KEY_HK4E %v", natsMsg.Data)
+			dispatchEc2bSeed := binary.BigEndian.Uint64(natsMsg.Data)
+			logger.LOG.Debug("recv new dispatch ec2b seed: %v", dispatchEc2bSeed)
+			gateDispatchEc2b := random.NewEc2b()
+			gateDispatchEc2b.SetSeed(dispatchEc2bSeed)
+			gateDispatchXorKey := gateDispatchEc2b.XorKey()
+			// 改变密钥
+			kcpEventInput <- &net.KcpEvent{
+				EventId:      net.KcpDispatchKeyChange,
+				EventMessage: gateDispatchXorKey,
+			}
 		}
 	}()
 

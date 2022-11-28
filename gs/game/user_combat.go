@@ -201,6 +201,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
 				logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
 			}
+
+			// 处理耐力消耗
+			g.HandleStamina(player, motionInfo.State)
+
 			invokeHandler.addEntry(entry.ForwardType, entry)
 		default:
 			invokeHandler.addEntry(entry.ForwardType, entry)

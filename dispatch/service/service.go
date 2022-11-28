@@ -11,12 +11,12 @@ type Service struct {
 // 用户密码改变
 func (f *Service) UserPasswordChange(uid uint32) bool {
 	// dispatch登录态失效
-	_, err := f.dao.UpdateAccountFieldByFieldName("uid", uid, "token", "")
+	_, err := f.dao.UpdateAccountFieldByFieldName("accountID", uid, "token", "")
 	if err != nil {
 		return false
 	}
 	// 游戏内登录态失效
-	account, err := f.dao.QueryAccountByField("uid", uid)
+	account, err := f.dao.QueryAccountByField("accountID", uid)
 	if err != nil {
 		return false
 	}
@@ -41,16 +41,16 @@ func (f *Service) ForbidUser(info *ForbidUserInfo) bool {
 		return false
 	}
 	// 写入账号封禁信息
-	_, err := f.dao.UpdateAccountFieldByFieldName("uid", info.UserId, "forbid", true)
+	_, err := f.dao.UpdateAccountFieldByFieldName("accountID", info.UserId, "forbid", true)
 	if err != nil {
 		return false
 	}
-	_, err = f.dao.UpdateAccountFieldByFieldName("uid", info.UserId, "forbidEndTime", info.ForbidEndTime)
+	_, err = f.dao.UpdateAccountFieldByFieldName("accountID", info.UserId, "forbidEndTime", info.ForbidEndTime)
 	if err != nil {
 		return false
 	}
 	// 游戏强制下线
-	account, err := f.dao.QueryAccountByField("uid", info.UserId)
+	account, err := f.dao.QueryAccountByField("accountID", info.UserId)
 	if err != nil {
 		return false
 	}
@@ -72,7 +72,7 @@ func (f *Service) ForbidUser(info *ForbidUserInfo) bool {
 // 解封
 func (s *Service) UnForbidUser(uid uint32) bool {
 	// 解除账号封禁
-	_, err := s.dao.UpdateAccountFieldByFieldName("uid", uid, "forbid", false)
+	_, err := s.dao.UpdateAccountFieldByFieldName("accountID", uid, "forbid", false)
 	if err != nil {
 		return false
 	}

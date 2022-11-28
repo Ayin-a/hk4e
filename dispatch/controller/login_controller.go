@@ -3,37 +3,19 @@ package controller
 import (
 	"encoding/base64"
 	"encoding/json"
+	"hk4e/dispatch/model"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
-	appConfig "hk4e/common/config"
 	"hk4e/dispatch/api"
-	db "hk4e/dispatch/model"
 	"hk4e/pkg/endec"
-	"hk4e/pkg/httpclient"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 
 	"github.com/gin-gonic/gin"
 )
-
-type SdkUserLoginReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type SdkUserLoginRsp struct {
-	Code         int32  `json:"code"`
-	Msg          string `json:"msg"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	Data         struct {
-		Uid      int32  `json:"uid"`
-		Username string `json:"username"`
-	} `json:"data"`
-}
 
 func (c *Controller) apiLogin(context *gin.Context) {
 	requestData := new(api.LoginAccountRequestJson)
@@ -109,41 +91,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	// SDK账号登陆
-	sdkUserLoginRsp, err := httpclient.Post[SdkUserLoginRsp](appConfig.CONF.Hk4e.LoginSdkUrl, &SdkUserLoginReq{
-		Username: username,
-		Password: password,
-	}, "")
-	// TODO 测试账号
-	{
-		sdkUserLoginRsp = &SdkUserLoginRsp{
-			Code:         0,
-			Msg:          "",
-			AccessToken:  "",
-			RefreshToken: "",
-			Data: struct {
-				Uid      int32  `json:"uid"`
-				Username string `json:"username"`
-			}{
-				Uid:      267042405,
-				Username: "FlourishingWorld",
-			},
-		}
-		err = nil
-	}
-	if err != nil {
-		responseData.Retcode = -201
-		responseData.Message = "服务器内部错误:-1"
-		context.JSON(http.StatusOK, responseData)
-		return
-	}
-	if sdkUserLoginRsp.Code != 0 {
-		responseData.Retcode = -201
-		responseData.Message = sdkUserLoginRsp.Msg
-		context.JSON(http.StatusOK, responseData)
-		return
-	}
-	// 登录成功
+	// TODO SDK账号登陆
 	account, err := c.dao.QueryAccountByField("username", username)
 	if err != nil {
 		logger.LOG.Error("query account from db error: %v", err)
@@ -151,6 +99,13 @@ func (c *Controller) apiLogin(context *gin.Context) {
 	}
 	if account == nil {
 		// 注册一个原神account
+		accountId, err := c.dao.GetNextAccountId()
+		if err != nil {
+			responseData.Retcode = -201
+			responseData.Message = "服务器内部错误:-1"
+			context.JSON(http.StatusOK, responseData)
+			return
+		}
 		playerID, err := c.dao.GetNextYuanShenUid()
 		if err != nil {
 			responseData.Retcode = -201
@@ -158,12 +113,15 @@ func (c *Controller) apiLogin(context *gin.Context) {
 			context.JSON(http.StatusOK, responseData)
 			return
 		}
-		regAccount := &db.Account{
-			Uid:        uint64(sdkUserLoginRsp.Data.Uid),
-			Username:   username,
-			PlayerID:   playerID,
-			Token:      base64.StdEncoding.EncodeToString(random.GetRandomByte(24)),
-			ComboToken: "",
+		regAccount := &model.Account{
+			AccountID:     accountId,
+			Username:      username,
+			Password:      endec.Md5Str(password),
+			PlayerID:      playerID,
+			Token:         "",
+			ComboToken:    "",
+			Forbid:        false,
+			ForbidEndTime: 0,
 		}
 		_, err = c.dao.InsertAccount(regAccount)
 		if err != nil {
@@ -172,25 +130,27 @@ func (c *Controller) apiLogin(context *gin.Context) {
 			context.JSON(http.StatusOK, responseData)
 			return
 		}
-		responseData.Message = "OK"
-		responseData.Data.Account.Uid = strconv.FormatInt(int64(regAccount.Uid), 10)
-		responseData.Data.Account.Token = regAccount.Token
-		responseData.Data.Account.Email = regAccount.Username
-	} else {
-		// 生产新的token
-		account.Token = base64.StdEncoding.EncodeToString(random.GetRandomByte(24))
-		_, err := c.dao.UpdateAccountFieldByFieldName("uid", account.Uid, "token", account.Token)
-		if err != nil {
-			responseData.Retcode = -201
-			responseData.Message = "服务器内部错误:-4"
-			context.JSON(http.StatusOK, responseData)
-			return
-		}
-		responseData.Message = "OK"
-		responseData.Data.Account.Uid = strconv.FormatInt(int64(account.Uid), 10)
-		responseData.Data.Account.Token = account.Token
-		responseData.Data.Account.Email = account.Username
+		account = regAccount
 	}
+	if endec.Md5Str(password) != account.Password {
+		responseData.Retcode = -201
+		responseData.Message = "用户名或密码错误"
+		context.JSON(http.StatusOK, responseData)
+		return
+	}
+	// 生产新的token
+	account.Token = base64.StdEncoding.EncodeToString(random.GetRandomByte(24))
+	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "token", account.Token)
+	if err != nil {
+		responseData.Retcode = -201
+		responseData.Message = "服务器内部错误:-4"
+		context.JSON(http.StatusOK, responseData)
+		return
+	}
+	responseData.Message = "OK"
+	responseData.Data.Account.Uid = strconv.FormatInt(int64(account.AccountID), 10)
+	responseData.Data.Account.Token = account.Token
+	responseData.Data.Account.Email = account.Username
 	context.JSON(http.StatusOK, responseData)
 }
 
@@ -206,7 +166,7 @@ func (c *Controller) apiVerify(context *gin.Context) {
 		logger.LOG.Error("parse uid error: %v", err)
 		return
 	}
-	account, err := c.dao.QueryAccountByField("uid", uid)
+	account, err := c.dao.QueryAccountByField("accountID", uid)
 	if err != nil {
 		logger.LOG.Error("query account from db error: %v", err)
 		return
@@ -249,7 +209,7 @@ func (c *Controller) v2Login(context *gin.Context) {
 		return
 	}
 	responseData := api.NewComboTokenRes()
-	account, err := c.dao.QueryAccountByField("uid", uid)
+	account, err := c.dao.QueryAccountByField("accountID", uid)
 	if account == nil || account.Token != loginData.Token {
 		responseData.Retcode = -201
 		responseData.Message = "token错误"
@@ -258,7 +218,7 @@ func (c *Controller) v2Login(context *gin.Context) {
 	}
 	// 生成新的comboToken
 	account.ComboToken = random.GetRandomByteHexStr(20)
-	_, err = c.dao.UpdateAccountFieldByFieldName("uid", account.Uid, "comboToken", account.ComboToken)
+	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboToken", account.ComboToken)
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-1"

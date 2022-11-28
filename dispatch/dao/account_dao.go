@@ -2,8 +2,8 @@ package dao
 
 import (
 	"context"
+	"hk4e/dispatch/model"
 
-	dbEntity "hk4e/dispatch/model"
 	"hk4e/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -12,14 +12,52 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (d *Dao) GetNextYuanShenUid() (uint64, error) {
-	db := d.db.Collection("player_id_counter")
+func (d *Dao) GetNextAccountId() (uint64, error) {
+	db := d.db.Collection("account_id_counter")
 	find := db.FindOne(context.TODO(), bson.D{{"_id", "default"}})
-	item := new(dbEntity.PlayerIDCounter)
+	item := new(model.AccountIDCounter)
 	err := find.Decode(item)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			item := &dbEntity.PlayerIDCounter{
+			item := &model.AccountIDCounter{
+				ID:        "default",
+				AccountID: 1,
+			}
+			_, err := db.InsertOne(context.TODO(), item)
+			if err != nil {
+				return 0, errors.New("insert new AccountID error")
+			}
+			return item.AccountID, nil
+		} else {
+			return 0, err
+		}
+	}
+	item.AccountID++
+	_, err = db.UpdateOne(
+		context.TODO(),
+		bson.D{
+			{"_id", "default"},
+		},
+		bson.D{
+			{"$set", bson.D{
+				{"AccountID", item.AccountID},
+			}},
+		},
+	)
+	if err != nil {
+		return 0, err
+	}
+	return item.AccountID, nil
+}
+
+func (d *Dao) GetNextYuanShenUid() (uint64, error) {
+	db := d.db.Collection("player_id_counter")
+	find := db.FindOne(context.TODO(), bson.D{{"_id", "default"}})
+	item := new(model.PlayerIDCounter)
+	err := find.Decode(item)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			item := &model.PlayerIDCounter{
 				ID:       "default",
 				PlayerID: 100000001,
 			}
@@ -50,7 +88,7 @@ func (d *Dao) GetNextYuanShenUid() (uint64, error) {
 	return item.PlayerID, nil
 }
 
-func (d *Dao) InsertAccount(account *dbEntity.Account) (primitive.ObjectID, error) {
+func (d *Dao) InsertAccount(account *model.Account) (primitive.ObjectID, error) {
 	db := d.db.Collection("account")
 	id, err := db.InsertOne(context.TODO(), account)
 	if err != nil {
@@ -100,7 +138,7 @@ func (d *Dao) UpdateAccountFieldByFieldName(fieldName string, fieldValue any, fi
 	}
 }
 
-func (d *Dao) QueryAccountByField(fieldName string, fieldValue any) (*dbEntity.Account, error) {
+func (d *Dao) QueryAccountByField(fieldName string, fieldValue any) (*model.Account, error) {
 	db := d.db.Collection("account")
 	find, err := db.Find(
 		context.TODO(),
@@ -111,9 +149,9 @@ func (d *Dao) QueryAccountByField(fieldName string, fieldValue any) (*dbEntity.A
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*dbEntity.Account, 0)
+	result := make([]*model.Account, 0)
 	for find.Next(context.TODO()) {
-		item := new(dbEntity.Account)
+		item := new(model.Account)
 		err := find.Decode(item)
 		if err != nil {
 			return nil, err

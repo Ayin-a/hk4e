@@ -46,6 +46,22 @@ func NewController(dao *dao.Dao) (r *Controller) {
 	return r
 }
 
+func (c *Controller) authorize() gin.HandlerFunc {
+	return func(context *gin.Context) {
+		// TODO auth token或其他验证方式
+		ok := true
+		if ok {
+			context.Next()
+			return
+		}
+		context.Abort()
+		context.JSON(http.StatusOK, gin.H{
+			"code": "10001",
+			"msg":  "没有访问权限",
+		})
+	}
+}
+
 func (c *Controller) registerRouter() {
 	if config.CONF.Logger.Level == "DEBUG" {
 		gin.SetMode(gin.DebugMode)
@@ -130,6 +146,8 @@ func (c *Controller) registerRouter() {
 		engine.GET("/pictures/gt/a330cf996/slice/86f9db021.png", c.slicePng)
 		engine.GET("/static/ant/sprite2x.1.2.6.png", c.sprite2xPng)
 	}
+	engine.Use(c.authorize())
+	engine.POST("/gate/token/verify", c.gateTokenVerify)
 	port := config.CONF.HttpPort
 	addr := ":" + strconv.Itoa(port)
 	err := engine.Run(addr)

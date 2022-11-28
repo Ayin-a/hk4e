@@ -30,7 +30,6 @@ type Hk4e struct {
 	KcpAddr            string `toml:"kcp_addr"`
 	ResourcePath       string `toml:"resource_path"`
 	GachaHistoryServer string `toml:"gacha_history_server"`
-	LoginSdkUrl        string `toml:"login_sdk_url"`
 }
 
 // 消息队列

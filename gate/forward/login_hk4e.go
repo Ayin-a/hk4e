@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"hk4e/dispatch/controller"
+	"hk4e/pkg/httpclient"
 	"strconv"
 	"strings"
 
@@ -15,27 +17,29 @@ import (
 )
 
 func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerTokenReq) (rsp *proto.GetPlayerTokenRsp) {
-	_ = req.AccountUid
-	_ = req.AccountToken
-	tokenValid := true
-	accountForbid := false
-	accountForbidEndTime := uint32(0)
-	accountPlayerID := uint32(100000001)
-	if !tokenValid {
+	// TODO 请求sdk验证token
+	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp]("http://127.0.0.1:8080/gate/token/verify", &controller.TokenVerifyReq{
+		AccountId:    req.AccountUid,
+		AccountToken: req.AccountToken,
+	}, "")
+	if err != nil {
+		logger.LOG.Error("verify token error: %v", err)
+		return nil
+	}
+	if !tokenVerifyRsp.Valid {
 		logger.LOG.Error("token error")
 		return nil
 	}
-	// TODO 请求sdk验证token
 	// comboToken验证成功
-	if accountForbid {
+	if tokenVerifyRsp.Forbid {
 		// 封号通知
 		rsp = new(proto.GetPlayerTokenRsp)
-		rsp.Uid = accountPlayerID
+		rsp.Uid = tokenVerifyRsp.PlayerID
 		rsp.IsProficientPlayer = true
 		rsp.Retcode = 21
 		rsp.Msg = "FORBID_CHEATING_PLUGINS"
 		//rsp.BlackUidEndTime = 2051193600 // 2035-01-01 00:00:00
-		rsp.BlackUidEndTime = accountForbidEndTime
+		rsp.BlackUidEndTime = tokenVerifyRsp.ForbidEndTime
 		rsp.RegPlatform = 3
 		rsp.CountryCode = "US"
 		addr, exist := f.getAddrByConvId(convId)
@@ -47,7 +51,7 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 		rsp.ClientIpStr = split[0]
 		return rsp
 	}
-	oldConvId, oldExist := f.getConvIdByUserId(accountPlayerID)
+	oldConvId, oldExist := f.getConvIdByUserId(tokenVerifyRsp.PlayerID)
 	if oldExist {
 		// 顶号
 		f.kcpEventInput <- &net.KcpEvent{
@@ -56,14 +60,15 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			EventMessage: uint32(kcp.EnetServerRelogin),
 		}
 	}
-	f.setUserIdByConvId(convId, accountPlayerID)
-	f.setConvIdByUserId(accountPlayerID, convId)
+	// 关联玩家uid和连接信息
+	f.setUserIdByConvId(convId, tokenVerifyRsp.PlayerID)
+	f.setConvIdByUserId(tokenVerifyRsp.PlayerID, convId)
 	f.setConnState(convId, ConnWaitLogin)
 	// 返回响应
 	rsp = new(proto.GetPlayerTokenRsp)
-	rsp.Uid = accountPlayerID
+	rsp.Uid = tokenVerifyRsp.PlayerID
 	// TODO 不同的token
-	rsp.Token = req.AccountToken
+	rsp.Token = "xxx"
 	rsp.AccountType = 1
 	// TODO 要确定一下新注册的号这个值该返回什么
 	rsp.IsProficientPlayer = true
@@ -149,20 +154,16 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 }
 
 func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (rsp *proto.PlayerLoginRsp) {
-	userId, exist := f.getUserIdByConvId(convId)
-	if !exist {
-		logger.LOG.Error("can not find userId by convId")
-		return nil
+	tokenValid := false
+	// TODO 不同的token
+	if req.Token == "xxx" {
+		tokenValid = true
 	}
-	_ = userId
-	_ = req.Token
-	tokenValid := true
 	if !tokenValid {
 		logger.LOG.Error("token error")
 		return nil
 	}
-	// TODO 请求sdk验证token
-	// comboToken验证成功
+	// token验证成功
 	f.setConnState(convId, ConnAlive)
 	// 返回响应
 	rsp = new(proto.PlayerLoginRsp)

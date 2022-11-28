@@ -49,7 +49,7 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 	}
 	// payload msg
 	protoMessageList := make([]*ProtoMessage, 0)
-	p.protoDecodePayloadCore(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
+	p.protoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
 	if len(protoMessageList) == 0 {
 		logger.LOG.Error("decode proto object is nil")
 		return protoMsgList
@@ -61,25 +61,26 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 			msg.CmdId = protoMessage.cmdId
 			msg.HeadMessage = protoMsg.HeadMessage
 			msg.PayloadMessage = protoMessage.message
-			logger.LOG.Debug("[recv] union proto msg, convId: %v, cmdId: %v", msg.ConvId, msg.CmdId)
 			if protoMessage.cmdId == cmd.UnionCmdNotify {
 				// 聚合消息自身不再往后发送
+				logger.LOG.Debug("[recv union], cmdId: %v, convId: %v, headMsg: %v", msg.CmdId, msg.ConvId, msg.HeadMessage)
 				continue
 			}
-			logger.LOG.Debug("[recv] proto msg, convId: %v, cmdId: %v, headMsg: %v", protoMsg.ConvId, protoMsg.CmdId, protoMsg.HeadMessage)
 			protoMsgList = append(protoMsgList, msg)
 		}
-		// 聚合消息自身不再往后发送
-		return protoMsgList
 	} else {
 		protoMsg.PayloadMessage = protoMessageList[0].message
+		protoMsgList = append(protoMsgList, protoMsg)
 	}
-	logger.LOG.Debug("[recv] proto msg, convId: %v, cmdId: %v, headMsg: %v", protoMsg.ConvId, protoMsg.CmdId, protoMsg.HeadMessage)
-	protoMsgList = append(protoMsgList, protoMsg)
+	cmdName := ""
+	if protoMsg.PayloadMessage != nil {
+		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
+	}
+	logger.LOG.Debug("[recv], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	return protoMsgList
 }
 
-func (p *ProtoEnDecode) protoDecodePayloadCore(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
+func (p *ProtoEnDecode) protoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
 	protoObj := p.decodePayloadToProto(cmdId, protoData)
 	if protoObj == nil {
 		logger.LOG.Error("decode proto object is nil")
@@ -93,7 +94,7 @@ func (p *ProtoEnDecode) protoDecodePayloadCore(cmdId uint16, protoData []byte, p
 			return
 		}
 		for _, unionCmd := range unionCmdNotify.GetCmdList() {
-			p.protoDecodePayloadCore(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
+			p.protoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
 		}
 	}
 	*protoMessageList = append(*protoMessageList, &ProtoMessage{
@@ -103,7 +104,11 @@ func (p *ProtoEnDecode) protoDecodePayloadCore(cmdId uint16, protoData []byte, p
 }
 
 func (p *ProtoEnDecode) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
-	logger.LOG.Debug("[send] proto msg, convId: %v, cmdId: %v, headMsg: %v", protoMsg.ConvId, protoMsg.CmdId, protoMsg.HeadMessage)
+	cmdName := ""
+	if protoMsg.PayloadMessage != nil {
+		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
+	}
+	logger.LOG.Debug("[send], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	kcpMsg = new(KcpMsg)
 	kcpMsg.ConvId = protoMsg.ConvId
 	kcpMsg.CmdId = protoMsg.CmdId

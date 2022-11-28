@@ -24,7 +24,7 @@ func NewDao() (r *Dao) {
 		return nil
 	}
 	r.client = client
-	r.db = client.Database("gate_hk4e")
+	r.db = client.Database("dispatch_hk4e")
 	return r
 }
 

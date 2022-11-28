@@ -194,7 +194,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	if hostWorld.multiplayer == false {
 		g.UserWorldRemovePlayer(hostWorld, hostPlayer)
 
-		hostPlayer.TeamConfig.CurrTeamIndex = 3
+		hostPlayer.TeamConfig.CurrTeamIndex = 0
 		hostPlayer.TeamConfig.CurrAvatarIndex = 0
 
 		// PacketPlayerEnterSceneNotify
@@ -234,7 +234,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		Z: hostPlayer.Rot.Z,
 	}
 	otherPlayer.SceneId = hostPlayer.SceneId
-	otherPlayer.TeamConfig.CurrTeamIndex = 3
+	otherPlayer.TeamConfig.CurrTeamIndex = 0
 	otherPlayer.TeamConfig.CurrAvatarIndex = 0
 
 	// PacketPlayerEnterSceneNotify

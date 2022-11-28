@@ -66,12 +66,12 @@ func (k *KcpConnectManager) Start() {
 	go func() {
 		// key
 		var err error = nil
-		k.dispatchKey, err = os.ReadFile("static/dispatchKey.bin")
+		k.dispatchKey, err = os.ReadFile("key/dispatchKey.bin")
 		if err != nil {
 			logger.LOG.Error("open dispatchKey.bin error")
 			return
 		}
-		k.secretKey, err = os.ReadFile("static/secretKey.bin")
+		k.secretKey, err = os.ReadFile("key/secretKey.bin")
 		if err != nil {
 			logger.LOG.Error("open secretKey.bin error")
 			return

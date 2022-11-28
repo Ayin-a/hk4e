@@ -27,11 +27,26 @@ func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg
 	}
 	r.natsConn = conn
 	r.natsMsgChan = make(chan *nats.Msg, 10000)
-	_, err = r.natsConn.ChanSubscribe("GATE_HK4E", r.natsMsgChan)
+	_, err = r.natsConn.ChanSubscribe("GATE_CMD_HK4E", r.natsMsgChan)
 	if err != nil {
 		logger.LOG.Error("nats subscribe error: %v", err)
 		return nil
 	}
+
+	// TODO 临时写一下用来传递新的密钥后面改RPC
+	keyNatsMsgChan := make(chan *nats.Msg, 10000)
+	_, err = r.natsConn.ChanSubscribe("GATE_KEY_HK4E", keyNatsMsgChan)
+	if err != nil {
+		logger.LOG.Error("nats subscribe error: %v", err)
+		return nil
+	}
+	go func() {
+		for {
+			natsMsg := <-keyNatsMsgChan
+			logger.LOG.Error("GATE_KEY_HK4E %v", natsMsg.Data)
+		}
+	}()
+
 	r.netMsgInput = netMsgInput
 	r.netMsgOutput = netMsgOutput
 	r.cmdProtoMap = cmd.NewCmdProtoMap()
@@ -87,7 +102,7 @@ func (m *MessageQueue) startSendHandler() {
 			logger.LOG.Error("parse net msg to bin error: %v", err)
 			continue
 		}
-		natsMsg := nats.NewMsg("GS_HK4E")
+		natsMsg := nats.NewMsg("GS_CMD_HK4E")
 		natsMsg.Data = netMsgData
 		err = m.natsConn.PublishMsg(natsMsg)
 		if err != nil {

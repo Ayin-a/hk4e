@@ -97,14 +97,6 @@ func (c *Controller) registerRouter() {
 		engine.POST("/hk4e_global/combo/granter/login/v2/login", c.v2Login)
 	}
 	{
-		// BLK文件补丁下载
-		// autopatchhk.yuanshen.com
-		engine.HEAD("/client_design_data/2.6_live/output_6988297_84eeb1c18b/client_silence/General/AssetBundles/data_versions", c.headDataVersions)
-		engine.GET("/client_design_data/2.6_live/output_6988297_84eeb1c18b/client_silence/General/AssetBundles/data_versions", c.getDataVersions)
-		engine.HEAD("/client_design_data/2.6_live/output_6988297_84eeb1c18b/client_silence/General/AssetBundles/blocks/00/29342328.blk", c.headBlk)
-		engine.GET("/client_design_data/2.6_live/output_6988297_84eeb1c18b/client_silence/General/AssetBundles/blocks/00/29342328.blk", c.getBlk)
-	}
-	{
 		// 日志
 		engine.POST("/sdk/dataUpload", c.sdkDataUpload)
 		engine.GET("/perf/config/verify", c.perfConfigVerify)

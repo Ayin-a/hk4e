@@ -21,7 +21,7 @@ func NewMessageQueue(conn *nats.Conn, netMsgInput chan *cmd.NetMsg, netMsgOutput
 	r = new(MessageQueue)
 	r.natsConn = conn
 	r.natsMsgChan = make(chan *nats.Msg, 10000)
-	_, err := r.natsConn.ChanSubscribe("GS_HK4E", r.natsMsgChan)
+	_, err := r.natsConn.ChanSubscribe("GS_CMD_HK4E", r.natsMsgChan)
 	if err != nil {
 		logger.LOG.Error("nats subscribe error: %v", err)
 		return nil
@@ -75,7 +75,7 @@ func (m *MessageQueue) startSendHandler() {
 			logger.LOG.Error("parse net msg to bin error: %v", err)
 			continue
 		}
-		natsMsg := nats.NewMsg("GATE_HK4E")
+		natsMsg := nats.NewMsg("GATE_CMD_HK4E")
 		natsMsg.Data = netMsgData
 		err = m.natsConn.PublishMsg(natsMsg)
 		if err != nil {

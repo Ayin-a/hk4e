@@ -184,7 +184,7 @@ func (f *ForwardManager) kcpEventHandle() {
 func (f *ForwardManager) Start() {
 	// 读取密钥相关文件
 	var err error = nil
-	f.secretKeyBuffer, err = os.ReadFile("static/secretKeyBuffer.bin")
+	f.secretKeyBuffer, err = os.ReadFile("key/secretKeyBuffer.bin")
 	if err != nil {
 		logger.LOG.Error("open secretKeyBuffer.bin error")
 		return

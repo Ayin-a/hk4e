@@ -47,7 +47,7 @@ func (c *CommandManager) GMAddUserAvatar(userId, avatarId uint32) {
 	}
 	// 添加角色
 	c.gameManager.AddUserAvatar(userId, avatarId)
-	// todo 设置角色 等以后做到角色升级之类的再说
+	// TODO 设置角色 等以后做到角色升级之类的再说
 	//avatar := player.AvatarMap[avatarId]
 }
 
@@ -70,4 +70,14 @@ func (c *CommandManager) GMAddUserAllAvatar(userId uint32) {
 	for avatarId := range c.gameManager.GetAllAvatarDataConfig() {
 		c.GMAddUserAvatar(userId, uint32(avatarId))
 	}
+}
+
+// GMAddUserAllEvery 给予玩家所有内容
+func (c *CommandManager) GMAddUserAllEvery(userId uint32, itemCount uint32, weaponCount uint32) {
+	// 给予玩家所有物品
+	c.GMAddUserAllItem(userId, itemCount)
+	// 给予玩家所有武器
+	c.GMAddUserAllWeapon(userId, itemCount)
+	// 给予玩家所有角色
+	c.GMAddUserAllAvatar(userId)
 }

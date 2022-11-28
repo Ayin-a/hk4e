@@ -18,4 +18,5 @@ func InitConstant() {
 	InitPlayerPropertyConst()
 	InitSceneTypeConst()
 	InitEntityTypeConst()
+	InitStaminaCostConst()
 }

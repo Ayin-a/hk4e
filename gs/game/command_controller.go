@@ -247,12 +247,8 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		c.GMAddUserAllAvatar(target.PlayerID)
 		c.SendMessage(player, "已给予玩家 UID：%v, 所有角色。", target.PlayerID)
 	case "all":
-		// 给予玩家所有物品
-		c.GMAddUserAllItem(target.PlayerID, count)
-		// 给予玩家所有武器
-		c.GMAddUserAllWeapon(target.PlayerID, count)
-		// 给予玩家所有角色
-		c.GMAddUserAllAvatar(target.PlayerID)
+		// 给予玩家所有内容
+		c.GMAddUserAllEvery(target.PlayerID, count, count) // TODO 武器额外获取数量
 		c.SendMessage(player, "已给予玩家 UID：%v, 所有内容。", target.PlayerID)
 	}
 }

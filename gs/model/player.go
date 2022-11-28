@@ -64,6 +64,7 @@ type Player struct {
 	Pause                 bool                  `bson:"-"` // 暂停状态
 	SceneLoadState        int                   `bson:"-"` // 场景加载状态
 	CoopApplyMap          map[uint32]int64      `bson:"-"` // 敲门申请的玩家uid及时间
+	StaminaInfo           *StaminaInfo          `bson:"-"` // 耐力临时数据
 	ClientSeq             uint32                `bson:"-"`
 }
 
@@ -75,6 +76,7 @@ func (p *Player) GetNextGameObjectGuid() uint64 {
 func (p *Player) InitAll() {
 	p.GameObjectGuidMap = make(map[uint64]GameObject)
 	p.CoopApplyMap = make(map[uint32]int64)
+	p.StaminaInfo = new(StaminaInfo)
 	p.InitAllAvatar()
 	p.InitAllWeapon()
 	p.InitAllItem()

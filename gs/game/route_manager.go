@@ -38,6 +38,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	player := r.gameManager.userManager.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
+		r.gameManager.ReconnectPlayer(userId)
 		return
 	}
 	player.ClientSeq = clientSeq

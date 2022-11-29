@@ -1,0 +1,7013 @@
+[
+///////////////////////////////////////////////////////////
+/// Pose StateControl
+/// 2001 2011 faildown  倒地阶段  fall down core & Fruit both broken 盾值  = 0 时候，倒地；如果是从正电阶段1001倒地时，恢复时进入到1001[1001 - 2001 - 1011];如果是从负电阶段1011倒地时，恢复时进入到1011 [1001 - 2002 - 1011]; [基础状态：头部底部核心Flase]
+///	1 Alertness         战前阶段  蜷缩在那里，种子 [基础状态：头部底部核心Flase]
+///	1001 Anode State    正电阶段  头部核心Core打开，底部核心关闭，在swtich_Anode技能中完成 [基础状态：头部核心与叶片shader正常发光]
+/// 1011 Cathode state  负电阶段  底部核心关闭，头部核心打开，在swtich_Cathode技能中完成 [基础状态：头部核心与叶片shader不发光，底部叶片关闭]
+/// 5001 ReturnToBorn   脱战阶段
+// 
+//  Skill
+//
+//  ****正电阶段*** 以长后摇为主
+//
+//  砸地攻击[单次] 大范围扇形      SkillID 201
+//  三连砸地[三次] 大范围扇形      SkillID 211
+//  三连横扫攻击   近距离攻击      SkillID 221
+//  雷光吐息       大范围攻击      SkillID 231  
+//
+//  ****正负极切换**** 
+//
+//  AnodeSwtich      正级转负极   SkillID 401
+//  CathodeSwtich    负极转正级   SkillID 411
+//  CollapseAttack   湮灭反应     条件：全场 当存在正电荷 + 负电荷时，自动触发的技能
+//
+//  ****负电阶段*** 高频单次攻击                 
+//
+//  砸地攻击[单次]   	SkillID 301
+//  横扫攻击        	SkillID 311  
+//	持续雷电           SkillID 341
+//  雷弹追踪           SkillID 351   
+//  
+//  ****负电阶段*** 高频单次攻击                            
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+///
+/// 状态控制
+///
+//////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_StateControl",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					9999, 
+					5001, 
+					0, 
+					1, 
+					2, 
+					3, 
+					4
+				],
+				"modifierName": "Monster_Regisvine_Electric_FreeState",
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1001, //正
+					1011, //负
+					2001, //正电倒地
+					2011, //负电倒地
+				],
+				"modifierName": "Monster_Regisvine_Electric_FightState",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Regisvine_Electric_FreeState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISOUTOFIGHT",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Fight",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Monster_Regisvine_Electric_FightState",
+					},
+				],
+			},
+			"Monster_Regisvine_Electric_FightState": 
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISOUTOFIGHT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//核心破除次数归0
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Alerted",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Fight",
+						"value":true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Monster_Regisvine_Electric_FreeState",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_PartControlTarget_Enable",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_HitboxInitialization",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_LarseAttack_ColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Begin",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		//处理眩晕与正负状态
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_StateManager",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_Regisvine_NoFaintState_Fruit", "UNIQUE_Regisvine_FaintState_Fruit"],
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_MONSTER_REGISVINE_ISFAINT_CORE",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_Regisvine_NoFaintState_Core", "UNIQUE_Regisvine_FaintState_Core"],
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_MONSTER_REGISVINE_CORE",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_Regisvine_NoAnodeState", "UNIQUE_Regisvine_AnodeState"],
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_MONSTER_REGISVINE_FRUIT",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_Regisvine_NoCathodeState", "UNIQUE_Regisvine_CathodeState"],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Regisvine_NoFaintState_Fruit":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Set Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Faint_Fruit",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Cathode",
+						"value":false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_FaintState_Fruit":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Reset Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Faint_Fruit",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Cathode",
+						"value":true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_NoFaintState_Core":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Set Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Faint_Core",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Anode",
+						"value":false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_FaintState_Core":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Reset Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Faint_Core",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Anode",
+						"value":true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_AnodeState":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Set Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Aonde_State",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Cathode",
+						"value":false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_NoAnodeState":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Set Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Aonde_State",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Cathode",
+						"value":true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_CathodeState":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Set Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Cathode_State",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Cathode",
+						"value":true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"UNIQUE_Regisvine_NoCathodeState":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						//Reset Faint Fruit
+						"$type": "SetPoseBool",
+						"boolID": "Cathode_State",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Is_Cathode",
+						"value":false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////////////////////////////
+//
+//  减伤
+//
+///////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_DamageManager",
+		"abilityMixins": 
+		[
+			{
+				"$type" : "AttachToPoseIDMixin",
+				"poseIDs": [2001, 2011],
+				"modifierName" : "UNIQUE_Regisvine_ReduceDamageRemoved",
+			},//倒地时移除
+		],
+		"onAdded":
+		[
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"UNIQUE_Regisvine_ReduceDamage",
+			},
+			{
+				"$type" : "AttachAbilityStateResistance",
+				"resistanceListID": 13002,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Regisvine_ReduceDamage":
+			{
+				"isUnique": true,
+				"properties":
+				{
+					"Actor_PhysicalSubHurtDelta": 3,
+					"Actor_FireSubHurtDelta": 3,
+					"Actor_ElecSubHurtDelta": 3,
+					"Actor_WaterSubHurtDelta": 3,
+					"Actor_GrassSubHurtDelta": 3,
+					"Actor_WindSubHurtDelta": 3,
+					"Actor_IceSubHurtDelta": 3,
+					"Actor_RockSubHurtDelta": 3,
+				},
+			},
+			"UNIQUE_Regisvine_ReduceDamageRemoved":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_ReduceDamage",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_Regisvine_ReduceDamage",
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////////////////////////////
+//
+//  Alert 核心逻辑
+//
+///////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_AlertLogic",
+		"abilityMixins": 
+		[
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["Alert"],
+				"enterActions": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Core_Open",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Creation_AnodeCharge",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Alert_Shader",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Core_Open":
+			{
+				"duration": 1.26,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Open",
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 33159001,
+					},
+					//挚电树的原核在<color=#FF5E41FF>花冠</color>凝聚…
+				],
+			},
+			"Creation_AnodeCharge":
+			{
+				"duration": 1.35,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_Switch_Charge_Anode",
+					},
+				],
+			},
+			"Alert_Shader":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type":"SetAnimatorTrigger",
+						"triggerID":"Shader_Skill_Alert",
+						"MPTriggerOnRemote": true,
+					},
+				],
+			},
+		},
+
+	},
+},
+///////////////////////////////////////////////////////////
+///
+///	正负切换
+///
+///////////////////////////////////////////////////////////
+{
+"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Switch_Management", 
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": 
+				[
+					"Faint_AS_Cathode",
+				],
+				"modifierName": "Faint_AS_Cathode",
+			},//当起身时执行的逻辑
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": 
+				[
+					"Faint_AS_Anode",
+				],
+				"modifierName": "Faint_AS_Anode",
+			},//当起身时执行的逻辑
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [1011],
+				"modifierName": "Reset_Swtich_Anode",
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [1001],
+				"modifierName": "Reset_Swtich_Cathode",
+			},
+		],
+		"modifiers": 
+		{
+			"Cathode_Swtich_Timekeeping":
+			{
+				// "duration": 1,
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [411],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [201,211,221,231,241],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [401],
+						// "predicates": 
+						// [
+						// 	{
+						// 		"$type": "ByTargetGlobalValue",
+						// 		"key": "_FAINT_TAGS_",
+						// 		"value": 0,
+						// 		"target": "Self",
+						// 		"compareType": "Equal",
+						// 	},
+						// ],
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_FAINT_TAGS_",
+						"value": -1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true
+					},
+				],
+
+			},
+			"Anode_Swtich_Timekeeping":
+			{
+				// "duration": 1,
+				"onRemoved":
+				[
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [411],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [301,311,331,341,351],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [411],
+						// "predicates": 
+						// [
+						// 	{
+						// 		"$type": "ByTargetGlobalValue",
+						// 		"key": "_FAINT_TAGS_",
+						// 		"value": 0,
+						// 		"target": "Self",
+						// 		"compareType": "Equal",
+						// 	},
+						// ],						
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_FAINT_TAGS_",
+						"value": -1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true
+					},
+				],
+			},
+			"Faint_AS_Cathode":
+			{
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602042,
+						"target": "Self",
+						"campID": 4001,
+						"byServer": true,
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive":true,
+						"sightGroupWithOwner": true,
+					},//创建核心
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//退出倒地Pose回到正电
+					{
+						"$type":"ApplyModifier",
+						"modifierName": "Close_Core_Delay",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Faint_ShaderChange",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerLockableOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FaintPushColliderOff",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Cathode_Swtich_Timekeeping",
+					},//重置cd
+				],
+			},//退出倒地的逻辑，负极状态下
+			"Faint_AS_Anode":
+			{
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602042,
+						"target": "Self",
+						"campID": 4001,
+						"byServer": true,
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive":true,
+						"sightGroupWithOwner": true,
+					},//创建核心
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//退出倒地Pose回到正电
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Close_Core_Delay",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Faint_ShaderChange",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerLockableOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FaintPushColliderOff",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Anode_Swtich_Timekeeping",
+					},//重置cd
+				],
+			},//退出倒地的逻辑，正级状态下
+			"Reset_Swtich_Cathode":
+			{
+				"onRemoved":
+				[
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [411],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [301,311,331,341,351],
+					},
+				],
+			},
+			"Reset_Swtich_Anode":
+			{
+				"onRemoved":
+				[
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [401],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [201,211,221,231,241],
+					},
+				],
+			},
+			"Close_Core_Delay":
+			{
+				"duration": 1,
+				"thinkInterval": 0.1,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Fruit"],
+						"setEnable" : false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Core"],
+						"setEnable" : false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+				],
+			}
+		},
+	},
+},
+//主动进行正极转换
+{
+	
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Switch_Anode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Anode_Switch"],
+				"modifierName": "Swtich_Anode_Handle",
+			},
+		],
+		"onAdded": 
+		[
+		],
+		"onAbilityStart": 
+		[
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Monster_Regisvine_Switch_Anode":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Cathode",
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Swtich_Aonde",
+						"value": false,
+					},
+					{	
+						"$type": "SetPoseBool",
+						"boolID": "Switch_Cathode",
+						"value": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_CORE",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUIT",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"value": true,
+						"boolID": "Shader_Skill_Is_Cathode",
+						"canBeHandledOnRecover": true,
+					},//转换材质到负极
+				],
+				"onRemoved": 
+				[
+				],
+			},
+			"Regisvine_Electric_Core_Open":
+			{
+				"duration": 2.2,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Open",
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 33159004,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_REGIVINE_IS_FAINT_AS_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 33159002,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_REGIVINE_IS_FAINT_AS_",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+			},
+			"Regisvine_Electric_Core_Change":
+			{
+				"duration": 2,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Change",
+					},
+				],
+			},
+			"Monster_Regisvine_Switch_Charge_Anode":
+			{
+				"duration": 1.14,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_Switch_Charge_Cathode",
+					},
+				],
+			},
+			"Swtich_Anode_Handle":
+			{
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Close",
+					},//关闭核心
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Change",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Anode",
+					},//切Pose
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_Open",
+						"canBeHandledOnRecover": true,
+					},//打开核心
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Regisvine_Switch_Charge_Anode",
+					},//创建电荷
+					{
+						"$type": "SetAISkillGCD",
+						"value": 7,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAISkillGCD",
+						"value": 3,
+					},
+				]
+			},
+		},
+	},
+},
+//主动进行负极转换
+{
+	
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Switch_Cathode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cathode_Switch"],
+				"modifierName": "Swtich_Cathode_Handle",
+			},
+		],
+		"onAdded": 
+		[
+		],
+		"onAbilityStart": 
+		[
+		],
+		"modifiers": 
+		{
+			"Swtich_Cathode_Handle":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Close",
+					},//关闭核心
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Change",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Cathode",
+					},//切Pose
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_Open",
+						"canBeHandledOnRecover": true,
+					},//打开核心
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Regisvine_Switch_Charge_Cathode",
+					},//创建电荷
+						
+					{
+						"$type": "SetAISkillGCD",
+						"value": 7,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAISkillGCD",
+						"value": 3,
+					},
+				]
+			},
+			"Regisvine_Electric_Core_Open":
+			{
+				"duration": 2.2,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Regisvine_Electric_Core_Open",
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 33159001,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_REGIVINE_IS_FAINT_AS_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 33159003,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_REGIVINE_IS_FAINT_AS_",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+			},
+			"Monster_Regisvine_Switch_Charge_Cathode":
+			{
+				"duration": 1.14,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_Switch_Charge_Anode",
+					},
+				],
+			},
+			"UNIQUE_Monster_Regisvine_Switch_Cathode":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Anode",
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Swtich_Aonde",
+						"value": true,
+					},
+					{	
+						"$type": "SetPoseBool",
+						"boolID": "Switch_Cathode",
+						"value": false,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_CORE",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//关
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"value": false,
+						"boolID": "Shader_Skill_Is_Cathode",
+						"canBeHandledOnRecover": true,
+					},//转换材质到负极
+				],
+			},
+		},
+	},
+},
+// 正电荷创建
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Switch_Charge_Anode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_Switch"],
+				"startNormalizedTime" : 0.626,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+		],
+		"onAdded": 
+		[	
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_Switch_Charge_Anode_01_Creation",
+			},
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_Switch_Charge_Anode_01_Creation":
+			{
+				"duration": 1,
+				"onAdded": 
+				[	
+					{
+						"$type": "SetGlobalPos",
+						"key": "_REGISVINE_CHARGE_ANODE_01_POS",
+						"target": "Self",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": -6.25,
+								"y": 0,
+								"z": 5.86,
+							},
+							"onGround": true,
+							"alongGround": true,
+						},
+					},				
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern": 
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 2.0,
+								"fanAngle": 360.0,
+									"radius": 2.0,
+								"born": 
+								{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_REGISVINE_CHARGE_ANODE_01_POS",
+									"onGround": true,
+									"alongGround": true,
+								},
+							},
+							"attackInfo": 
+							{
+								"attackProperty": 
+								{
+									"damagePercentage": 0.4,
+									"strikeType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100,
+								},
+								"hitPattern": 
+								{
+									"hitImpulseType": "LV3",
+									// "reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": true,
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.3,
+									"shakeDistance": 20,
+								},
+							},
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602035,
+						// "target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive": true,
+						"sightGroupWithOwner": true,
+						"byServer": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_CHARGE_ANODE_01_POS",
+							"offset": 
+							{
+								"x": 0,
+								"y": 1,
+								"z": 0,
+							},											
+						},
+					},
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[1,0,0],
+					},//创建正电荷的次数与时间
+				],
+			},
+		},
+	},
+},
+// 负电荷创建
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Switch_Charge_Cathode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_Switch"],
+				"startNormalizedTime" : 0.626,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+		],
+		"onAdded": 
+		[					
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_Switch_Charge_Cathode_01_Creation",
+			},
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_Switch_Charge_Cathode_01_Creation":
+			{
+				"duration": 1,
+				"onAdded": 
+				[	
+					{
+						"$type": "SetGlobalPos",
+						"key": "_REGISVINE_CHARGE_CATHODE_01_POS",
+						"target": "Self",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 6.25,
+								"y": 0,
+								"z": 5.86,
+							},
+							"onGround": true,
+							"alongGround": true
+						},
+					},			
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern": 
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 2.0,
+								"fanAngle": 360.0,
+									"radius": 2.0,
+								"born": 
+								{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_REGISVINE_CHARGE_CATHODE_01_POS",
+									"onGround": true,
+									"alongGround": true,
+								},
+							},
+							"attackInfo": 
+							{
+								"attackProperty": 
+								{
+									"damagePercentage": 1.0,
+									"strikeType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100,
+								},
+								"hitPattern": 
+								{
+									"hitImpulseType": "LV3",
+									// "reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": true,
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.3,
+									"shakeDistance": 20,
+								},
+							},
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602036,
+						// "target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive": true,
+						"sightGroupWithOwner": true,
+						"byServer": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_CHARGE_CATHODE_01_POS",
+							"offset": 
+							{
+								"x": 0,
+								"y": 1,
+								"z": 0,
+							},											
+						},
+					},
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[1,1,0],
+					},//创建负电荷的次数与时间
+				],
+			},
+		},
+	},
+},
+///////////////////////////////////////////////////////////
+///
+///	重生 
+///
+///////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_ReturnToBorn",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [5001],
+				"modifierName": "ReturnToBorn_Start",
+			},
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["ReturnToBorn"],
+				"modifierName": "ReturnToBornHandler",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["NormalIdle"],
+				"modifierName": "Regisvine_NormalIdleState",
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value": 0,
+						"compareType": "NoneOrEqual",
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value": 0,
+						"compareType": "NoneOrEqual",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"ReturnToBorn_Start":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ReturnToBornTrigger",
+						"MPTriggerOnRemote": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+				],
+			},
+			"ReturnToBornHandler":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_KillSelf",
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "Predicated",
+						"target": "Self",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_MONSTER_REGISVINE_CORE",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "Shader_FruitUpper_State",
+								"value": 1,
+							},
+						],
+					},
+					//若是正电，摧毁核心
+					{
+						"$type": "Predicated",
+						"target": "Self",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_MONSTER_REGISVINE_FRUIT",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":
+						[
+							// {
+							// 	"$type": "SetAnimatorBool",
+							// 	"boolID": "FruitCovered",
+							// 	"value": true,
+							// },
+							{
+								"$type": "AddGlobalValue",
+								"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+								"value" : 10,
+								"useLimitRange" : true,
+								"maxValue" : 1,
+								"minValue" : 0,
+							},
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "Shader_FruitLower_State",
+								"value": 0,
+							},
+						],
+					},
+					//若是负电，摧毁核心
+					{
+						"$type": "KillServerGadget",
+						"gadgetInfo": 
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602035,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "KillServerGadget",
+						"gadgetInfo": 
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602036,
+							"sortType": "Default",
+						},
+					},
+					{
+						//RTB
+						//Reset Faint Fruit Gloval
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value": 0,
+						"doOffStage": true,
+					},
+					{
+						//RTB
+						//Reset Faint Fruit Gloval
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value": 0,
+						"doOffStage": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_CORE",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},//非正电阶段
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},//非底部阶段
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Cathode_State",
+						"value": false,
+					},
+					//Handle colliders
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FaintPushColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_LarseAttack_ColliderOff",
+					},
+					//Handle modifiers
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Cathode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Anode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Anode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Cathode",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Shader_Skill_RetrunToFree",
+						"MPTriggerOnRemote": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_CORE",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//默认头部阶段
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//非底部阶段
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISKILLED",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//默认没死
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//非正电倒地状态
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//非负电倒地状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_BROKEN",
+						"value": 0,
+						"doOffStage": true,
+					},//默认核心好好的
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ANODECHERGE_COUNT",
+						"value": 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},//正电荷数量
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_CATHODECHERGE_COUNT",
+						"value": 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},//负电荷数量
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+						"value": 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},//弱点所在位置，默认为头部
+					//_REGISVINE_ELECTRIC_COLLAPSEATTACK_HIT_
+					{
+						"$type": "SetGlobalValue",
+						"key": "_REGISVINE_ELECTRIC_COLLAPSEATTACK_HIT_",
+						"value": 0,
+					},//重置击中数
+					// //Handle Pose
+					// {
+					// 	"$type": "SetPoseBool",
+					// 	"boolID": "Aonde_State",
+					// 	"value": false,
+					// },
+					// {
+					// 	"$type": "SetPoseBool",
+					// 	"boolID": "Cathode_State",
+					// 	"value": false,
+					// },
+					//Handle colliders
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FaintPushColliderOff",
+					},
+					//Handle modifiers
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Cathode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Anode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Anode",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Regisvine_Switch_Cathode",
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_KillSelf",
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},//摧毁核心
+					{
+						"$type": "KillServerGadget",
+						"gadgetInfo": 
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602035,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "KillServerGadget",
+						"gadgetInfo": 
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602036,
+							"sortType": "Default",
+						},
+					},
+				],
+			},
+			"Regisvine_NormalIdleState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_FaintPushCollider",
+					},//移除额外碰撞
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : ["PushCollider"],
+						"setEnable" : true,
+					},//开启碰撞
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : 
+						[
+							"PushCollider_Faint01",
+							"PushCollider_Faint01_Extra",
+							"PushCollider_Head",
+						],
+						"setEnable" : false,
+					},//关闭碰撞	
+				],
+			},
+			"Regisvine_Electric_Core_KillSelf":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"KillSelf",
+						"target": "Self",
+					},
+				],
+			},
+
+		},
+	},
+},
+///////////////////////////////////////////////////////////
+///
+///	击倒
+///
+///////////////////////////////////////////////////////////
+// 负极击倒
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_Faint_Cathode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Faint_BS"],
+				"modifierName": "Open_PushColliderOn",
+			},	
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type":"DoWatcherSystemAction",
+				"watcherId":12015212,
+				"inThreatListOnly": true,
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_REGISVINE_ELECTRIC_IS_ACTIVITY_",
+						"value": 1,
+					},
+				],
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_FaintState_Cathode",
+				"target": "Self",
+			},		
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+				"value": 0,
+				"doOffStage": true,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_FaintState_Cathode" :
+			{
+				"isUnique": true,
+				"forceSyncToRemote": true,
+				"onAdded":
+				[
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[2,1,0],
+					},//负电弱点突破次数
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_ThunderBlizzardEffect",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_LarseAttack_ColliderOff",
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Cathode",
+						"value": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value": 1,
+						"doOffStage": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//核心破除次数+1
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [501,502],
+					},
+					{
+						"$type":"AttachBulletAimPoint",
+						"bulletAimPoint":"Core",
+					},
+
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+				"onKill":
+				[
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : 
+						[
+							"PushCollider_Faint01",
+							"PushCollider_Faint01_Extra",
+						],
+						"setEnable" : false,
+					},
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : ["PushCollider"],
+						"setEnable" : true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+			},
+			"Open_PushColliderOn":
+			{
+				"onAdded": 
+				[
+
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FaintPushColliderOn",
+					},
+				],
+			},
+		},
+	},
+},
+// 正极击倒
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_Faint_Anode",
+		"onAbilityStart":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_FaintState_Anode",
+				"target": "Self",
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+				"value": 0,
+				"doOffStage": true,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_FaintState_Anode" :
+			{
+				"isUnique": true,
+				"forceSyncToRemote": true,
+				"onAdded":
+				[
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[2,0,0],
+					},//正电荷状态下弱点突破次数
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_ThunderBlizzardEffect",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_LarseAttack_ColliderOff",
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Anode",
+						"value": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Regisvine_FlowerPushColliderOff",
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},//核心破除次数+1
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value": 10,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 0,
+						"doOffStage": true,
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [501,502],
+					},//初始化ItialCD = 18s
+					{
+						"$type":"AttachBulletAimPoint",
+						"bulletAimPoint":"Core",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value": -10,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 0,
+						"doOffStage": true,
+					},
+				],
+				"onKill":
+				[
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : 
+						[
+							"PushCollider_Faint01",
+							"PushCollider_Faint01_Extra",
+						],
+						"setEnable" : false,
+					},
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : ["PushCollider"],
+						"setEnable" : true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value": -10,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 0,
+						"doOffStage": true,
+					},
+				],
+			},
+		},
+	},
+},
+// 复苏控制
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_Faint_Recover",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_REGIVINE_IS_FAINT_AS_",
+				"target": "Self",
+				"value": 0,
+			},
+		],
+		"abilityMixins":
+		[
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "Faint_AS_Anode",
+				"modifierName" : "FaintRecover_Anode",
+				"target" : "Self",
+				"normalizeStart" : 0.01,
+				"normalizeEnd" : 1.0,
+			},
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "Faint_AS_Cathode",
+				"modifierName" : "FaintRecover_Cathode",
+				"target" : "Self",
+				"normalizeStart" : 0.01,
+				"normalizeEnd" : 1.0,
+			},
+		],
+		"modifiers":
+		{
+			"FaintRecover_Anode" :
+			{
+				"forceSyncToRemote": true,
+				"onAdded":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Anode",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[2,2,0],
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "FaintRecover_Mark",
+					},
+				],
+			},
+			"FaintRecover_Cathode" :
+			{
+				"forceSyncToRemote": true,
+				"onAdded":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_FaintState_Cathode",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Self",
+						"paramList":[2,2,0],
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "FaintRecover_Mark",
+					},
+				],
+			},
+			"FaintRecover_Mark" :
+			{
+				"duration": 10,
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"key": "_REGIVINE_IS_FAINT_AS_",
+						"value": 1,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"key": "_REGIVINE_IS_FAINT_AS_",
+						"value": 0,
+					},
+				],
+			},				
+		},
+	},
+},
+// 倒地时进入
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_Faint_GV",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_FAINT_TAGS_",
+				"value": 0,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_Electric_Faint_GV",
+			},
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_Electric_Faint_GV":
+			{
+				"duration": 5,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_FAINT_TAGS_",
+						"value": 1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_FAINT_TAGS_",
+						"value": -1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true
+					},
+				],
+			},
+		},
+	},	
+},
+/////////////////////////////////////////////////////////
+//
+// 核心管理
+//
+/////////////////////////////////////////////////////////
+//创建核心
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Core_Begin",
+		"onAdded":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_CORE",
+				"value" : 10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},//默认头部阶段
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_FRUIT",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},//非底部阶段
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_ISKILLED",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},//默认没死
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},//非正电倒地状态
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_ISFAINT_CORE",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},//非负电倒地状态
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_REGISVINE_CORE_IS_BROKEN",
+				"value": 0,
+				"doOffStage": true,
+			},//默认核心好好的
+			// {
+			// 	"$type": "SetGlobalValue",
+			// 	"key": "_MONSTER_REGISVINE_ANODECHERGE_COUNT",
+			// 	"value": 0,
+			// 	"useLimitRange" : true,
+			// 	"maxValue" : 1,
+			// 	"minValue" : 0,
+			// 	"doOffStage": true,
+			// },//正电荷数量
+			// {
+			// 	"$type": "SetGlobalValue",
+			// 	"key": "_MONSTER_REGISVINE_CATHODECHERGE_COUNT",
+			// 	"value": 0,
+			// 	"useLimitRange" : true,
+			// 	"maxValue" : 1,
+			// 	"minValue" : 0,
+			// 	"doOffStage": true,
+			// },//负电荷数量
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+				"value": 0,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+				"doOffStage": true,
+			},//弱点所在位置，默认为头部
+			// {
+			// 	"$type": "SetGlobalValue",
+			// 	"key": "_REGISVINE_ELECTRIC_COLLAPSEATTACK_HIT_",
+			// 	"value": 0,
+			// },//默认倍湮灭的击中次数为0
+		],
+		"onKill":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_MONSTER_REGISVINE_ISKILLED",
+				"value" : 10,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},
+
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},//正电状态
+				],
+				"successActions":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "CreateCore_Delayed_Anode",
+						"target": "Self",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			}, //正电下的核心逻辑
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal"
+					},//负电状态
+				],
+				"successActions":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "CreateCore_Delayed_Cathode",
+						"target": "Self",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+
+		],
+		"modifiers":
+		{
+			"CreateCore_Delayed_Anode": //创建头部核心，退出倒地状态
+			{
+				"duration": 2.0,
+				"onRemoved":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602042,
+						"target": "Self",
+						"campID": 4001,
+						"byServer": true,
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive":true,
+						"sightGroupWithOwner": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_CORE",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+				],
+			},
+			"CreateCore_Delayed_Cathode"://创建底部核心,退出倒地状态
+			{
+				"duration": 2.0,
+				"onRemoved":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602042,
+						"target": "Self",
+						"campID": 4001,
+						"byServer": true,
+						"lifeByOwnerV2": true,
+						// "lifeByOwnerIsAlive":true,
+						"sightGroupWithOwner": true,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_ISFAINT_FRUIT",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+				],
+			},
+		},
+	},
+},
+//开启核心
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Core_Open",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Core"],
+						"setEnable" : true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Fruit"],
+						"setEnable" : false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InCoreEffect",
+					},//开启头部核心表现
+				],
+			},//若是正电状态，打开核心
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					// {
+					// 	"$type": "SetAnimatorBool",
+					// 	"boolID": "FruitCovered",
+					// 	"value": false,
+					// },
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Fruit"],
+						"setEnable" : true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type" : "EnableHitBoxByName",
+						"hitBoxNames" : ["HitBox_Core"],
+						"setEnable" : false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InFuritEffect",
+					},//开启果实表现
+					// {
+					// 	"$type": "RemoveUniqueModifier",
+					// 	"modifierName": "UNIQUE_FruitTempClosed",
+					// },
+				],
+			},//若是负电状态，打开核心
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Regisvine_Electric_Core_InCoreEffect":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InFuritEffect",
+					},//移除负电的表现
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Core_PowerOn_Anode",
+					},//核心激活特效
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Core_Normal_Anode",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+								"target": "Self",
+								"value": 0,
+								"compareType": "Equal"
+							},
+						],
+					},//核心发光特效
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Core_Normal_02_Anode",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+								"target": "Self",
+								"value": 1,
+								"compareType": "Equal"
+							},
+						],
+					},//核心发光特效	
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitUpper_State",
+						"value": 2,
+					},//核心发光材质
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitUpper_State",
+						"value": 0,
+					},//核心微光材质
+				],
+				
+			},
+			"UNIQUE_Regisvine_Electric_Core_InFuritEffect":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InCoreEffect",
+					},//移除正电的表现
+					// {
+					// 	"$type": "SetAnimatorBool",
+					// 	"boolID": "FruitCovered",
+					// 	"value": false,
+					// },//开启叶片
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Fruit_PowerOn_Cathode",
+					},//果实激活特效
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Fruit_Normal_Cathode",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+								"target": "Self",
+								"value": 0,
+								"compareType": "Equal"
+							},
+						],
+					},//果实发光特效
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Fruit_Normal_02_Cathode",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+								"target": "Self",
+								"value": 1,
+								"compareType": "Equal"
+							},
+						],
+					},//果实发光特效
+						
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitLower_State",
+						"value": 2,
+					},//果实发光材质
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitLower_State",
+						"value": 0,
+					},//果实微光材质
+					// {
+					// 	"$type": "SetAnimatorBool",
+					// 	"boolID": "FruitCovered",
+					// 	"value": true,
+					// },//关闭叶片
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+				],
+
+			},
+		}
+	},
+},
+//核心关闭
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Core_Close",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "EnableHitBoxByName",
+				"hitBoxNames" : ["HitBox_Fruit"],
+				"setEnable" : false,
+				"otherTargets" :
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42602042,
+					"sortType": "Default",
+				},
+			},
+			{
+				"$type" : "EnableHitBoxByName",
+				"hitBoxNames" : ["HitBox_Core"],
+				"setEnable" : false,
+				"otherTargets" :
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42602042,
+					"sortType": "Default",
+				},
+			},
+			{
+				"$type": "HideUIBillBoard",
+				"hide": true,
+				"otherTargets" :
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42602042,
+					"sortType": "Default",
+				},
+			},//隐藏盾条
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InCoreEffect",
+					},//关闭核心表现
+				],
+			},//正电状态，关闭核心
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core_InFuritEffect",
+					},//关闭果实表现
+				],
+			},//负电状态，关闭核心
+		],
+	},
+},
+//核心消灭
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Core_End",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_KillSelf",
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitUpper_State",
+						"value": 1,
+					},
+				],
+			},
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					// {
+					// 	"$type": "SetAnimatorBool",
+					// 	"boolID": "FruitCovered",
+					// 	"value": true,
+					// },
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_REGISVINE_FRUITCOVERED",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Electric_Core_KillSelf",
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42602042,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Shader_FruitLower_State",
+						"value": 0,
+					},
+				],
+			},
+		],
+		"onKill":
+		[
+			{
+				"$type": "HideUIBillBoard",
+				"hide": true,
+				"otherTargets" :
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42602042,
+					"sortType": "Default",
+				},
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_Electric_Core_KillSelf",
+				"otherTargets" :
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42602042,
+					"sortType": "Default",
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Regisvine_Electric_Core_KillSelf":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"KillSelf",
+						"target": "Self",
+					},
+				],
+			},
+		},
+	},
+},
+//转移核心
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Core_Change",
+		"abilityMixins": 
+		[
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+						"value": -10,
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+					},
+				],
+			},
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Target",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+						"value":10,
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+					},
+				],
+			},
+		],
+	},
+},
+/////////////////////////////////////////////////////////
+//
+// 转向控制
+//
+/////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_SteerAttack",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Alert"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			// {
+			// 	"$type": "SteerAttackMixin",
+			// 	"steerStateIDs": ["Anode_MeleeAttack_Wave"],
+			// 	"startNormalizedTime" : 0.0,
+			// 	"endNormalizedTime" : 99,
+			// 	"angularSpeed" : 90,
+			// 	"attackTrigger" : "",
+			// 	"attackDistance" : 7.0,
+			// },
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttackCombo"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.11,
+				"angularSpeed" : 15,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttackCombo"],
+				"startNormalizedTime" : 0.22,
+				"endNormalizedTime" : 0.28,
+				"angularSpeed" : 15,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttackCombo"],
+				"startNormalizedTime" : 0.38,
+				"endNormalizedTime" : 0.45,
+				"angularSpeed" : 270,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathonde_MeleeAttack02"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.11,
+				"angularSpeed" : 15,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathonde_MeleeAttack02"],
+				"startNormalizedTime" : 0.22,
+				"endNormalizedTime" : 0.28,
+				"angularSpeed" : 15,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathonde_MeleeAttack02"],
+				"startNormalizedTime" : 0.38,
+				"endNormalizedTime" : 0.45,
+				"angularSpeed" : 270,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["LaserAttack_01_Near"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.3,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["LaserAttack_02_Near"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.3,
+				"angularSpeed" : 60,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_MeleeAttack_Wave"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.34,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_MeleeAttack_Wave"],
+				"startNormalizedTime" : 0.75,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathonde_MeleeAttack_L"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.25,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathonde_MeleeAttack_R"],
+				"startNormalizedTime" : 0.68,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttack_L"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.25,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttack_R"],
+				"startNormalizedTime" : 0.68,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_RangeAttack_BS"],
+				"startNormalizedTime" :0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_RangeAttack_Loop"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 99.0,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_RangeAttack_AS"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttack_Wave"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.25,
+				"angularSpeed" : 60,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttack_Wave"],
+				"startNormalizedTime" : 0.6,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 60,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Anode_MeleeAttack_Wave_LockOff"],
+				"startNormalizedTime" : 0.68,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+		],
+	},
+},
+///////////////////////////////////////////////////////////
+//
+// 吐息
+//
+//////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_LarseAttack_ThunderBlizzardEffect",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["LaserAttack_03"],
+				"modifierName": "Remove_Effect",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_ThunderBlizzardEffect",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_ThunderBlizzardEffect":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_BreathAttack03_Effect_Anode",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_BreathAttack03_EffectBS_Anode",
+					},
+				],
+			},
+			"Remove_Effect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_WATCHER_82134_",
+						"value": 1,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_WATCHER_82134_",
+						"value": 0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_ThunderBlizzardEffect",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_ThunderBlizzard",
+					},
+				],
+			},
+		},
+		"onKill": 
+		[
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_ThunderBlizzardEffect",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_LarseAttack_ThunderBlizzard",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["LaserAttack_03"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.125,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["LaserAttack_03"],
+				"startNormalizedTime" : 0.17,
+				"endNormalizedTime" : 0.34,
+				"angularSpeed" : 30,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_ThunderBlizzard",
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_ThunderBlizzard":
+			{
+				"duration": 2.1,
+				"isUnique": true,
+				"onAdded":
+				[
+					// {
+					// 	"$type": "ApplyModifier",
+					// 	"modifierName": "ThunderBlizzardEffect",
+					// },
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "RemoveThunderBlizzardEffect",
+					},
+				],
+				"thinkInterval":0.3,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackBox",
+								"muteHitBehindScene": true,
+								"checkHitLayerType" : "OnlyHitBox",
+								"triggerType" : "TriggerNoRepeat",
+								"ignoreMassive": true,
+								"size" :
+								{
+									"x" : 2.0,
+									"y" : 3.75,
+									"z" : 30.0,
+								},
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "BulletSourceCore",
+									"offset":
+									{
+										"x": -0.25,
+										"y": 0.0,
+										"z": -4.75,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName" : "BulletSourceCore",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+							},
+							"attackInfo":
+							{
+								// "canBeModifiedBy":"OriginOwner",
+								"attackProperty":
+								{
+									"damagePercentage": 0,
+									"strikeType": "Blunt",
+									"enBreak": 10000,
+								},//摧毁岩创生物
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"muteHitText":false,
+								},
+							},
+						},
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackBox",
+								"muteHitBehindScene": true,
+								"checkHitLayerType" : "OnlyHitBox",
+								"triggerType" : "TriggerNoRepeat",
+								"ignoreMassive": true,
+								"size" :
+								{
+									"x" : 2.0,
+									"y" : 4.0,
+									"z" : 30.0,
+								},
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "BulletSourceCore",
+									"offset":
+									{
+										"x": -0.25,
+										"y": 0.0,
+										"z": -4.75,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName" : "BulletSourceCore",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+							},
+							"attackInfo":
+							{
+								// "canBeModifiedBy":"OriginOwner",
+								"attackProperty":
+								{
+									"damagePercentage": 0.25,
+									"strikeType": "Pierce",
+									"attackType": "Range",
+									"enBreak": 100,
+									"elementDurability":25,
+									"elementType": "Electric",
+								},//摧毁岩创生物
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									"hitHaltTime": 0.0,
+									"muteHitText":false,
+								},
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.1,
+									"shakeTime": 0.1,
+									"shakeDistance": 25.0,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0,
+									},
+								},
+							},
+						},
+					},
+				],
+				"onKill":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "RemoveThunderBlizzardEffect",
+					},
+				],							
+			},
+			"RemoveThunderBlizzardEffect":
+			{
+				"duration":0.5,
+				"onAdded":
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"parameter" : "Die",
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"parameter" : "Deactivate",
+					},
+				],
+				"onRemoved":
+				[
+					// {
+					// 	"$type": "RemoveModifier",
+					// 	"modifierName": "ThunderBlizzardEffect",
+					// },
+				],
+			},		
+		},
+	},
+},
+//开启吐息期间的Collider与底部hitbox，方便玩家锁头
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_LarseAttack_ColliderOn",
+		"onAbilityStart": 
+		[
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"UNIQUE_Regisvine_LarseAttack_ColliderHeadle",
+				"target": "Self",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Regisvine_LarseAttack_ColliderHeadle":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : ["PushCollider_LayerAttack03"],
+						"setEnable" : true,
+					},				
+				],
+				"onRemoved":
+				[
+					{
+						"$type" : "EnablePushColliderName",
+						"pushColliderNames" : ["PushCollider_LayerAttack03"],
+						"setEnable" : false,
+					},
+				],
+			},
+		},
+	},
+},
+//关闭喷射期间的Collider
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_LarseAttack_ColliderOff",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Regisvine_LarseAttack_ColliderHeadle",
+			},
+		],
+	},
+},
+
+///////////////////////////////////////////////////////////
+///ThunderSeed  
+///////////////////////////////////////////////////////////
+
+//在不同位置创建雷暴
+{
+	"Default":
+	{	
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_ThunaderAttack",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cathode_ThunderSeed_BS","Cathode_ThunderSeed_Loop"],
+				"modifierName": "Monster_Regisvine_Create_Thunader_Effect",
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_ThunderSeed_BS"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_ThunderSeed_Loop"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 99.0,
+				"angularSpeed" : 80,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Cathode_ThunderSeed_AS"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" :1.0,
+				"angularSpeed" : 60,
+				"attackTrigger" : "",
+				"attackDistance" : 7.0,
+			},
+		],
+		"onAbilityStart": 
+		[	
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_ThunaderAttack_CreateInAvatar",
+			}, //追踪 
+
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_ThunaderAttack_CreateInAvatar":
+			{
+				"duration": 0.5,	
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalPos",
+						"key": "_REGISVINE_THUNDER_POS",
+						"target": "SelfAttackTarget",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornByPredicatePoint",
+							"timeForPredictive": 0.5,
+							"onGround": true,
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602037,
+						"target": "SelfAttackTarget",
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_THUNDER_POS",
+							"bornRandom":
+							{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 0,
+								"maxRandomRange": 0.5,
+							},
+							"onGround": true,												
+						},
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Regisvine_ThunaderAttack_CreateInNearly",
+					}, //远 
+				]
+			},
+			"Monster_Regisvine_ThunaderAttack_CreateInNearly":
+			{
+				"duration": 0.3,	
+				"onAdded":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602037,
+						"target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_THUNDER_POS",
+							"bornRandom":
+							{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 2,
+								"maxRandomRange": 5,
+							},
+							"onGround": true,						
+						},						
+					},
+
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalPos",
+						"key": "_REGISVINE_THUNDER_POS",
+						"target": "SelfAttackTarget",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornByPredicatePoint",
+							"timeForPredictive": 0.5,
+							"onGround": true,
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602037,
+						"target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_THUNDER_POS",
+							"bornRandom":
+							{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 2,
+								"maxRandomRange": 5,
+							},
+							"onGround": true,	
+						},						
+					},
+					// {
+					// 	"$type": "ApplyModifier",
+					// 	"modifierName": "Monster_Regisvine_ThunaderAttack_CreateInAway",
+					// },
+				]			
+			},
+			"Monster_Regisvine_ThunaderAttack_CreateInAway":
+			{
+				"duration": 0.3,	
+				"onAdded":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602037,
+						"target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_THUNDER_POS",
+							"bornRandom":
+							{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 2,
+								"maxRandomRange": 5,
+							},
+							"onGround": true,	
+						},
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalPos",
+						"key": "_REGISVINE_THUNDER_POS",
+						"target": "SelfAttackTarget",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornByPredicatePoint",
+							"timeForPredictive": 0.5,
+							"onGround": true,
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602037,
+						"target": "SelfAttackTarget",
+						"lifeByOwnerV2": true,
+						"campID": 4001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_REGISVINE_THUNDER_POS",
+							"bornRandom":
+							{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 2,
+								"maxRandomRange": 5,
+							},
+							"onGround": true,	
+						},
+					},
+				],			
+			},
+			"Monster_Regisvine_Create_Thunader_Effect":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Effect_R_Cathode",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Effect_L_Cathode",
+					},
+				],
+			},	
+		},
+	},
+},
+//雷暴预警后伤害
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Create_ThunaderDamageLogic",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_ThunaderDamage_Alert",
+			},
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_ThunaderDamage_Alert":
+			{
+				"duration": 1.0,
+				"onAdded": 
+				[
+					{
+						"$type": "FireSubEmitterEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Alert_Cathode",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+							"onGround": true,
+						},
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Regisvine_ThunaderDamage",
+					},
+				],
+			},
+			"Monster_Regisvine_ThunaderDamage":
+			{
+				"duration": 0.5,
+				"onAdded": 
+				[
+					{
+						"$type": "FireSubEmitterEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Damage_Cathode",
+						"born":
+						{	"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+							"onGround": true,
+						},
+					},
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern": 
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 2.0,
+				    		    "fanAngle": 360.0,
+				   			    "radius": 2.0,
+								"born": 
+								{
+									"$type": "ConfigBornBySelf",
+									"offset": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+									"onGround": true,
+								},
+							},
+							"attackInfo": 
+							{
+								"attackProperty": 
+								{
+									"damagePercentage": 0.4,
+									"strikeType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100,
+								},
+								"hitPattern": 
+								{
+									"hitImpulseType": "LV2",
+									// "reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.1,
+									"shakeTime": 0.3,
+									"shakeDistance": 20,
+								},
+							},
+						},
+					},
+				],
+			},
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////
+//
+// 负电头槌攻击
+//
+///////////////////////////////////////////////////////////
+//   负电冲击波子弹
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Regisvine_Cathode_MeleeAttack_Wave_Ability",
+		"onAdded":
+		[
+			{
+				"$type":"FireSubEmitterEffect",
+				"effectPattern":"Eff_Monster_Regisvine_Electric_MeleAttack01_Wave_Explode_Cathode",
+				"born":
+				{
+					"$type":"ConfigBornBySelf"
+				}
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerOnce",
+						// "height":4,
+						"radius": 2.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy":"OriginOwner",
+						"attenuationTag":"Regisvine_Cathode_MeleeAttack_Wave",
+						"attenuationGroup": "Regisvine_Common",
+						"attackProperty":
+						{
+							"damagePercentage": 0.5,
+							"strikeType": "Default",
+							"attackType": "Melee",
+							"enBreak": 100.0,
+							"elementDurability":25,
+							"elementType": "Electric",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV7",
+			          		"retreatType": "ByHitDirection",
+			          		"reboundRatio": 0,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+			          	},
+			        },
+			    },
+			},
+			{
+				"$type":"AttachModifier",
+				"modifierName":"Monster_Regisvine_Cathode_MeleeAttack_Wave_delay"
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Regisvine_Cathode_MeleeAttack_Wave_delay":
+			{
+				"duration":0.2,
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_Cathode_MeleeAttack_Wave_Damage"
+					}
+				]
+			},
+			"Monster_Regisvine_Cathode_MeleeAttack_Wave_Damage":
+			{
+
+				"duration":1.6,
+				"thinkInterval":0.2,
+				"onThinkInterval":
+				[
+					{
+						"$type":"FireSubEmitterEffect",
+						"effectPattern":"Eff_Monster_Regisvine_Electric_MeleAttack01_Wave_Explode_Cathode",
+						"born":
+						{
+							"$type":"ConfigBornBySelf"
+						}
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackCircle",
+								"triggerType" : "TriggerOnce",
+								"radius": 2,
+								"height":3,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy":"OriginOwner",
+								"attenuationTag":"Regisvine_Cathode_MeleeAttack_Wave",
+								"attenuationGroup": "Regisvine_Common",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Default",
+									"attackType": "Range",
+									"enBreak": 100.0,
+									"elementDurability":25,
+									"elementType": "Electric",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV7",
+									"retreatType": "ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				]
+			}
+		}
+	}
+},
+//   施法
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Regisvine_Cathode_MeleeAttack_Wave",
+		"onAbilityStart":
+		[
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602040,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":1.5,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":15,
+							"z":0
+						}
+					}
+				}
+			},
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602040,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":0.0,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":0,
+							"z":0
+						}
+					}
+				}
+			},
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602040,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":-1.5,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":-15,
+							"z":0
+						}
+					}
+				}
+			},
+		]
+	}
+},
+
+///////////////////////////////////////////////////////////
+//
+// 正电头槌攻击
+//
+///////////////////////////////////////////////////////////
+
+//   正电冲击波子弹
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Regisvine_Anode_MeleeAttack_Wave_Ability",
+		"onAdded":
+		[
+			{
+				"$type":"FireSubEmitterEffect",
+				"effectPattern":"Eff_Monster_Regisvine_Electric_MeleAttack01_Wave_Explode_Anode",
+				"born":
+				{
+					"$type":"ConfigBornBySelf"
+				}
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerOnce",
+						"height":4,
+						"radius": 2.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy":"OriginOwner",
+						"attenuationTag":"Regisvine_Anode_MeleeAttack_Wave",
+						"attenuationGroup": "Regisvine_Common",
+						"attackProperty":
+						{
+							"damagePercentage": 0.5,
+							"strikeType": "Default",
+							"attackType": "Range",
+							"enBreak": 100.0,
+							"elementDurability":25,
+							"elementType": "Electric",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV7",
+			          		"retreatType": "ByHitDirection",
+			          		"reboundRatio": 0,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+			          	},
+			        },
+			    },
+			},
+			{
+				"$type":"AttachModifier",
+				"modifierName":"Monster_Regisvine_Anode_MeleeAttack_Wave_delay"
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Regisvine_Anode_MeleeAttack_Wave_delay":
+			{
+				"duration":0.2,
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_Anode_MeleeAttack_Wave_Damage"
+					}
+				]
+			},
+			"Monster_Regisvine_Anode_MeleeAttack_Wave_Damage":
+			{
+
+				"duration":1.6,
+				"thinkInterval":0.2,
+				"onThinkInterval":
+				[
+					{
+						"$type":"FireSubEmitterEffect",
+						"effectPattern":"Eff_Monster_Regisvine_Electric_MeleAttack01_Wave_Explode_Anode",
+						"born":
+						{
+							"$type":"ConfigBornBySelf"
+						}
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackCircle",
+								"triggerType" : "TriggerOnce",
+								"radius": 2,
+								"height":3,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy":"OriginOwner",
+								"attenuationTag":"Regisvine_Cathode_MeleeAttack_Wave",
+								"attenuationGroup": "Regisvine_Common",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Default",
+									"attackType": "Range",
+									"enBreak": 100.0,
+									"elementDurability":25,
+									"elementType":"Electric",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV7",
+									"retreatType": "ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				]
+			}
+		}
+	}
+},
+//   施法 
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Regisvine_Anode_MeleeAttack_Wave",
+		"abilityMixins": 
+		[
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602039,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":1.5,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":15,
+							"z":0
+						}
+					}
+				}
+			},
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602039,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":0.0,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":0,
+							"z":0
+						}
+					}
+				}
+			},
+			{
+				"$type":"TriggerBullet",
+				"bulletID":42602039,
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":-1.5,
+						"y":0,
+						"z":7,
+					},
+					"direction":
+					{
+						"$type":"ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":0,
+							"y":-15,
+							"z":0
+						}
+					}
+				}
+			},
+		]
+	}
+},
+
+///////////////////////////////////////////////////////////
+///
+/// 负电雷刺攻击
+/// 
+///////////////////////////////////////////////////////////
+
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_RangeAttack_R_Cathode",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cathode_RangeAttack_BS","Cathode_RangeAttack_Loop"],
+				"modifierName": "Monster_Regisvine_RangeAttack_Cathode_Effect",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_RangeAttack_R_01_Cathode",
+			},
+		],
+		"modifiers": 
+		{
+			"Monster_Regisvine_RangeAttack_R_01_Cathode": 
+			{
+				"duration": 0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						// "trackTarget": "SelfAttackTarget",
+						"born": 
+						{
+							// "$type": "ConfigBornByAttachPoint",
+							// "attachPointTargetType": "Self",
+							// "attachPointName": "BulletSourceFarR",
+							// "offset": 
+							// {
+							// 	"x": 0,
+							// 	"y": 2,
+							// 	"z": 0,
+							// },
+							// "direction":
+							// {
+							// 	"$type":"ConfigDirectionByAttackTarget",
+							// },
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 2.42,
+								"y": 6.56,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_RangeAttack_R_02_Cathode",
+					},
+				],
+			},
+			"Monster_Regisvine_RangeAttack_R_02_Cathode": 
+			{
+				"duration": 0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						// "trackTarget": "SelfAttackTarget",
+						"born": 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 4.55,
+								"y": 4.23,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_RangeAttack_R_03_Cathode",
+					},
+				],
+			},
+			"Monster_Regisvine_RangeAttack_R_03_Cathode": 
+			{
+				"duration":0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						// "trackTarget": "SelfAttackTarget",
+						"born": 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 7.01,
+								"y": 6.31,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},		
+				],
+				"onRemoved":
+				[
+				],
+			},
+			"Monster_Regisvine_RangeAttack_Cathode_Effect":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Effect_R_Cathode",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_ThunderAttack_Effect_L_Cathode",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_RangeAttack_L_Cathode",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Regisvine_RangeAttack_L_01_Cathode",
+			},
+		],
+		"modifiers": 
+		{
+
+			"Monster_Regisvine_RangeAttack_L_01_Cathode": 
+			{
+				"duration": 0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						"born": 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": -2.360001,
+								"y": 6.31,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_RangeAttack_L_02_Cathode",
+					},
+				],
+			},
+			"Monster_Regisvine_RangeAttack_L_02_Cathode": 
+			{
+				"duration": 0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						"born": 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": -4.82,
+								"y": 4.23,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Regisvine_RangeAttack_L_03_Cathode",
+					},
+				],
+			},
+			"Monster_Regisvine_RangeAttack_L_03_Cathode": 
+			{
+				"duration":0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602032,
+						"target": "SelfAttackTarget",
+						"born": 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": -6.950001,
+								"y": 6.56,
+								"z": 4.19,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByAttackTarget",
+							},
+						},
+					},		
+				],
+				"onRemoved":
+				[
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Regisvine_RangeAttack_Bullet_Cathode",
+		"onAdded":
+		 [
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Regisvine_RangeAttack_Bullet_Cathode",
+				"target": "Self",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Regisvine_RangeAttack_Bullet_Cathode":
+			 {
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_RangeAttack_Bullet_Cathode" 
+					}
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	 {
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_RangeAttack_Bullet_Damage",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Regisvine_Electric_RangeAttack_Damage_Cathode",
+				"born": 
+				{
+					"$type": "ConfigBornByCollisionPoint"
+				},
+			},
+			{
+				"$type": "TriggerAttackEvent",
+				"targetType": "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern": 
+					{
+						"$type": "ConfigAttackSphere",
+						"triggerType": "TriggerOnce",
+						"radius": 0.5,
+						"born": 
+						{
+							"$type": "ConfigBornByCollisionPoint",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+					},
+					"attackInfo": 
+					{
+						"attackProperty": 
+						{
+							"damagePercentage": 0.4,  //基于新的
+							"strikeType": "Default",
+							"attackType": "Range",
+							"elementType": "Electric",
+							"elementDurability": 25,
+							"enBreak": 30,
+						},
+						"hitPattern": 
+						{
+							"hitImpulseType": "LV2",
+							// "reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.0,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+		],
+	},
+},
+
+///////////////////////////////////////////////////////////
+///
+/// 正负电荷逻辑
+///
+///////////////////////////////////////////////////////////
+
+// 负电荷逻辑
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Cathode_Charge_Ability",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToGlobalValueMixin",
+				"removeAppliedModifier": false,
+				"globalValueKey": "_MONSTER_REGISVINE_ANODECHERGE_COUNT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Empty_Modifier","Regisvine_Cathode_Charge_IsActivate"],
+				"globalValueTarget": "Owner",
+			},// 当场上存在正电荷时，将自身设为激活状态	
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_CHARGE_ISACTIVATE",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Empty_Modifier","Regisvine_Cathode_Charge_KissSelf"],
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier":false,
+			}, // 当自身处于激活状态时，激活一段时间后移除自身，湮灭的表现由正电荷去执行		
+		],
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValueToOverrideMap",
+				"abilityFormula": "None",
+				"globalValueKey": "_MONSTERAFFIX_ELEMENTSHIELD_DURABILITYIMPROVE",
+				"overrideMapKey": "CathodeCharge_DurabilityImprove",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key":"_CHARGE_ISACTIVATE",
+				"value": 0,
+				"useLimitRange": true,
+				"minValue": 0,
+				"maxValue": 1,
+			},//初始化，未激活
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_CHARGE_KILLBYSELF_",
+				"value": 0,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},//未自杀状态
+			{
+				"$type": "SetGlobalValue",
+				"key":"_IS_CATHODE_CHERGE",
+				"value": 1,
+				"useLimitRange": true,
+				"minValue": 0,
+				"maxValue": 1,
+			},//是负电荷
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_CathodeCherge_Count_Add_01",
+				"target": "Owner",
+			},//负电荷数量+1
+			{
+				"$type": "EnableHitBoxByName",
+				"hitBoxNames": ["HitBox"],
+				"setEnable": true,
+			},
+			{
+				"$type": "HideUIBillBoard",
+				"hide":false,
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Cathode_Charge_Effect",
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Regisvine_Cathode_Charge_ShieldBar",
+				"target": "Self",
+			},
+		],
+		"onKill": 
+		[
+			{
+				"$type": "HideUIBillBoard",
+				"hide":true,
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_CathodeCherge_Count_Add_02",
+				"target": "Owner",
+			},//负电荷数量-1
+			{
+				"$type": "EnablePushColliderName",
+				"pushColliderNames": ["PushCollider"],
+				"setEnable": false,
+			},
+			{
+				"$type": "EnableHitBoxByName",
+				"hitBoxNames": ["HitBox"],
+				"setEnable": false,
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Cathode_Hit",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_CHARGE_KILLBYSELF_",
+						"value": 0,
+						"compareType": "Equal",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Cathode_Charge_Effect":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Cathode_Born",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Regisvine_Cathode_Charge_Effect",
+					},
+				],			
+			},
+			"UNIQUE_Regisvine_Cathode_Charge_Effect":
+			{					
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Cathode",  
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName":"RootNode",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0,
+							},
+						},
+					},			
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Cathode_Activate",
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName":"RootNode",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0,
+							},
+						},
+					},//激活特效
+				],
+			},
+			"UNIQUE_Regisvine_Cathode_Charge_ShieldBar": 
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"elementType": "Electric",
+				"elementDurability": "50*%CathodeCharge_DurabilityImprove+50",
+				"modifierMixins": 
+				[
+					{
+						"$type": "ShieldBarMixin",
+						"useMutiPlayerFixData": true,
+						"onShieldBroken": 
+						[
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},
+							{
+								"$type": "ServerLuaCall",
+								"luaCallType": "OwnerFromGroup",
+								"funcName": "SLC_Activity_Boss_Watcher_Charge",
+								"paramNum": 1,
+								"param1": 0,
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Owner",
+										"key": "_REGISVINE_ELECTRIC_IS_ACTIVITY_",
+										"value": 1,
+									},
+								],
+							},//被摧毁时，发送数量统计
+							{
+								"$type":"ServerMonsterLog",
+								"target":"Owner",
+								"paramList":[1,1,1],
+							},
+							//负电荷（花）被击杀平均时长
+						],
+					},
+
+				],
+				"onAdded": 
+				[
+					{
+						"$type" : "SetSelfAttackTarget",
+						"turnToTargetImmediately" : false,
+						"otherTargets" :
+						{
+							"$type": "SelectTargetsByShape",
+							"topLimit": 1,
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "AllExceptSelf",
+							"campBasedOn": "Self",
+							"sortType": "Nearest",
+						},
+						"predicates":
+						[
+							// {
+							// 	"$type": "ByTargetType",
+							// 	"target": "OriginOwner",
+							// 	"isTarget": true,
+							// 	"targetType": "OriginOwner",
+							// },
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_IS_ANODE_CHERGE",
+								"value":0,
+								"compareType":"MoreThan",
+							},
+						],
+					},
+				],
+				"onBeingHit":
+				[
+					//根据收到的元素展现不同的受击特效
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar","Gadget","Bullet"],
+							},
+							{
+								"$type": "ByAny",
+								"predicates":
+								[
+									{
+										"$type": "ByHitElement",
+										"element": "Wind",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Ice",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Grass",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Rock",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Fire",
+										"target": "Self",
+									},
+								],
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.3,
+									"shakeTime": 0.2,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Cathode_Hit",//Eff_Monster_Invoker_Deacon_Fire_FireCoreAS
+								"born":
+								{
+									"$type":"ConfigBornByAttachPoint",
+									"attachPointName":"RootNode",
+									"offset":
+									{
+										"x":0,
+										"y":0,
+										"z":0,
+									},
+								},
+							},
+						],
+						"failActions": 
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Fire_BlazeSeed_Hit_Ineffective",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+									"direction":
+									{
+										"$type": "ConfigDirectionByBackToHitBoxCenter",
+									},
+								},
+							},
+						],
+					},
+
+				],
+				"onRemoved":
+				[	
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"Regisvine_Cathode_Charge_IsActivate":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_CHARGE_ISACTIVATE",
+						"value": 10,
+						"target": "Self",
+						"useLimitRange": true,
+						"minValue": 0,
+						"maxValue": 1,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_CHARGE_ISACTIVATE",
+						"value":-10,
+						"target": "Self",
+						"useLimitRange": true,
+						"minValue": 0,
+						"maxValue": 1,
+					},
+				],
+			},
+			"Empty_Modifier":
+			{
+
+			},
+			"Regisvine_Cathode_Charge_KissSelf":
+			{
+				"duration": 1.9,
+				"onAdded": 
+				[
+					{
+						"$type": "SetSelfAttackTarget",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"topLimit": 1,
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "AllExceptSelf",
+							"campBasedOn": "Self",
+							"sortType": "Nearest",
+						},
+						"predicates": 
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_IS_ANODE_CHERGE",
+								"value":1,
+								"compareType":"Equal",
+							},
+						],
+						"turnToTargetImmediately":true, 
+					},
+					//把负电荷设为Target
+				],
+				"onRemoved":
+				[
+					// {
+					// 	"$type": "TriggerBullet",
+					// 	"bulletID": 42602045,
+					// 	"born":
+					// 	{
+					// 		"$type": "ConfigBornBySelf",
+					// 	},
+					// },//从自身位置朝自身方向发射正电荷
+					{
+						"$type": "AddGlobalValue",
+						"target": "Self",
+						"key": "_CHARGE_KILLBYSELF_",
+						"value":10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Cathode_Charge_Collaspe_Killself",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Cathode_Charge_Effect",
+					},
+				],
+			},
+			"Regisvine_Cathode_Charge_Collaspe_Killself":
+			{
+				"duration": 0.1,
+				"onAdded": 
+				[
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42602045,
+						"ownerIs": "OriginOwner",
+						"lifeByOwnerV2": true,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},//把雷电树设为owner，从自身位置朝自身方向发射正电荷
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"Regisvine_CathodeCherge_Count_Add_01":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CATHODECHERGE_COUNT",
+						"value": 1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},//负电荷数量+1
+				],
+			},
+			"Regisvine_CathodeCherge_Count_Add_02":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CATHODECHERGE_COUNT",
+						"value": -10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},//负电荷数量-1
+				],
+			},
+
+		},
+		"abilitySpecials": 
+		{
+			"CathodeCharge_DurabilityImprove":0,
+		},		
+	},
+},
+// 正电荷逻辑
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Anode_Charge_Ability",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_CHARGE_ISACTIVATE",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Empty_Modifier","Regisvine_Anode_Charge_Collaspe_Bullet_Fire"],
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier":false,
+			}, // 判断是否处于处于激活状态
+			{
+				"$type": "AttachModifierToGlobalValueMixin",
+				"removeAppliedModifier":false,
+				"globalValueKey": "_MONSTER_REGISVINE_CATHODECHERGE_COUNT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Empty_Modifier","Regisvine_Anode_Charge_IsActivate"],
+				"globalValueTarget": "Owner",
+			},// 当场上存在负电荷时，将自身设为激活状态
+		],
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValueToOverrideMap",
+				"abilityFormula": "None",
+				"globalValueKey": "_MONSTERAFFIX_ELEMENTSHIELD_DURABILITYIMPROVE",
+				"overrideMapKey": "AnodeCharge_DurabilityImprove",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key":"_CHARGE_ISACTIVATE",
+				"value": 0,
+				"useLimitRange": true,
+				"minValue": 0,
+				"maxValue": 1,
+			},//初始化，未激活
+
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_CHARGE_KILLBYSELF_",
+				"value": 0,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},//未自杀状态
+			{
+				"$type": "SetGlobalValue",
+				"key":"_IS_ANODE_CHERGE",
+				"value": 1,
+				"useLimitRange": true,
+				"minValue": 0,
+				"maxValue": 1,
+			},//是负电荷
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_AnodeCherge_Count_Add_01",
+				"target": "Owner",
+			},
+			{
+				"$type": "EnableHitBoxByName",
+				"hitBoxNames": ["HitBox"],
+				"setEnable": true,
+			},//攻击盒
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Anode_Charge_Effect",
+				"target": "Self",
+			},//特效
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Regisvine_Anode_Charge_ShieldBar",
+				"target": "Self",
+			},//元素反应逻辑
+		],
+		"onKill": 
+		[
+			{
+				"$type": "HideUIBillBoard",
+				"hide":true,
+			},
+			{
+				"$type": "EnablePushColliderName",
+				"pushColliderNames": ["PushCollider"],
+				"setEnable": false,
+			},
+			{
+				"$type": "EnableHitBoxByName",
+				"hitBoxNames": ["HitBox"],
+				"setEnable": false,
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_AnodeCherge_Count_Add_02",
+				"target": "Owner",
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Anode_Hit",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_CHARGE_KILLBYSELF_",
+						"value": 0,
+						"compareType": "Equal",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Anode_Charge_Effect":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Anode_Born",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Regisvine_Anode_Charge_Effect",
+					},
+				],
+			},	
+			"UNIQUE_Regisvine_Anode_Charge_Effect":
+			{					
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Anode",  
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName":"RootNode",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0,
+							},
+						},
+					},			
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Anode_Activate",  
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName":"RootNode",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0,
+							},
+						},
+					},			
+				],
+			},
+			"UNIQUE_Regisvine_Anode_Charge_ShieldBar": 
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"elementType": "Electric",
+				"elementDurability": "50+50*%AnodeCharge_DurabilityImprove",
+				"modifierMixins": 
+				[
+					{
+						"$type": "ShieldBarMixin",
+						"useMutiPlayerFixData": true,
+						"onShieldBroken": 
+						[
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},
+							{
+								"$type": "ServerLuaCall",
+								"luaCallType": "OwnerFromGroup",
+								"funcName": "SLC_Activity_Boss_Watcher_Charge",
+								"paramNum": 1,
+								"param1": 1,
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Owner",
+										"key": "_REGISVINE_ELECTRIC_IS_ACTIVITY_",
+										"value": 1,
+									},
+								],
+							},//被摧毁时，发送数量统计
+							{
+								"$type":"ServerMonsterLog",
+								"target":"Owner",
+								"paramList":[1,0,1],
+							},
+							//负电荷（花）被击杀平均时长
+						],
+					},
+				],
+				"onAdded": 
+				[
+				],
+				"onBeingHit":
+				[
+					//根据收到的元素展现不同的受击特效
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar","Gadget","Bullet"],
+							},
+							{
+								"$type": "ByAny",
+								"predicates":
+								[
+									{
+										"$type": "ByHitElement",
+										"element": "Wind",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Ice",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Grass",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Rock",
+										"target": "Self",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Fire",
+										"target": "Self",
+									},
+								],
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.3,
+									"shakeTime": 0.2,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Anode_Hit",//Eff_Monster_Invoker_Deacon_Fire_FireCoreAS
+								"born":
+								{
+									"$type":"ConfigBornByAttachPoint",
+									"attachPointName":"RootNode",
+									"offset":
+									{
+										"x":0,
+										"y":0,
+										"z":0,
+									},
+								},
+							},
+						],
+						"failActions": 
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Fire_BlazeSeed_Hit_Ineffective",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+									"direction":
+									{
+										"$type": "ConfigDirectionByBackToHitBoxCenter",
+									},
+								},
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[	
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"Empty_Modifier":
+			{
+				"onAdded": 
+				[
+
+				],
+			},//空Modifier
+			"Regisvine_Anode_Charge_Collaspe_Bullet_Fire":
+			{
+				"duration":1.9,
+				"onAdded": 
+				[
+					{
+						"$type": "SetSelfAttackTarget",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"topLimit": 1,
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "AllExceptSelf",
+							"campBasedOn": "Self",
+							"sortType": "Nearest",
+						},
+						"predicates": 
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_IS_CATHODE_CHERGE",
+								"value":1,
+								"compareType":"Equal",
+							},
+						],
+						"turnToTargetImmediately":true, 
+					},//把负电荷设为selfattacktarget
+				],
+				"onRemoved":
+				[
+					// {
+					// 	"$type": "TriggerBullet",
+					// 	"bulletID": 42602044,
+					// 	"born":
+					// 	{
+					// 		"$type": "ConfigBornBySelf",
+					// 	},
+					// },//从自身位置朝负电荷方向发射正电荷
+					// {
+					// 	"$type": "TriggerBullet",
+					// 	"bulletID": 42602045,
+					// 	"target": "Self",
+					// 	"born":
+					// 	{
+					// 		"$type": "ConfigBornByTarget",
+					// 		"direction":
+					// 		{
+					// 			"$type":"ConfigBornDirectionType",
+					// 		},
+					// 	},
+					// },//从Target位置超自身位置发射负电荷
+					// {
+					// 	"$type":"ApplyModifier",
+					// 	"modifierName": "Regisvine_Anode_Charge_Collaspe_Bullet_Light",
+					// 	"target": "SelfAttackTarget",
+					// },//电荷之间连线
+					{
+						"$type": "AddGlobalValue",
+						"target": "Self",
+						"key": "_CHARGE_KILLBYSELF_",
+						"value":10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Anode_Charge_Effect",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Regisvine_Anode_Charge_Collaspe_Killself",
+					},
+				],
+			},//开始湮灭
+			"Regisvine_Anode_Charge_IsActivate":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_CHARGE_ISACTIVATE",
+						"value": 10,
+						"target": "Self",
+						"useLimitRange": true,
+						"minValue": 0,
+						"maxValue": 1,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_CHARGE_ISACTIVATE",
+						"value":-10,
+						"target": "Self",
+						"useLimitRange": true,
+						"minValue": 0,
+						"maxValue": 1,
+					},
+				],
+			},//激活自身
+			"Regisvine_Anode_Charge_Collaspe_Bullet_Light":
+			{
+				"duration": 0.6,
+				"thinkInterval": 0.2,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Collapse_Lightning",
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"attachPointTargetType":"Applier",
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+						},//在负电荷与自身间创建电火花						
+					},
+				],
+			},
+			"Regisvine_Anode_Charge_Collaspe_Killself":
+			{
+				"duration":0.1,
+				"onAdded": 
+				[
+				],
+				"onRemoved": 
+				[						
+				
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42602044,
+					"ownerIs": "OriginOwner",
+					"lifeByOwnerV2": true,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+					},
+				},//从自身位置朝负电荷方向发射正电荷
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"Regisvine_AnodeCherge_Count_Add_01":
+			{
+				"duration":1,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_ANODECHERGE_COUNT",
+						"value": 1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},//正电荷数量+1
+				],
+			},
+			"Regisvine_AnodeCherge_Count_Add_02":
+			{
+				"duration":1,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_ANODECHERGE_COUNT",
+						"value": -1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},//正电荷数量-1
+				],
+			},
+		},
+		"abilitySpecials": 
+		{
+			"AnodeCharge_DurabilityImprove":0,
+		},
+	},
+},
+// 正电子弹，触发湮灭
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Anode_Charge_Collapse_Bullet",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "FIND_OTHER_BULLET",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Empty_Modifier","Bullet_Light"],
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier":false,
+			},
+		],
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_COLLAPSE_ANODE_BULLET",
+				"value": 1,
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "FIND_OTHER_BULLET",
+				"value": 0,
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+			},
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Bullet_Anode",  
+				"born":
+				{
+					"$type":"ConfigBornByAttachPoint",
+					"attachPointName":"RootNode",
+					"offset":
+					{
+						"x":0,
+						"y":0,
+						"z":0,
+					},
+				},
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Bullet_Light_Time",
+			},			
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Bullet"],
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_COLLAPSE_CATHODE_BULLET",
+						"value": 1,
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42602046,
+						"ownerIs": "OriginOwner",
+						"lifeByOwnerV2": true,
+						"campID": 4001,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					{
+						"$type":"ServerMonsterLog",
+						"target":"Owner",
+						"paramList":[3,0,0],
+					},
+					//正负电荷爆炸（湮灭）次数
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Bullet_Light":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetSelfAttackTarget",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"topLimit": 1,
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "Alliance",
+							"campBasedOn": "Self",
+							"sortType": "Nearest",
+						},
+						"predicates": 
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_COLLAPSE_CATHODE_BULLET",
+								"value":1,
+								"compareType":"Equal",
+							},
+						], 
+					},
+					//把负电荷设为selfattacktarget
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Collapse_Lightning",
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"attachPointTargetType":"Applier",
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+						},//在负电荷与自身间创建电火花						
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName": "Regisvine_Anode_Charge_Collaspe_Bullet_Light",
+						"target": "SelfAttackTarget",
+					},
+					//电荷之间连线
+				],
+			},
+			"Regisvine_Anode_Charge_Collaspe_Bullet_Light":
+			{
+				"duration": 0.65,
+				"thinkInterval": 0.15,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Collapse_Lightning",
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"attachPointTargetType":"Applier",
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+						},//在负电荷与自身间创建电火花						
+					},
+				],				
+			},
+			"Bullet_Light_Time":
+			{
+				"duration": 0.3,
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"key": "FIND_OTHER_BULLET",
+						"value": 1,
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+					},
+				],
+			},
+			"Empty_Modifier":
+			{
+
+			},
+		},
+	},
+}, 
+// 负电子弹，选择自毁
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Cathode_Charge_Collapse_Bullet",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_COLLAPSE_CATHODE_BULLET",
+				"value": 1,
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+			},
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Regisvine_Electric_Charge_Bullet_Cathode",  
+				"born":
+				{
+					"$type":"ConfigBornByAttachPoint",
+					"attachPointName":"RootNode",
+					"offset":
+					{
+						"x":0,
+						"y":0,
+						"z":0,
+					},
+				},
+			},			
+		],
+		"onAbilityStart": 
+		[
+			
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Bullet"],
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_COLLAPSE_ANODE_BULLET",
+						"value": 1,
+					},
+				],//接触到激活状态的子弹，杀死自己
+				"successActions":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+	},
+}, 
+
+///////////////////////////////////////////////////////////
+///
+/// 树的核心逻辑
+///
+///////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_CoreGadget",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToGlobalValueMixin",
+				"globalValueKey":"_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"globalValueTarget": "Owner",
+				"modifierNameSteps": ["UNIQUE_CorePos_IsCore","UNIQUE_CorePos_IsFruit"],
+				"removeAppliedModifier": true,
+			},// 检测Owner的GV，调整弱点的位置
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValueToOverrideMap",
+				"abilityFormula": "None",
+				"globalValueKey": "_MONSTERAFFIX_ELEMENTSHIELD_DURABILITYIMPROVE",
+				"overrideMapKey": "ElementShield_DurabilityImprove",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+				"value": 0,
+				"useLimitRange": true,
+				"minValue": 0,
+				"maxValue": 1,
+			},//初始化挂点位置：头部
+			{
+				"$type" : "EnableHitBoxByName",
+				"hitBoxNames" : ["HitBox_Core"],
+				"setEnable" : true,
+			},//初始化HitBox位置：核心
+			{
+				"$type": "HideUIBillBoard",
+				"hide": false,
+			}, //开启盾条显示
+			{				
+				"$type":"SetOverrideMapValue",
+				"overrideMapKey":"CoreElementDurability",
+				"value": 400.0,
+				"target": "Self",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"target": "Owner",
+						"value": 0,
+						"compareType": "Equal",
+					},
+				],
+			},//当破盾次数=0时，盾值400
+			{				
+				"$type":"SetOverrideMapValue",
+				"overrideMapKey":"CoreElementDurability",
+				"value": 200.0,
+				"target": "Self",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_MONSTER_REGISVINE_BORNTIMESCOUNT",
+						"target": "Owner",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+			},///当破盾次数=1时，盾值200
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Regisvine_Electric_Core",
+				"target": "Self",
+			},//弱点逻辑
+		],
+		"modifiers":
+		{
+			"UNIQUE_Regisvine_Electric_Core":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"forceSyncToRemote": true,
+				"elementType": "Electric",
+				"elementDurability": "%CoreElementDurability+%ElementShield_DurabilityImprove*%CoreElementDurability",
+				"modifierMixins":
+				[
+					{
+						"$type": "ShieldBarMixin",
+						"useMutiPlayerFixData": true,
+						"onShieldBroken":
+						[
+							{
+								"$type": "DoWatcherSystemAction",
+								"target": "Owner",
+								"inThreatListOnly": true,
+								"watcherId": 82134,
+								"predicates":
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Owner",
+										"key": "_WATCHER_82134_",
+										"value": 1,
+										"compareType": "Equal",
+									},
+								],
+							},
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},//震屏
+							{
+								//进入击晕Animator状态
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "FaintTrigger",
+								"target": "Owner",
+								"MPTriggerOnRemote": true,
+							},//进入倒地动画
+							{
+								"$type": "Predicated",
+								"target": "Owner",
+								"targetPredicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_MONSTER_REGISVINE_CORE",
+										"value": 1,
+										"compareType": "Equal"
+									},//核心在头部时
+								],
+								"successActions": 
+								[
+									{
+										"$type": "TriggerAbility",
+										"abilityName": "Monster_Regisvine_Electric_Faint_Anode",
+										"target": "Owner",
+									},//开始倒地
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Monster_Regisvine_Electric_Core_Break_Anode",
+										"born":
+										{
+											"$type": "ConfigBornByCollisionPoint",
+										},
+										"target": "Owner",
+									},//核心爆裂特效
+									{
+										"$type": "RemoveUniqueModifier",
+										"modifierName": "UNIQUE_Regisvine_Electric_Core_InCoreEffect",
+										"target": "Owner",
+									},//移除核心的开启表现
+									{
+										"$type" : "EnableHitBoxByName",
+										"hitBoxNames" : ["HitBox_Core"],
+										"target": "Owner",
+										"setEnable" : false,
+									},
+									{
+										"$type" : "EnableHitBoxByName",
+										"hitBoxNames" : ["HitBox_Core_Lockable"],
+										"target": "Owner",
+										"setEnable" : false,
+									},
+									{
+										"$type" : "EnableHitBoxByName",
+										"hitBoxNames" : ["HitBox_Core_Critical"],
+										"target": "Owner",
+										"setEnable" : true,
+									},								
+								],
+							},//当是正电状态时
+							{
+								"$type": "Predicated",
+								"target": "Owner",
+								"targetPredicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_MONSTER_REGISVINE_FRUIT",
+										"value": 1,
+										"compareType": "Equal"
+									},//核心在底部时
+								],
+								"successActions": 
+								[
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Monster_Regisvine_Electric_Fruit_Break_Cathode",
+										"born":
+										{
+											"$type": "ConfigBornByCollisionPoint",
+										},
+										"target": "Owner",
+									},//核心爆裂特效
+									{
+										"$type": "TriggerAbility",
+										"abilityName": "Monster_Regisvine_Electric_Faint_Cathode",
+										"target": "Owner",
+									},//开始倒地逻辑
+									{
+										"$type": "RemoveUniqueModifier",
+										"modifierName": "UNIQUE_Regisvine_Electric_Core_InFuritEffect",
+										"target": "Owner",
+									},//移除果实的开启表现														
+								],
+							},//当是负电状态时
+						],
+					},
+				],
+				"onAdded":
+				[
+				],
+				"onBeingHit":
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates": 
+						[
+							{
+								"$type" : "ByAny",
+								"predicates" :
+								[
+									{
+										"$type": "ByHitElement",
+										"element": "Fire",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Ice",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Water",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Wind",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Rock",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Grass",
+									},
+								],
+							},//除雷外任一元素
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+								"target": "Self",
+								"value": 0,
+								"compareType": "Equal",
+							},//当核心位于头部时候
+						],
+						"successActions":
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Electric_Core_Hit_Anode",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+									"direction":
+									{
+										"$type": "ConfigDirectionByBackToHitBoxCenter",
+									},
+								},
+							},//播放头部核心受到特效
+						],
+					},				
+					{
+						"$type": "Predicated",
+						"targetPredicates": 
+						[
+							{
+								"$type" : "ByAny",
+								"predicates" :
+								[
+									{
+										"$type": "ByHitElement",
+										"element": "Fire",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Ice",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Water",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Wind",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Rock",
+									},
+									{
+										"$type": "ByHitElement",
+										"element": "Grass",
+									},
+								],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+								"target": "Self",
+								"value": 1,
+								"compareType": "Equal",
+							},//当核心位于底部的时候
+						],
+						"successActions":
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Electric_Fruit_Hit_Cathode",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+								},
+							},
+						],
+					},
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "FruitWeaknessBeHit",
+						"target": "Owner",
+						"MPTriggerOnRemote": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+								"target": "Self",
+								"value": 1,
+								"compareType": "Equal",
+							},//当核心位于底部的时候
+						],
+					},
+					{
+						//进入击晕Animator状态
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CoreWeaknessBeHit",
+						"target": "Owner",
+						"MPTriggerOnRemote": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+								"target": "Self",
+								"value": 0,
+								"compareType": "Equal",
+							},//当核心位于头部的时候
+						],
+					},
+				],// 正负电下的核心受击表现
+				"onKill":
+				[
+					//被杀时销毁自身
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Regisvine_Electric_Core",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"UNIQUE_CorePos_IsCore":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+						"value": -10,
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+					},
+					{
+						"$type": "SetFollowMove",
+						"attachPoint":"Core",
+						"followRotation":true,
+					},//将挂点置为Fruit
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_CorePos_IsFruit",
+					},
+				],
+			},
+			"UNIQUE_CorePos_IsFruit":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE_IS_INFRUIT",
+						"value": 10,
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+					},
+					{
+						"$type": "SetFollowMove",
+						"attachPoint":"Fruit_CorePos",
+						"followRotation":true,
+					},//将挂点置为Fruit
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_CorePos_IsCore",
+					},
+				],
+			},
+		},
+		"abilitySpecials" :
+		{
+			"CoreElementDurability" : 400.0,
+			"ElementShield_DurabilityImprove":0,
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////
+///
+/// 湮灭逻辑
+///
+///////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_CollapseAttack",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Regisvine_Electric_CollapseAttack_Effect",
+			},
+		],
+		"modifiers": 
+		{
+			"Regisvine_Electric_CollapseAttack_Effect":
+			{
+				"duration": 1.5,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Collapse_BS", 
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName": "Regisvine_Electric_CollapsAttack_UseSkill",
+						"target": "CasterOriginOwner",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Collapse_Damage", 
+					},
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR30H5",
+							"centerBasedOn": "Self",
+							"campTargetType": "Enemy",
+							"campBasedOn": "Self",
+						},
+						"modifierName": "Regisvine_Electric_CollapseAttack_Damage",
+					},
+					{
+						"$type": "ActCameraShake",
+						"cameraShake": 
+						{
+							"shakeType": "CustomVector",
+							"shakeRange": 0.48,
+							"shakeTime": 0.36,
+							"shakeDistance": 30.0,
+							"shakeDir": 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+						},
+					},
+
+				],
+			},
+			"Regisvine_Electric_CollapseAttack_Damage":
+			{
+				"duration": 1.0,
+				"onAdded": 
+				[
+					{
+						"$type": "DamageByAttackValue",
+						"attacker": "Caster",
+						"attackInfo": 
+						{
+							"attackProperty": 
+								{
+									"damagePercentage": 3, 
+									"strikeType": "Default",
+									"attackType": "Range",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 5000,
+								},
+								"hitPattern": 
+								{
+									"hitImpulseType": "LV7",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.3,
+									"shakeTime": 0.2,
+									"shakeDistance": 40,
+								},
+						},
+					},
+					{
+						"$type": "DoWatcherSystemAction",
+						"watcherId": 82132,
+						"authorityOnly": true,
+						"predicates": [
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar"]
+							}
+						]
+					}
+				],
+			},
+			"Regisvine_Electric_CollapsAttack_UseSkill":
+			{
+				"duration": 1,
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_REGISVINE_ELECTRIC_COLLAPSEATTACK_HIT_",
+						"value": 1,
+					},//被击中时计数
+				]
+			},
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////
+///
+/// 材质控制
+///
+///////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Regisvine_Electric_Faint_ShaderChange",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions": 
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Anode",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			{
+				"$type": "Predicated",
+				"target": "Self",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions": 
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "Shader_Skill_Faint_Cathode",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+		],
+	},
+},
+
+///////////////////////////////////////////////////////////
+///
+/// 受击逻辑
+///
+///////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_BeHitEffect",
+		"onAdded": 
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Regisvine_Electric_BeHitEffect",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Regisvine_Electric_BeHitEffect":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onBeingHit": 
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByNot",
+								"predicates":
+								[
+									{
+										"$type": "ByAny",
+										"predicates": 
+										[
+											{
+												"$type": "ByHitBoxName",
+												"hitBoxNames": ["HitBox_Core"],
+											},
+											{
+												"$type": "ByHitBoxName",
+												"hitBoxNames": ["HitBox_Fruit"],
+											},
+										],
+									},
+								],
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Regisvine_Fire_BlazeSeed_Hit_Ineffective",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+									"direction":
+									{
+										"$type": "ConfigDirectionByBackToHitBoxCenter",
+									},
+								},
+							},
+
+						],
+					},
+				],
+			},
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////
+/// 
+/// 死亡逻辑
+///
+///////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_DieEffect",
+		"onAdded": 
+		[
+
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Regisvine_Electric_Core_InCoreEffect",
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Regisvine_Electric_Core_InFuritEffect",
+			},
+			{
+				"$type": "Predicated",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_MONSTER_REGISVINE_CORE",
+						"value": 1,
+						"compareType": "Equal"
+					},//核心在头部时
+				],
+				"successActions": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Die_01_Anode",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Die_02_Anode",
+					},
+				],
+			},//正电下死亡
+			{
+				"$type": "Predicated",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_MONSTER_REGISVINE_FRUIT",
+						"value": 1,
+						"compareType": "Equal"
+					},//核心在头部时
+				],
+				"successActions": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Die_01_Cathode",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Regisvine_Electric_Die_02_Cathode",
+					},
+				],//负电下死亡
+			},
+		],
+	},
+},
+
+///////////////////////////////////////////////////////////
+/// 
+/// 3.0 Activity Watcher
+///
+///////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Regisvine_Electric_Activity_WatcherHandle",
+		"isDynamicAbility": true,
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_REGISVINE_ELECTRIC_IS_ACTIVITY_",
+				"value": 1,
+			},//标记为活动，只有这个Gv = 1时，逻辑中的watcher才生效
+		],
+		"onKill": 
+		[
+			{
+				"$type":"DoWatcherSystemAction",
+				"watcherId":12015211,
+				"inThreatListOnly": true,
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Self",
+						"key": "_REGISVINE_ELECTRIC_COLLAPSEATTACK_HIT_",
+						"value": 0,
+						"compareType": "NoneOrEqual",
+					},
+				],
+			},//Watcher:不被湮灭击中的情况下，击败Boss
+		],
+	},
+},
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "MonsterAffix_Regisvine_Electric_Faint_AS",
+		"isDynamicAbility": true,
+		"onAdded": 
+		[
+			{
+				"$type": "UseSkillEliteSet",
+				"skillEliteSetID": 1,
+			},
+		]
+	},
+},
+
+]

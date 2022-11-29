@@ -1,0 +1,1 @@
+main_id = 22114sub_ids = {	2211401,	2211402,	2211403,	2211404,	2211405,}finish_action = {	CLIENT = { },	SERVER = { },}fail_action = {	CLIENT = { },	SERVER = { },}cancel_action = {	CLIENT = { },	SERVER = 	{		QUEST_EXEC_DEL_ALL_SPECIFIC_PACK_ITEM = 		{			{ "100485", },			{ "100486", },		},	},}

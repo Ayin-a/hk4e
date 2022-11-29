@@ -1,0 +1,2688 @@
+[
+
+//-----------------------------------迷城战线一期------------------------------------//
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_FallingBuff",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarHandle",
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type": "ClearGlobalValue",
+					"doOffStage": true,
+					"target": "Self",
+					"key": "_Ability_SuperTrial_FallingBuff_BuffCount",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarHandle":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags":
+									[
+										"FallingAttack"
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"doOffStage": true,
+									"target": "Caster",
+									"key": "_Ability_SuperTrial_FallingBuff_AttackCount",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 0,
+									"maxValue": "%Value_OnceCount",
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"target": "Caster",
+									"modifierName": "CheckCount",
+								},
+							],
+						},
+					],
+				},
+				"CheckCount":
+				{
+					"duration": 0.1,
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_Ability_SuperTrial_FallingBuff_AttackCount",
+							"overrideMapKey": "Temp_Count",
+						},
+						{
+							"$type": "Repeated",
+							"repeatTimes": "%Temp_Count",
+							"actions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"doOffStage": true,
+									"target": "CurTeamAvatars",
+									"key": "_Ability_SuperTrial_FallingBuff_BuffCount",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 0,
+									"maxValue": "%Value_MaxCount",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"target": "Caster",
+							"doOffStage": true,
+							"globalValueKey": "_Ability_SuperTrial_FallingBuff_BuffCount",
+							"overrideMapKey": "Value_BuffCount",
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarBuff",
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarBuff",
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarBuff_AvatarTimer",
+						},
+						{
+							"$type": "ClearGlobalValue",
+							"doOffStage": true,
+							"target": "CurTeamAvatars",
+							"key": "_Ability_SuperTrial_FallingBuff_AttackCount",
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarBuff":
+				{
+					"duration": "%Value_Time",
+					"isUnique": true,
+					"state": "AttackUp",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "ShowBuffEffect",
+						},
+					],
+					"properties":
+					{
+						"Actor_AttackRatio": "%Value_AttackRate*%Value_BuffCount",
+					}
+				},
+				"ShowBuffEffect":
+				{
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_SuperTrial_Buff",
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_FallingBuff_AvatarBuff_AvatarTimer":
+				{
+					"duration": "%Value_Time",
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onRemoved":
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"doOffStage": true,
+							"key": "_Ability_SuperTrial_FallingBuff_BuffCount",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.06,
+				"Value_BuffCount": 0,
+				"Value_OnceCount": 10,
+				"Value_MaxCount": 10,
+				"Value_Time": 30,
+				"Temp_Count": 0,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_FallingBuff------下落攻击击中怪物时，根据怪物数量，给全队叠加攻击力加成的buff，最多计入X个，持续X秒，触发冷却X秒
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_FallingAreaAttack",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "CurLocalAvatarMixin",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_FallingAreaAttack_Avatar",
+				},
+			],
+			"onAdded":
+			[
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_FallingAreaAttack_Avatar":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags":
+							[
+								"FallingAttack"
+							],
+							"damagePercentageRatio": "%Value_DamageRate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AreaAttackCD": 1,
+				"Value_DamageRate": 1.2,
+				"Value_DamageSystemValue": 0,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_FallingAreaAttack------下落攻击时触发一个大范围无属性冲击波，对周围的敌人造成伤害，冷却X秒
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_ShieldDamageUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_Handler",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "_Ability_SuperTrial_ShieldDamageUp_Check",
+					"removeAppliedModifier": true,
+					"valueSteps":
+					[
+						-0.5,
+						0.5,
+						1.5
+					],
+					"modifierNameSteps":
+					[
+						"UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_NoBuff",
+						"UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_HasBuff",
+					],
+				},
+			],
+			"modifiers":
+			{
+				//通过Modifier上的Interval间隔检测自身是否有护盾进行属性增减
+				"UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_Handler":
+				{
+					"isUnique": true,
+					"thinkInterval": 1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHasShield",
+									"type": "All",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"doOffStage": true,
+									"key": "_Ability_SuperTrial_ShieldDamageUp_Check",
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 1,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"doOffStage": true,
+									"key": "_Ability_SuperTrial_ShieldDamageUp_Check",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_NoBuff":
+				{
+					"isUnique": true,
+
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_ShieldDamageUp_HasBuff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"state": "AttackUp",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "ShowBuffEffect",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Value_AttackRate",
+						},
+					],
+				},
+				"ShowBuffEffect":
+				{
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_SuperTrial_Buff",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_ShieldDamageUp------处于护盾庇护下的角色伤害提升
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_GainShieldAreaAttack",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "DoActionByGainCrystalSeedMixin",
+					"elementTypes":
+					[
+						"Fire",
+						"Water",
+						"Electric",
+						"Ice",
+					],
+					"actions":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "TriggerGainShieldAreaAttack",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_ActivityAbility_SuperTrial_GainShieldAttack_CD",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"TriggerGainShieldAreaAttack":
+				{
+					"duration": 0.1,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_GainShieldAttack_TeamCD",
+							"target": "Team",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Stages_GainWave_01",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Applier",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 4,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%Value_DamageRate*%Value_DamageSystemValue",
+										"ignoreAttackerProperty": true,
+										"elementDurability": 0,
+										"enBreak": 0,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "",
+										"hitImpulseType": "LV1", //Light x200 y0
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.00,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_GainShieldAttack_TeamCD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Value_AreaAttackCD",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_GainShieldAttack_CD",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_GainShieldAttack_CD",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AreaAttackCD": 1,
+				"Value_DamageRate": 4,
+				"Value_DamageSystemValue": 0,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_GainShieldAreaAttack------拾取元素晶片时，触发一个能量波对周围的敌人造成无属性伤害
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_HealingDamageUp",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToPredicateMixin",
+					"onEvent": "HP",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_HealingDamageUp_Buff",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetHPRatio",
+							"HPRatio": "%Value_HpRate",
+							"logic": "GreaterOrEqual",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_HealingDamageUp_Buff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"state": "AttackUp",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "ShowBuffEffect",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Value_AttackRate",
+						},
+					],
+				},
+				"ShowBuffEffect":
+				{
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_SuperTrial_Buff",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_HpRate": 0.9,
+				"Value_AttackRate": 0.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_HealingDamageUp-----角色血量高于90%时，获得增伤buff
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_HealingReviveElemEnergy",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "DoActionByEventMixin",
+					"type": "Current",
+					"onEvent": "HPUp",
+					"actions":
+					[
+						{
+							"$type": "ReviveElemEnergy",
+							"doOffStage": true,
+							"target": "CurTeamAvatars",
+							"value": "%Value_ReviveElemEnergy",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_ActivityAbility_SuperTrial_HealingReviveElemEnergy_CD",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_HealingReviveElemEnergy_TeamCD",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_HealingReviveElemEnergy_TeamCD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Value_CD",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_HealingReviveElemEnergy_CD",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_HealingReviveElemEnergy_CD",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_ReviveElemEnergy": 3,
+				"Value_CD": 1.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_HealingReviveElemEnergy-----回复生命时，回复全队少量能量
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_ElementMasteryUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_ElementMasteryUp",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_ElementMasteryUp":
+				{
+					"isLimitedProperties": true,
+					"stacking": "Unique",
+					"isUnique": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Value_Delta",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_Delta": 300,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_ElementMasteryUp------全角色加X点精通
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_ElementReactionAttack",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"type": "Both",
+					"range": 20, //感觉范围20差不多
+					"entityTypes":
+					[
+						"Monster"
+					],
+					"reactionTypes":
+					[
+						"Explode",
+						"Stream",
+						"Burning",
+						"Melt",
+						"Freeze",
+						"Shock",
+						"Superconductor",
+						"SwirlFire",
+						"SwirlWater",
+						"SwirlElectric",
+						"SwirlIce",
+						"CrystallizeWater",
+						"CrystallizeElectric",
+						"CrystallizeIce",
+						"CrystallizeFire"
+					],
+					"actions":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "TriggerElementReactionAttack",
+							"target": "Other",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_ElementReactionAttack_CD",
+									"target": "Team",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_ElementReactionAttack_TeamCD",
+							"target": "Team",
+						},
+					],
+				}, //一个检测发生了元素反应的mixin
+			],
+
+			"onAdded":
+			[
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"doOffStage": true,
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"modifiers":
+			{
+				"TriggerElementReactionAttack":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Stages_GainWave_01",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Applier",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 4,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%Value_DamageRate*%Value_DamageSystemValue",
+										"ignoreAttackerProperty": true,
+										"elementDurability": 0,
+										"enBreak": 0,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "",
+										"hitImpulseType": "LV1", //Light x200 y0
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.00,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+
+				"UNIQUE_ActivityAbility_SuperTrial_ElementReactionAttack_TeamCD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Value_AreaAttackCD",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_ElementReactionAttack_CD",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_ElementReactionAttack_CD",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_DamageRate": 4,
+				"Value_DamageSystemValue": 0,
+				"Value_AreaAttackCD": 1,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_ElementReactionAttack------造成反应时，在反应位置形成一个小范围能量冲击波造成无属性伤害，每种反应独立计算一个X秒的CD
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_MeleeDamageUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_MeleeDamageUp_Buff",
+					"predicates":
+					[
+						{
+							"$type": "ByAvatarWeaponType",
+							"weaponTypes":
+							[
+								"WEAPON_CLAYMORE",
+								"WEAPON_POLE",
+								"WEAPON_SWORD_ONE_HAND"
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_MeleeDamageUp_Buff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"state": "AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags":
+							[
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+								"ExtraAttack",
+								"FallingAttack",
+							],
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Value_AttackRate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.75,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_MeleeDamageUp----长柄、单手剑、双手剑（近战）武器类型角色加伤
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_MeleeAreaAttack",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_MeleeAreaAttack_Avatar",
+					"predicates":
+					[
+						{
+							"$type": "ByAvatarWeaponType",
+							"weaponTypes":
+							[
+								"WEAPON_CLAYMORE",
+								"WEAPON_POLE",
+								"WEAPON_SWORD_ONE_HAND"
+							],
+						},
+					],
+				},
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"doOffStage": true,
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_MeleeAreaAttack_Avatar":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags":
+									[
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack"
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_MeleeAreaAttack_CD",
+									"target": "Team",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "TriggerMeleeAreaAttack",
+									"target": "CurLocalAvatar",
+								},
+							],
+						},
+					],
+				},
+				"TriggerMeleeAreaAttack":
+				{
+					"duration": 0.1,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_MeleeAreaAttack_TeamCD",
+							"target": "Team",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Stages_GainWave_01",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Applier",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 4,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%Value_DamageRate*%Value_DamageSystemValue",
+										"ignoreAttackerProperty": true,
+										"elementDurability": 0,
+										"enBreak": 0,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "",
+										"hitImpulseType": "LV1", //Light x200 y0
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.00,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_MeleeAreaAttack_TeamCD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Value_AreaAttackCD",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_MeleeAreaAttack_CD",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_MeleeAreaAttack_CD",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AreaAttackCD": 2,
+				"Value_DamageRate": 4,
+				"Value_DamageSystemValue": 0,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_MeleeAreaAttack------下落攻击时触发一个大范围无属性冲击波，对周围的敌人造成伤害，冷却X秒
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RangeNoEnemyAttackUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_Team",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_Team":
+				{
+					"isUnique": true,
+					"thinkInterval": 1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_HasEnemy",
+							"value": 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR5",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "CurLocalAvatar",
+								"sortType": "Nearest", //从近开始选
+							},
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_HasEnemy",
+									"value": 1,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_HasEnemy",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_AvatarBuff",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_AvatarBuff",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyAttackUp_AvatarBuff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"state": "AttackUp",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "ShowBuffEffect",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Value_AttackRate",
+						},
+					],
+				},
+				"ShowBuffEffect":
+				{
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_SuperTrial_Buff",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.75,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RangeNoEnemyAttackUp  范围X米内没有敌人时，获得增伤
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_Team",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_Team":
+				{
+					"isUnique": true,
+					"thinkInterval": 1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_HasEnemy",
+							"value": 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR5",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "CurLocalAvatar",
+								"sortType": "Nearest", //从近开始选
+							},
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_HasEnemy",
+									"value": 1,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_HasEnemy",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_AvatarBuff_01",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_AvatarBuff_01",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_AvatarBuff_01":
+				{
+					"isUnique": true,
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs":
+							[
+								"SprintBS",
+								"Sprint",
+								"LiquidStrike_BS",
+								"LiquidStrike_BS1",
+								"LiquidStrike_Move",
+								"LiquidStrike_Stand"
+							],
+							"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_AvatarBuff_02",
+						},
+					],
+					"isLimitedProperties": true,
+					"state": "SpeedUp",
+					"properties":
+					{
+						"Animator_MoveSpeedRatio": "%Value_SpeedRate",
+					}
+				},
+				"UNIQUE_ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction_AvatarBuff_02":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CostStaminaRatio": "%Value_CostStaminaRatio",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_SpeedRate": 0.2,
+				"Value_CostStaminaRatio": -0.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RangeNoEnemyStaminaReduction  范围X米内没有敌人时，角色移速增加，冲刺体力消耗降低
+
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomRevive",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RandomRoomRoomRevive",
+					"target": "Self",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_RandomRoomRoomRevive":
+				{
+					"isUnique": true,
+					"duration": 1,
+					"onAdded":
+					[
+						{
+							"$type": "ReviveDeadAvatar",
+							"target": "AllPlayerAvatars",
+							"amountByTargetMaxHPRatio": "%Value_Hp",
+							"isReviveOtherPlayerAvatar": false,
+						},
+						{
+							"$type": "HealHP",
+							"amountByCasterMaxHPRatio": "%Value_Hp",
+							"target": "CurTeamAvatars",
+						},
+						{
+							"$type": "DebugLog",
+							"content": "OnAdded:ActivityAbility_SuperTrial_RandomRoomRevive!!!!!!!!!!!",
+						},
+					],
+				},
+			},
+
+			"abilitySpecials":
+			{
+				"Value_Hp": 1,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_Revive 完成挑战后，复活队伍中所有阵亡角色，并将全体角色血量恢复至一定百分比
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomAttackUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_SuperTrial_RandomRoomAttackUp",
+					"target": "Caster",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_SuperTrial_RandomRoomAttackUp":
+				{
+					"state": "AttackUp",
+					"stacking": "Multiple",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Value_AttackRate",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RandomRoomAttackUp 完成挑战后，提升全体角色的基础攻击力
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomSpeedUp",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_SuperTrial_RandomRoomSpeedUp",
+					"target": "Caster",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_SuperTrial_RandomRoomSpeedUp":
+				{
+					"state": "SpeedUp",
+					"stacking": "Multiple",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_MoveSpeedRatio": "%Value_SpeedRate",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_SpeedRate": 0.2,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RandomRoomSpeedUp 完成挑战后，提升全体角色的基础攻击力
+
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomRevive_Copy",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_ActivityAbility_SuperTrial_RandomRoomRoomRevive",
+					"target": "Self",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ActivityAbility_SuperTrial_RandomRoomRoomRevive":
+				{
+					"isUnique": true,
+					"duration": 1,
+					"onAdded":
+					[
+						{
+							"$type": "ReviveDeadAvatar",
+							"target": "Self",
+							"amountByTargetMaxHPRatio": "%Value_Hp",
+							"isReviveOtherPlayerAvatar": false,
+						},
+						{
+							"$type": "HealHP",
+							"amountByCasterMaxHPRatio": "%Value_Hp",
+							"target": "CurTeamAvatars",
+						},
+						{
+							"$type": "DebugLog",
+							"content": "OnAdded:ActivityAbility_SuperTrial_RandomRoomRevive!!!!!!!!!!!",
+						},
+					],
+				},
+			},
+
+			"abilitySpecials":
+			{
+				"Value_Hp": 1,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_Revive_Copy 完成挑战后，复活队伍中所有阵亡角色，并将全体角色血量恢复至一定百分比
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomAttackUp_Copy",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_SuperTrial_RandomRoomAttackUp",
+					"target": "Caster",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_SuperTrial_RandomRoomAttackUp":
+				{
+					"state": "AttackUp",
+					"stacking": "Multiple",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Value_AttackRate",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_AttackRate": 0.5,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RandomRoomAttackUp_Copy 完成挑战后，提升全体角色的基础攻击力
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_SuperTrial_RandomRoomSpeedUp_Copy",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_SuperTrial_RandomRoomSpeedUp",
+					"target": "Caster",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_SuperTrial_RandomRoomSpeedUp":
+				{
+					"state": "SpeedUp",
+					"stacking": "Multiple",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_MoveSpeedRatio": "%Value_SpeedRate",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Value_SpeedRate": 0.2,
+			},
+		},
+	}, //ActivityAbility_SuperTrial_RandomRoomSpeedUp_Copy 完成挑战后，提升全体角色的基础攻击力
+//----------------------------------------------------------------------------------//
+
+
+//-----------------------------------迷城战线二期------------------------------------//
+
+	//角色攻击处于冻结状态下的敌人时，造成伤害额外提升XX%
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_1",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_Level1_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_Level1_Handler_OnTeam":  //Team上的处理逻辑
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level1_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":  //tick保证死亡角色也能回复
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level1_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level1_Handler_OnAvatar":  //对冰冻中的敌人伤害提升
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Override_Ratio",
+							"predicates":
+							[
+								{
+									"$type": "ByHasAbilityState",
+									"abilityState": "ElementFrozen",
+									"target": "Target",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+			},
+		},
+	},
+
+	//角色感电反应伤害提升XX%；对敌方造成感电反应时，全队角色元素战技及爆发冷却时间降低1秒，该效果6秒触发一次
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_2",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_Level2_CdMinus_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+							{
+								"$type": "AttachModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+							{
+								"$type": "AttachModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+							{
+								"$type": "AttachModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+							{
+								"$type": "AttachModifier",
+								"modifierName": "MistTrial_Level2_ShockDamageUp",
+								"target": "CurTeamAvatars",
+								"doOffStage": true,
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_Level2_CdMinus_Handler_OnTeam":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level2_CdMinus_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level2_CdMinus_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level2_CdMinus_Handler_OnAvatar":  //触发感电反应减少全队CD
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["Shock",],
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_CdMinus_OnTeam",
+									"target": "Team",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_MistTrial_CdMinus_OnTeam":  //处理CD减少间隔
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CD_Interval",
+					"onAdded":
+					[
+						// {
+						// 	"$type": "ModifyAvatarSkillCD",
+						// 	"skillSlot": [2],
+						// 	"cdDelta": "-1*%CD_Minus",
+						// 	"target": "CurTeamAvatars",
+						// 	"doOffStage": true,
+						// },
+						{
+							"$type": "ReviveElemEnergy",
+							"value": "%Energy",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+						},
+						{
+							"$type":"ModifyAvatarSkillCD",
+							"skillSlot": [5],
+							"cdDelta": "-1*%CD_Minus",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+						},
+					],
+				},
+				"MistTrial_Level2_ShockDamageUp":   //感电伤害提升固定百分比
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemReactElectricDelta": "%Override_Ratio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+
+				"CD_Interval": 0,  //触发间隔
+				"CD_Minus": 0,   //CD减少时间
+				"Energy": 0,     //回复能量值
+			},
+		},
+	},
+
+	//触发融化或蒸发反应时，释放一次冲击波造成范围伤害，至多XX秒触发一次
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_3",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"key": "System_Damage",
+					"type": "ElementLevelCo",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_Level3_Melt_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_Level3_Melt_Handler_OnTeam":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level3_Melt_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level3_Melt_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level3_Melt_Handler_OnAvatar":  //触发融化时造成冲击波特效
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["Melt", "Stream"],
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Melt_OnTeam",
+									"target": "Team",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_MistTrial_Melt_OnTeam":  //冲击波及间隔控制
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CD_Interval",
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "CurLocalAvatar",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 5.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%System_Damage*%Override_Ratio",
+										"ignoreAttackerProperty": true,
+										"ignoreModifyDamage": true,
+										"trueDamage": true,
+										"elementType": "None",
+										"elementDurability": 0,
+										"enBreak": 0,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "",
+										"hitImpulseType": "LV1", //Light x200 y0
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"System_Damage": 0,    //不导表，大世界等级
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+				"CD_Interval": 0,   //触发间隔
+			},
+		},
+	},
+
+	//每次触发超载/超导/扩散/结晶，伤害提升XX%，持续XX秒；每种效果独自叠加计时
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_4",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_Level4_Reaction_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_Level4_Reaction_Handler_OnTeam":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level4_Reaction_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level4_Reaction_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level4_Reaction_Handler_OnAvatar":   //触发各种反应的中转站
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["Explode"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Explode",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Explode",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["Superconductor"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Superconductor",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Superconductor",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["SwirlFire", "SwirlWater", "SwirlElectric", "SwirlIce"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Swirl",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Swirl",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["CrystallizeFire", "CrystallizeWater", "CrystallizeElectric", "CrystallizeIce"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Crystal",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Buff_Crystal",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_MistTrial_Buff_Explode":  //超载反应导致的伤害加成
+				{
+					"isUnique": true,
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddHurtDelta": "%Override_Ratio",
+					},
+				},
+				"UNIQUE_MistTrial_Buff_Superconductor":  //超导反应导致的伤害加成
+				{
+					"isUnique": true,
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddHurtDelta": "%Override_Ratio",
+					},
+				},
+				"UNIQUE_MistTrial_Buff_Swirl":  //扩散反应导致的伤害加成
+				{
+					"isUnique": true,
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddHurtDelta": "%Override_Ratio",
+					},
+				},
+				"UNIQUE_MistTrial_Buff_Crystal":  //结晶反应导致的伤害加成
+				{
+					"isUnique": true,
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddHurtDelta": "%Override_Ratio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+				"Duration": 0,
+			},
+		},
+	},
+
+	//角色释放元素爆发，全队角色元素爆发伤害提升XX%，一直存在至多提升10层；达到10层时额外提升攻速、移速
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_5",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_MistTrial_BurstLevel",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_Level5_Charge_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+						],
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "_ABILITY_MistTrial_BurstLevel",
+					"valueSteps": [-0.5, 9.5, 10.5],
+					"modifierNameSteps": ["Blank", "MistTrial_Level5_FullBurst_OnTeam"],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_Level5_Charge_Handler_OnTeam":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level5_Charge_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_MistTrial_BurstDamageUp_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level5_Charge_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_MistTrial_BurstDamageUp_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level5_Charge_Handler_OnAvatar":  //全队角色充能叠层
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerUltimateSkill":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"key": "_ABILITY_MistTrial_BurstLevel",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 0,
+									"maxValue": 10,
+									"target": "Team",
+								},
+								{
+									"$type": "SetGlobalValueToOverrideMap",
+									"globalValueKey": "_ABILITY_MistTrial_BurstLevel",
+									"overrideMapKey": "Burst_Level",
+									"target": "Team",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_MistTrial_BurstDamageUp_OnAvatar":  //元素爆发伤害提升（单次地城永久存在）
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": ["Elemental_Burst"],
+							"damagePercentageRatio": "%Override_Ratio*%Burst_Level",
+						},
+					],
+				},
+				"MistTrial_Level5_FullBurst_OnTeam":   //充满能量层时攻速和移速提升
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level5_FullBurst_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":   //需要间隔Tick一下，避免角色死亡复活时吃不到Buff
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_Level5_FullBurst_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_Level5_FullBurst_OnAvatar":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_AttackSpeedRatio": "%AttackSpeed_Ratio",
+						"Animator_MoveSpeedRatio": "%MoveSpeed_Ratio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Burst_Level": 0,      //不导表，用于记录充能层数
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+				"AttackSpeed_Ratio": 0,  //攻速提升
+				"MoveSpeed_Ratio": 0,    //移速提升
+			},
+		},
+	},
+
+	//触发扩散反应全队攻击力提升XX%，持续XX秒
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_MistTrial_Level_6",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "MistTrial_SwirlAttackUp_Handler_OnTeam",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ServerUpdateGlobalValueMixin",
+					"key": "SGV_ABILITY_Mist_Level",
+					"useLimitRange": true,
+					"minValue": 1,
+					"maxValue": 4,
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_ABILITY_Mist_Level",
+					"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+					"modifierNameSteps": ["Blank", "Blank", "Blank", "Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv1",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv2",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv3",
+							},
+						],
+						[
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "Override_Ratio",
+								"value": "%Damage_Ratio_Lv4",
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"MistTrial_SwirlAttackUp_Handler_OnTeam":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_SwirlAttackUp_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "MistTrial_SwirlAttackUp_Handler_OnAvatar",
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"MistTrial_SwirlAttackUp_Handler_OnAvatar":  //角色触发扩散反应攻击力提升XX%
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": ["SwirlFire", "SwirlWater", "SwirlElectric", "SwirlIce"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName":"UNIQUE_MistTrial_Swirl_AttackUp",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_MistTrial_Swirl_AttackUp",
+									"target": "CurTeamAvatars",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_MistTrial_Swirl_AttackUp":  //扩散造成攻击提升Buff
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Duration",
+					"abilityState": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Override_Ratio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Override_Ratio": 0,   //不导表，用于转换伤害百分比
+				"Damage_Ratio_Lv1": 0,
+				"Damage_Ratio_Lv2": 0,
+				"Damage_Ratio_Lv3": 0,
+				"Damage_Ratio_Lv4": 0,
+				"Duration": 0,  			//攻击力Buff时间
+			},
+		},
+	},
+
+	//普通怪物血量上限提升
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "MonsterAffix_Property_HpUp_01_ForMistTrial",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_MonsterAffix_Property_HpUp_01_ForMistTrial",
+				},
+			],
+			"modifiers" : 
+			{
+				"UNIQUE_MonsterAffix_Property_HpUp_01_ForMistTrial":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"properties":
+					{
+						"Actor_MaxHPRatio": "%HPUpRatio",
+					},
+				},
+			},
+			"abilitySpecials": 
+			{
+				"HPUpRatio": 0.0,
+			},
+		},
+	},
+	//Boss血量上限提升
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "MonsterAffix_Property_HpUp_02_ForMistTrial",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_MonsterAffix_Property_HpUp_02_ForMistTrial",
+				},
+			],
+			"modifiers" : 
+			{
+				"UNIQUE_MonsterAffix_Property_HpUp_02_ForMistTrial":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"properties":
+					{
+						"Actor_MaxHPRatio": "%HPUpRatio",
+					},
+				},
+			},
+			"abilitySpecials": 
+			{
+				"HPUpRatio": 0.0,
+			},
+		},
+	},
+]

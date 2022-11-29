@@ -1,0 +1,7313 @@
+[
+// 稻妻-少男-岩-弓 五郎 技能配置
+// 
+// 	by AQ
+// 
+//Index
+//
+//*************************  普通攻击  ****************************************************
+//普攻_01:Avatar_Gorou_ShootArrow_01 
+//普攻_02:Avatar_Gorou_ShootArrow_02
+//普攻_03:Avatar_Gorou_ShootArrow_03
+//普攻_04:Avatar_Gorou_ShootArrow_04 
+//普攻子弹拖尾轻：Avatar_Gorou_ShootArrow_Light_Material
+//普攻子弹拖尾重：Avatar_Gorou_ShootArrow_Heavy_Material
+//下落攻击：Avatar_Gorou_FallingAnthem
+
+//*************************  瞄准射击  ****************************************************
+//瞄准模式下点击和蓄力:Avatar_Gorou_AimPressShoot
+//蓄力期间特效表现:Avatar_Gorou_ShootAimingArrow_Charge
+//蓄力点击发射：Avatar_Gorou_ShootArrow_Aiming
+//蓄力未完成箭(物理）：Sara_AimingArrow_WithoutElectric
+//蓄力完成箭（岩）：Bullet_Sara_ShootArrow_WithElectric
+
+//*************************  元素战技  ****************************************************
+//元素战技长短按判断：Avatar_Gorou_ElementalArt_SkillHoldCharge
+//元素战技短按：Avatar_Gorou_ElementalArt
+//元素战技领域效果：SkillObj_Gorou_FieldLand_LogicHanler
+//元素战技特效管理：SkillObj_Gorou_FieldLand_EffectHanler
+
+//*************************  元素爆发  ****************************************************
+//元素爆发: Avatar_Gorou_ElementalBurst
+//元素爆发Gagdget【伤害逻辑】：SkillObj_Gorou_BurstFieldLand
+//元素爆发领域Gadget【领域光环效果和其他逻辑管理】：SkillObj_Gorou_BurstFieldLand_Halo
+//元素爆发狗子：SkillObj_Gorou_BurstFieldLand_Dog
+
+  //*************************  天赋命之座新增 ability  ****************************************************
+  //命之座2  Avatar_Gorou_Constellation_2 大招状态下每次拾取元素结晶都会使持续时间延长1秒，最多触发3次。
+
+////////////////////////////////////////////////////////////////
+//
+//  箭的表现
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_Arrow_FX",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"Aim",
+						"FastAim",
+					],
+					"modifierName": "Gorou_Arrow_FX",
+				},
+			],
+			"modifiers":
+			{
+				"Gorou_Arrow_FX":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow",
+						},
+						{
+								"$type": "DebugLog", 
+								"content": "##箭的表现",
+						}
+
+					]
+				}
+			}
+		}
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  蓄力射击【长按普攻键】
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_PressShoot",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10551,
+					"chargeTime": 0.2,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 100,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetCameraLockTime",
+							"lockTime": 0.3,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10554,
+							"isHold": true,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 101,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10551,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10553,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10554,
+							"isHold": true,
+						},
+					],
+					"chargeStateIDs":
+					[
+						"ShootBS",
+						"Shoot",
+						"FastAim",
+						"FastAimShoot"
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FastAim",
+						"FastAimShoot"
+					],
+					"modifierName": "KeepFastAiming",
+				},
+				{
+					// 当快速瞄准射击结束时，会设置FastAimShootFinish，使得动画从FastAim状态出来，同时会通过FastAimShooting防止在射击过程中点击了瞄准按钮直接退出
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FastAimShoot"
+					],
+					"modifierName": "SetFastAimShooting",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ShootBS",
+						"FastAim",
+						"FastAimShoot"
+					],
+					"modifierName": "SetNeedAimEndStates",
+				},
+			],
+			"modifiers":
+			{
+				"KeepFastAiming":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAiming",
+							"value": true,
+						},
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.755,
+								"y": 0.17,
+								"z": -1.9
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.755,
+								"y": 0.37,
+								"z": -1.6
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold": 360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov": 30,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAiming",
+							"value": false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"SetFastAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "AimEnd",
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorBool",
+									"parameter": "FastAiming",
+									"value": true
+								},
+							]
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				}
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  R键瞄准
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_AimPressShoot",
+			"abilityMixins":
+			[
+				//点按瞄准键
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10553,
+					"chargeTime": 0,
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10551,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10553,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10554,
+							"isHold": true,
+						},
+					],
+					//如果进入了这里配置的State以外的State，则调用Cancel逻辑
+					"chargeStateIDs":
+					[
+						"Aim",
+						"AimShoot"
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"Aim",
+						"AimShoot"
+					],
+					"modifierName": "KeepAiming",
+				},
+				{
+					// 通过AimShooting防止在射击过程中点击了瞄准按钮直接退出
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"AimShoot"
+					],
+					"modifierName": "SetAimShooting",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"Aim",
+						"AimShoot"
+					],
+					"modifierName": "SetNeedAimEndStates",
+				},
+			],
+			"modifiers":
+			{
+				"KeepAiming":
+				{
+					"onAdded":
+					[
+						//将动画状态机设置为瞄准状态
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Aiming",
+							"value": true,
+						},
+						//进入瞄准镜头
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.755,
+								"y": 0.17,
+								"z": -1.9
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.755,
+								"y": 0.37,
+								"z": -1.6
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold": 360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov": 30,
+						},
+						//如果处于大招状态下，把狗子的特效隐藏
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Hide",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_Shirou",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Aiming",
+							"value": false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+						//重新显示
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "ExitHide",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_Shirou",
+						},
+					],
+				},
+				"SetAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": false,
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				}
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  蓄力期间特效表现
+//
+//////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootAimingArrow_Charge",
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachToStateIDMixin",//蓄力时记录蓄力的层数
+					"stateIDs": [ "Aim", "FastAim" ],
+					"modifierName": "ShootAimingArrow_Charge_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin", //播放瞄准蓄力特效
+					"stateIDs": [ "Aim", "AimShoot" ],
+					"modifierName": "ShowAimingEffect",
+				},
+				{
+					"$type": "AttachToStateIDMixin", //播放瞄准蓄力特效。
+					"stateIDs": [ "FastAim", "FastAimShoot" ],
+					"modifierName": "ShowAimingEffect",
+				},
+				{
+					"$type": "AttachToStateIDMixin",//用于在离开蓄力状态时，清楚蓄力的特效及相关的标记
+					"stateIDs": [ "Aim", "FastAim", "FastAimShoot", "AimShoot" ],
+					"modifierName": "ShootAimingArrow_Charge_Remove",
+				},
+				//用于处理瞄准状态下护盾特效半透
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"AimLoop",
+					"modifierName":"Aim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"FastAimLoop",
+					"modifierName":"FastAim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},				
+			],
+			"onAbilityStart": 
+			[
+				////////////射完了记得清一下标记及相关特效////////////////////////////////////
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Enchanted_Time",
+					"value": -5,
+					"useLimitRange": true,
+					"maxValue": 5,
+					"minValue": 0,
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "AimChargeMark",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "RockMagic_Arrow_Glow_Once",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "RockMagic_Arrow_Glow_WithoutWind_Once",
+				},
+				//////////////////////////////////////////////////////////////////////////
+			],
+			"modifiers": 
+			{
+				"ShootAimingArrow_Charge_Handler": 
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "AimChargeMark",
+						},
+					],
+				},
+				"ShootAimingArrow_Charge_Remove": 
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": -5,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "AimChargeMark",
+						}
+					],
+				},
+				"AimChargeMark": 
+				{
+					"stacking": "MultipleRefreshNoRemove",
+					"stackingOption": 
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						},
+					],
+				},
+				"ShowAimingEffect": 
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "RockMagic_Arrow_Glow_WithoutWind_Once",							
+						}
+					],
+					"thinkInterval": 0.1,
+					//判断蓄力时间播不同的特效
+					"onThinkInterval": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "RockMagic_Arrow_Glow_Once",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 4,
+									"forceByCaster": true,
+									"compareType": "MoreThanAndEqual",
+								},
+							]
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "RockMagic_Arrow_Glow_WithoutWind_Once",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 1,
+									"forceByCaster": true,
+									"compareType": "Equal",
+								},
+							]
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "RockMagic_Arrow_Glow_Once",
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "RockMagic_Arrow_Glow_WithoutWind_Once",
+						}
+					]
+				},
+				"RockMagic_Arrow_Glow_Once": //带元素
+				{
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ExtraAttack_Glow_Once_02",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ExtraAttack_Glow_Loop_02",
+						},
+					]
+				},
+				"RockMagic_Arrow_Glow_WithoutWind_Once": //不带元素
+				{
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ExtraAttack_Glow_Once_01",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ExtraAttack_Glow_Loop_01",
+						},
+					]
+				},
+				"Aim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+				"FastAim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+			},
+		},
+	}, //Avatar_Ambor_ShootAimingArrow_Charge
+
+////////////////////////////////////////////////////
+//      蓄力箭逻辑     //////////////////////////////
+////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_Aiming",
+			"onAbilityStart": 
+			[
+				{
+					//判断蓄力时间
+					"$type": "Predicated",
+					"target": "Self",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 3,
+							"forceByCaster": true,
+							"compareType": "LessAndEqual",
+						},
+					],
+					"successActions":
+					[
+						{
+							//蓄力时间不足时则射出普通的物理箭
+							"$type": "TriggerBullet",
+							"bulletID": 41055010,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "WeaponL",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+								}
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ElectricMagic_ShootArrow",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "WeaponR",
+								"offset":
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": 0.9, // + means forward, - means backward
+								}
+							},
+						}, //FireEffect
+					],
+					"failActions":
+					[
+						{
+							//岩属性蓄力箭
+							"$type": "TriggerBullet",
+							"bulletID": 41055011,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "WeaponL",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+								}
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 4,
+									"forceByCaster": true,
+									"compareType": "MoreThanAndEqual",
+								},
+							]
+						}, //TriggerBullet
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_OnShooting",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "WeaponR",
+								"offset":
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": 0.9, // + means forward, - means backward
+								}
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 4,
+									"forceByCaster": true,
+									"compareType": "MoreThanAndEqual",
+								},
+							]
+						}, //FireEffect
+					],
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	}, 
+   
+////////////////////////////////////////////////////////////////
+//
+//  无属性蓄力箭子弹  Bullet_Gorou_AimingArrow_WithoutRock  /////
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Bullet_Gorou_AimingArrow_WithoutRock",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Fly_Big",
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene": 
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",
+						"surfaceEffect": 
+						{
+							"Water": "Eff_Arrow_Hit_Water"
+						}
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": 
+							{
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0,
+							},
+							"born": 
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"attenuationTag": "ExtraAttack",
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty": 
+							{
+								"damagePercentage": "%DamageWithoutRock",
+								"strikeType": "Pierce",
+								"elementType": "None",
+								"enBreak": 10,
+								"enHeadBreak": 30,
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern": 
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"bulletWane": 
+							{
+								"waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval": 0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio": 0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval": 0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin": "Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio": 0.1,
+								"elementDurabilityWaneInterval": 0.05,
+								"elementDurabilityWaneRatio": 0.1,
+								"elementDurabilityWaneMinRatio": 0.1,
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+
+			},
+			"abilitySpecials": 
+			{
+				"DamageWithoutRock":0,
+			},
+		},
+	},
+   
+///////////////////////////////////////////////////////////////
+//
+//  岩属性蓄力箭子弹 Bullet_Gorou_AimingArrow_Rock  ////////////
+//
+//////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Bullet_Gorou_AimingArrow_Rock",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Rock_Fly_Trail",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Rock_Fly_Particle",
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene": 
+					{
+						"defaultEffect": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Rock_Hit",
+						"surfaceEffect": 
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": 
+							{
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0,
+							},
+							"born": 
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{						
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty": 
+							{
+								"damagePercentage": "%DamageWithRock",
+								"strikeType": "Pierce",
+								"enBreak": 20,
+								"enHeadBreak": 60,
+								"elementType":"Rock",
+								"elementDurability":25,
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Rock_Hit",
+								"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern": 
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head_Rock",
+									"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"bulletWane": 
+							{
+								"waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval": 0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio": 0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval": 0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin": "Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio": 0.1,
+								"elementDurabilityWaneInterval": 0.05,
+								"elementDurabilityWaneRatio": 0.1,
+								"elementDurabilityWaneMinRatio": 0.1,
+							},
+						}
+					},
+				},
+			],
+			"abilitySpecials": 
+			{
+				"DamageWithRock": 0,
+			},
+		},
+	},
+
+	///////////////////普攻平射/////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_01",
+			"onAbilityStart":
+			[
+				{
+					"$type": "DebugLog", 
+					"content": "##触发普攻",
+				},
+				{
+					//以RootNode点为基准从固定点发射
+					"$type": "TriggerBullet",
+					"bulletID": 41055001,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.086,
+							"y": 0.976,
+							"z": 0.695,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Small",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.086,
+							"y": 0.976,
+							"z": 0.695,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	//普攻第二击
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_02",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41055002,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0,
+							"y": 0.906,
+							"z": 0.474,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Small",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0,
+							"y": 0.906,
+							"z": 0.474,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	//第三四击的动画幅度大，为了防止帧数不稳定的时候发射位置不对写死了一个点把箭射出去
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_03",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41055003,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0.025,
+							"y": 1.106,
+							"z": 0.493,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Big",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0.025,
+							"y": 1.106,
+							"z": 0.493,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_04",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41055004,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.128,
+							"y": 0.986,
+							"z": 0.716,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Big",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.128,
+							"y": 0.986,
+							"z": 0.716,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_05",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41056005,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName": "FocusAnchor",
+							"attachPointTargetType": "Self",
+						}
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Venti_ShootArrow_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+
+			},
+		},
+	},
+
+	//普攻平射表现（小子弹）
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_Light_Material",
+			"onAdded":
+			[
+				//箭头拖尾特效，小箭头
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Small",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Fly_Small",
+				},
+			],
+			"onAbilityStart":
+			[
+				//箭头命中敌人，或不同场景时的特效
+				//可以在collision的时候trigger，这样不像安柏那样超多Ability，可以少写一个。
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",//打到地面特效
+						"surfaceEffect":
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+	//普攻平射表现（大子弹）
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_Heavy_Material",
+			"onAdded":
+			[
+				//箭头拖尾特效，小箭头
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ShootArrow_Big",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_Arrow_Fly_Big",
+				}
+			],
+			"onAbilityStart":
+			[
+				//箭头命中敌人，或不同场景时的特效
+				//可以在collision的时候trigger，这样不像安柏那样超多Ability，可以少写一个。
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",//打到地面特效
+						"surfaceEffect":
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+	/////////////普攻伤害///////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ShootArrow_Damage",
+			"abilityMixins": 
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%NormalAttack_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%NormalAttack_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%NormalAttack_03_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04"],
+					"damagePercentage": "%NormalAttack_04_DamagePercentage",
+				},
+			],
+			"abilitySpecials":
+			{
+				"NormalAttack_01_DamagePercentage":0.0,
+				"NormalAttack_02_DamagePercentage":0.0,
+				"NormalAttack_03_DamagePercentage":0.0,
+				"NormalAttack_04_DamagePercentage":0.0,
+			},
+		},
+	},
+   
+//////////////////////////////////////////////////////////////////
+//
+//  Avatar_Gorou_ElementalArt_SkillHoldCharge 元素战技长按/点按判断
+//  释放领域
+//
+/////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ElementalArt_SkillHoldCharge",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Gorou_ElementalArt_BloomElemBall_Handler",
+					"target": "Self",
+				},
+			],
+			"onAbilityStart":
+			[
+				//长按trigger这个
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10552,
+				},
+				{
+					"$type": "ResetAnimatorTrigger",
+					"triggerID": "DoSkill",
+				},
+				//计算一下这个时候队里有多少岩角色，gv记在team和五郎上（为了拷给gadget）
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Team",
+					"target": "Team",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Avatar",
+					"target": "Self",
+				},
+				//命6
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_Constellation_6",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Gorou_Constellation_6_Handler",
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_Constellation_6_Handler",
+							"target": "Self",							
+						}
+					],
+				},
+				//判断是否属于大招状态下
+				{
+					"$type": "Predicated",
+					"target": "Self",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalBurst_State",
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+					//不处于大招状态下，长按发射子弹
+					"successActions":
+					[	
+						//trigger bullet前取一下方向
+						{
+							"$type": "SetGlobalDir",
+							"key": "ElementalArt_Charge_Dir",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+							},
+						},			
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 41038009,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGlobalValue",
+									"directionKey":"ElementalArt_Charge_Dir",
+								},
+							},
+						},
+					],
+					//处于大招状态下，领域创建失败，只造成一段伤害
+					"failActions":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Attack",	
+						},
+						//如果没有突破2造成的伤害，只吃攻击力
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5.0,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+									// "checkHitLayerType": "Both",
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Art",
+									"canBeModifiedBy": "OriginOwner",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"hitImpulseType":"LV4",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+									"forceCameraShake": true,
+									"cameraShake": 
+									{
+										"shakeType": "Center",
+										"shakeRange": 0.4,
+										"shakeTime": 0.12,
+										"shakeDistance": 60,
+										"extension":
+										{
+											"baseOnCamera": true,
+										},
+									},
+								}
+							},
+							"predicates": 
+							[
+								{
+									"$type" : "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByUnlockTalentParam",
+											"talentParam": "Gorou_PermanentSkill_2",
+										},
+									],
+								},
+							],
+						},
+						//如果有了突破2，受到防御力加成
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5.0,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+									// "checkHitLayerType": "Both",
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Art",
+									"canBeModifiedBy": "OriginOwner",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+										"damageExtra": "%Gorou_PermanentSkill_2_ArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{			
+										"hitImpulseType":"LV4",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+									"forceCameraShake": true,
+									"cameraShake": 
+									{
+										"shakeType": "Center",
+										"shakeRange": 0.4,
+										"shakeTime": 0.12,
+										"shakeDistance": 60,
+										"extension":
+										{
+											"baseOnCamera": true,
+										},
+									},
+								}
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Gorou_PermanentSkill_2",
+								},
+							],
+						},
+					],				
+				},	
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "SkillButtonHoldChargeMixin",	//长短按二择
+					"skillID": 10552,
+					"beforeStateIDs": ["Gorou_ElementalArt_BS"],
+					"chargeLoopStateIDs": ["Gorou_ElementalArt_Charge"],
+					"chargeLoopDurations": [ 10 ], //长按超过10秒自动释放
+					"nextLoopTriggerID": "NextLoopTrigger", //设置进入长按
+					"endHoldTrigger": "EndHoldTrigger", //设置短按
+				},
+				//瞄准状态镜头设置
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalArt_Charge","Gorou_ElementalArt_Custom"],
+					"modifierName": "Focus",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalArt_Charge_BS", "Gorou_ElementalArt_Charge",],
+					"modifierName": "AimingAlertFX",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalArt_Charge",],
+					"modifierName": "Charge_FX",
+				},
+				//特效效果测试【手上光球】
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalArt_BS","Gorou_ElementalArt","Gorou_ElementalArt_Charge","Gorou_ElementalArt_Custom"],
+					"modifierName": "AttachHandEffect",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Gorou_ElementalArt_Custom_AS",
+					"modifierName": "Reset_Gorou_ElementalArt_Charge",
+					"normalizeStart": 0.05,
+				},
+			],
+			"modifiers":
+			{
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Team":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Avatar":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"Reset_Gorou_ElementalArt_Charge":
+				{
+					"duration":0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalArt_ClickOrHold",  
+							"value": 1,
+						},						
+					]
+				},
+				//蓄力瞄准镜头
+				"Focus":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							//瞄准模式相机仰角位置
+							"cameraFollowLower":
+							{
+								"x": 0.8,
+								"y": 0.2,
+								"z": -2.5,
+							},
+							//瞄准模式相机俯角位置
+							"cameraFollowUpper":
+							{
+								"x": 0.5,
+								"y": -0.2,
+								"z": 0.0,
+							},
+							"cameraFastFocusMode": true,
+							"dragButtonName": "Skill2",
+							"assistance":
+							{
+								"ps4":
+								{
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useGyro": true,
+								},
+							},
+							"canMove": false,
+							"showCrosshair":false,
+							"vcam_fov":45,
+							"focusAnchorVerAngle":0,
+							"focusAnchorHorAngle":0,
+							"cameraFollowMaxDegree": 5,
+                            "cameraFollowMinDegree": -45,
+							"disableAimLayer":true,
+							//这里配置的偏移没有办法清理它
+							// //FocusAnchor点Z轴与摄像机当前角度竖直方向上的额外偏移角度，正数为向上偏
+							// "focusAnchorVerAngle":5,
+							// //FocusAnchor点Z轴与摄像机当前角度水平方向上的额外偏移角度，正数为向右偏
+							// "focusAnchorHorAngle":0,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalArt_ClickOrHold",  
+							"value": 2,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"Charge_FX":	//长按蓄力的瞄准特效
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetGlobalValue",
+							"key" : "_GOROU_THROW_RANGE",	//配合Aim_Line特效使用，可调整瞄准特效距离
+							"value" : 10,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Aim_Line",
+						},
+					],
+				},
+				"AimingAlertFX":	//长按蓄力时角色自己身上的循环特效
+				{
+					"onAdded":
+					[
+						//角色自身周围冒的烟尘
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Aim_AimAlert",
+						},
+						//手上的效果
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Aim_AimAlert_Hand",
+						},
+					],
+				},
+				"AttachHandEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Hand_BS",                            
+						},                            
+					],
+				},
+				"Gorou_ElementalArt_BloomElemBall_Handler":
+				{
+					"onAttackLanded": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": 
+							[
+								{
+									"$type": "ByAttackTags",
+									"attackTags": ["Elemental_Art"],
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Gorou_ElementalArt_BloomElemBall",
+								},
+							],
+						},
+					],					
+				},
+				"Gorou_ElementalArt_BloomElemBall":
+				{
+					"duration": 0.2,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2023,
+							"baseEnergy": 6,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0.5,
+									"maxRandomRange": 1.5,
+								},
+							},
+						},
+						{
+							"$type": "DebugLog", 
+							"content": "##产球",								
+						},
+					],					
+				},
+				//命6效果：根据领域等级提升全队岩元素爆伤
+				"Gorou_Constellation_6_Handler":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":  
+							[
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+							"failActions": 
+							[
+								{
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "Avatar_Gorou_ElementalArt_Layer",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+									[
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type": "AttachModifier",
+											"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+									],
+									"failActions":
+									[
+										{
+											"$type": "Predicated",
+											"target": "Self",
+											"targetPredicates":
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "Avatar_Gorou_ElementalArt_Layer",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											],
+											"successActions": 
+											[
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type": "AttachModifier",
+													"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},												
+											]
+										}
+
+									],
+								}
+																
+							]
+						},
+					],
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration",  
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer1",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer2",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer3",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+			},
+			"abilitySpecials": 
+			{
+				"Gorou_PermanentSkill_2_ArtRatio":0,
+				"ElementalArt_OnceAttack_Damage":0,
+				"Gorou_Constellation_6_Duration":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer1":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer2":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer3":0,
+			}
+		},
+	},
+   
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Gorou_ElementalArt  元素战技释放领域[通过eventpattern trigger]
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ElementalArt",	
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalArt","Gorou_ElementalArt_Custom"],
+					"modifierName": "Kill_ElementalArt_Field",	
+					//先kill掉之前创建的那个
+				},
+				//拍地过程中狗子开始出现
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Gorou_ElementalArt_AS",
+					"modifierName": "Gorou_ElementalArt_Shirou_Flag",
+					"normalizeStart": 0, 
+					"normalizeEnd": 0.2,
+				},
+			],
+			"onAdded":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10552,
+					"cdRatio": 1,
+				},
+				{
+					"$type": "ResetAnimatorTrigger",
+					"triggerID": "DoSkill",
+				},
+				//计算一下这个时候队里有多少岩角色，gv记在team和五郎上（为了拷给gadget）
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Team",
+					"target": "Team",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Avatar",
+					"target": "Self",
+				},
+				//命6
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_Constellation_6",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Gorou_Constellation_6_Handler",
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_Constellation_6_Handler",
+							"target": "Self",							
+						}
+					],
+				},
+				//判断是否属于大招状态下
+				{
+					"$type": "Predicated",
+					"target": "Self",
+					"targetPredicates":
+					[
+						{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Gorou_ElementalBurst_State",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+						},
+					],
+					//不处于大招状态下，创建领域
+					"successActions":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41055006,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 2.0,//身前创建
+								},
+								"onGround": true,//贴地创建
+								"alongGround": false,//在BornDirection计算完毕后将方向调整至与地面平行
+								"onGroundIgnoreWater": true,//onGround是否无视水层
+								"onGroundRaycastUpDist": 3, //onGround射线起始点抬高高度
+							},
+							// 创建LocalGadget
+						},
+						//创建之后看看跟地面之间的距离是不是过远，远了kill掉
+						{
+							"$type": "ApplyModifier",	
+							"modifierName": "Kill_ElementalBurst_Field_Charge",	
+							"doOffStage": true,				
+						},
+					],
+					//处于大招状态下，领域创建失败，只造成一段伤害
+					"failActions":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Attack",	
+						},
+						//如果没有突破2造成的伤害，只吃攻击力
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5.0,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+									// "checkHitLayerType": "Both",
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Art",
+									"canBeModifiedBy": "OriginOwner",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"hitImpulseType":"LV4",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+									"forceCameraShake": true,
+									"cameraShake": 
+									{
+										"shakeType": "Center",
+										"shakeRange": 0.4,
+										"shakeTime": 0.12,
+										"shakeDistance": 60,
+										"extension":
+										{
+											"baseOnCamera": true,
+										},
+									},
+								}
+							},
+							"predicates": 
+							[
+								{
+									"$type" : "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByUnlockTalentParam",
+											"talentParam": "Gorou_PermanentSkill_2",
+										},
+									],
+								},
+							],
+						},
+						//如果有了突破2，受到防御力加成
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5.0,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+									// "checkHitLayerType": "Both",
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Art",
+									"canBeModifiedBy": "OriginOwner",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+										"damageExtra": "%Gorou_PermanentSkill_2_ArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{			
+										"hitImpulseType":"LV4",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+									"forceCameraShake": true,
+									"cameraShake": 
+									{
+										"shakeType": "Center",
+										"shakeRange": 0.4,
+										"shakeTime": 0.12,
+										"shakeDistance": 60,
+										"extension":
+										{
+											"baseOnCamera": true,
+										},
+									},
+								}
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Gorou_PermanentSkill_2",
+								},
+							],
+						},
+					],				
+				},
+			],
+			"modifiers":
+			{
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Team":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Avatar":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"Gorou_ElementalArt_Shirou_Flag":
+				{
+					"onAdded":
+					[
+						//判断是否属于大招状态下
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+										"$type": "ByTargetGlobalValue",
+										"key": "_ABILITY_Gorou_ElementalBurst_State",
+										"value": 0,
+										"compareType": "NoneOrEqual",
+								},
+							],
+							//不处于大招状态下再播狗狗插旗子的特效
+							"successActions":
+							[
+							]
+						}
+					],
+				},
+				"Kill_ElementalArt_Field":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						//被外力kill掉的，给个标记
+						{
+							"$type": "SetGlobalValue",
+							"key": "Gorou_ElementalArt_Field_Bekilled",	
+							"value": 1,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055006,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "ApplyModifier",	
+							"modifierName": "Gorou_Kill_ElementalArt_Field",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055006,
+								"sortType": "Default",
+							},
+						},
+					]
+				},
+
+				"Gorou_Kill_ElementalArt_Field":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						{
+							"$type": "KillSelf",
+						}
+					]
+				},
+				"Kill_ElementalBurst_Field_Charge":
+				{
+					"duration": 0.2,
+					"onRemoved": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"doOffStage": true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055006,
+								"sortType": "Default",
+							},
+							"targetPredicates": 
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 10,
+									"logic": "Greater",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"Gorou_Kill_ElementalBurst_Field_AfterCharge",
+									"target": "Other",
+									"doOffStage": true,								
+								}
+							],
+						}
+
+					],
+				},
+				"Gorou_Kill_ElementalBurst_Field_AfterCharge":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						{
+							"$type": "KillSelf",
+						}
+					]					
+				},
+				//命6效果：根据领域等级提升全队岩元素爆伤
+				"Gorou_Constellation_6_Handler":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":  
+							[
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+							"failActions": 
+							[
+								{
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "Avatar_Gorou_ElementalArt_Layer",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+									[
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type": "AttachModifier",
+											"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+									],
+									"failActions":
+									[
+										{
+											"$type": "Predicated",
+											"target": "Self",
+											"targetPredicates":
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "Avatar_Gorou_ElementalArt_Layer",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											],
+											"successActions": 
+											[
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type": "AttachModifier",
+													"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},												
+											]
+										}
+
+									],
+								}
+																
+							]
+						},
+					],
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration",  
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer1",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer2",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer3",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},				
+			},
+			"abilitySpecials":
+			{
+				"ElementalArt_OnceAttack_Damage":0,
+				"ElementalArt_OnceAttack_DefRatio":0,
+				"Gorou_PermanentSkill_2_ArtRatio":0,
+				"Gorou_Constellation_6_Duration":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer1":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer2":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer3":0,
+			}
+		},
+	},
+   
+   
+///////////////////////////////////////////////////////////////////////////
+//
+//  元素战技领域效果[Gadget]  逻辑效果///////////////////////////////////////
+//
+///////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SkillObj_Gorou_FieldLand_LogicHanler",	
+			"abilityMixins":
+			[
+				//判断队里没有五郎时就干掉领域
+				{
+					"$type": "DoActionByTeamStatusMixin",
+					"actions":
+					[
+						{
+							"$type": "KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByCurTeamHasFeatureTag",
+									"featureTagID": 10055,
+									"number": 0,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"onAdded":
+			[ 
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Gorou_ElementalArt_LifeTimeHandler",
+				},                               
+				//创建时以gadget为圆心造成伤害
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Attack",	
+				},
+				//没有突破2的伤害值
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height": 4.0,
+							"fanAngle": 360.0,
+							"detectDirection": "CenterToSide",
+							"radius": 5,
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								}
+							},
+							// "checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"attackTag": "Elemental_Art",
+							"canBeModifiedBy": "OriginOwner",
+							"attackProperty": 
+							{
+								"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+								"strikeType": "Blunt",
+								//攻击类型
+								//1-Melee:近身挥砍、钝击、戳刺、横扫、撞击等，可被闪避、格挡
+								//2-Range:中远距离喷射、炸弹、龙卷风等范围伤害
+								"attackType": "Melee",
+								"elementType": "Rock",
+								"elementDurability": 25,
+								"enBreak": 80,
+							},
+							"hitPattern": 
+							{
+								"hitImpulseType":"LV4",
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.02,
+								"muteHitText": false,
+								"retreatType": "ByHitDirection",
+							},
+							"forceCameraShake": true,
+							"cameraShake": 
+							{
+								"shakeType": "Center",
+								"shakeRange": 0.4,
+								"shakeTime": 0.12,
+								"shakeDistance": 60,
+								"extension":
+								{
+									"baseOnCamera": true,
+								},
+							},
+						}
+					},
+					"predicates": 
+					[
+						{
+							"$type" : "ByNot",
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Gorou_PermanentSkill_2",
+								},
+							],
+						},
+					],
+				}, 
+				//如果有了突破2，受到防御力加成
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height": 4.0,
+							"fanAngle": 360.0,
+							"detectDirection": "CenterToSide",
+							"radius": 5.0,
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								}
+							},
+							// "checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"attackTag": "Elemental_Art",
+							"canBeModifiedBy": "OriginOwner",
+							"attackProperty": 
+							{
+								"damagePercentage": "%ElementalArt_OnceAttack_Damage",
+								"damageExtra": "%Gorou_PermanentSkill_2_ArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+								"strikeType": "Blunt",
+								"attackType": "Melee",
+								"elementType": "Rock",
+								"elementDurability": 25,
+								"enBreak": 80,
+							},
+							"hitPattern": 
+							{
+								//"onHitEffectName": "Eff_Avatar_Male_Pole_Zhongli_RockShield_BS_Behit",
+								"hitImpulseType":"LV4",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.02,
+								"muteHitText": false,
+								"retreatType": "ByHitDirection",
+							},
+							"forceCameraShake": true,
+							"cameraShake": 
+							{
+								"shakeType": "Center",
+								"shakeRange": 0.4,
+								"shakeTime": 0.12,
+								"shakeDistance": 60,
+								"extension":
+								{
+									"baseOnCamera": true,
+								},
+							},
+						}
+					},
+					"predicates": 
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_PermanentSkill_2",
+						},
+					],
+				},
+				//把队伍中岩角色的数量拷贝过来
+				{
+					"$type": "CopyGlobalValue",
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "Avatar_Gorou_ElementalArt_Layer",
+					"dstKey": "Avatar_Gorou_ElementalArt_Layer",
+				},
+				//根据岩角色数量决定领域效果
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Gorou_FieldLand_Layer_Controller",         
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+
+			"modifiers":
+			{
+				"Gorou_FieldLand_Constellation_1_Avatar":
+				{
+					"duration": 2,
+					"stacking": "Refresh",
+					"onAttackLanded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Other",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByHitElement",
+									"element": "Rock",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "DebugLog", 
+									"content": "##触发命座1",
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Gorou_FieldLand_Constellation_1_DesArtCd_Field",
+									"target": "Caster",//先传给领域处理，再传给五郎
+									"doOffStage":true,
+								},
+
+							],
+						},
+					]
+				},
+				"Gorou_FieldLand_Constellation_1_DesArtCd_Field":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "OriginOwner",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Gorou_FieldLand_Constellation_1_CD",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type" : "ByNot",
+									"predicates" :
+									[
+										{
+											"$type" : "BySkillReady",
+											"skillID" : 10552,
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Gorou_FieldLand_Constellation_1_DesArtCd",
+									"target": "OriginOwner",
+									"doOffStage":true,
+								},
+								//触发CD,CD记在五郎自己身上
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Gorou_FieldLand_Constellation_1_CdHandler",
+									"target": "OriginOwner",
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+				"Gorou_FieldLand_Constellation_1_DesArtCd":
+				{
+					"duration": 0.5,
+					"onAdded": 
+					[
+						{
+							"$type": "DebugLog", 
+							"content": "##减少技能CD",
+							"doOffStage":true,
+						},
+						{
+							"$type": "ModifyAvatarSkillCD",
+							"skillID": 10552,
+							"cdDelta": "%Gorou_Constellation_1_ReduceColdDown",
+							"doOffStage":true,
+						},
+					]
+				},
+				"UNIQUE_Gorou_FieldLand_Constellation_1_CdHandler":
+				{
+					"duration": "%Gorou_Constellation_1_ReduceColdDown_CD",
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage":true,
+							"target": "Self",
+							"key": "_Gorou_FieldLand_Constellation_1_CD",
+							"value": -1,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage":true,
+							"target": "Self",
+							"key": "_Gorou_FieldLand_Constellation_1_CD",
+							"value": 0,
+						}
+					]
+				},
+				"UNIQUE_Gorou_ElementalArt_LifeTimeHandler":
+				{
+					"isUnique":true,
+					"duration":"%Duration",
+					"elementType": "None",
+					"elementDurability": "%Duration",
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				//1层时加防御力，多个五郎在场时不可叠加
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer1_Modifier":
+				{
+					//"duration":2,
+					"isUnique":true,
+					"state": "DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_01",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+				//2层领域内角色抗打断提升
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer2_Modifier":
+				{
+					//"duration":2,
+					"isUnique":true,
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_EndureDelta": 0.5, 
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_02",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+				//3层加岩伤
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer3_Modifier":
+				{
+					//"duration":2,
+					"isUnique": true,
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_EndureDelta": 0.5, 
+						"Actor_RockAddHurtDelta":"%Layer3_RockAddHurtDelta",
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_03",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+
+				"Gorou_FieldLand_Layer_Controller":
+				{
+					"thinkInterval":0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Avatar_Gorou_ElementalArt_Layer_Controller",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H16",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+						//命1效果，领域内角色造成岩元素伤害时，元素战技冷却时间减少2秒
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Gorou_FieldLand_Constellation_1_Avatar",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H16",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+								{
+									"$type": "ByNot", //并且当前角色不是五郎自己
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetType",
+											"targetType": "OriginOwner", //实际这个type只有4个生效Self/Caster/Owner/OriginOwner
+										},
+									]
+								},
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Gorou_Constellation_1",
+								},
+							],
+						},
+					],					
+				},
+
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer_Controller":
+				{
+					"isUnique": true,
+					"duration": 2,
+					"onAdded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Applier",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer1_Modifier",
+								},
+							],
+							"failActions": 
+							[
+								{
+									"$type" : "Predicated",
+									"target" : "Applier",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "Avatar_Gorou_ElementalArt_Layer",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type": "AttachModifier",
+											"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer2_Modifier",
+										},
+									],
+									"failActions": 
+									[
+										{
+											"$type" : "Predicated",
+											"target" : "Applier",
+											"targetPredicates":
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "Avatar_Gorou_ElementalArt_Layer",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											],
+											"successActions":
+											[
+												{
+													"$type": "AttachModifier",
+													"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer3_Modifier",
+												},
+											],
+
+										},										
+									]
+								},								
+							]
+						},
+					]
+
+				},
+
+			},
+			"onKill":
+			[
+			],
+			"abilitySpecials":
+			{
+				"Duration":10,  
+				"ElementalArt_OnceAttack_Damage":0,
+				"Layer1_DefenceDelta":0,
+				"Layer3_RockAddHurtDelta":0,
+				"Gorou_Constellation_1_ReduceColdDown":0,
+				"Gorou_Constellation_1_ReduceColdDown_CD":0,
+				"Gorou_PermanentSkill_2_ArtRatio":0,
+			},
+		},
+	},
+   
+   
+/////////////////////////////////////////////////////////////////////////////
+//
+//  元素战技领域各等级特效管理  SkillObj_Gorou_FieldLand_EffectHanler /////////
+//
+/////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SkillObj_Gorou_FieldLand_EffectHanler",	
+			"onAdded":
+			[
+				//领域边缘特效
+				{
+					"$type": "AttachEffect",	
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_FieldAlert",
+				},
+				//旗子自身特效，需要等狗子表现完延迟一段时间出来
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_Time",         
+				}, 
+				//狗子出来插旗的效果
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Shirou_Appear",
+				},
+				//旗子下狗爪印的效果
+				{
+					"$type": "AttachEffect",	
+					"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_DogClaw",
+				},                                         
+				//根据岩角色数量不同的表现
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Gorou_FieldLand_Layer_Mixin",         
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+
+			"onKill":
+			[
+				//判断一下消失原因，是被小技能kill掉还是大招kill掉
+				{
+					"$type": "Predicated",
+					"target": "Self",
+					"targetPredicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalBurst_State",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+					"successActions": 
+					[
+						//是被大招kill掉的
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Gorou_ElementalBurst_PutAwayGadget",
+						},
+						//判断一下当前gadget的层级去播对应的爪印消失效果
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_02_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_03_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_04_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 3,
+									"compareType": "MoreThanAndEqual",
+								},
+							],
+						},
+					],
+					"failActions": 
+					[
+						//旗子消失的效果
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_Die",
+						},
+						//是被小技能kill掉或者是时间到了自然消失
+						//领域边缘的特效消失效果
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Field_Die",
+						},
+						//判断一下当前gadget的层级去播对应的爪印消失效果
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_02_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_03_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_04_Die",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 3,
+									"compareType": "MoreThanAndEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+
+			"modifiers":
+			{
+				"Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag_Time":
+				{
+					"duration":0.55,
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag",  		        	
+						}
+					]
+				},
+				"Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",	
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag",
+						},
+					]
+
+				},
+
+				"Gorou_FieldLand_Layer_Mixin":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "Avatar_Gorou_ElementalArt_Layer",
+							"removeAppliedModifier": true,
+							"valueSteps": 
+							[
+							0.5,
+							1.5,
+							2.5,
+							4.5
+							],
+							"modifierNameSteps": 
+							[
+							"Avatar_Gorou_ElementalArt_Layer1",
+							"Avatar_Gorou_ElementalArt_Layer2",
+							"Avatar_Gorou_ElementalArt_Layer3",
+							],
+						},
+					]
+				},
+				"Avatar_Gorou_ElementalArt_Layer1":
+				{
+					"onAdded":
+					[
+						//旗子下狗爪印的效果
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Layer02",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_DogClaw",
+						},
+						//旗子自身特效
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag",
+							"parameter": "Layer02",
+						},
+						//升级特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_LevelUp",	
+						},					
+					]					
+				},
+				"Avatar_Gorou_ElementalArt_Layer2":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Layer03",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_DogClaw",
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag",
+							"parameter": "Layer03",
+						},
+						//升级特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_LevelUp",	
+						},					
+					]					
+				},
+				"Avatar_Gorou_ElementalArt_Layer3":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Layer04",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_DogClaw",
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Flag",
+							"parameter": "Layer04",
+						},
+						//升级特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Claw_LevelUp",	
+						},					
+					]					
+				},
+			},
+		},
+	},
+     
+	//元素战技长按时发射的子弹
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Gorou_ElementalArt_Bullet",	//长按发射子弹，碰撞后创建底座的位置
+			"onAbilityStart": 
+			[
+				{
+						"$type": "DebugLog", 
+						"content": "##长按子弹移动到地面",
+				},
+				{
+					"$type": "SetGlobalPos",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Gorou_ElementalArt_CustomPos",
+					"born": 
+					{
+						"$type": "ConfigBornByCollisionPoint",
+					},
+					//使用碰撞点位置和实体方向
+					//因为bullet发生碰撞触发逻辑时，bullet的位置和碰撞点可能已经不在一起了，逻辑上会记录碰撞点位置，供该配置使用
+					"setTarget": true,
+				},
+				{
+					"$type": "SetGlobalDir",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Gorou_ElementalArt_CustomDir",
+					"born": 
+					{
+						"$type": "ConfigBornBySelfOwner",	//用五郎的方向
+					},
+					"setTarget": true,
+				},
+				{
+					"$type": "TriggerAbility",
+					"abilityName": "Gorou_ElementalArt_Bullet_CreateGadget",	
+					"target": "OriginOwner",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "DebugLog", 
+					"content": "##长按投射子弹创建",
+				}
+			]
+		},
+	},
+   
+	//用长按发射的子弹回传的位置创建
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Gorou_ElementalArt_Bullet_CreateGadget",
+			"onAbilityStart":
+			[
+				{
+						"$type": "DebugLog", 
+						"content": "##用子弹回弹位置创建",
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41055006,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornByGlobalValue",
+						"positionKey": "_ABILITY_Gorou_ElementalArt_CustomPos",	
+						"directionKey": "_ABILITY_Gorou_ElementalArt_CustomDir",
+						"onGround": true,
+						"alongGround": false,
+						"onGroundIgnoreWater": true,
+						"onGroundRaycastUpDist": 3,
+					},
+					// "byServer": true,	//底座需要服务器创建
+					// "lifeByOwnerIsAlive": true,	//需要一个死亡不带走离队和重连带走的字段
+				},
+				//创建之后看看跟地面之间的距离是不是过远，远了kill掉
+				{
+					"$type": "ApplyModifier",	
+					"modifierName": "Kill_ElementalBurst_Field_Charge",	
+					"doOffStage": true,				
+				},
+			],
+			"modifiers":
+			{
+				"Kill_ElementalBurst_Field_Charge":
+				{
+					"duration": 0.2,
+					"onRemoved": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"doOffStage": true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055006,
+								"sortType": "Default",
+							},
+							"targetPredicates": 
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 10,
+									"logic": "Greater",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"Gorou_Kill_ElementalBurst_Field_AfterCharge",
+									"target": "Other",
+									"doOffStage": true,								
+								}
+							],
+						}
+
+					],
+				},
+				"Gorou_Kill_ElementalBurst_Field_AfterCharge":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						{
+							"$type": "KillSelf",
+						}
+					]					
+				}
+			}
+		},
+	},
+   
+	//超过子弹生命周期时默认的创建位置
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Gorou_ElementalArt_Bullet_LifeOver",	//长按发射子弹，最大时间过后在最远处创建底座的位置
+			"onAbilityStart": 
+			[
+				{
+					"$type": "DebugLog",
+					"content": "##超过子弹生命周期，默认位置创建",
+				},
+				{
+					"$type": "SetGlobalPos",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Gorou_ElementalArt_CustomPos",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+					},
+					"setTarget": true,
+				},
+				{
+					"$type": "SetGlobalDir",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Gorou_ElementalArt_CustomDir",
+					"born": 
+					{
+						"$type": "ConfigBornBySelfOwner",	
+					},
+					"setTarget": true,
+				},
+				{
+					"$type": "TriggerAbility",
+					"abilityName": "Gorou_ElementalArt_Bullet_CreateGadget",	
+					"target": "OriginOwner",
+				},
+			],
+		},
+	},
+   
+   
+   
+/////////////////////////////////////////////////////////////
+//
+// Avatar_Gorou_ElementalBurst_KillGadget 先触发把场上的领域收起来
+//
+////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ElementalBurst_KillGadget",	
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10555,
+				},
+				//Kill掉场上自己的领域
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Gorou_ElementalBurst_KillSelf",
+					"doOffStage":true,
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Gorou_ElementalBurst_KillSelf":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						//先杀掉小技能创造的领域
+						{
+							"$type": "ApplyModifier",	
+							"modifierName": "Gorou_ElementalBurst_KillArtField",
+							"doOffStage":true,
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055006,
+							},
+						},
+					],
+				},
+				"Gorou_ElementalBurst_KillArtField":
+				{
+					"duration": 0.2,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage":true,
+							"target": "Self",
+							"key": "_ABILITY_Gorou_ElementalBurst_State",
+							"value": 1,
+						},
+						{
+							"$type": "KillSelf",
+						}
+					]
+				}
+			
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+// Avatar_Gorou_ElementalBurst 元素爆发效果
+//
+//////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_ElementalBurst",	
+			"onAbilityStart":
+			[
+				//这个modifier用于处理五郎自身和最好让五郎apply出去的逻辑，避免传递关系混乱
+				//标记处于大招状态下，此时用小技能只有伤害不创建gadget
+				//大招的gadget被kill掉后想办法同步kill这个modifier
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Avatar_Gorou_ElementalBurst_SelfHanler",
+				},
+				//计算一下这个时候队里有多少岩角色，gv记在team和五郎上（为了拷给gadget）
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Team",
+					"target": "Team",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Gorou_ElementalArt_RockAvatar_Hanlder_Avatar",
+					"target": "Self",
+				},
+				//突破1：全队防御力提升X%
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_PermanentSkill_1",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Gorou_PermanentSkill_1_Avatars_Handler",
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_PermanentSkill_1_Avatars_Handler",
+							"target": "Self",							
+						}
+					],
+				},
+				//命6
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_Constellation_6",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Gorou_Constellation_6_Handler",
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_Constellation_6_Handler",
+							"target": "Self",							
+						}
+					],
+				},
+				//狗子专用gadget
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41055007,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornByTarget",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						}
+					}
+				},
+				//领域跟随效果
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41055008,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Team":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "Team_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"Gorou_ElementalArt_RockAvatar_Hanlder_Avatar":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 2,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 3,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Rock",
+									"number": 3,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Avatar_Gorou_ElementalBurst_SelfHanler":
+				{
+					"isUnique":true,
+					"stacking": "Refresh",
+					"duration":"%Avatar_Gorou_ElementalBurst_Duration",
+					"elementType": "None",
+					"elementDurability": "%Avatar_Gorou_ElementalBurst_Duration",
+					"onAdded":
+					[
+						//给自己一个标记，持续期间释放小技能没有领域创建的效果
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalBurst_State",
+							"value": 1,
+							"doOffStage": true,
+						},
+						//命之座2效果：大招状态下每次拾取元素结晶都会使持续时间延长1.5秒，最多触发3次。
+						//让五郎来给队里的角色上
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Gorou_BurstFieldLand_AddDuration_Handler_Avatars",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",	
+							"key": "Avatar_Gorou_Constellation_2_Count",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						}
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Gorou_ElementalBurst_State",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",	
+							"key": "Avatar_Gorou_Constellation_2_Count",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						}
+					],
+				},
+				"Gorou_PermanentSkill_1_Avatars_Handler":
+				{
+					"onAdded": 
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Gorou_PermanentSkill_1_Avatars",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Gorou_PermanentSkill_1_Avatars",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Gorou_PermanentSkill_1_Avatars":
+				{
+					"isUnique": true,
+					"duration":"%Gorou_PermanentSkill_1_Duration",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_DefenceRatio": "%Gorou_PermanentSkill_1_DefenceRatio",
+					},				
+				},
+
+				"Gorou_BurstFieldLand_AddDuration_Handler_Avatars":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByGainCrystalSeedMixin",
+							"elementTypes":["Fire","Water","Electric","Ice"],
+							"doOffStage":true,
+							"actions":
+							[
+								//通知五郎 
+								//联机不能trigger remote玩家的ability，需要包一层
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Gorou_Constellation_2_TriggerHandler",
+									"target": "Applier",
+									"doOffStage":true,
+								}, 
+							]            
+						},
+					]
+				},
+				"Avatar_Gorou_Constellation_2_TriggerHandler":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Avatar_Gorou_Constellation_2",
+							"doOffStage":true,
+						}, 
+					]
+				},
+
+				"Gorou_ElementalBurst_Invincible":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							//添加状态抵抗
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				//后摇又拆出了一个，两个mixin调用同名modifier可能会被莫名下掉
+				"Gorou_ElementalBurst_Invincible_AS_Before":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"Gorou_ElementalBurst_Weather":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWeatherMixin",
+							"weatherPattern":"Weather_Albedo_AlchemicalBreakOut",
+							"type":"Skill",
+							"transDuration":0.3,//变化时间
+							"duration":2,//持续时间
+						},
+					]
+				},
+				//大招镜头
+				"Avatar_Gorou_ElementalBurst_Camera_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+							"blend" : false,
+						},
+						{
+							"$type": "DebugLog", 
+								"content": "大招镜头调用了吗",
+						},	
+					],                    
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"doOffStage":true,
+							"cameraParam":
+							{
+								"forceRadius": 5,
+								"forceRadiusDuration": 0,
+								"shouldKeepForceRadius":true,
+							},
+						},
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"doOffStage":true,
+							"cameraParam":
+							{
+								"forceRadius": 5,
+								"forceRadiusDuration": 0,
+								"shouldKeepForceRadius":true,
+							},
+						},
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+					],									
+				},
+				"Kill_ElementalBurst_Field":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",	
+							"modifierName": "Gorou_Kill_ElementalBurst_Field",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055007,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "ApplyModifier",	
+							"modifierName": "Gorou_Kill_ElementalBurst_Field",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055008,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "DebugLog", 
+								"content": "##大招重新创建",
+						},
+
+					]
+				},
+
+				"Gorou_Kill_ElementalBurst_Field":
+				{
+					"duration":1,
+					"onAdded":
+					[
+						{
+							"$type": "KillSelf",
+						}
+					]
+				},
+				//命6效果：根据领域等级提升全队岩元素爆伤
+				"Gorou_Constellation_6_Handler":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":  
+							[
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+							"failActions": 
+							[
+								{
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "Avatar_Gorou_ElementalArt_Layer",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+									[
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type":"RemoveUniqueModifier",
+											"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+										{
+											"$type": "AttachModifier",
+											"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+											"target": "AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByTargetPositionToSelfPosition",
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+									],
+									"failActions":
+									[
+										{
+											"$type": "Predicated",
+											"target": "Self",
+											"targetPredicates":
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "Avatar_Gorou_ElementalArt_Layer",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											],
+											"successActions": 
+											[
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type":"RemoveUniqueModifier",
+													"modifierName":"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},
+												{
+													"$type": "AttachModifier",
+													"modifierName": "UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars",
+													"target": "AllPlayerAvatars",
+													"predicates":
+													[
+														{
+															"$type": "ByTargetPositionToSelfPosition",
+															"compareType": "XZ",
+															"value": 40,
+															"logic": "LesserOrEqual",
+														},
+													],
+												},												
+											]
+										}
+
+									],
+								}
+																
+							]
+						},
+					],
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer1_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration",  
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer1",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer2_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer2",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_Constellation_RockAvatar_Layer3_Avatars":
+				{
+					"isUnique": true,
+					"duration": "%Gorou_Constellation_6_Duration", 
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%Gorou_Constellation_6_CriticalHurt_Layer3",
+							"predicates":
+							[
+								{
+									"$type":"ByHitElement",
+									"element":"Rock",
+								},
+							],
+						},
+					]
+				},
+			},
+			"abilityMixins":
+			[
+				//释放期间无敌
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalBurst"],
+					"modifierName": "Gorou_ElementalBurst_Invincible",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Gorou_ElementalBurst_AS_Before",
+					"modifierName":"Gorou_ElementalBurst_Invincible_AS_Before",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.21,
+				},				
+				//天气变化
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalBurst"],
+					"modifierName": "Gorou_ElementalBurst_Weather",
+				},
+				//镜头控制
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalBurst"],
+					"modifierName": "Avatar_Gorou_ElementalBurst_Camera_Handler",	
+				},
+
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gorou_ElementalBurst"],
+					"modifierName": "Kill_ElementalBurst_Field",	
+					//如果持续时间内又释放了大招，需要刷新
+				},
+			],
+			"abilitySpecials":
+			{
+				"Avatar_Gorou_ElementalBurst_Duration":9.1,
+				"Gorou_PermanentSkill_1_Duration":0,
+				"Gorou_PermanentSkill_1_DefenceRatio":0,
+				"Gorou_Constellation_6_Duration":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer1":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer2":0,
+				"Gorou_Constellation_6_CriticalHurt_Layer3":0,				
+			}
+		},
+	},
+	  
+///////////////////////////////////////////////////////////////////
+//
+//SkillObj_Gorou_BurstFieldLand 元素爆发领域Gadget【选择目标造成伤害】
+//
+//////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SkillObj_Gorou_BurstFieldLand",	
+			"onAdded":
+			[
+				{
+					"$type": "GetFightProperty",
+					"fightPropSourceTarget": "OriginOwner",
+					"fightProp": "FIGHT_PROP_CUR_DEFENSE",
+					"globalValueKey": "_Gorou_Cur_Def", //gv会设到自己身上，跟SourceTarget无关
+					"doOffStage": true,
+				},
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "_Gorou_Cur_Def",
+					"overrideMapKey": "Gorou_Cur_Defense",
+				},
+				//tick打伤害
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Gorou_BurstFieldLand_Handler",
+					"doOffStage":true,					
+				},
+				//第一段伤害
+				{
+					"$type": "Predicated",
+					"target": "Caster",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_PermanentSkill_2",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Burst",
+									"attackProperty": 
+									{
+										"damageExtra": "%ElementalBurst_damagePercentage_Once*%Gorou_Cur_Defense+%Gorou_PermanentSkill_2_BurstRatio*%Gorou_Cur_Defense",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 40,
+									},
+									"hitPattern": 
+									{
+										"hitImpulseType":"LV4",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+								}
+							},
+						},
+						{
+							"$type": "DebugLog", 
+							"content": "##大招第一段伤害触发时点【有突2伤害】",
+						},
+					],
+					"failActions": 
+					[
+						//释放的时候额外造成一段伤害【没有突2】
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"detectDirection": "CenterToSide",
+									"radius": 5,
+									"born": 
+									{
+										"$type": "ConfigBornBySelf",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										}
+									},
+								},
+								"attackInfo": 
+								{
+									"attackTag": "Elemental_Burst",
+									"attackProperty": 
+									{
+										"damageExtra": "%ElementalBurst_damagePercentage_Once*%Gorou_Cur_Defense",
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Rock",
+										"elementDurability": 25,
+										"enBreak": 40,
+									},
+
+									"hitPattern": 
+									{
+										"hitImpulseType":"LV4",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false,
+										"retreatType": "ByHitDirection",
+									},
+								}
+							},
+						},
+						{
+							"$type": "DebugLog", 
+							"content": "##大招第一段伤害触发时点【没有突2加成】",
+						},
+					]
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"onKill":
+			[
+				//持续时间结束后消失特效，收起来再让狗子插旗
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Gorou_ElementalBurst_End_PutAwayGadget",
+				},
+			],
+			"modifiers":
+			{
+				"Gorou_BurstFieldLand_Handler":
+				{
+					"thinkInterval":1.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "GetFightProperty",
+							"fightPropSourceTarget": "OriginOwner",
+							"fightProp": "FIGHT_PROP_CUR_DEFENSE",
+							"globalValueKey": "_Gorou_Cur_Def", //gv会设到自己身上，跟SourceTarget无关
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_Gorou_Cur_Def",
+							"overrideMapKey": "Gorou_Cur_Defense",
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H8",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit": 1,
+								"entityTypePriority":["Monster"],
+								"sortType": "Nearest",
+							},
+							"targetPredicates": 
+							[
+								{
+								  "$type": "ByEntityTypes",
+								  "entityTypes": ["Monster"],
+								},
+								{
+                                    "$type": "ByTargetGlobalValue",  //选目标时排除小动物
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+							],
+							"successActions": 
+							[
+								//选一个目标造成小范围伤害
+								{
+									"$type": "SetGlobalPos",
+									"target": "Target",
+									"key": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos",
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointTargetType":"Target",
+										"attachPointName":"Fx_ChestNode",
+									},
+									"setTarget": false,
+								},
+								{
+									"$type": "CopyGlobalValue",
+									"srcTarget": "Self",
+									"dstTarget": "OriginOwner",
+									"srcKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_0",
+									"dstKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_0",
+								},
+								{
+									"$type": "CopyGlobalValue",
+									"srcTarget": "Self",
+									"dstTarget": "OriginOwner",
+									"srcKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_1",
+									"dstKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_1",
+								},
+								{
+									"$type": "CopyGlobalValue",
+									"srcTarget": "Self",
+									"dstTarget": "OriginOwner",
+									"srcKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_2",
+									"dstKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos_2",
+								},
+								{
+									"$type": "FireEffect",
+									"target": "Target",
+									"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_TickAttack",	//特效
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointTargetType":"Target",
+										"attachPointName":"Fx_ChestNode",
+									},
+								},
+								{
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByUnlockTalentParam",
+											"talentParam": "Gorou_PermanentSkill_2",
+										},
+									],
+									"successActions": 
+									[
+										//tick伤害【有突2】
+										{
+											"$type" : "TriggerAttackEvent",
+											"target": "OriginOwner",
+											"targetType" : "Enemy",
+											"attackEvent":
+											{
+												"attackPattern" :
+												{
+													"$type": "ConfigAttackCircle",
+													"triggerType": "TriggerNoRepeat",
+													"fanAngle": 360.0,
+													"height": 3,
+													"radius": 3.5,
+													"born":
+													{								
+														"$type": "ConfigBornByGlobalValue",
+														"positionKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos",	
+														"useGlobalUp": true,
+														"offset":
+														{
+															"x" : 0.0,
+															"y" : -1.5,
+															"z" : 0.0,
+														},
+													},
+												},
+												"attackInfo":
+												{
+													"canBeModifiedBy": "OriginOwner",
+													"attackTag" : "Elemental_Burst",
+													"attenuationTag": "Elemental_Burst",
+													"attackProperty":
+													{									
+														"damageExtra": "%ElementalBurst_damagePercentage*%Gorou_Cur_Defense+%Gorou_PermanentSkill_2_BurstRatio*%Gorou_Cur_Defense",
+														"strikeType": "Default",
+														"attackType": "Melee",
+														"elementType": "Rock",
+														"elementDurability": 25,
+														"enBreak": 20,
+													},
+													"hitPattern":
+													{
+														"onHitEffectName": "default",
+														"hitImpulseType":"LV1",
+														"retreatType": "ByAttacker",
+														"canBeDefenceHalt": false,
+														"hitHaltTime": 0.0,
+														"hitHaltTimeScale": 0.05,
+														"muteHitText": false,
+													},
+												},
+											},
+										},
+										{
+											"$type": "DebugLog", 
+											"content": "##大招tick伤害触发时点【有突2伤害】",
+										},
+									],
+									"failActions": 
+									[
+										//tick伤害【没有突2】
+										{
+											"$type" : "TriggerAttackEvent",
+											"target": "OriginOwner",
+											"targetType" : "Enemy",
+											"attackEvent":
+											{
+												"attackPattern" :
+												{
+													"$type": "ConfigAttackCircle",
+													"triggerType": "TriggerNoRepeat",
+													"fanAngle": 360.0,
+													"height": 3,
+													"radius": 3.5,
+													"born":
+													{
+														"$type": "ConfigBornByGlobalValue",
+														"positionKey": "_Avatar_Boy_Bow_Gorou_ElementalBurst_AtkPos",	
+														"useGlobalUp": true,
+														"offset":
+														{
+															"x" : 0.0,
+															"y" : -1.5,
+															"z" : 0.0,
+														},
+													},
+												},
+												"attackInfo":
+												{
+													"canBeModifiedBy": "OriginOwner",
+													"attackTag" : "Elemental_Burst",
+													"attenuationTag": "Elemental_Burst",
+													"attackProperty":
+													{									
+														"damageExtra": "%ElementalBurst_damagePercentage*%Gorou_Cur_Defense",
+														"strikeType": "Default",
+														"attackType": "Melee",
+														"elementType": "Rock",
+														"elementDurability": 25,
+														"enBreak": 20,
+														
+													},
+													"hitPattern":
+													{
+														"onHitEffectName": "default",
+														"hitImpulseType":"LV1",
+														"retreatType": "ByAttacker",
+														"canBeDefenceHalt": false,
+														"hitHaltTime": 0.0,
+														"hitHaltTimeScale": 0.05,
+														"muteHitText": false,
+													},
+												},
+											},
+										},
+										{
+											"$type": "DebugLog", 
+											"content": "##大招tick伤害触发时点【没有突2加成】",
+										},
+									]
+								},
+							]
+						}
+					],
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_FieldAlert",					
+						},
+					]
+				},		
+			},
+			"abilitySpecials":
+			{
+				"ElementalBurst_damagePercentage_Once": 0,
+				"ElementalBurst_damagePercentage": 0,
+				"Gorou_PermanentSkill_2_BurstRatio": 0, //突2伤害加成
+				"Gorou_Cur_Defense": 0,
+				
+			},
+		},
+	},
+///////////////////////////////////////////////////////////////////////
+//
+//SkillObj_Gorou_BurstFieldLand_Halo 元素爆发领域Gadget【领域光环效果和其他逻辑管理】
+//
+//////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SkillObj_Gorou_BurstFieldLand_Halo",
+			"abilityMixins":
+			[
+				//判断队里没有五郎时就干掉领域
+				{
+					"$type": "DoActionByTeamStatusMixin",
+					"actions":
+					[
+						{
+							"$type": "KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByCurTeamHasFeatureTag", //判断队伍当前有多少指定tag
+									"featureTagID": 10055,
+									"number": 0, //数量
+									"logic": "LesserOrEqual", //比较关系
+								},
+							],
+						},
+					],
+				},
+			],	
+			"onAdded":
+			[
+				//生命周期管理
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Gorou_BurstFieldLand_Life_Handler",
+				},
+				//把队伍中岩角色的数量拷贝过来
+				{
+					"$type": "CopyGlobalValue",
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "Avatar_Gorou_ElementalArt_Layer",
+					"dstKey": "Avatar_Gorou_ElementalArt_Layer",
+				},
+				//根据岩角色数量决定领域效果
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Gorou_BurstFieldLand_Layer_Controller",         
+				},
+				//命之座4效果，大招持续期间每X秒造成一次治疗
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Gorou_Constellation_4",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "Avatar_Gorou_ElementalArt_Layer",
+							"value": 2,
+							"compareType": "MoreThanAndEqual",
+						},
+					],
+					"successActions":  
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"Avatar_Gorou_ElementalBurst_Heal_Handler",
+						},
+					],
+				},	
+				// 每隔一段时间吸取元素盾到法阵中央
+				{				
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Gorou_ElementalBurst_WindZone",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Gorou_ElementalBurst_WindZone":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"forceType":"GorouZoneType",
+							"thinkInterval": 1.5,
+							// "onThinkInterval":
+							// [
+							// 	//特效状态机转换
+							// 	{
+							// 		"$type": "SendEffectTrigger",
+							// 		"parameter": "change",
+							// 		"effectPattern": "Eff_Element_Crystal_Water_Seed",
+							// 	},
+							// ],
+							"shapeName": "CircleR8H8",
+							"innerRadius": 0.1,//无效化内半径
+							"strength": 15,//强度
+							"maxNum": 1,
+							"attenuation": 0,
+							"reverse":true,
+							"overrideWeight":75,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",//风场挂接的位置，注意这里是会Follow的
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"alongGround": true,    //其朝向与地面法向一致
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "ElementAbility_CrystalSeed",
+									"value": 1,
+									"compareType": "Equal",
+							   },
+							],
+						},
+					]
+				},
+				"Gorou_FieldLand_Constellation_1_Avatar":
+				{
+					"duration": 2,
+					"stacking": "Refresh",
+					"onAttackLanded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Other",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByHitElement",
+									"element": "Rock",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "DebugLog", 
+									"content": "##触发命座1",
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Gorou_FieldLand_Constellation_1_DesArtCd_Field",
+									"target": "Caster",//先传给领域处理，再传给五郎
+									"doOffStage":true,
+								},
+
+							],
+						},
+					]
+				},
+				"Gorou_FieldLand_Constellation_1_DesArtCd_Field":
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "OriginOwner",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Gorou_FieldLand_Constellation_1_CD",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type" : "ByNot",
+									"predicates" :
+									[
+										{
+											"$type" : "BySkillReady",
+											"skillID" : 10552,
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Gorou_FieldLand_Constellation_1_DesArtCd",
+									"target": "OriginOwner",
+									"doOffStage":true,
+								},
+								//触发CD,CD记在五郎自己身上
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Gorou_FieldLand_Constellation_1_CdHandler",
+									"target": "OriginOwner",
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+				"Gorou_FieldLand_Constellation_1_DesArtCd":
+				{
+					"duration": 0.5,
+					"onAdded": 
+					[
+						{
+							"$type": "DebugLog", 
+							"content": "##减少技能CD",
+							"doOffStage":true,
+						},
+						{
+							"$type": "ModifyAvatarSkillCD",
+							"skillID": 10552,
+							"cdDelta": "%Gorou_Constellation_1_ReduceColdDown",
+							"doOffStage":true,
+						},
+					]
+				},
+				"UNIQUE_Gorou_FieldLand_Constellation_1_CdHandler":
+				{
+					"duration": "%Gorou_Constellation_1_ReduceColdDown_CD",
+					"isUnique": true,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage":true,
+							"target": "Self",
+							"key": "_Gorou_FieldLand_Constellation_1_CD",
+							"value": -1,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage":true,
+							"target": "Self",
+							"key": "_Gorou_FieldLand_Constellation_1_CD",
+							"value": 0,
+						}
+					]
+				},
+				//命4额外附带治疗
+				"Avatar_Gorou_ElementalBurst_Heal_Handler":
+				{
+					"thinkInterval":1.5,
+					"onThinkInterval":
+					[
+						//先取一下五郎的防御力数值
+						{
+							"$type": "GetFightProperty",
+							"fightPropSourceTarget": "OriginOwner",
+							"fightProp": "FIGHT_PROP_CUR_DEFENSE",	
+							"globalValueKey": "_ABILITY_Gorou_CurDefense",
+						},
+						{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_ABILITY_Gorou_CurDefense",
+						"overrideMapKey": "_ABILITY_Gorou_CurDefense",
+						},
+						{
+							"$type": "HealHP",                     
+							"amount": "%_ABILITY_Gorou_CurDefense*%Constellation_4_HealRatio",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H16",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self",
+								"topLimit": 5,
+								"entityTypePriority": ["Avatar"],
+								"sortType": "Nearest",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Gorou_BurstFieldLand_Life_Handler":
+				{
+					"isUnique":true,
+					"duration":"%Gorou_BurstFieldLand_Duration",
+					"elementType": "None",
+					"elementDurability": "%Gorou_BurstFieldLand_Duration",
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_BurstFieldLand_KillSelf_Delay",
+						},
+					]
+				},
+
+				"Gorou_BurstFieldLand_KillSelf_Delay":
+				{
+					"duration": 0.2,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+
+				//1层时加防御力，多个五郎在场时不可叠加
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer1_Modifier":
+				{
+					//"duration":2,
+					"isUnique":true,
+					"state": "DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_01",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+				//2层领域内角色抗打断提升
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer2_Modifier":
+				{
+					//"duration":2,
+					"isUnique":true,
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_EndureDelta": 0.5, 
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_02",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+				//3层加岩伤
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer3_Modifier":
+				{
+					//"duration":2,
+					"isUnique": true,
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_EndureDelta": 0.5, 
+						"Actor_RockAddHurtDelta":"%Layer3_RockAddHurtDelta",
+						"Actor_DefenceDelta" : "%Layer1_DefenceDelta",
+					},
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_03",	
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalArt_Symbol_Die",
+							"target": "CurLocalAvatar",
+						}
+					],
+				},
+
+				"Gorou_BurstFieldLand_Layer_Controller":
+				{
+					"thinkInterval":0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Avatar_Gorou_ElementalArt_Layer_Controller",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H16",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+						//命1效果，领域内角色造成岩元素伤害时，元素战技冷却时间减少2秒
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Gorou_FieldLand_Constellation_1_Avatar",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H16",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+								{
+									"$type": "ByNot", //并且当前角色不是五郎自己
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetType",
+											"targetType": "OriginOwner", //实际这个type只有4个生效Self/Caster/Owner/OriginOwner
+										},
+									]
+								},
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Gorou_Constellation_1",
+								},
+							],
+						},
+					],					
+				},
+
+				"UNIQUE_Avatar_Gorou_ElementalArt_Layer_Controller":
+				{
+					"isUnique": true,
+					"duration": 2,
+					"onAdded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Applier",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Avatar_Gorou_ElementalArt_Layer",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer1_Modifier",
+								},
+							],
+							"failActions": 
+							[
+								{
+									"$type" : "Predicated",
+									"target" : "Applier",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "Avatar_Gorou_ElementalArt_Layer",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type": "AttachModifier",
+											"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer2_Modifier",
+										},
+									],
+									"failActions": 
+									[
+										{
+											"$type" : "Predicated",
+											"target" : "Applier",
+											"targetPredicates":
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "Avatar_Gorou_ElementalArt_Layer",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											],
+											"successActions":
+											[
+												{
+													"$type": "AttachModifier",
+													"modifierName": "UNIQUE_Avatar_Gorou_ElementalArt_Layer3_Modifier",
+												},
+											],
+
+										},										
+									]
+								},								
+							]
+						},
+					]
+
+				},
+			},
+			"onKill":
+			[
+			],
+			"abilitySpecials":
+			{
+				"Gorou_BurstFieldLand_Duration":9.1,
+				"Layer1_DefenceDelta":0,
+				"Layer3_RockAddHurtDelta":0,
+				"Constellation_4_HealRatio":0,
+				"_ABILITY_Gorou_CurDefense":0,
+				"Gorou_Constellation_1_ReduceColdDown":0,
+				"Gorou_Constellation_1_ReduceColdDown_CD":0,
+			},
+		},
+	},
+   
+/////////////////////////////////////////////////////////////
+//
+//SkillObj_Gorou_BurstFieldLand_Dog 元素爆发表现用【狗子】
+//
+/////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SkillObj_Gorou_BurstFieldLand_Dog",	
+			"onAdded":
+			[
+				//生命周期管理
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Gorou_BurstFieldShirou_Life_Handler",
+				},				
+				{
+					"$type": "AttachModifier",
+					"modifierName": "AttachEffect_ElementalBurst_Shirou",
+				},
+				//给狗子一个标记，为了让弓箭手进瞄准的时候可以选到
+				{
+					"$type": "SetGlobalValue",
+					"key": "_Gorou_BurstFieldLand_Dog",
+					"target":"Self",
+					"value": 1,
+				},
+				//一定时间后狗子播消失特效
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_Fire_Gorou_BurstFieldLand_Dog_Effect",
+					"doOffStage":true,
+				},
+				//为了处理弓箭手瞄准状态下隐藏大招狗子
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Gorou_BurstFieldLand_Dog_Hide",
+					"target":"CurTeamAvatars",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"UNIQUE_Gorou_BurstFieldShirou_Life_Handler":
+				{
+					"isUnique": true,
+					"duration":9.3,
+					"elementType": "None",
+					"elementDurability": 9.3,
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Gorou_BurstFieldShirou_KillSelf_Delay",
+						},
+					]
+				},
+
+				"Gorou_BurstFieldShirou_KillSelf_Delay":
+				{
+					"duration": 0.1,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				"AttachEffect_ElementalBurst_Shirou":
+				{
+					"onAdded": 
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_Shirou",
+						}
+					]
+				},
+				"UNIQUE_Fire_Gorou_BurstFieldLand_Dog_Effect":
+				{
+					"isUnique":true,
+					"duration":"%Gorou_BurstFieldLand_Shirou_Duration",
+					"elementType": "None",
+					"elementDurability": "%Gorou_BurstFieldLand_Shirou_Duration",
+					"onRemoved":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Disappear",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Gorou_ElementalBurst_Shirou",
+						},
+					]
+				},
+				"Gorou_BurstFieldLand_Dog_Hide":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs":
+							[
+								"Aim",
+								"FastAim",
+							],
+							"modifierName": "Gorou_BurstFieldLand_Dog_Hide_OnAim",
+						},
+					]
+				},
+				"Gorou_BurstFieldLand_Dog_Hide_OnAim":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8H8",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+								"topLimit": 1,
+							},
+							"predicates": 
+							[
+								{
+								  "$type": "ByEntityTypes",
+								  "entityTypes": ["Field"],
+								},
+								{
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_Gorou_BurstFieldLand_Dog",
+                                    "value": 1,
+                                    "compareType": "Equal",
+                                },
+							],
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+
+					],
+				}
+			},
+
+			"onKill":
+			[
+			],
+			"abilitySpecials":
+			{
+				"Gorou_BurstFieldLand_Shirou_Duration":9.3,
+			},
+		},
+	},
+
+/////////////////////////////////////////////////////////////
+//
+//Gorou_Onkill_KillBusrtField 用于处理狗狼死了之后把大招给kill掉
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Gorou_Onkill_KillBusrtField",	
+		"onKill":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Gorou_Onkill_KillBusrtField",
+				"doOffStage":true,
+				"otherTargets": 
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 41055008,
+					"sortType": "Default",
+				},
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Gorou_Onkill_KillBusrtField",
+				"doOffStage":true,
+				"otherTargets": 
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 41055007,
+					"sortType": "Default",
+				},
+			},
+		],
+		"onAdded": 
+		[
+			//检测大招gadget还在不在，不在的话同步清大招状态
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Gorou_BurstStateCheckHandler",				
+			}		
+		],
+		"modifiers": 
+		{
+			"Gorou_Onkill_KillBusrtField":
+			{
+				"duration":1,
+				"onAdded":
+				[
+					{
+						"$type": "KillSelf",
+						"doOffStage":true,
+					}
+				]
+			},
+			"Gorou_BurstStateCheckHandler":
+			{
+				"onReconnect": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Other",
+						"doOffStage": true,
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 41055007,
+							"sortType": "Default",
+						},
+						"targetPredicates": 
+						[
+						],
+						"successActions": 
+						[
+							{
+								"$type":"RemoveUniqueModifier",
+								"modifierName":"UNIQUE_Avatar_Gorou_ElementalBurst_SelfHanler",
+								"doOffStage": true,
+							}
+						],
+					}					
+				]
+			},
+		}
+	},
+},
+
+////////////////////////////////////////////////////////////////
+//
+//  生活天赋
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_Radar_Collectables_Daoqi",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Radar_Toggle",
+				},
+			],
+			"modifiers":
+			{
+				"Radar_Toggle":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Radar_Collectables_Daoqi",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Radar_Collectables_Daoqi",
+							"value" : -1,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+		},
+	}, 
+   
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Gorou_FallingAnthem  空中攻击
+//
+////////////////////////////////////////////////////////////////
+   {
+	   "Default":
+	   {
+		   "$type": "ConfigAbility",
+		   "abilityName": "Avatar_Gorou_FallingAnthem",
+		   "abilityMixins":
+		   [
+			   {
+				   "$type": "AvatarChangeSkillMixin",
+				   "priority":"AvatarCommon",
+				   "jumpSkillID": 5055010,
+				   "flySkillID": 5055010,
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS"
+				   ],
+				   "modifierName": "FallingAnthem_BS_Material",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_Loop"
+				   ],
+				   "modifierName": "FallingAnthem_Loop_Normal",
+			   },
+			   {
+				   "$type": "AttachToAnimatorStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS_2",
+					   "FallingAnthem_Loop",
+					   "FallingAnthem_Loop_Low",
+				   ],
+				   "modifierName": "FallingAnthem_LoopDamage",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS"
+				   ],
+				   "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS",
+					   "FallingAnthem_Loop",
+					   "FallingAnthem_AS_1",
+					   "FallingAnthem_AS_2"
+				   ],
+				   "modifierName": "FallingAnthem_Height_Detect",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS",
+					   "FallingAnthem_Loop",
+					   "FallingAnthem_AS_1",
+					   "FallingAnthem_AS_2"
+				   ],
+				   "modifierName": "FallingAnthem_FallingDamageImmune_01",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS",
+					   "FallingAnthem_Loop"
+				   ],
+				   "modifierName": "Inertia",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS",
+					   "FallingAnthem_Loop",
+					   "FallingAnthem_AS_1",
+					   "FallingAnthem_AS_2"
+				   ],
+				   "modifierName": "FallingAnthem_OverHead_Camera",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS"
+				   ],
+				   "modifierName": "FallingAnthem_ClearVelocityForce",
+			   },
+			   {
+				   "$type": "AttachToStateIDMixin",
+				   "stateIDs":
+				   [
+					   "FallingAnthem_BS",
+					   "FallingAnthem_Loop",
+				   ],
+				   "modifierName": "FallingAnthem_AttachEffect_BS_01", //气流效果
+			   },
+		   ],
+		   "onAdded":
+		   [
+		   ],
+		   "onAbilityStart":
+		   [
+			   {
+				   "$type": "DebugLog", 
+				   "content": "##trigger下落攻击",
+			   },
+			   //普通状态第一段
+			   {
+				   "$type": "TriggerAttackEvent",
+				   "targetType": "Enemy",
+				   "attackEvent":
+				   {
+					   "attackPattern":
+					   {
+						   "$type": "ConfigAttackCircle",
+						   "triggerType": "TriggerNoRepeat",
+						   "height": 2.0,
+						   "fanAngle": 360.0,
+						   "radius": 3.0,
+						   "born":
+						   {
+							   "$type": "ConfigBornByTarget",
+							   "offset":
+							   {
+								   "x": 0.0,
+								   "y": -0.5,
+								   "z": 0.0,
+							   },
+						   },
+					   },
+					   "attackInfo":
+					   {
+						   "attackTag": "FallingAttack",
+						   "attackProperty":
+						   {
+							   "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+							   "strikeType": "Pierce",
+							   "attackType": "Melee",
+							   "elementType": "None",
+							   "elementDurability": 25,
+							   "enBreak": 50,
+						   },
+						   "hitPattern":
+						   {
+							   "onHitEffectName": "none",
+							   "hitImpulseType":"LV2",
+							   "retreatType": "ByAttacker",
+							   "canBeDefenceHalt": false,
+							   "hitHaltTime": 0,
+							   "hitHaltTimeScale": 0.1,
+							   "muteHitText": false
+						   },
+					   },
+				   },
+				   "predicates":
+				   [
+					   {
+						   "$type": "ByTargetGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "forceByCaster": true,
+						   "value": 0,
+						   "compareType": "NoneOrEqual",
+					   },
+				   ],
+			   },
+			   //普通状态第二段
+			   {
+				   "$type": "TriggerAttackEvent",
+				   "targetType": "Enemy",
+				   "attackEvent":
+				   {
+					   "attackPattern":
+					   {
+						   "$type": "ConfigAttackCircle",
+						   "triggerType": "TriggerNoRepeat",
+						   "height": 2.0,
+						   "fanAngle": 360.0,
+						   "radius": 3.5,
+						   "born":
+						   {
+							   "$type": "ConfigBornByTarget",
+							   "offset":
+							   {
+								   "x": 0.0,
+								   "y": -0.5,
+								   "z": 0.0,
+							   },
+						   },
+					   },
+					   "attackInfo":
+					   {
+						   "attackTag": "FallingAttack",
+						   "attackProperty":
+						   {
+							   "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+							   "strikeType": "Pierce",
+							   "attackType": "Melee",
+							   "elementType": "None",
+							   "elementDurability": 25,
+							   "enBreak": 100,
+						   },
+						   "hitPattern":
+						   {
+							   "onHitEffectName": "none",
+							   "hitImpulseType":"LV3",
+							   "retreatType": "ByAttacker",
+							   "reboundRatio": 0,
+							   "canBeDefenceHalt": false,
+							   "hitHaltTime": 0,
+							   "hitHaltTimeScale": 0.1,
+							   "muteHitText": false
+						   },
+					   },
+				   },
+				   "predicates":
+				   [
+					   {
+						   "$type": "ByTargetGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "forceByCaster": true,
+						   "value": 1,
+						   "compareType": "Equal",
+					   },
+				   ],
+			   },
+			   //普通状态第一段
+			   {
+				   "$type": "FireEffect",
+				   "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_01",
+				   "predicates":
+				   [
+					   {
+						   "$type": "ByTargetGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "forceByCaster": true,
+						   "value": 0,
+						   "compareType": "NoneOrEqual",
+					   },
+				   ],
+			   },
+			   //普通状态第二段
+			   {
+				   "$type": "FireEffect",
+				   "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_02",
+				   "predicates":
+				   [
+					   {
+						   "$type": "ByTargetGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "forceByCaster": true,
+						   "value": 1,
+						   "compareType": "Equal",
+					   },
+				   ],
+			   },
+		   ],
+		   "modifiers":
+		   {
+			   "FallingAnthem_AttachEffect_BS_01":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "AttachEffect",
+						   "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS_01",
+					   },
+				   ],
+			   },
+			   "FallingAnthem_BS_Material":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "FireEffect",
+						   "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS",
+					   },
+				   ],
+				   "onRemoved":
+				   [
+					   {
+						   "$type": "ActCameraRadialBlur",
+						   "cameraRadialBlur":
+						   {
+							   "power": 0.3,
+							   "blurTime": 0.3,
+							   "fadeTime": 0.15,
+						   },
+					   },
+				   ],
+			   },
+			   "FallingAnthem_BS_VelocityForce_Initialize":
+			   {
+				   "properties":
+				   {
+					   "Actor_AddGravityScale": -2,
+				   },
+				   "onAdded":
+				   [
+					   {
+						   "$type": "RemoveVelocityForce",
+						   "forces":
+						   [
+							   "RushMoveType"
+						   ],
+					   },
+				   ],
+			   },
+			   "FallingAnthem_LoopDamage":
+			   {
+				   "thinkInterval": 0.3,
+				   "onThinkInterval":
+				   [
+					   {
+						   "$type": "TriggerAttackEvent",
+						   "targetType": "Enemy",
+						   "attackEvent":
+						   {
+							   "attackPattern":
+							   {
+								   "$type": "ConfigAttackSphere",
+								   "triggerType": "TriggerNoRepeat",
+								   "radius": 1.0,
+								   "born":
+								   {
+									   "$type": "ConfigBornBySelf",
+									   "offset":
+									   {
+										   "x": 0.0,
+										   "y": 0.0,
+										   "z": 0.0
+									   }
+								   }
+							   },
+							   "attackInfo":
+							   {
+								   "attackTag": "FallingAttack",
+								   "attackProperty":
+								   {
+									   "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+									   "strikeType": "Pierce",
+									   "attackType": "Melee",
+									   "elementType": "None",
+									   "elementDurability": 0,
+									   "enBreak": 10,
+								   },
+								   "hitPattern":
+								   {
+									   "onHitEffectName": "default",
+									   "hitImpulseType":"LV2",
+									   "reboundRatio": 0,
+									   "canBeDefenceHalt": false,
+									   "hitHaltTime": 0,
+									   "hitHaltTimeScale": 0.02,
+									   "muteHitText": false
+								   },
+							   },
+						   },
+					   },
+				   ],
+			   },
+			   "FallingAnthem_FallingDamageImmune_01":
+			   {
+				   "onAdded":
+				   [
+					   {
+						 "$type": "ClearGlobalValue",
+						 "key": "_ABILITY_FallingAttack_Altitude",
+					   },
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAttack_Altitude",
+						   "value": "%FallingAnthem_FallingDamageRatio_Lv0",
+						   "useLimitRange": true,
+						   "maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+						   "minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv0",
+								   "logic": "LesserOrEqual",
+							   },
+						   ],
+					   },//==================================================================================
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAttack_Altitude",
+						   "value": "%FallingAnthem_FallingDamageRatio_Lv1",
+						   "useLimitRange": true,
+						   "maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+						   "minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv1",
+								   "logic": "LesserOrEqual",
+							   },
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv0",
+								   "logic": "Greater",
+							   },
+						   ],
+					   },//==================================================================================
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAttack_Altitude",
+						   "value": "%FallingAnthem_FallingDamageRatio_Lv2",
+						   "useLimitRange": true,
+						   "maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+						   "minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv2",
+								   "logic": "LesserOrEqual",
+							   },
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv1",
+								   "logic": "Greater",
+							   },
+						   ],
+					   },//==================================================================================
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAttack_Altitude",
+						   "value": "%FallingAnthem_FallingDamageRatio_Lv3",
+						   "useLimitRange": true,
+						   "maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+						   "minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv3",
+								   "logic": "LesserOrEqual",
+							   },
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv2",
+								   "logic": "Greater",
+							   },
+						   ],
+					   },//==================================================================================
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAttack_Altitude",
+						   "value": "%FallingAnthem_FallingDamageRatio_Lv4",
+						   "useLimitRange": true,
+						   "maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+						   "minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": "%FallingAnthem_Altitude_Lv3",
+								   "logic": "Greater",
+							   },
+						   ],
+					   },//==================================================================================
+   
+					   {
+						   "$type": "AttachModifier",
+						   "modifierName": "FallingAnthem_FallingDamageImmune_02",
+					   },
+				   ],
+			   },
+			   "FallingAnthem_FallingDamageImmune_02":
+			   {
+				   "onAdded":[
+					   {
+						   "$type": "SetGlobalValueToOverrideMap",
+						   "globalValueKey": "_ABILITY_FallingAttack_Altitude",
+						   "overrideMapKey": "FallingAnthem_FallingDamageRatio",
+					   },
+					   {
+						   "$type": "AttachModifier",
+						   "modifierName": "FallingAnthem_FallingDamageImmune_03",
+					   },
+				   ],
+			   },
+			   "FallingAnthem_FallingDamageImmune_03":
+			   {
+   
+				   "properties":
+				   {
+					   "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+				   },
+			   },
+			   "FallingAnthem_Loop_Normal":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "AttachEffect",
+						   "effectPattern": "Eff_Avatar_Bow_FallAnthem_Loop_02",
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetGlobalValue",
+								   "key": "_ABILITY_FallingAnthem_UseCamera",
+								   "forceByCaster": true,
+								   "value": 1,
+								   "compareType": "Equal",
+							   },
+						   ],
+					   },
+				   ],
+			   },
+			   //水平惯性继承
+			   "Inertia":
+			   {
+				   "modifierMixins":
+				   [
+					   {
+						   "$type": "ApplyInertiaVelocityMixin",
+						   "damping": 0,
+						   "useXZ": false,
+						   "useY": false,
+					   },
+				   ],
+			   },
+			   "FallingAnthem_Height_Detect":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "value": 0,
+						   "useLimitRange": true,
+						   "maxValue": 0,
+						   "minValue": 0,
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": 2.4,
+								   "logic": "LesserOrEqual",
+							   },
+						   ],
+					   },
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "value": 5,
+						   "useLimitRange": true,
+						   "maxValue": 1,
+						   "minValue": 0,
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": 2.4,
+								   "logic": "Greater",
+							   },
+						   ],
+					   },
+					   {
+						   "$type": "SetAnimatorFloat",
+						   "floatID": "FallingAnthem_UseCamera",
+						   "value": 0,
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": 2.4,
+								   "logic": "LesserOrEqual",
+							   },
+						   ],
+					   },
+					   {
+						   "$type": "SetAnimatorFloat",
+						   "floatID": "FallingAnthem_UseCamera",
+						   "value": 1,
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByTargetAltitude",
+								   "value": 2.4,
+								   "logic": "Greater",
+							   },
+						   ],
+					   },
+				   ],
+				   "onRemoved":
+				   [
+					   {
+						   "$type": "SetAnimatorFloat",
+						   "floatID": "FallingAnthem_UseCamera",
+						   "value": 0,
+					   },
+					   {
+						   "$type": "AddGlobalValue",
+						   "key": "_ABILITY_FallingAnthem_UseCamera",
+						   "value": 0,
+						   "useLimitRange": true,
+						   "maxValue": 0,
+						   "minValue": 0,
+					   },
+				   ],
+			   },
+			   "FallingAnthem_OverHead_Camera":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "AvatarCameraParam",
+						   "lockParam": false,
+						   "cameraParam":
+						   {
+							   "forceRadius": 4.5,
+							   "forceRadiusDuration": 0.2,
+							   "shouldKeepForceRadius": true,
+						   },
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByAnimatorFloat",
+								   "parameter": "FallingAnthem_UseCamera",
+								   "value": 1,
+								   "logic": "Equal",
+							   },
+						   ],
+					   },
+				   ],
+			   },
+			   "FallingAnthem_OverHead_Camera_Remover":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "doOffStage": true,
+						   "$type": "AvatarExitCameraShot",
+					   },
+				   ],
+			   },
+			   "FallingAnthem_Landed_Camera":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "AvatarCameraParam",
+						   "lockParam": false,
+						   "cameraParam":
+						   {
+							   "forceRadius": 6.0,
+							   "forceRadiusDuration": 0.1,
+							   "shouldKeepForceRadius": true,
+						   },
+						   "predicates":
+						   [
+							   {
+								   "$type": "ByAnimatorFloat",
+								   "parameter": "FallingAnthem_UseCamera",
+								   "value": 1,
+								   "logic": "Equal",
+							   },
+						   ],
+					   },
+				   ],
+			   },
+			   "FallingAnthem_ClearVelocityForce":
+			   {
+				   "onAdded":
+				   [
+					   {
+						   "$type": "RemoveVelocityForce",
+						   "forces":
+						   [
+							   "RushMoveType",
+							   "InertiaType"
+						   ],
+					   },
+				   ],
+			   },
+		   },
+		   "abilitySpecials":
+		   {
+			   "FallingAnthem_Normal_Loop_Damage": 0,
+			   "FallingAnthem_Normal_Rank_1_Damage": 0,
+			   "FallingAnthem_Normal_Rank_2_Damage": 0,
+   
+			   "FallingAnthem_Altitude_Lv0": 20,
+			   "FallingAnthem_Altitude_Lv1": 40,
+			   "FallingAnthem_Altitude_Lv2": 60,
+			   "FallingAnthem_Altitude_Lv3": 100,
+			   "FallingAnthem_Altitude_Lv4": 200,
+   
+			   "FallingAnthem_FallingDamageRatio_Lv0": -1,
+			   "FallingAnthem_FallingDamageRatio_Lv1": -1,
+			   "FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+			   "FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+			   "FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+   
+			   "FallingAnthem_FallingDamageRatio": 0,
+		   },
+	   },
+   },
+   
+///////////////////////////////////////////////////////////////
+//
+//  命之座2 Constellation_2
+//  大招状态下每次拾取元素结晶都会使持续时间延长1秒，最多触发3次。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Gorou_Constellation_2",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "Predicated",
+					"target": "Self",
+					"doOffStage": true,
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "Avatar_Gorou_Constellation_2_Count",
+							"value": 2,
+							"compareType": "LessAndEqual",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "DebugLog",
+							"content": "##trigger了五郎的命2效果",
+							"doOffStage": true,
+						},
+						//只能触发3次
+						//加gadget的持续时间
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Gadget",
+							"doOffStage": true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055008,
+								"sortType": "Default",
+							},
+						},
+						//加shirou的持续时间
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Shirou",
+							"doOffStage": true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055007,
+								"sortType": "Default",
+							},
+						},
+						//加shirou的持续时间
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Shirou2",
+							"doOffStage": true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41055007,
+								"sortType": "Default",
+							},
+						},
+						//加大招五郎的持续时间
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Avatar",
+							"doOffStage": true,							
+						},
+						{
+							"$type": "AddGlobalValue",	//间隔爆炸
+							"key": "Avatar_Gorou_Constellation_2_Count",
+							"doOffStage": true,	
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+						}
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Gadget":
+				{
+					"isUnique":true,
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"doOffStage": true,
+							"value" : 1,
+							"modifierName":"UNIQUE_Gorou_BurstFieldLand_Life_Handler",
+							"useLimitRange": true,
+							"maxValue": 12.1,
+						},
+					]
+				},
+				//狗子消失时间也延长
+				"UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Shirou":
+				{
+					"isUnique":true,
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"doOffStage": true,
+							"value" : 1,
+							"modifierName":"UNIQUE_Fire_Gorou_BurstFieldLand_Dog_Effect",
+							"useLimitRange": true,
+							"maxValue": 12.3,
+						},
+					]
+				},
+				"UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Shirou2":
+				{
+					"isUnique":true,
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"doOffStage": true,
+							"value" : 1,
+							"modifierName":"UNIQUE_Gorou_BurstFieldShirou_Life_Handler",
+							"useLimitRange": true,
+							"maxValue": 12.3,
+						},
+					]
+				},
+				"UNIQUE_Avatar_Gorou_Constellation_2_AddDuration_Avatar":
+				{
+					"isUnique":true,
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"doOffStage": true,
+							"value" : 1,
+							"modifierName":"UNIQUE_Avatar_Gorou_ElementalBurst_SelfHanler",
+							"useLimitRange": true,
+							"maxValue": 12.1,
+						},
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+   
+
+///////////////////////////////////////////////////////////////
+//
+//  突破天赋 Gorou_PermanentSkill_1
+//  元素爆发持续时间内全队防御力提升X%
+//
+////////////////////////////////////////////////////////////////
+   
+   
+]

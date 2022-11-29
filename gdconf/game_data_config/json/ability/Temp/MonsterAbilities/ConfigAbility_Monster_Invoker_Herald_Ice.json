@@ -1,0 +1,994 @@
+[
+	// --------------------------------------------------
+	//
+	//           Mixin：使用技能时旋转瞄准配置相关
+	//
+	// --------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_AnimatorSteer",
+			"abilityMixins": [
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Hoarfrost_Slash"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 0.28,
+					"angularSpeed": 280,
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Hoarfrost_Blast"],
+					"startNormalizedTime": 0.36,
+					"endNormalizedTime": 0.5,
+					"angularSpeed": 180,
+					"attackDistance": 0
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Alert"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 0.3,
+					"angularSpeed": 180,
+					"attackTrigger": "",
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["IceSlash_P1"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 0.9,
+					"angularSpeed": 210,
+					"attackTrigger": "",
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["IceSlash_P2"],
+					"startNormalizedTime": 0.27,
+					"endNormalizedTime": 0.32,
+					"angularSpeed": 180,
+					"attackTrigger": "",
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["IceSlash_P3"],
+					"startNormalizedTime": 0.4,
+					"endNormalizedTime": 0.46,
+					"angularSpeed": 180,
+					"attackTrigger": "",
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Approach_Precast", "Approach_Backswing","Frozen_Blink_Precast", "Frozen_Blink_Backswing"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 0.6,
+					"angularSpeed": 210,
+					"attackTrigger": "",
+					"attackDistance": 12
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Approach_IN","Frozen_Blink_IN"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 1,
+					"angularSpeed": 80,
+					"attackTrigger": "",
+					"attackDistance": 12
+				}
+			]
+		}
+	},
+	// --------------------------------------------------
+	//
+	//           POSE状态机控制
+	//
+	// --------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_StateControl",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToHPPercentMixin",
+					"valueSteps": [0.6, 0.2],
+					"modifierNameSteps": [
+						"Empty_Modifier",
+						"PoseControl_To_302",
+						"PoseControl_To_401"
+					]
+				}
+			],
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Limbo"
+				}
+			],
+			"modifiers": {
+				"Empty_Modifier": {},
+				"Limbo": {
+					"state": "Limbo",
+					"properties": {
+						"Actor_HpThresholdRatio": 0.15
+					}
+				},
+				"PoseControl_To_302": {
+					"onAdded": [
+						{
+							"$type": "SetPoseBool",
+							"boolID": "To_302",
+							"value": true
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetPoseBool",
+							"boolID": "To_302",
+							"value": false
+						}
+					]
+				},
+				"PoseControl_To_401": {
+					"onAdded": [
+						{
+							"$type": "SetPoseBool",
+							"boolID": "To_401",
+							"value": true
+						},
+						{
+							"$type": "ClearEndura"
+						}
+					]
+				}
+			}
+		}
+	},
+	// -----------------------------------------------
+	//
+	//				Debuff技能侦听功能
+	//
+	//		部分技能命中后会使目标的体力减少
+	//
+	//		只有带有Tag为【 Invoker_Herald_Ice_Special 】的攻击才会使体力减少
+	//
+	// -----------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_Special_Debuff_Monitor",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Special_Debuff_Monitor"
+				}
+			],
+			"modifiers": {
+				"Special_Debuff_Monitor": {
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByAttackTags",
+									"attackTags": ["Invoker_Herald_Ice_Special"]
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "DeductStamina",
+									"target": "Target",
+									"value": 100
+								}
+							]
+						}
+					]
+				},
+			}
+		}
+	},
+	// --------------------------------------------------
+	//
+	//            霜凝爆发 Hoarfrost Blast
+	//
+	//		用于技能的二段击地强攻击
+	//
+	// 		如果进入神降状态，则额外为自己身边附上冰霜领域效果
+	//		持续对进入范围内的角色造成伤害
+	//
+	// --------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_Hoarfrost_Area",
+			"onAbilityStart": [
+				// ----------------------------
+				//         攻击效果
+				// 用SelectTargetsByShape实现
+				// 所以这个技能不会被闪避技能躲开
+				// 用跳跃的方式可以避开
+				// ----------------------------
+				{
+					"$type": "ApplyModifier",
+					"otherTargets": {
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleInvokerHeraldIceHitGround",
+						"centerBasedOn": "Self",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Self"
+					},
+					"modifierName": "Invoker_Herald_Ice_Blast_Damage"
+				},
+
+				// 	"$type": "ActCameraShake",     看看需不需要做震屏
+
+				// 为自身添加冰霜领域效果
+				{
+					"predicates": [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_MONSTER_INVOKER_HERALD_ICE_SHIELD_ADDED",
+							"compareType": "Equal",
+							"value": 1
+						}
+					],
+					"$type": "ApplyModifier",
+					"modifierName": "Hoarfrost_Area_Halo"
+				}
+			],
+			"modifiers": {
+				// 砸地的无法闪避躲开的伤害效果
+				"Invoker_Herald_Ice_Blast_Damage": {
+					"duration": 1.0,
+					"stacking": "Unique",
+					"onAdded": [
+						{
+							"$type": "DamageByAttackValue",
+							"attacker": "Caster",
+							"attackInfo": {
+								"attackProperty": {
+									"damagePercentage": 2.0,
+									"strikeType": "Blunt",
+									"elementType": "Ice",
+									"elementDurability": 25,
+									"enBreak": 200
+								},
+								"hitPattern": {
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV7",
+									"hitHaltTime": 0,
+									"hitHaltTimeScale": 0
+								}
+							}
+						}
+					]
+				},
+				// 冰霜领域  (光环)
+				"Hoarfrost_Area_Halo": {
+					"duration": 6,
+					"thinkInterval": 0.33,
+					"onAdded": [
+						// 冰霜领域的特效
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Hoarfrost_Area_Temp"
+						}
+					],
+					"onThinkInterval": [
+						// 每跳造成一次伤害
+						{
+							"$type": "ApplyModifier",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6H3",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self"
+							},
+							"modifierName": "Hoarfrost_Area_Halo_Damage"
+						}
+					]
+				},
+				// 无法闪避躲开的光环的伤害效果
+				"Hoarfrost_Area_Halo_Damage": {
+					"duration": 0.1,
+					"stacking": "Unique",
+					"onAdded": [
+						{
+							"$type": "DamageByAttackValue",
+							"attacker": "Caster",
+							"attackInfo": {
+								"attackProperty": {
+									"damagePercentage": 0.06,
+									"elementType": "Ice",
+									"elementDurability": 5,
+									"enBreak": 0.0
+								},
+								"hitPattern": {
+									// "attenuationTag": "Group1",
+									// "attenuationGroup": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.0
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	},
+	// --------------------------------------------------
+	//
+	//            冰封之刃    Frozen Blade
+	//
+	//		    技能本体：召唤Gadget托管攻击
+	//
+	//
+	//            两种，预判时间有所区别
+	// --------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_FrozenBlade_Cast_Long",
+			"onAbilityStart": [
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 42202004,
+					"campID": 4001,
+					"lifeByOwnerIsAlive": true,
+					"target": "SelfAttackTarget",
+					"born": {
+						"$type": "ConfigBornByPredicatePoint",
+						// ——————————————————————————
+						// timeForPredictive为攻击的延迟时间,需要和下面的Duration尽量同步
+						// ——————————————————————————
+						"timeForPredictive": 0.55,
+						"onGround": true
+					}
+				}
+			]
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_FrozenBlade_Cast_Short",
+			"onAbilityStart": [
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 42202006,
+					"campID": 4001,
+					"lifeByOwnerIsAlive": true,
+					"target": "SelfAttackTarget",
+					"born": {
+						"$type": "ConfigBornByPredicatePoint",
+						// ——————————————————————————
+						// timeForPredictive为攻击的延迟时间,需要和下面的Duration尽量同步
+						// ——————————————————————————
+						"timeForPredictive": 0.34,
+						"onGround": true
+					}
+				}
+			]
+		}
+	},
+	// --------------------------------------------------
+	//
+	//            冰封之刃    Frozen Blade
+	//
+	//		Gadget的技能效果预判移动落点的攻击效果
+	//
+	//	有两个技能，分别用于给预判时间不同的攻击使用
+	// --------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_FrozenBlade_Gadget_Long",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FrozenBlade_Attack"
+				}
+			],
+			"modifiers": {
+				// 用Modifier作为攻击效果
+				"FrozenBlade_Attack": {
+					// ——————————————————————————
+					// duration为攻击的延迟时间，需要和上面的【 timeForPredictive 】保持同步
+					// ——————————————————————————
+					"duration": 0.55,
+					"onAdded": [
+						// 显示警告圈   TODO: 换成正式的警告圈
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Frozenblade_Alert_Temp",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset": {
+									"x": 0,
+									"y": 1.5,
+									"z": 0
+								}
+							}
+						}
+					],
+					"onRemoved": [
+						// 计时结束时，进行攻击
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Frozenblade_Temp",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset": {
+									"x": 0,
+									"y": 1.5,
+									"z": 0
+								}
+							}
+						},
+						// 攻击伤害的 Action
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 1.4,
+									"height": 2.3
+								},
+								"attackInfo": {
+									"attackProperty": {
+										"damagePercentage": 1.0,
+										"strikeType": "Blunt",
+										"elementType": "Ice",
+										"elementDurability": 50,
+										"enBreak": 40
+									},
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag": "Invoker_Herald_Ice_Special",
+									"hitPattern": {
+										"onHitEffectName": "none",
+										"hitImpulseType": "LV3",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0
+									}
+								}
+							}
+						},
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_FrozenBlade_Gadget_Short",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FrozenBlade_Attack"
+				}
+			],
+			"modifiers": {
+				"FrozenBlade_Attack": {
+					// ——————————————————————————
+					//    短延迟
+					// ——————————————————————————
+					"duration": 0.34,
+					"onAdded": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Frozenblade_Alert_Temp",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset": {
+									"x": 0,
+									"y": 1.5,
+									"z": 0
+								}
+							}
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Frozenblade_Temp",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset": {
+									"x": 0,
+									"y": 1.5,
+									"z": 0
+								}
+							}
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 1.4,
+									"height": 2.3
+								},
+								"attackInfo": {
+									"attackProperty": {
+										"damagePercentage": 1.0,
+										"strikeType": "Blunt",
+										"elementType": "Ice",
+										"elementDurability": 50,
+										"enBreak": 40
+									},
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag": "Invoker_Herald_Ice_Special",
+									"hitPattern": {
+										"onHitEffectName": "none",
+										"hitImpulseType": "LV3",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0
+									}
+								}
+							}
+						},
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	},
+	// ------------------------------------------------------------------
+	//
+	//				       冰霜闪现 Frozen Blink
+	//
+	// 	控制闪现相关的状态     进入闪现的State时，隐藏自己，以及相关的操作
+	// ------------------------------------------------------------------
+
+	// 闪现状态绑定
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_Frozen_Blink_IN_State",
+			"abilityMixins": [
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Frozen_Blink_IN"],
+					"modifierName": "UNIQUE_Invoker_Herald_Ice_inBlink"
+				}
+			],
+			"modifiers": {
+				//
+				//
+				//                闪现中的状态控制
+				//
+				//    闪现状态下：不可见、不可击杀、不可选中、隐藏UI信息
+				//
+				//
+				"Blink_Invincible": {
+					"state": "Invincible"
+				},
+				"Blink_DenyLockOn": {
+					"state": "DenyLockOn"
+				},
+				"UNIQUE_Invoker_Herald_Ice_inBlink": {
+					"isUnique": true,
+					"onAdded": [
+						// TODO: Debug
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Sylph_Rock_RockBullet_Body"
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Blink_Invincible",
+							"target": "Self"
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Blink_DenyLockOn",
+							"target": "Self"
+						},
+						// 上面这两个Modifier会随着inBlink的这个Modifier一同移除
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"target": "Self"
+						},
+						{
+							"$type": "HideUIBillBoard",
+							"hide": true,
+							"target": "Self"
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["HitBox"],
+							"setEnable": false
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider"],
+							"setEnable": false
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["HitBox", "HeadBox"],
+							"setEnable": true
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider"],
+							"setEnable": true
+						},
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"target": "Self"
+						},
+						{
+							"$type": "HideUIBillBoard",
+							"hide": false,
+							"target": "Self"
+						}
+					]
+				}
+			}
+		}
+	},
+
+	// --------------------------------------------------------------------------
+	//
+	//				     冰霜闪现 Frozen Blink   位置测试
+	//                        在IN状态后半段触发
+	// 		    如果闪现结束时自身离玩家过于接近，将会使用传送的方式远离玩家
+	//	TODO 相关特效
+	// ---------------------------------------------------------------------------
+
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_Frozen_Blink_Redirect",
+			"onAbilityStart": [
+				// 测试距离
+				{
+					"$type": "SetGlobalValueByTargetDistance",
+					"target": "SelfAttackTarget",
+					"key": "_INVOKER_HERALD_ICE_DISTENCE_CHECK"
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_INVOKER_HERALD_ICE_DISTENCE_CHECK",
+							"compareType": "LessAndEqual",
+							"value": "%Redirect_Threshold"
+						}
+					],
+					// 满足距离过近的条件
+					"successActions": [
+						{
+							"$type": "TryFindBlinkPoint",
+							"target": "SelfAttackTarget",
+							"forwardAngle": 40,
+							"minRange": 15.0,
+							"maxRange": 18.0
+						},
+						{
+							"$type": "DoBlink"
+						}
+					]
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Invoker_Herald_Ice_Blink_Hint_Temp",
+					"born": {
+						"$type": "ConfigBornBySelf",
+						"offset": {
+							"x": 0,
+							"y": 2,
+							"z": 0
+						}
+					}
+				}
+			],
+			"abilitySpecials": {
+				"Redirect_Threshold": 7.9
+			}
+		}
+	},
+
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_FrozenBlink_Achieve",
+			"onAbilityStart": [
+				//  在连线的点上召唤一个延迟爆炸的实体
+				{
+					"$type": "Repeated",
+					"repeatTimes": 3,
+					"actions": [
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42202005,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"target": "SelfAttackTarget",
+							"born": {
+								"$type": "ConfigBornByTargetLinearPoint",
+								"onGround": true,
+								"linearOffset": 0.5,
+								"linearMin": 5,
+								"linearMax": 10,
+								"bornRandom": {
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 1.5,
+									"maxRandomRange": 3.7
+								}
+							}
+						}
+					]
+				}
+			]
+		}
+	},
+	// ------------------------------------------------------------------
+	//
+	//				     冰霜闪现留下的Gadget
+	//
+	//				TODO:   功能与表现细化
+	//
+	// ------------------------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_Crystal_Gadget",
+			"onAdded": [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_LaSignora_FrostBlume_Bullet"
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Crystal_Attack"
+				},
+				{
+					"$type": "SetRandomOverrideMapValue",
+					"overrideMapKey": "Crystal_Delay_Explode_Time",
+					"valueRangeMin": 1.1,
+					"valueRangeMax": 2.1
+				}
+			],
+			"abilitySpecials": {
+				"Crystal_Delay_Explode_Time": 1.5
+			},
+			"modifiers": {
+				// 水晶的延迟攻击效果
+				"Crystal_Attack": {
+					// -----------------
+					// 爆炸延迟时间在这里
+					// -----------------
+					"duration": "%Crystal_Delay_Explode_Time",
+					"onRemoved": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_LaSignora_FrostBlume_BulletAS",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset": {
+									"x": 0,
+									"y": 1.5,
+									"z": 0
+								}
+							}
+						},
+						// 攻击伤害的 Action
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 2.5,
+									"height": 2.3
+								},
+								"attackInfo": {
+									"attackProperty": {
+										"damagePercentage": 1.0,
+										"strikeType": "Blunt",
+										"elementType": "Ice",
+										"elementDurability": 50,
+										"enBreak": 40
+									},
+									"canBeModifiedBy": "OriginOwner",
+									"hitPattern": {
+										"onHitEffectName": "none",
+										"hitImpulseType": "LV3",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0
+									}
+								}
+							}
+						},
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	},
+	// ------------------------------------------------------------------
+	//
+	//				     【 神 降 】  状态控制技能
+	//
+	//				TODO         表现细化
+	//
+	// ------------------------------------------------------------------
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Invoker_Herald_Ice_EmpowerState",
+			"abilityMixins": [
+				{
+					// 神降状态效果绑定
+					"$type": "AttachToPoseIDMixin",
+					"poseIDs": [401, 402],
+					"modifierName": "Empower_State"
+				}
+			],
+			"onAdded": [
+				// 赋值  强度提升词条->可用变量
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"abilityFormula": "None",
+					"globalValueKey": "_MONSTERAFFIX_ELEMENTSHIELD_DURABILITYIMPROVE",
+					"overrideMapKey": "ElementShield_DurabilityImprove"
+				}
+			],
+			"onAbilityStart": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_Invoker_Herald_Ice_ElementShield"
+				}
+			],
+			"abilitySpecials": {
+				// 变量初始化
+				"ElementShield_DurabilityImprove": 0.0
+			},
+			"modifiers": {
+				// -----------------------------------------
+				//
+				//			    神降状态逻辑
+				//
+				// 	进入神降状态后，锁血、并确保元素盾的正常添加
+				//
+				// -----------------------------------------
+				"Empower_State": {
+					"thinkInterval": 5.0,
+					"onThinkInterval": [
+						{
+							// 如果确定护盾还没有添加过
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_MONSTER_INVOKER_HERALD_ICE_SHIELD_ADDED",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								}
+							],
+							// 那就添加元素护盾
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Invoker_Herald_Ice_ElementShield"
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "Go_Enpower",
+							"MPTriggerOnRemote": true
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Empower_LockHP"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Empower_NoHeal"
+						}
+					]
+				},
+				"Empower_LockHP": {
+					"state": "LockHP"
+				},
+				"Empower_NoHeal": {
+					"state": "NoHeal"
+				},
+				// -----------------------------------------
+				//
+				// 			  关键的元素盾逻辑
+				//
+				//	功能：
+				//
+				//
+				// -----------------------------------------
+				"UNIQUE_Invoker_Herald_Ice_ElementShield": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"elementType": "Frozen",
+					"elementDurability": "900*%ElementShield_DurabilityImprove+900",
+					"properties": {
+						"Actor_EndureDelta": 0.0 // 霸体
+					},
+					"modifierMixins": [
+						// 元素盾细节配置
+						{
+							"$type": "ElementShieldMixin",
+							"elementType": "Ice",
+							"shieldHPRatio": 1.0,
+							"damageRatio": 0.2,
+							"useMutiPlayerFixData": true
+						},
+						{
+							"$type": "VelocityForceMixin",
+							// 不会受到风场力的影响
+							"excludeForces": ["WindZoneType"]
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_MONSTER_INVOKER_HERALD_ICE_SHIELD_ADDED", // 已添加护盾状态
+							"value": 1
+						},
+						// 免疫挣扎状态、免疫冰冻状态
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 14001
+						},
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 14002
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_MONSTER_INVOKER_HERALD_ICE_SHIELD_ADDED",
+							"value": 0
+						},
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	}
+]

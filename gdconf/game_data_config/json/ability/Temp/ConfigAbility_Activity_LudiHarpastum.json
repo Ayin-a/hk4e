@@ -1,0 +1,4284 @@
+[
+    //-----------------废弃逻辑？不敢删-------------//
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Racket",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "Is_Gold_Bat",
+					"value": 0,
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 1,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ActivityAbility_LudiHarpastum_Racket_EffectHandler",
+					"doOffStage": true,
+				},
+			],
+			"modifiers": 
+			{
+				"ActivityAbility_LudiHarpastum_Racket_EffectHandler":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"target": "Team",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Racket",
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"target": "Team",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Racket",
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_LudiHarpastum_Racket": 
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Disappear",
+						},
+					],
+				},
+			},
+		}, //
+	}, //ActivityAbility_LudiHarpastum_Racket 显示逻辑 （绑定在队伍上的）
+
+
+//////////////////////////////////////////////////////////////
+///
+///    大世界羽球玩法
+///    
+//////////////////////////////////////////////////////////////
+	//ActivityAbility_LudiHarpastum_Serve_SwitchSkill（切换发球技能）
+    {
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Serve_SwitchSkill",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Serve_AddSkillInfo",
+					"target": "Self",
+				},
+			],
+			"modifiers": 
+			{
+				"UNIQUE_ActivityAbility_LudiHarpastum_Serve_AddSkillInfo": 
+				{
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20021,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 20021,
+							"cdRatio": 0.05,
+						}, //AvatarSkillStart _ 这个是为了切换时个小CD，使得UI看上去有个技能可以用的效果提示
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"type": "Bool",
+							"parameter": "SwitchSkill",
+							"value": 1,
+							"effectPattern": "Eff_Activity_LudiHarpastum",
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"type": "Bool",
+							"parameter": "SwitchSkill",
+							"value": 0,
+							"effectPattern": "Eff_Activity_LudiHarpastum",
+						},
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20021,
+						},
+					],
+				},
+				"SwitchSkill": 
+				{
+					"stacking": "Refresh",
+					"modifierMixins": 
+					[
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20021,
+						},
+					],
+				},
+			},
+		},
+	},
+
+    //ActivityAbility_LudiHarpastum_Serve（大世界羽球发球逻辑）
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Serve",
+			"isDynamicAbility": true,
+			"onAvatarOut": 
+            [
+				{
+					"$type": "ApplyModifier",
+					"doOffStage": true,
+					"modifierName": "RemovedFocusState",
+				},
+			],
+			"abilityMixins": 
+			[
+				{
+					//因为这里动画状态机用的是chaneel，为了不更改老的Channel的连发，因此在退出上做了特殊处理（仅当BS 未进入loop时退出，确保他能进AS）
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": 
+                    [
+						"Channel_BS",
+						"Channel_Loop",
+					],
+					"modifierName": "CheckChannelLoop",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": 
+                    [
+						"Channel_BS",
+						"Channel_Loop",
+						"Channel_AS",
+					],
+					"modifierName": "Trigger_OnExit",
+				},
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 20021,
+					"chargeTime": 0.0,
+					"secondChargeTime": 0.12,
+					"OnBeginCharged": 
+					[
+						{
+							"$type": "ChangePlayMode",
+							"canBeHandledOnRecover": true,
+							"muteRemoteAction": true,
+							"authorityOnly": true,
+							"doOffStage": true,
+							"toPlayMode": "ActivityAimState",
+						},
+						{
+            				"$type": "SetGlobalValue",
+            				"key": "_ABILITY_Common_Channel_IsTrigger",  //每次点按重置Trigger
+            				"value": 0,
+            				"doOffStage": true,
+            			},
+					],
+					"OnReleaseCharged": 
+                    [
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "Shoot_Short",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_Endora_IsFocus",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "Shoot",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_Endora_IsFocus",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"toPlayMode": "Normal",
+							"doOffStage": true,
+						},
+					],
+					"OnBeginSecondCharged": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Focus",
+						},
+					],
+					"OnReleaseSecondCharged": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "Shoot",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Common_Channel_IsTrigger",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+            				"$type": "SetGlobalValue",
+            				"key": "_ABILITY_Common_Channel_IsTrigger",
+            				"value": 1,
+            				"doOffStage": true,
+            			},
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "doOffStage": true,
+                            "triggerID": "EndChannelTrigger",
+                        },
+					],
+					"OnCancelCharged": 
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndChannelTrigger",
+							"doOffStage": true,
+						}
+					],
+					"chargeStateIDs": 
+                    [
+						"Channel_Loop",
+					],
+				},
+			],
+			"modifiers": 
+            {
+            	"Trigger_OnExit":  //强制打断时进CD
+            	{
+            		"onRemoved":
+            		[
+            			{
+            				"$type": "ApplyModifier",       //没松手被打断时强制发射子弹
+            				"modifierName": "Shoot_Short",
+            				"doOffStage": true,
+            				"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Common_Channel_IsTrigger",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+            			},
+            			{
+            				"$type": "SetGlobalValue",
+            				"key": "_ABILITY_Common_Channel_IsTrigger",
+            				"value": 1,
+            				"doOffStage": true,
+            			},
+            		],
+            	},
+				"Shoot_Short": //点按发射羽球
+				{
+					"duration": 0.1,
+					"onAdded": 
+                    [
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 20021,
+							"cdRatio": 1,
+						}, //AvatarSkillStart
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Serve_OnShooting",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset": {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+							},
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 44000110,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+								"direction": 
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+									"angleOffset": 
+									{
+										"x": -1.5,
+										"y": 0,
+										"z": 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Shoot": //长按发射羽球
+				{
+					"duration": 0.1,
+					"onAdded": 
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 20021,
+							"cdRatio": 1,
+						}, //AvatarSkillStart
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "Focus",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Serve_OnShooting",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset": {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+							},
+						},
+						{
+							//针对非弓角色的出射点
+							"$type": "TriggerBullet",
+							"bulletID": 44000111,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset": {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+								"direction": 
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+									"angleOffset": 
+									{
+										"x": -1.5,
+										"y": 0,
+										"z": 0,
+									},
+								},
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByAvatarWeaponType",
+											"weaponTypes": [ "WEAPON_BOW" ],
+										},
+									],
+								},
+							],
+						},
+						{
+							//针对弓角色的出射点
+							"$type": "TriggerBullet",
+							"bulletID": 44000111,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset": 
+								{
+									"x": 0.3,
+									"y": 0.0,
+									"z": 1.2,
+								},
+								"direction": 
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+									"angleOffset": 
+									{
+										"x": -1.5,
+										"y": 0,
+										"z": 0,
+									},
+								},
+							},
+							"predicates": [
+								{
+									"$type": "ByAvatarWeaponType",
+									"weaponTypes": [ "WEAPON_BOW" ],
+								},
+							],
+						},
+					],
+				},
+				"Focus": //处理瞄准镜头
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StartChannelTrigger",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_Endora_IsFocus",
+							"value": 1,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "LockMotionFlagExitChannel",
+							"value": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Serve_Charge",
+						},
+						{
+							"$type": "DummyAction",
+						},
+					],
+					"onRemoved": 
+                    [
+                    	{
+							"$type": "SetAnimatorTrigger",
+							"doOffStage": true,
+							"triggerID": "EndChannelTrigger",
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"doOffStage": true,
+							"boolID": "LockMotionFlagExitChannel",
+							"value": false,
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "RemovedFocusStateDelay",
+						}, //动画被打断时退出瞄准
+						{
+							"$type": "ClearGlobalValue",
+							"doOffStage": true,
+							"key": "_ActivityAbility_Endora_IsFocus",
+						},
+					],
+				},
+				"CheckChannelLoop": //Interval用于检测退出镜头
+				{
+					"thinkInterval": 0.1,
+					"onThinkInterval": 
+                    [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndChannelTrigger",
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_Endora_IsFocus",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "RemovedFocusState",
+						}, //动画被打断时退出瞄准
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower": 
+							{
+								"x": 0.8,
+								"y": 0.2,
+								"z": -1.5,
+							},
+							"cameraFollowUpper": 
+							{
+								"x": 0.5,
+								"y": -0.2,
+								"z": 0.0,
+							},
+							"canMove": false,
+							"cameraFastFocusMode": false,
+							"dragButtonName": "Skill2",
+							"showCrosshair": true,
+							"disableAnim": true,
+							"assistance": 
+                            {
+								"ps4": { "useGyro": false, },
+								"ps5": { "useGyro": false, },
+								"other": { "useGyro": false, },
+							},
+							"vcam_fov": 30,
+						},
+					],
+				},
+				"RemovedFocusState": 
+                {
+					"duration": 0.1,
+					"stacking": "Multiple",
+					"onAdded": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "Focus",
+						},
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "RemovedFocusStateDelay",
+						},
+					],
+				},
+				"RemovedFocusStateDelay": 
+                {
+					"duration": 0.3,
+					"stacking": "Refresh",
+					"onRemoved": 
+                    [
+                    	{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"toPlayMode": "Normal",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"onKill":  //加个死亡恢复保护
+			[
+				{
+					"$type": "ChangePlayMode",
+					"muteRemoteAction": true,
+					"toPlayMode": "Normal",
+					"doOffStage": true,
+				},
+			],
+			"onRemoved":  //下掉Group时的恢复保护
+			[
+				{
+					"$type": "ChangePlayMode",
+					"muteRemoteAction": true,
+					"toPlayMode": "Normal",
+					"doOffStage": true,
+				},
+			],
+		},
+	},
+
+    //ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02_Mark（使用小道具时添加标记）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02_Mark",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02_Mark",
+					"value": 1,
+				},
+			],
+			"onRemoved": 
+            [
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02_Mark",
+					"value": 0,
+				},
+			],
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02（切换接球技能）
+	{
+		"Default":
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Hit_02_AddSkillInfo",
+					"target": "Self",
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_Hit_02_AddSkillInfo": 
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20029,
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill_Handle",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill_Handle",
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20029,
+						},
+					],
+				},
+				"SwitchSkill_Handle":  //根据是否使用小道具的Mark去决定是否切换击球技能（用于区域检测）
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ActivityAbility_LudiHarpastum_Hit_SwitchSkill_02_Mark",
+							"valueSteps": 
+                            [
+								-0.5,
+								0.5,
+								1.5,
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": 
+                            [
+								"SwitchSkill_Blank",
+								"SwitchSkill",
+							],
+						},
+					],
+				},
+				"SwitchSkill_Blank": {},
+				"SwitchSkill": 
+                {
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "RemoveUniqueModifier",
+							"target": "Team",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Racket",
+						},
+						{
+							"$type": "AttachModifier",
+							"target": "Team",
+							"doOffStage": true,
+							"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Racket",
+						},
+						// {
+						// 	"$type": "SendEffectTrigger",
+						// 	"target": "Team",
+						// 	"type": "Bool",
+						// 	"parameter": "SwitchSkill",
+						// 	"value": 1,
+						// 	"effectPattern": "Eff_Activity_LudiHarpastum",
+						// },
+					],
+					"onRemoved": 
+                    [
+						// {
+						// 	"$type": "SendEffectTrigger",
+						// 	"target": "Team",
+						// 	"type": "Bool",
+						// 	"parameter": "SwitchSkill",
+						// 	"value": 0,
+						// 	"effectPattern": "Eff_Activity_LudiHarpastum",
+						// },
+					],
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 0,
+							"skillID": 20029,
+						},
+					],
+				},
+				"UNIQUE_ActivityAbility_LudiHarpastum_Racket":  //显示围绕自身的球拍特效（有坑，当上这个modifier的角色死亡时这个特效会直接被下掉）
+                {
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded": 
+                    [
+						{
+							"$type": "AttachEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "FireEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Disappear",
+						},
+					],
+				},
+			},
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastum_Hit_02（接球逻辑）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Hit_02",
+			"isDynamicAbility": true,
+			"onAbilityStart":  //通过avatarskill表里的triggerability直接进入
+            [
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 20029,
+					"cdRatio": 1,
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DoHit",
+				},
+			],
+			"modifiers": 
+            {
+				"DoHit": 
+                {
+					"duration": 0.3,     //可以调间隔
+					"stacking": "Unique",
+					"onAdded": 
+                    [
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"parameter": "Hit",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "All",
+							"attackEvent": 
+                            {
+								"attackPattern": 
+                                {
+									"$type": "ConfigAttackCircle",
+									"height": 3.0, //可以调 高度
+									"fanAngle": 240.0, //可以调 角度 （x度扇形 ，360就是圆）
+									"detectDirection": "CenterToSide", //  游戏中输入命令  //attackShape 可看
+									"radius": 2.5, //可以调 范围
+									"triggerType": "TriggerNoRepeat",
+									"born": 
+                                    {
+										"$type": "ConfigBornBySelf",
+										"offset": 
+                                        {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+                                {
+									"attackTag": "Activity_LudiHarpastum_Hit",
+									"attackProperty": 
+                                    {
+										"damagePercentage": 0,
+										"damageExtra": 0,
+									},
+									"hitPattern": 
+                                    {
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV0",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": true,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+
+    //ActivityAbility_LudiHarpastumGadgetSkill_ParabolaBall（大世界羽球_点按和长按）
+    {
+        "Default": 
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_ParabolaBall",
+            "onAdded": 
+            [
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "GV_BallElementType",
+                    "value": 0,
+                },
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "GV_Is_PlayerBall",
+                    "value": 1,
+                },
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "ElementController",
+                },
+            ],
+            "onAbilityStart":  //碰撞时Trigger
+            [
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_SceneObj_LudiReboundShooter_01_Hit",
+                    "born": 
+                    {
+                        "$type": "ConfigBornByCollisionPoint",
+                        "offset": 
+                        {
+                            "x": 0.0,
+                            "y": 0.0,
+                            "z": -0.5,
+                        }
+                    },
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "All",
+                    "attackEvent": 
+                    {
+                        "attackPattern": 
+                        {
+                            "$type": "ConfigAttackBox",
+                            "triggerType": "TriggerNoRepeat",
+                            "size": 
+                            {
+                                "x": 0.1,
+                                "y": 0.1,
+                                "z": 1.0,
+                            },
+                            "born": 
+                            {
+                                "$type": "ConfigBornByCollisionPoint",
+                                "offset": 
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": -0.5,
+                                }
+                            },
+                            "checkHitLayerType": "Both",
+                        },
+                        "attackInfo": 
+                        {
+                            "attackTag": "Activity_LudiHarpastum_ParabolaBall_Hit",
+                            "attackProperty": 
+                            {
+                                "damagePercentage": 0,
+                                "damageExtra": 0,
+                            },
+                            "hitPattern": 
+                            {
+                                //"onHitEffectName": "Eff_SceneObj_LudiReboundShooter_01_Hit",
+                                "hitImpulseType": "LV0",
+                                "reboundRatio": 0,
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": true,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                    "predicates": 
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "GV_BallElementType",
+                            "value": 0,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "All",
+                    "attackEvent": 
+                    {
+                        "attackPattern": 
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "fanAngle": 360.0,
+                            "radius": 2,
+                            "born": 
+                            {
+                                "$type": "ConfigBornBySelf",
+                            },
+                        },
+                        "attackInfo": 
+                        {
+                            "attackTag": "Activity_LudiHarpastum_ParabolaBall_Hit",
+                            "attackProperty": 
+                            {
+                                "damagePercentage": 0,
+                                "damageExtra": 0,
+                                "elementType": "Fire",
+                                "elementDurability": 25,
+                            },
+                            "hitPattern": 
+                            {
+                                "hitImpulseType": "LV0",
+                                "reboundRatio": 0,
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": true,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                    "predicates": 
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "GV_BallElementType",    //火
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "All",
+                    "attackEvent": 
+                    {
+                        "attackPattern": 
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "fanAngle": 360.0,
+                            "radius": 2,
+                            "born": 
+                            {
+                                "$type": "ConfigBornBySelf",
+                            },
+                        },
+                        "attackInfo": 
+                        {
+                            "attackTag": "Activity_LudiHarpastum_ParabolaBall_Hit",
+                            "attackProperty": 
+                            {
+                                "damagePercentage": 0,
+                                "damageExtra": 0,
+                                "elementType": "Electric",
+                                "elementDurability": 25,
+                            },
+                            "hitPattern": 
+                            {
+                                "hitImpulseType": "LV0",
+                                "reboundRatio": 0,
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": true,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                    "predicates": 
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "GV_BallElementType",   //雷
+                            "value": 2,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "All",
+                    "attackEvent": 
+                    {
+                        "attackPattern": 
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "fanAngle": 360.0,
+                            "radius": 2,
+                            "born": 
+                            {
+                                "$type": "ConfigBornBySelf",
+                            },
+                        },
+                        "attackInfo": 
+                        {
+                            "attackTag": "Activity_LudiHarpastum_ParabolaBall_Hit",
+                            "attackProperty": 
+                            {
+                                "damagePercentage": 0,
+                                "damageExtra": 0,
+                                "elementType": "Water",
+                                "elementDurability": 25,
+                            },
+                            "hitPattern": 
+                            {
+                                "hitImpulseType": "LV0",
+                                "reboundRatio": 0,
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": true,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                    "predicates": 
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "GV_BallElementType",   //水
+                            "value": 3,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates": 
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_Is_LudiHarpastum_Buttom",
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                    "successActions": 
+                    [
+                        {
+                            "$type": "KillSelf",
+                        },
+                    ],
+                    "failActions": [
+                    ],
+                },
+            ],
+            "modifiers": 
+            {
+                "ElementController":  //羽球染色特效管理
+                {
+                    "modifierMixins": 
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "GV_BallElementType",
+                            "valueSteps": [ -0.5, 0.5, 1.5, 2.5, 3.5 ],
+                            "modifierNameSteps": [ "NoElement", "FireElement", "ElectricElement", "WaterElement" ],
+                        },
+                    ],
+                },
+                "NoElement": 
+                {
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_LudiHarpastum_BasicTrail",
+                        },
+                    ],
+                },
+                "FireElement": 
+                {
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_LudiHarpastum_FireTrail",
+                        },
+                    ],
+                },
+                "WaterElement": 
+                {
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_LudiHarpastum_WaterTrail",
+                        },
+                    ],
+                },
+                "ElectricElement": 
+                {
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_LudiHarpastum_ElectroTrail",
+                        },
+                    ],
+                },
+            },
+        },
+    }, 
+
+//////////////////////////////////////////////////////////////
+///
+///    限定区域联机打球玩法
+///    
+//////////////////////////////////////////////////////////////
+	//ActivityAbility_LudiHarpastum_Hit_SwitchSkill（切换接球技能）
+    {
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Hit_SwitchSkill",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_Hit_AddSkillInfo",
+					"target": "Self",
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_Hit_AddSkillInfo":  //为角色添加对应技能组
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20022,
+						},
+						//{
+						//  "$type": "AvatarSkillStart",
+						//  "skillID": 20022,
+						//  "cdRatio": 0.05,
+						//}, //AvatarSkillStart _ 这个是为了切换时个小CD，使得UI看上去有个技能可以用的效果提示
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+					],
+					"onRemoved": 
+                    [
+                    	{
+                    		"$type": "RemoveModifier",
+                    		"doOffStage": true,
+                    		"modifierName": "SwitchSkill",
+                    	},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20022,
+						},
+					],
+				},
+				"SwitchSkill":   //切换PlayMode（控制按键布局）
+                {
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "ChangePlayMode",
+							"doOffStage": true,
+							"toPlayMode": "BounceConjuring",
+							"canBeHandledOnRecover": true,
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "ChangePlayMode",
+							"doOffStage": true,
+							"toPlayMode": "Normal",
+							"canBeHandledOnRecover": true,
+						},
+					],
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 0,
+							"skillID": 20022,
+						},
+					],
+				},
+			},
+		},
+	}, 
+	
+    //ActivityAbility_LudiHarpastum_Hit（接球逻辑）
+    {
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Hit",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_GoldBat_Team",
+					"doOffStage": true,
+					"target": "Team",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "CheckHitBall",
+					"doOffStage": true,
+				},
+			],
+			"onRemoved": 
+            [
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_GoldBat_Team",
+					"doOffStage": true,
+					"target": "Team",
+				},
+			],
+			"onAbilityStart":  //主动按键触发接球
+            [
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 20022,
+					"cdRatio": 1,
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DoHit_Effect",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DoHit_TriggerAttack",
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_GoldBat_Team":  //根据服务器返回GlobalValue值确定是否自动接球
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "ServerUpdateGlobalValueMixin",
+							"key": "Is_Gold_Bat",
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+						},
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "Is_Gold_Bat",
+							"valueSteps": 
+                            [
+								-0.5,
+								0.5,
+								1.5,
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": 
+                            [
+								"RacketMode_False",
+								"RacketMode_True",
+							],
+						},
+					],
+				},
+				"RacketMode_False": {},
+				"RacketMode_True":  //拾取黄金球拍
+                {
+					"duration": 1,
+					"onAdded": 
+                    [
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "UNIQUE_RacketMode_Auto_Team",
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "RacketMode_Auto_Style",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "SetGlobalValue",
+							"key": "Is_Gold_Bat",
+							"value": 0,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+						},
+					],
+				},
+				"UNIQUE_RacketMode_Auto_Team": 
+                {
+					"duration": "%Auto_Time",
+					"isUnique": true,
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "CurLocalAvatarMixinV2",
+							"modifierName": "RacketMode_Auto_Avatar",
+						},
+					],
+				},
+				"RacketMode_Auto_Avatar":   //自动接球模式
+                {
+					"thinkInterval": 0.1,
+					"onThinkInterval": 
+                    [
+						{
+							"$type": "Predicated",
+							"otherTargets": 
+                            {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2.5H5",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": 
+                                    [
+										"Avatar"
+									],
+									"reject": true,
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": 
+                                    [
+										"Bullet"
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_Ball_Type",
+									"value": 0,
+									"compareType": "MoreThanAndEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_BeHit",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_CounterBall",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									//"target": "Caster",
+									"modifierName": "DoHit_Effect",
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Other",
+									"modifierName": "UNIQUE_HitBall",
+								},
+								{
+									"$type": "ServerLuaCall",
+									"target": "Self",
+									"isTarget": true,
+									"luaCallType": "CurGalleryControlGroup",
+									"funcName": "AutoReturnCount",
+								},
+							],
+						},
+					],
+				},
+				"RacketMode_Auto_Style":    //自动接球模式的特效管理
+                {
+					"stacking": "Refresh",
+					"duration": "%AutoStyle_Time",
+					"onAdded": 
+                    [
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"parameter": "ToAutoMode",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"parameter": "ToNormalMode",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+					],
+				},
+				"DoHit_Effect":   //播放接球特效动画
+                {
+					"duration": 0.3, //可以调 间隔
+					"stacking": "Unique",
+					"onAdded": 
+                    [
+						{
+							"$type": "SendEffectTrigger",
+							"target": "Team",
+							"parameter": "Hit",
+							"effectPattern": "Eff_Activity_LudiHarpastum_Racket_Swing",
+						},
+					],
+				},
+				"DoHit_TriggerAttack":   //手动接球攻击盒
+                {
+					"duration": 0.1, //可以调 间隔
+					"stacking": "Unique",
+					"onAdded": 
+                    [
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "All",
+							"attackEvent": 
+                            {
+								"attackPattern": 
+                                {
+									"$type": "ConfigAttackCircle",
+									"height": 2.2, //可以调 高度
+									"fanAngle": 360.0, //可以调 角度 （x度扇形 ，360就是圆）
+									"detectDirection": "CenterToSide", //  游戏中输入命令  //attackShape 可看
+									"radius": 2.4, //可以调 范围
+									"triggerType": "TriggerNoRepeat",
+									"born": 
+                                    {
+										"$type": "ConfigBornBySelf",
+										"offset": 
+                                        {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+                                {
+									"attackTag": "Activity_LudiHarpastum_ParabolaBall_Hit",
+									"attackProperty": 
+                                    {
+										"damagePercentage": 0,
+										"damageExtra": 0,
+									},
+									"hitPattern": 
+                                    {
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV0",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": true,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+				"CheckHitBall":   //检测接球的攻击Tag，做出AnswerBall
+                {
+					"stacking": "Refresh",
+					"onAttackLanded": 
+                    [
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": 
+                                    [
+									   "Avatar"
+									],
+									"reject": true,
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": 
+                                    [
+									   "Bullet"
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_Ball_Type",
+									"value": 0,
+									"compareType": "MoreThanAndEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_CounterBall",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_LudiHarpastum_BeHit",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [ "Activity_LudiHarpastum_ParabolaBall_Hit" ],
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"target": "Other",
+									"modifierName": "UNIQUE_HitBall",
+								},
+								//执行serverluacall发送击球消息
+								{
+									"$type": "Predicated",
+									"target": "Target",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Is_LudiHarpastum_Ball_Type",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "ServerLuaCall",
+											"target": "Self",
+											"isTarget": true,
+											"luaCallType": "CurGalleryControlGroup",
+											"funcName": "SoilBallCount",
+										},
+									],
+								},
+								{
+									"$type": "Predicated",
+									"target": "Target",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Is_LudiHarpastum_Ball_Type",
+											"value": 3,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "ServerLuaCall",
+											"target": "Self",
+											"isTarget": true,
+											"luaCallType": "CurGalleryControlGroup",
+											"funcName": "IceBallCount",
+										},
+									],
+								},
+								{
+									"$type": "Predicated",
+									"target": "Target",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Is_LudiHarpastum_Ball_Type",
+											"value": 4,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "ServerLuaCall",
+											"target": "Self",
+											"isTarget": true,
+											"luaCallType": "CurGalleryControlGroup",
+											"funcName": "CurveBallCount",
+										},
+									],
+								},
+								{
+									"$type": "Predicated",
+									"target": "Target",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Is_LudiHarpastum_Ball_Type",
+											"value": 5,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "ServerLuaCall",
+											"target": "Self",
+											"isTarget": true,
+											"luaCallType": "CurGalleryControlGroup",
+											"funcName": "SpeedBallCount",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_HitBall":   //通知角色回球并干掉自己（挂在飞过来的球上），这里有坑一定要是Unique的，否则会同时打出好几个球
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+					"duration": 0.5,
+					"onAdded": 
+                    [
+                        {
+                            "$type": "SetGlobalPos",
+                            "target": "Self",
+                            "key": "BallPos",
+                            "born": 
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset": 
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"target": "Applier",   //这里有个坑，不能是Caster，否则找不到当前的击球人
+							"modifierName": "HitBall_Avatar",
+						},
+						{
+							"$type": "KillSelf",
+							"banDrop": true,
+							"banExp": true,
+							"killSelfType": "Disappear",
+						},
+					],
+				},
+				"HitBall_Avatar":   //成功接球SetGlobalValue，并确定发球机创建新球击回（核心逻辑）
+                {
+					"duration": 0.5,
+                    "stacking": "Multiple",
+					"onAdded": 
+                    [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Applier",
+							"doOffStage": true,
+							"key": "_Is_LudiHarpastum_BeHit",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage": true,
+							"target": "Self",
+							"key": "_Is_LudiHarpastum_Ball_Perfect",
+							"value": 0,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage": true,
+							"target": "Self",
+							"key": "_Is_LudiHarpastum_Ball_Perfect",  //黄金拍默认为Perfect
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "Is_Gold_Bat",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage": true,
+							"target": "Self",
+							"key": "_Is_LudiHarpastum_Ball_Perfect",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"target": "Applier",
+									"compareType": "XZ",
+									"value": 2.2, //可以调_Perfect 的至少小于这个值
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"target": "Applier",
+									"compareType": "XZ",
+									"value": 1.2, //可以调_Perfect 的同时大于这个值
+									"logic": "Greater",
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_Is_LudiHarpastum_Ball_Perfect",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "ActCameraShake",
+									"target": "Self",
+									"muteRemoteAction": true,
+									"cameraShake": 
+                                    {
+										"shakeType": "Center",
+										"shakeRange": 0.2,
+										"shakeTime": 0.12,
+										"shakeDistance": 30,
+										"extension": 
+                                        {
+											"baseOnCamera": true,
+										},
+									},
+								},
+								{
+									"$type": "FireEffect",
+									"target": "Applier",
+									"born": 
+                                    {
+										"$type": "ConfigBornByTarget",
+									},
+									"effectPattern": "Eff_Activity_LudiHarpastum_Serve_BallHit_Prefect",
+								},
+							],
+							"failActions": 
+                            [
+								{
+									"$type": "FireEffect",
+									"target": "Applier",
+									"born": 
+                                    {
+										"$type": "ConfigBornByTarget",
+									},
+									"effectPattern": "Eff_Activity_LudiHarpastum_Serve_BallHit_Good",
+								},
+							],
+						},
+                        //同步球的位置
+                        {
+                            "$type": "CopyGlobalValue",
+                            "doOffStage": true,
+                            "srcTarget": "Applier",
+                            "dstTarget": "Self",
+                            "srcKey": "BallPos_0",
+                            "dstKey": "BallPos_0",
+                        },
+                        {
+                            "$type": "CopyGlobalValue",
+                            "doOffStage": true,
+                            "srcTarget": "Applier",
+                            "dstTarget": "Self",
+                            "srcKey": "BallPos_1",
+                            "dstKey": "BallPos_1",
+                        },
+                        {
+                            "$type": "CopyGlobalValue",
+                            "doOffStage": true,
+                            "srcTarget": "Applier",
+                            "dstTarget": "Self",
+                            "srcKey": "BallPos_2",
+                            "dstKey": "BallPos_2",
+                        },
+                        {
+							"$type": "CopyGlobalValue",
+							"doOffStage": true,
+							"srcTarget": "Applier",
+							"dstTarget": "Self",
+							"srcKey": "_Is_LudiHarpastum_Ball_Type",
+							"dstKey": "_Is_LudiHarpastum_Ball_Type",
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"target": "Self",
+							"modifierName": "HitBall_CasterCreateBall",
+						},
+					],
+				},
+				"HitBall_CasterCreateBall":   //创建AnswerBall
+                {
+					"duration": 0.5,
+					"stacking": "Multiple",  //这里有隐患，由于联机延时很有可能创造多个子弹
+					"onAdded": 
+                    [
+                        {
+                            "$type": "SetSelfAttackTarget",   //寻找发球机并向回击球
+                            "doOffStage": true,
+                            "otherTargets": 
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR30",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "All",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates": 
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "Is_LudiHarpastum_Shooter",
+                                    "value": 1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "FireEffect",      //没太看懂这个特效为啥直接在发球机播？
+                            "target": "SelfAttackTarget",
+                            "doOffStage": true,
+                            "effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA_OnShoot",
+                            "born": 
+                            {
+                                "$type": "ConfigBornByTarget",
+                            },
+                        },
+						{
+							"$type": "TriggerBullet",
+							"doOffStage": true,
+							"target": "Self",
+							"bulletID": 44000113,
+							"born": 
+                            {
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "BallPos",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction": 
+                                {
+									"$type": "ConfigDirectionByAttackTarget",  //SelfAttackTarget是发球机
+									"randomAngleHor": 3,
+									"randomAngleVer": 3,
+									"angleOffset": 
+                                    {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials": 
+            {
+				"Auto_Time": 9,
+				"AutoStyle_Time": 4,     // ？？？为啥自动接球模式 特效与逻辑时间不一致
+			},
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastumGadgetSkill_CounterBall（Gadget_44000113 击回球）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_CounterBall",
+			"onAdded": 
+            [
+				{
+					"$type": "CopyGlobalValue",
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "_Is_LudiHarpastum_Ball_Perfect",
+					"dstKey": "_Is_LudiHarpastum_Ball_Perfect",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_Is_LudiHarpastum_CounterBall",
+					"value": 1,
+				},
+				{
+					"$type": "CopyGlobalValue",
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "_Is_LudiHarpastum_Ball_Type",
+					"dstKey": "_Is_LudiHarpastum_Ball_Type",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_Is_LudiHarpastum_Ball_Attract",
+					"value": 1,
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Self",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 6,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonBasic_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonSoil_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 2,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonIce_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 3,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonCurve_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 4,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonSpeed_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 5,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_SceneObj_BadmintonAttract_01",
+					"predicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_LudiHarpastum_Ball_Type",
+							"value": 6,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"onAbilityStart":  //碰撞时Trigger
+            [
+				{
+					"$type": "Predicated",
+					"targetPredicates": 
+                    [
+						{
+							"$type": "ByTargetGlobalValue",
+							"forceByCaster": true,
+							"key": "_Is_LudiHarpastum_Ball_Perfect",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+					"successActions": 
+                    [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Badminton_01_Hit_03",
+						},
+					],
+					"failActions": 
+                    [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Badminton_01_Hit_02",
+						},
+					],
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+                    {
+						"attackPattern": 
+                        {
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": 
+                            {
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0,
+							},
+							"born": 
+                            {
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.0,
+									"z": -0.5,
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+                        {
+							"attackTag": "Activity_LudiHarpastum_CounterBall",
+							"attackProperty": 
+                            {
+								"damagePercentage": 0,
+								"damageExtra": 0,
+							},
+							"hitPattern": 
+                            {
+								"onHitEffectName": "",
+								"hitImpulseType": "LV0",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": true,
+						}
+					},
+				},
+			],
+			"modifiers": 
+            {
+				"SpeedFix":  //废弃
+                {
+					"properties": 
+                    {
+						"Actor_BulletMoveSpeedRatio": "1+%SpeedFix",
+					},
+				},
+			},
+			"abilitySpecials": 
+            {
+				"SpeedFix": 0,
+			},
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastum_Camera  联机玩法的镜头配置（绑定在队伍上的） 
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Camera",
+			"isDynamicAbility": true,
+			"abilityMixins": 
+            [
+				{
+					"$type": "StageReadyMixin",
+					"onStageReady": 
+                    [
+						{
+							"$type": "AvatarEnterCameraShot",
+							"targetType": "Self",
+							"cameraMoveCfgPath": "Camera_LudiHarpastum_01",
+						},
+					],
+				},
+			],
+			"onAvatarIn": 
+            [
+				{
+					"$type": "AvatarEnterCameraShot",
+					"targetType": "Self",
+					"cameraMoveCfgPath": "Camera_LudiHarpastum_01",
+				},
+			],
+			"onRemoved": 
+            [
+				{
+					"$type": "AvatarExitCameraShot",
+				},
+			],
+		},
+	},
+
+    //ActivityAbility_LudiHarpastum_GlodBat （应该废弃了）
+    {
+        "Default": 
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_GlodBat",
+            "onAdded": 
+            [
+                // {
+                //  "$type": "AttachEffect",
+                //  "effectPattern": "Eff_SceneObj_BadmintonSoil_01",
+                // },
+            ],
+            "onAbilityStart": 
+            [
+
+            ],
+            "onBeingHit": [
+            ],
+
+            "modifiers": {
+                "SpeedFix": {
+                },
+            },
+
+            "abilitySpecials": 
+            {
+                "SpeedFix": 0,
+            },
+        },
+    },
+
+//////////////////////////////////////////////////////////////
+///
+///    羽球炸弹（3类）
+///    
+//////////////////////////////////////////////////////////////
+	//ActivityAbility_LudiHarpastum_Bomb_Mark（指定区域加标记）
+    {
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Bomb_Mark",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_BombMark",
+					"value": 1,
+				},
+			],
+			"onRemoved": 
+            [
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_BombMark",
+					"value": 0,
+				},
+			],
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastum_BombForbid（禁止释放技能，弹Tips）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Bomb_Forbid",
+			"isDynamicAbility": true,
+			"onAbilityStart": 
+            [
+				{
+					"$type": "ShowTextMap",
+					"doOffStage": true,
+					"id": "UI_WIDGET_AREA_LIMITED",  //小道具限制释放区域
+				},
+			],
+		},
+	},
+
+    //ActivityAbility_LudiHarpastum_BombTypeA_SwitchSkill（切换技能_炸弹A）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_BombTypeA_SwitchSkill",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_BombTypeA_AddSkillInfo",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_BombType",
+					"value": 1,
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_BombTypeA_AddSkillInfo":  //新增炸弹A技能组
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20023,
+						},
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20026,
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20023,
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20026,
+						},
+					],
+				},
+				"SwitchSkill":  //根据当前区域决定是否禁用炸弹技能组
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ActivityAbility_LudiHarpastum_BombMark",
+							"valueSteps": 
+                            [
+								-0.5,
+								0.5,
+								1.5,
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": 
+                            [
+								"SwitchSkill_BombForbid",
+								"SwitchSkill_Bomb",
+							],
+						},
+					],
+				},
+				"SwitchSkill_Bomb": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20023,
+						},
+					],
+				},
+				"SwitchSkill_BombForbid": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20026,
+						},
+					],
+				},
+			},
+		},
+	}, 
+    //ActivityAbility_LudiHarpastum_BombTypeB_SwitchSkill（切换技能_炸弹B）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_BombTypeB_SwitchSkill",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_BombTypeB_AddSkillInfo",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_BombType",
+					"value": 2,
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_BombTypeB_AddSkillInfo": 
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20024,
+						},
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20027,
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20024,
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20027,
+						},
+					],
+				},
+				"SwitchSkill": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ActivityAbility_LudiHarpastum_BombMark",
+							"valueSteps": 
+                            [
+								-0.5,
+								0.5,
+								1.5,
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": 
+                            [
+								"SwitchSkill_BombForbid",
+								"SwitchSkill_Bomb",
+							],
+						},
+					],
+				},
+				"SwitchSkill_Bomb": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20024,
+						},
+					],
+				},
+				"SwitchSkill_BombForbid": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20027,
+						},
+					],
+				},
+			},
+		},
+	}, 
+    //ActivityAbility_LudiHarpastum_BombTypeC_SwitchSkill（切换技能_炸弹C）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_BombTypeC_SwitchSkill",
+			"isDynamicAbility": true,
+			"onAdded": 
+            [
+				{
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "UNIQUE_ActivityAbility_LudiHarpastum_BombTypeC_AddSkillInfo",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"doOffStage": true,
+					"key": "_ActivityAbility_LudiHarpastum_BombType",
+					"value": 3,
+				},
+			],
+			"modifiers": 
+            {
+				"UNIQUE_ActivityAbility_LudiHarpastum_BombTypeC_AddSkillInfo": 
+                {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onAdded": 
+                    [
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20025,
+						},
+						{
+							"$type": "AddAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20028,
+						},
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "SwitchSkill",
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20025,
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"doOffStage": true,
+							"skillID": 20028,
+						},
+					],
+				},
+				"SwitchSkill": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ActivityAbility_LudiHarpastum_BombMark",
+							"valueSteps": 
+                            [
+								-0.5,
+								0.5,
+								1.5,
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": 
+                            [
+								"SwitchSkill_BombForbid",
+								"SwitchSkill_Bomb",
+							],
+						},
+					],
+				},
+				"SwitchSkill_Bomb": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20025,
+						},
+					],
+				},
+				"SwitchSkill_BombForbid": 
+                {
+					"stacking": "Refresh",
+					"modifierMixins": 
+                    [
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20028,
+						},
+					],
+				},
+			},
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastum_Bomb_AimPress（羽球炸弹发射逻辑）
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastum_Bomb_AimPress",
+			"isDynamicAbility": true,
+			"onAvatarOut": 
+            [
+				{
+					"$type": "ApplyModifier",
+					"doOffStage": true,
+					"modifierName": "RemovedFocusState",
+				},
+			],
+			"abilityMixins": 
+            [
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": 
+                    [
+						"Channel_BS",
+						"Channel_Loop",
+					],
+					"modifierName": "CheckChannelLoop",
+				}, //因为这里动画状态机用的是channel，为了不更改老的Channel的连发，因此在退出上做了特殊处理（仅当BS 未进入loop时退出，确保他能进AS）
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ActivityAbility_LudiHarpastum_BombType",
+					"valueSteps": 
+                    [
+						-0.5,
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": 
+                    [
+						"UI_ItemState_Check_Blank",
+						"UI_ItemState_Check_TypeA",
+						"UI_ItemState_Check_TypeB",
+						"UI_ItemState_Check_TypeC",
+					],
+				},
+			],
+			"modifiers": 
+            {
+				"Focus":  //瞄准状态
+                {
+					"onAdded": 
+                    [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StartChannelTrigger",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ActivityAbility_Endora_IsFocus",
+							"value": 1,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "LockMotionFlagExitChannel",
+							"value": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA_Charge",
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeB_Charge",
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeC_Charge",
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 3,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "DummyAction",
+						},
+					],
+					"onRemoved": 
+                    [
+                    	{
+							"$type": "SetAnimatorTrigger",
+							"doOffStage": true,
+							"triggerID": "EndChannelTrigger",
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"doOffStage": true,
+							"boolID": "LockMotionFlagExitChannel",
+							"value": false,
+						},
+						{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"doOffStage": true,
+							"toPlayMode": "Normal",
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"doOffStage": true,
+						},
+						{
+							"$type": "ClearGlobalValue",
+							"doOffStage": true,
+							"key": "_ActivityAbility_Endora_IsFocus",
+						},
+					],
+				},
+				"CheckChannelLoop":  //检测角色处于祈祷动作中
+                {
+					"thinkInterval": 0.1,
+					"onThinkInterval": 
+                    [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndChannelTrigger",
+							"predicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_Endora_IsFocus",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onRemoved": 
+                    [
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "RemovedFocusState",
+						}, //动画被打断时退出瞄准
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower": 
+                            {
+								"x": 0.8,
+								"y": 0.2,
+								"z": -1.5,
+							},
+							"cameraFollowUpper": 
+                            {
+								"x": 0.5,
+								"y": -0.2,
+								"z": 0.0,
+							},
+							"canMove": false,
+							"cameraFastFocusMode": false,
+							"dragButtonName": "Skill2",
+							"showCrosshair": true,
+							"disableAnim": true,
+							"assistance": 
+                            {
+								"ps4": 
+                                {
+									"useGyro": false,
+								},
+								"ps5": 
+                                {
+									"useGyro": false,
+								},
+								"other": 
+                                {
+									"useGyro": false,
+								},
+							},
+							"vcam_fov": 30,
+						},
+					],
+				},
+				"RemovedFocusState": 
+                {
+					"duration": 0.1,
+					"stacking": "Multiple",
+					"onAdded": 
+                    [
+						{
+							"$type": "RemoveModifier",
+							"doOffStage": true,
+							"modifierName": "Focus",
+						},
+						{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"doOffStage": true,
+							"toPlayMode": "Normal",
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"doOffStage": true,
+						},
+					],
+				},
+				"SkillStart":  //释放技能走自身CD
+                {
+					"duration": 0.1,
+					"onAdded": 
+                    [
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220029,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20023,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20026,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 2,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220030,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20024,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20027,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 3,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220031,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20025,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 20028,
+									"cdRatio": 1,
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UseItem":  //消耗羽球炸弹道具
+                {
+					"duration": 0.1,
+					"onAdded": 
+                    [
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220029,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "UseItem",
+									"itemId": 220029,
+									"itemNum": 1,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 2,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220030,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "UseItem",
+									"itemId": 220030,
+									"itemNum": 1,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 3,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220031,
+									"itemNum": 1,
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "UseItem",
+									"itemId": 220031,
+									"itemNum": 1,
+								},
+							],
+						},
+					],
+				},
+				"UI_ItemState_Check_Blank": {},
+				"UI_ItemState_Check_TypeA": 
+                {
+					"onAdded": 
+                    [
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"modifierName": "CanUseSkill",
+							"predicates": 
+                            [
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220029,
+									"itemNum": 1,
+								},
+							],
+						},
+					],
+				},
+				"UI_ItemState_Check_TypeB": 
+                {
+					"onAdded": 
+                    [
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"modifierName": "CanUseSkill",
+							"predicates": 
+                            [
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220030,
+									"itemNum": 1,
+								},
+							],
+						},
+					],
+				},
+				"UI_ItemState_Check_TypeC": 
+                {
+					"onAdded": 
+                    [
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"modifierName": "CanUseSkill",
+							"predicates": 
+                            [
+								{
+									"$type": "ByItemNumber",
+									"itemId": 220031,
+									"itemNum": 1,
+								},
+							],
+						},
+					],
+				},
+				"CanUseSkill":  //统一处理三种羽球炸弹的 按键反馈逻辑
+                {
+					"modifierMixins": 
+                    [
+						{
+							"$type": "ButtonHoldChargeMixin",
+							"skillID": 20023,
+							"chargeTime": 0.0,
+							"secondChargeTime": 0.12,
+							"OnBeginCharged":
+							[
+								{
+									"$type": "ChangePlayMode",
+									"canBeHandledOnRecover": true,
+									"muteRemoteAction": true,
+									"authorityOnly": true,
+									"doOffStage": true,
+									"toPlayMode": "ActivityAimState",  //独有的射击PlayMode
+								},
+							],
+							"OnReleaseCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot_Short",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 0,
+											"compareType": "NoneOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+								},
+								{
+									"$type": "ChangePlayMode",
+									"muteRemoteAction": true,
+									"toPlayMode": "Normal",
+									"doOffStage": true,
+								},
+							],
+							"OnBeginSecondCharged": 
+                            [
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Focus",
+								},
+							],
+							"OnReleaseSecondCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+								},
+                                {
+                                    "$type": "SetAnimatorTrigger",
+                                    "doOffStage": true,
+                                    "triggerID": "EndChannelTrigger",
+                                },
+							],
+							"OnCancelCharged": 
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "EndChannelTrigger",
+									"doOffStage": true,
+								}
+							],
+							"chargeStateIDs": 
+                            [
+								"Channel_Loop",
+							],
+						},
+						{
+							"$type": "ButtonHoldChargeMixin",
+							"skillID": 20024,
+							"chargeTime": 0.0,
+							"secondChargeTime": 0.12,
+							"OnBeginCharged":
+							[
+								{
+									"$type": "ChangePlayMode",
+									"canBeHandledOnRecover": true,
+									"muteRemoteAction": true,
+									"authorityOnly": true,
+									"doOffStage": true,
+									"toPlayMode": "ActivityAimState",  //独有的射击PlayMode
+								},
+							],
+							"OnReleaseCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot_Short",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 0,
+											"compareType": "NoneOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+								},
+								{
+									"$type": "ChangePlayMode",
+									"muteRemoteAction": true,
+									"toPlayMode": "Normal",
+									"doOffStage": true,
+								},
+							],
+							"OnBeginSecondCharged": 
+                            [
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Focus",
+								},
+							],
+							"OnReleaseSecondCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+								},
+                                {
+                                    "$type": "SetAnimatorTrigger",
+                                    "doOffStage": true,
+                                    "triggerID": "EndChannelTrigger",
+                                },
+							],
+							"OnCancelCharged": 
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "EndChannelTrigger",
+									"doOffStage": true,
+								}
+							],
+							"chargeStateIDs": 
+                            [
+								"Channel_Loop",
+							],
+						},
+						{
+							"$type": "ButtonHoldChargeMixin",
+							"skillID": 20025,
+							"chargeTime": 0.0,
+							"secondChargeTime": 0.12,
+							"OnBeginCharged":
+							[
+								{
+									"$type": "ChangePlayMode",
+									"canBeHandledOnRecover": true,
+									"muteRemoteAction": true,
+									"authorityOnly": true,
+									"doOffStage": true,
+									"toPlayMode": "ActivityAimState",  //独有的射击PlayMode
+								},
+							],
+							"OnReleaseCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot_Short",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 0,
+											"compareType": "NoneOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_Bomb_IsFocus",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+								},
+								{
+									"$type": "ChangePlayMode",
+									"muteRemoteAction": true,
+									"toPlayMode": "Normal",
+									"doOffStage": true,
+								},
+							],
+							"OnBeginSecondCharged": 
+                            [
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Focus",
+								},
+							],
+							"OnReleaseSecondCharged": 
+                            [
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "Shoot",
+								},
+                                {
+                                    "$type": "SetAnimatorTrigger",
+                                    "doOffStage": true,
+                                    "triggerID": "EndChannelTrigger",
+                                },
+							],
+							"OnCancelCharged": 
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "EndChannelTrigger",
+									"doOffStage": true,
+								}
+							],
+							"chargeStateIDs": 
+                            [
+								"Channel_Loop",
+							],
+						},
+					],
+				},
+
+                "Shoot_Short":  //短按发射子弹
+                {
+                    "duration": 0.1,
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "ApplyModifier",
+                            "target": "CurTeamAvatars",
+                            "doOffStage": true,
+                            "modifierName": "SkillStart",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "target": "Self",
+                            "modifierName": "UseItem",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "TriggerBullet_Short",
+                        },
+                    ],
+                },
+				"TriggerBullet_Short": //点按炸弹
+				{
+					"duration": 0.1,
+					"onAdded": 
+                    [
+						{
+							"$type": "SetGlobalPos",
+							"key": "_Temp_POS",
+							"target": "Caster",
+							"born": 
+                            {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"key": "_ActivityAbility_Shoot_POS",
+							"target": "Caster",
+							"born": 
+                            {
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "_Temp_POS",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+							},
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA_OnShoot",
+									"born": 
+                                    {
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "_ActivityAbility_Shoot_POS",
+									},
+								},
+								{
+									"$type": "TriggerBullet",
+									"bulletID": 44000115,
+									"born":
+                                    {
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "_ActivityAbility_Shoot_POS",
+										"angleOffset": 
+                                        {
+											"x": -6.0,
+											"y": 0,
+											"z": 0,
+										},
+									},
+								},
+							],
+							"failActions": 
+                            [
+								{
+									"$type": "Predicated",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_LudiHarpastum_BombType",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "FireEffect",
+											"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeB_OnShoot",
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+												"offset": 
+                                                {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+											},
+										},
+										{
+											"$type": "TriggerBullet",
+											"bulletID": 44000116,
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+												"angleOffset": 
+                                                {
+													"x": -6.0,
+													"y": 0,
+													"z": 0,
+												},
+											},
+										},
+									],
+									"failActions": 
+                                    [
+										{
+											"$type": "FireEffect",
+											"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeC_OnShoot",
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+											},
+										},
+										{
+											"$type": "TriggerBullet",
+											"bulletID": 44000117,
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+												"angleOffset": 
+                                                {
+													"x": -6.0,
+													"y": 0,
+													"z": 0,
+												},
+											},
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+                "Shoot":   //长按发射子弹
+                {
+                    "duration": 0.1,
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "ApplyModifier",
+                            "doOffStage": true,
+                            "target": "CurTeamAvatars",
+                            "modifierName": "SkillStart",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "target": "Self",
+                            "modifierName": "UseItem",
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "doOffStage": true,
+                            "modifierName": "Focus",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "TriggerBullet_Normal",
+                        },
+                    ],
+                },
+				"TriggerBullet_Normal": //长按炸弹
+				{
+					"duration": 0.1,
+					"onAdded": 
+                    [
+						{
+							"$type": "SetGlobalPos",
+							"key": "_Temp_POS",
+							"target": "Caster",
+							"born": 
+                            {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+							},
+						},
+						{
+							//非弓角色发射点
+							"$type": "SetGlobalPos",
+							"key": "_ActivityAbility_Shoot_POS",
+							"target": "Caster",
+							"born": 
+                            {
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "_Temp_POS",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.5,
+									"z": 1.2,
+								},
+							},
+							"predicates": 
+                            [
+								{
+									"$type": "ByNot",
+									"predicates": 
+                                    [
+										{
+											"$type": "ByAvatarWeaponType",
+											"weaponTypes": [ "WEAPON_BOW" ],
+										},
+									],
+								},
+							],
+						},
+						{
+							//弓系角色发射点
+							"$type": "SetGlobalPos",
+							"key": "_ActivityAbility_Shoot_POS",
+							"target": "Caster",
+							"born": 
+                            {
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "_Temp_POS",
+								"offset": 
+                                {
+									"x": 0.3,
+									"y": 0.0,
+									"z": 1.2,
+								},
+							},
+							"predicates": 
+                            [
+								{
+									"$type": "ByAvatarWeaponType",
+									"weaponTypes": [ "WEAPON_BOW" ],
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+                            [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ActivityAbility_LudiHarpastum_BombType",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions": 
+                            [
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA_OnShoot",
+									"born": 
+                                    {
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "_ActivityAbility_Shoot_POS",
+									},
+								},
+								{
+									"$type": "TriggerBullet",  //非弓系
+									"bulletID": 44000118,
+									"born": 
+                                    {
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "_ActivityAbility_Shoot_POS",
+										"direction": 
+                                        {
+											"$type": "ConfigDirectionByAttachPoint",
+											"attachPointName": "FocusAnchor",
+											"attachPointTargetType": "Self",
+											"angleOffset": 
+                                            {
+												"x": -1.5,
+												"y": -2,
+												"z": 0,
+											},
+										}
+									},
+                                    "predicates": 
+                                    [
+                                        {
+                                            "$type": "ByNot",
+                                            "predicates": 
+                                            [
+                                                {
+                                                    "$type": "ByAvatarWeaponType",
+                                                    "weaponTypes": [ "WEAPON_BOW" ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+								},
+                                {
+                                    "$type": "TriggerBullet",  //弓系
+                                    "bulletID": 44000118,
+                                    "born": 
+                                    {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ActivityAbility_Shoot_POS",
+                                        "direction": 
+                                        {
+                                            "$type": "ConfigDirectionByAttachPoint",
+                                            "attachPointName": "FocusAnchor",
+                                            "attachPointTargetType": "Self",
+                                            "angleOffset": 
+                                            {
+                                                "x": -1.5,
+                                                "y": 0,
+                                                "z": 0,
+                                            },
+                                        }
+                                    },
+                                    "predicates": 
+                                    [
+                                        {
+                                            "$type": "ByAvatarWeaponType",
+                                            "weaponTypes": [ "WEAPON_BOW" ],
+                                        },
+                                    ],
+                                },
+							],
+							"failActions": 
+                            [
+								{
+									"$type": "Predicated",
+									"targetPredicates": 
+                                    [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ActivityAbility_LudiHarpastum_BombType",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+                                    [
+										{
+											"$type": "FireEffect",
+											"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeB_OnShoot",
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+											},
+										},
+										{
+											"$type": "TriggerBullet",  //非弓系
+											"bulletID": 44000119,
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+												"direction": 
+                                                {
+													"$type": "ConfigDirectionByAttachPoint",
+													"attachPointName": "FocusAnchor",
+													"attachPointTargetType": "Self",
+													"angleOffset": 
+                                                    {
+														"x": -1.5,
+														"y": -2,
+														"z": 0,
+													},
+												}
+											},
+                                            "predicates": 
+                                            [
+                                                {
+                                                    "$type": "ByNot",
+                                                    "predicates": 
+                                                    [
+                                                        {
+                                                            "$type": "ByAvatarWeaponType",
+                                                            "weaponTypes": [ "WEAPON_BOW" ],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+										},
+                                        {
+                                            "$type": "TriggerBullet",  //弓系
+                                            "bulletID": 44000119,
+                                            "born": 
+                                            {
+                                                "$type": "ConfigBornByGlobalValue",
+                                                "positionKey": "_ActivityAbility_Shoot_POS",
+                                                "direction": 
+                                                {
+                                                    "$type": "ConfigDirectionByAttachPoint",
+                                                    "attachPointName": "FocusAnchor",
+                                                    "attachPointTargetType": "Self",
+                                                    "angleOffset": 
+                                                    {
+                                                        "x": -1.5,
+                                                        "y": 0,
+                                                        "z": 0,
+                                                    },
+                                                }
+                                            },
+                                            "predicates": 
+                                            [
+                                                {
+                                                    "$type": "ByAvatarWeaponType",
+                                                    "weaponTypes": [ "WEAPON_BOW" ],
+                                                },
+                                            ],
+                                        },
+									],
+									"failActions":
+                                    [
+										{
+											"$type": "FireEffect",
+											"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeC_OnShoot",
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+											},
+										},
+										{
+											"$type": "TriggerBullet",  //非弓系
+											"bulletID": 44000120,
+											"born": 
+                                            {
+												"$type": "ConfigBornByGlobalValue",
+												"positionKey": "_ActivityAbility_Shoot_POS",
+												"direction": 
+                                                {
+													"$type": "ConfigDirectionByAttachPoint",
+													"attachPointName": "FocusAnchor",
+													"attachPointTargetType": "Self",
+													"angleOffset": 
+                                                    {
+														"x": -1.5,
+														"y": -2,
+														"z": 0,
+													},
+												},
+											},
+                                            "predicates": 
+                                            [
+                                                {
+                                                    "$type": "ByNot",
+                                                    "predicates": 
+                                                    [
+                                                        {
+                                                            "$type": "ByAvatarWeaponType",
+                                                            "weaponTypes": [ "WEAPON_BOW" ],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+										},
+                                        {
+                                            "$type": "TriggerBullet",  //弓系
+                                            "bulletID": 44000120,
+                                            "born": 
+                                            {
+                                                "$type": "ConfigBornByGlobalValue",
+                                                "positionKey": "_ActivityAbility_Shoot_POS",
+                                                "direction": 
+                                                {
+                                                    "$type": "ConfigDirectionByAttachPoint",
+                                                    "attachPointName": "FocusAnchor",
+                                                    "attachPointTargetType": "Self",
+                                                    "angleOffset": 
+                                                    {
+                                                        "x": -1.5,
+                                                        "y": 0,
+                                                        "z": 0,
+                                                    },
+                                                },
+                                            },
+                                            "predicates": 
+                                            [
+                                                {
+                                                    "$type": "ByAvatarWeaponType",
+                                                    "weaponTypes": [ "WEAPON_BOW" ],
+                                                },
+                                            ],
+                                        },
+
+									],
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	}, 
+
+    //ActivityAbility_LudiHarpastumGadgetSkill_BombTypeA （Gadget_44000115 单体炸弹)
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_BombTypeA",
+			"onAdded": 
+            [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA_Trail",
+				},
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"doOffStage": true,
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"onAbilityStart": 
+            [
+				{
+					"$type": "FireEffect",
+					"doOffStage": true,
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeA",
+					"born": 
+                    {
+						"$type": "ConfigBornBySelf",
+						"offset": 
+                        {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						},
+						//"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"target": "Caster",
+					"targetType": "Enemy",
+					"attackEvent": 
+                    {
+						"attackPattern": 
+                        {
+							"$type": "ConfigAttackCircle",
+							"height": 2.0, //可以调 高度
+							"radius": 1, //可以调 范围
+							"triggerType": "TriggerNoRepeat",
+							"born":
+                            {
+								"$type": "ConfigBornBySelf",
+								"offset": 
+                                {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+						},
+						"attackInfo": 
+                        {
+							"attackProperty": 
+                            {
+								"damageExtra": "%Value_DamageSystemValue*%Value_DamageSystemRate",
+								//"damageExtra": 50000,
+								"trueDamage": true,
+								"ignoreAttackerProperty": true,
+								"elementType": "Fire",
+								"elementDurability": "%Value_Durability",
+								"enBreak": 0,
+							},
+							"hitPattern": 
+                            {
+								"onHitEffectName": "",
+								"hitImpulseType": "LV1", //Light x200 y0
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.00,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials": 
+            {
+				"Value_DamageSystemValue": 0,
+				"Value_DamageSystemRate": 288,
+				"Value_Durability": 25,
+			},
+		},
+	}, 
+    //ActivityAbility_LudiHarpastumGadgetSkill_BombTypeB （Gadget_44000116 爆破炸弹)
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_BombTypeB",
+			"onAdded": 
+            [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeB_Trail",
+				},
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"doOffStage": true,
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"onAbilityStart": 
+            [
+				{
+					"$type": "FireEffect",
+					"doOffStage": true,
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeB",
+					"born": 
+                    {
+						"$type": "ConfigBornBySelf",
+						"offset": 
+                        {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						},
+						//"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"target": "Caster",
+					"targetType": "Enemy",
+					"attackEvent": 
+                    {
+						"attackPattern": 
+                        {
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 6,
+							"born": 
+                            {
+								"$type": "ConfigBornBySelf",
+								"offset": 
+                                {
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+							},
+						},
+						"attackInfo": 
+                        {
+							"attackProperty": 
+                            {
+								"damageExtra": "%Value_DamageSystemValue*%Value_DamageSystemRate",
+								//"damageExtra": 10000,
+								"trueDamage": true,
+								"ignoreAttackerProperty": true,
+								"elementType": "Fire",
+								"elementDurability": "%Value_Durability",
+								"enBreak": 0,
+							},
+							"hitPattern": 
+                            {
+								"onHitEffectName": "",
+								"hitImpulseType": "LV1", //Light x200 y0
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.00,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials": 
+            {
+				"Value_DamageSystemValue": 0,
+				"Value_DamageSystemRate": 72,
+				"Value_Durability": 25,
+			},
+		},
+	}, 
+    //ActivityAbility_LudiHarpastumGadgetSkill_BombTypeC （Gadget_44000117 破盾炸弹)
+	{
+		"Default": 
+        {
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_LudiHarpastumGadgetSkill_BombTypeC",
+			"onAdded": 
+            [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeC_Trail",
+				},
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"doOffStage": true,
+					"key": "Value_DamageSystemValue",
+					"type": "ElementLevelCo",
+				},
+			],
+			"onAbilityStart": 
+            [
+				{
+					"$type": "FireEffect",
+					"doOffStage": true,
+					"effectPattern": "Eff_Activity_LudiHarpastum_BombTypeC",
+					"born": 
+                    {
+						"$type": "ConfigBornBySelf",
+						"offset": 
+                        {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						},
+						//"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"target": "Caster",
+					"targetType": "Enemy",
+					"attackEvent": 
+                    {
+						"attackPattern": 
+                        {
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 3,
+							"born": 
+                            {
+								"$type": "ConfigBornBySelf",
+								"offset": 
+                                {
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+							},
+						},
+						"attackInfo": 
+                        {
+							"attackProperty": 
+                            {
+								"damageExtra": "%Value_DamageSystemValue*%Value_DamageSystemRate",
+								//"damageExtra": 10000,
+								"trueDamage": true,
+								"elementType": "Fire",
+								"elementDurability": "%Value_Durability",
+								"ignoreAttackerProperty": true,
+								"enBreak": 0,
+							},
+							"hitPattern": 
+                            {
+								"onHitEffectName": "",
+								"hitImpulseType": "LV1", //Light x200 y0
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.00,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials": 
+            {
+				"Value_DamageSystemValue": 0,
+				"Value_DamageSystemRate": 36,
+				"Value_Durability": 300,
+			},
+		},
+	}, 
+
+]

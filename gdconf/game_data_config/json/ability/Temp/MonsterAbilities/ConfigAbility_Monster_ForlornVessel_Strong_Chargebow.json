@@ -1,0 +1,1423 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Pose
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_Pose",
+        "abilityMixins": 
+        [
+            // _FORLORNVESSEL_CHARGEBOW_POSE_TAG_
+            // 0:弓
+            // 1:盾弓
+            {
+                "$type": "AttachModifierToSelfGlobalValueMixin",
+                "globalValueKey": "_FORLORNVESSEL_CHARGEBOW_POSE_TAG_",
+                "defaultGlobalValueOnCreate":0,
+                "removeAppliedModifier": true,
+                "valueSteps": [-0.5, 0.5, 1.5],
+                "modifierNameSteps": ["Pose_None", "Pose_Shield"],
+            },
+            {
+                "$type":"AttachToStateIDMixin",
+                "stateIDs":["BeHit", "BeHitThrow"],
+                "modifierName":"ForlornVessel_Chargebow_HitRemoveShield",
+            },
+        ],
+        "modifiers": 
+        {
+            "Pose_None":
+            {
+                "onAdded": 
+                [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ShieldTag",
+						"value": false,
+					},
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "ForlornVessel_Chargebow_WeaponTag",
+                        "value": 0,
+                        "otherTargets":
+                        {
+                            "$type":"SelectTargetsByEquipParts",
+                            "equipPartNames": ["equip02"],
+                        },
+                    },
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider_Shield"],
+						"setEnable": false,
+					},
+                ],
+            },
+            "Pose_Shield":
+            {
+                "properties": 
+                {
+                    "Actor_EndureDelta": 0.5,
+                },
+                "modifierMixins":
+                [
+                    {
+                        "$type": "MonsterDefendMixin",
+                        "stateIDs": ["NormalIdle", "NormalMove", "Turn", "BeHit", "BeHitThrow", "NormalAtk_BS", "NormalAtk_Loop", "NormalAtk_AS1", "NormalAtk_AS2", "SpecialAtk"],
+                        "defendAngle": 90,
+                        "doNotTurnDirection":true,
+                        "canDefenceWhileEndureFull": true,
+                        "onDefendSucceded":	
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Brute_None_Shield_Defend",
+								"born":
+								{
+									"$type": "ConfigBornByTarget",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 1.5,
+										"z": 1.2,
+									},
+								}
+							},
+						],
+                    },
+                ],
+                "onAdded": 
+                [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ShieldTag",
+						"value": true,
+					},
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "ForlornVessel_Chargebow_WeaponTag",
+                        "value": 1,
+                        "otherTargets":
+                        {
+                            "$type":"SelectTargetsByEquipParts",
+                            "equipPartNames": ["equip02"],
+                        },
+                    },
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider_Shield"],
+						"setEnable": true,
+					},
+                ],
+                "onKill": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldDie",
+                        "type": "Trigger",
+                        "value": 1,
+                        "canBeHandledOnRecover": true,
+                        "otherTargets":
+                        {
+                            "$type":"SelectTargetsByEquipParts",
+                            "equipPartNames": ["equip02"],
+                        },
+                    },
+                ],
+            },
+            "ForlornVessel_Chargebow_HitRemoveShield":
+            {
+                "onAdded": 
+                [
+					{
+                        "$type": "SetGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_POSE_TAG_",
+                        "value": 0,
+                        "target": "Self",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_ShieldHandler",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_AttackEnhance",
+                    },
+                ],
+            },
+        },
+    },
+},
+////////////////////////////////////////////////////////////////
+//
+//  HitShield
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_HitShield",
+        "onAdded": 
+        [
+            {
+                "$type": "ApplyModifier",
+                "target": "Self",
+                "modifierName": "ForlornVessel_Chargebow_HitShield_Detect",
+            },
+            {
+                "$type": "SetGlobalValue",
+                "key": "_FORLORNVESSEL_CHARGEBOW_ATTACKENHANCE_",
+                "value": 0,
+            },
+        ],
+        "modifiers": 
+        {
+            "ForlornVessel_Chargebow_HitShield_Detect":
+            {
+                "onAttackLanded": 
+                [
+                    {
+                        "$type": "Predicated",
+                        "target": "Target",
+                        "targetPredicates":
+                        [
+                            {
+                                "$type": "ByHasShieldV2",
+                                "type": "All",
+                            },
+							{
+								"$type":"ByAttackTags",
+								"attackTags":
+								[
+									"Monster_ForlornVessel_Attack",
+									"Monster_ForlornVessel_Lance_ChargeAtk",
+								],
+							},
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+                                "target": "Target",
+							},
+                        ],
+                        "successActions":
+                        [
+                            {
+                                "$type": "ApplyModifier",
+                                "target": "Caster",
+                                "modifierName": "UNIQUE_ForlornVessel_Chargebow_HitShield_Succ",
+                            },
+                        ],
+                    },
+                ],
+            },
+            "UNIQUE_ForlornVessel_Chargebow_HitShield_Succ":
+            {
+                "duration": 2.0,
+                "isUnique": true,
+                "stacking": "Unique",
+                "onAdded": 
+                [
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_AttackEnhance",
+                    },
+                    {
+                        "$type": "ApplyModifier",
+                        "target": "Self",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_ShieldHandler",
+                    },
+                    {
+                        "$type": "LoseHP",
+                        "target": "Caster",
+                        "amount": 0.0,
+                        "amountByTargetCurrentHPRatio": 0.15,
+                        "enableInvincible": true,//无敌可以抵挡这个扣血行为
+                        "enableLockHP": true,//锁血可以抵挡这个扣血行为	
+                        "lethal": false,
+                        "useMeta":false,
+                    },
+                    {
+                        "$type": "AddGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_ATTACKENHANCE_",
+                        "value": 1,
+						"useLimitRange" : true,
+						"minValue" : 0,
+						"maxValue" : 5,
+                    },
+                    {
+                        "$type": "SetGlobalValueToOverrideMap",
+                        "globalValueKey": "_FORLORNVESSEL_CHARGEBOW_ATTACKENHANCE_",
+                        "overrideMapKey": "ForlornVessel_Chargebow_AttackEnhance",
+                    },
+                    {
+                        "$type": "ApplyModifier",
+                        "target": "Self",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_AttackEnhance",
+                    },
+                ],
+            },
+            "UNIQUE_ForlornVessel_Chargebow_ShieldHandler":
+            {
+                // 开盾持续30s，过程中再次命中刷新时长
+                "duration": 30.0,
+                "isUnique": true,
+                "stacking": "Refresh",
+                "onAdded": 
+                [
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_POSE_TAG_",
+                        "value": 1,
+                        "target": "Self",
+                    },
+                ],
+                "onRemoved": 
+                [
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_POSE_TAG_",
+                        "value": 0,
+                        "target": "Self",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_AttackEnhance",
+                    },
+                ],
+            },
+            "UNIQUE_ForlornVessel_Chargebow_AttackEnhance":
+            {
+                "isUnique": true,
+                "stacking": "Unique",
+                "properties": 
+                {
+					"Actor_AttackRatio": "0.15*%ForlornVessel_Chargebow_AttackEnhance",
+                },
+            },
+        },
+        "abilitySpecials": 
+        {
+            "ForlornVessel_Chargebow_AttackEnhance": 0.0,
+        },
+    },
+},
+////////////////////////////////////////////////////////////////
+//
+//  Chargebow
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "MonEquip_ForlornVessel_Chargebow_Effect",
+		"onAdded": 
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "ForlornVessel_Chargebow_Effect",
+			},
+		],
+        "abilityMixins": 
+        [
+            {
+                "$type": "AttachModifierToSelfGlobalValueMixin",
+                "globalValueKey": "ForlornVessel_Chargebow_WeaponTag",
+                "valueSteps": [-0.5, 0.5, 1.5],
+                "removeAppliedModifier": true,
+                "modifierNameSteps": ["ForlornVessel_Chargebow_ShieldOff", "ForlornVessel_Chargebow_ShieldOn"],
+            },
+        ],
+		"modifiers": 
+		{
+			"ForlornVessel_Chargebow_Effect":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+					},
+				],
+			},
+            "ForlornVessel_Chargebow_ShieldOff":
+			{
+				"onAdded": 
+				[
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldTag",
+                        "type": "Bool",
+                        "value": 0,
+                        "canBeHandledOnRecover": true,
+                    },
+				],
+                "onChangeAuthority": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldTag",
+                        "type": "Bool",
+                        "value": 0,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+			},
+            "ForlornVessel_Chargebow_ShieldOn":
+			{
+				"onAdded": 
+				[
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldTag",
+                        "type": "Bool",
+                        "value": 1,
+                        "canBeHandledOnRecover": true,
+                    },
+				],
+                "onChangeAuthority": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldTag",
+                        "type": "Bool",
+                        "value": 1,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "MonEquip_ForlornVessel_Chargebow_NormalAtk_EffectAdd",
+        "onAbilityStart": 
+        [
+            {
+                "$type": "ApplyModifier",
+                "modifierName": "UNIQUE_MonEquip_ForlornVessel_Chargebow_NormalAtk_Storage",
+            },
+        ],
+        "modifiers": 
+        {
+            "UNIQUE_MonEquip_ForlornVessel_Chargebow_NormalAtk_Storage":
+            {
+                "isUnique": true,
+                "onAdded": 
+                [
+                    {
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Storage",
+                    },
+                ],
+            },
+        },
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "MonEquip_ForlornVessel_Chargebow_NormalAtk_EffectRemove",
+        "onAbilityStart": 
+        [
+            {
+                "$type": "RemoveUniqueModifier",
+                "modifierName": "UNIQUE_MonEquip_ForlornVessel_Chargebow_NormalAtk_Storage",
+            },
+        ],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_ForlornVessel_Strong_Chargebow_Steer",
+		"abilityMixins" : 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Turn"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 180,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_BS"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.14,
+				"angularSpeed" : 270,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SpecialAtk"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.18,
+				"angularSpeed" : 180,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  EndureDelta
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_EndureDelta",
+        "abilityMixins": 
+        [
+            {
+                "$type": "AttachToStateIDMixin",
+                "stateIDs":["NormalAtk_BS", "NormalAtk_Loop", "NormalAtk_AS1"],
+                "modifierName": "ForlornVessel_Strong_Chargebow_EndureDelta",
+            },
+            {
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"SpecialAtk",
+				"normalizeStart":0,
+                "normalizeEnd": 0.5,
+				"modifierName":"ForlornVessel_Strong_Chargebow_EndureDelta",
+			},
+        ],
+        "modifiers": 
+        {
+            "ForlornVessel_Strong_Chargebow_EndureDelta":
+            {
+                "stacking": "Unique",
+                "onAdded": 
+                [
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "Monster_ForlornVessel_EndureDelta_Add",
+                    },
+                ],
+                "onRemoved": 
+                [
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "Monster_ForlornVessel_EndureDelta_Remove",
+                    },
+                ],
+            },
+        },
+    },
+},
+////////////////////////////////////////////////////////////////
+//
+//  NormalAtk
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Storage",
+        "abilityMixins": 
+        [
+            {
+                "$type": "AttachToStateIDMixin",
+                "stateIDs": ["NormalAtk_BS","NormalAtk_Loop","NormalAtk_AS1"],
+                "modifierName": "Chargebow_NormalAtk_Storage_Effect",
+            },
+        ],
+        "onKill": 
+        [
+            {
+                "$type": "RemoveUniqueModifier",
+                "modifierName": "UNIQUE_MonEquip_ForlornVessel_Chargebow_NormalAtk_Storage",
+                "otherTargets":
+                {
+                    "$type":"SelectTargetsByEquipParts",
+                    "equipPartNames": ["equip02"],
+                },
+            },
+        ],
+        "modifiers": 
+        {
+            "Chargebow_NormalAtk_Storage_Effect":
+            {
+                "modifierMixins": 
+                [
+                    {
+                        "$type": "SetAnimationPauseByAbilityStateMixin",
+                        "abilityStates": ["ElementFrozen","ElementPetrifaction"],
+                    },
+                ],
+                "onAdded": 
+                [
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "MonEquip_ForlornVessel_Chargebow_NormalAtk_EffectAdd",
+                        "otherTargets":
+                        {
+                            "$type":"SelectTargetsByEquipParts",
+                            "equipPartNames": ["equip02"],
+                        },
+                    },
+                ],
+                "onRemoved": 
+                [
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "MonEquip_ForlornVessel_Chargebow_NormalAtk_EffectRemove",
+                        "otherTargets":
+                        {
+                            "$type":"SelectTargetsByEquipParts",
+                            "equipPartNames": ["equip02"],
+                        },
+                    },
+                ],
+            },
+        },
+    },
+},
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Launch",
+        "onAbilityStart": 
+        [
+            {
+                "$type": "TriggerBullet",
+                "bulletID": 42207021,
+                "otherTargets":
+                {
+                    "$type":"SelectTargetsByEquipParts",
+                    "equipPartNames": ["equip02"],
+                },
+                "born": 
+                {
+                    "$type": "ConfigBornByTarget",
+                    "offset": 
+                    {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                    },
+					"direction":
+					{
+						"$type": "ConfigDirectionByAttackTarget",
+						"maxAngleType": "Free",
+						"maxAngle": 15,
+					},
+                },
+            },
+        ],
+    },
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "ForlornVessel_Strong_Chargebow_NormalAtk_Launch",
+		"onAdded": 
+		[
+			{
+                "$type": "AttachModifier",
+                "modifierName": "NormalAtk_Eff",
+            },
+            {
+                "$type": "AttachModifier",
+                "modifierName": "NormalAtk_DamageBullet",
+            },
+		],
+        "onKill": 
+        [
+            
+        ],
+		"onAbilityStart": 
+		[
+            {
+                "$type": "ApplyModifier",
+                "modifierName": "NormalAtk_Action",
+            },
+		],
+        "modifiers": 
+        {
+            "NormalAtk_Action":
+            {
+                "properties":
+                {
+                    "Animator_OverallSpeedRatioMultiplied": 0.01,
+                },
+                "onAdded":
+                [
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "ForlornVessel_Strong_Chargebow_NormalAtk_Damage",
+                        "otherTargets":
+                        {
+                            "$type": "SelectTargetsByChildren",
+                            "configID": 42207022,
+                            "sortType": "Default",
+                        },
+                    },
+                    {
+                        "$type": "FireHitEffect",
+                        "hitScene": 
+                        {
+                            "defaultEffect": "Eff_Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Hit",
+                        },
+                    },
+                    {
+                        "$type" : "TriggerAttackEvent",
+                        "targetType" : "Enemy",
+                        "attackEvent": 
+                        {
+                            "attackPattern" :
+                            {
+                                "$type" : "ConfigAttackSphere",
+                                "triggerType" : "TriggerNoRepeat",
+                                "radius": 0.8,
+                                "born":
+                                {
+                                    "$type": "ConfigBornByCollisionPoint",
+                                },
+                                "checkHitLayerType": "Both",
+                            },
+                            "attackInfo":
+                            {
+                                "attackTag": "Monster_ForlornVessel_Attack",
+                                "attenuationTag": "Monster_ForlornVessel_Chargebow_NormalAtk",
+                                "attenuationGroup": "Monster_ForlornVessel_Chargebow_NormalAtk",
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackProperty":
+                                {
+                                    "damagePercentage": 1.0,
+                                    "strikeType": "Default",
+                                    "enBreak": 100.0,
+                                    "elementDurability":50,
+                                    "elementType": "Ice",
+                                },
+                                "hitPattern" :
+                                {
+                                    "onHitEffectName": "default",
+                                    "hitImpulseType":"LV3",
+                                    "retreatType": "ByAttacker",
+                                    "hitHaltTime": 0.0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false,
+                                },
+                                "forceCameraShake": false,
+                            },
+                        },
+                    },
+                    {
+                        "$type": "EnableBulletCollisionPluginTrigger",
+                        "setEnable": false,
+                    },
+                    {
+                        "$type": "RemoveModifier",
+                        "modifierName": "NormalAtk_Eff",
+                    },
+                    {
+                        "$type": "KillSelf",
+                        "duration": 0.2,
+                    },
+                ],
+            },
+            "NormalAtk_Eff":
+            {
+                "onAdded":
+                [
+                    {
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Loop",
+                    },
+                    {
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Trail",
+                    },
+                ],
+            },
+            "NormalAtk_DamageBullet":
+            {
+                "onAdded":
+                [
+                    {
+						"$type": "TriggerBullet",
+						"bulletID": 42207022,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+                        "trackTarget": "Self",
+                        "lifeByOwnerV2": true,
+					},
+                ],
+            },
+        },
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "ForlornVessel_Strong_Chargebow_NormalAtk_Damage",
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.8,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+                        "checkHitLayerType": "Both",
+					},
+					"attackInfo":
+					{
+                        "attackTag": "Monster_ForlornVessel_Attack",
+                        "attenuationTag": "Monster_ForlornVessel_Chargebow_NormalAtk",
+                        "attenuationGroup": "Monster_ForlornVessel_Chargebow_NormalAtk",
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Default",
+							"enBreak": 100.0,
+							"elementDurability":50,
+							"elementType": "Ice",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV3",
+                            "retreatType": "ByAttacker",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+					},
+				},
+			},
+            {
+                "$type": "EnableBulletCollisionPluginTrigger",
+                "setEnable": false,
+            },
+            {
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_NormalAtk_Hit",
+                "born":
+                {
+                    "$type": "ConfigBornByCollisionPoint",
+                },
+			},
+            {
+                "$type": "TriggerAbility",
+                "abilityName": "ForlornVessel_Strong_Chargebow_NormalAtk_Launch",
+                "target": "Owner",
+            },
+            {
+                "$type": "KillSelf",
+            },
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  SpecialAtk
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Alert",
+        "abilityMixins": 
+        [
+            {
+                "$type": "AttachToStateIDMixin",
+                "stateIDs": ["SpecialAtk"],
+                "modifierName": "ForlornVessel_Strong_Chargebow_SpecialAtk_GadgetHandler",
+            },
+        ],
+        "onAbilityStart": 
+        [
+            {
+				"$type":"Predicated",
+				"target":"SelfAttackTarget",
+				"targetPredicates":
+				[
+					{
+						"$type":"ByTargetPositionToSelfPosition",
+						"compareType":"XZ",
+						"value":5,
+						"logic":"LesserOrEqual",
+					},
+				],
+				"successActions":
+				[
+                    {
+                        "$type": "CreateGadget",
+                        "gadgetID": 42207023,
+                        "campID": 4001,
+                        "campTargetType": "Enemy",
+                        "target": "Self",
+                        "born":
+                        {
+                            "$type": "ConfigBornBySelf",
+                            "onGround": true,
+                            "alongGround": true,
+                            "onGroundIgnoreWater": false,
+                            "offset": 
+                            {
+                                "x": 0.0,
+                                "y": 0.0,
+                                "z": 5.0,
+                            },
+                        },
+                    },
+				],
+				"failActions":
+				[
+                    {
+                        "$type": "CreateGadget",
+                        "gadgetID": 42207023,
+                        "campID": 4001,
+                        "campTargetType": "Enemy",
+                        "target": "SelfAttackTarget",
+                        "born":
+                        {
+                            "$type": "ConfigBornByTarget",
+                            "onGround": true,
+                            "alongGround": true,
+                            "offset": 
+                            {
+                                "x": 0.0,
+                                "y": 0.0,
+                                "z": 1.0,
+                            },
+                            "direction":
+                            {
+                                "$type": "ConfigDirectionByAttachPoint",
+                                "attachPointName": "RootNode",
+                                "attachPointTargetType": "Self",
+                            },
+                        },
+                    },
+				],
+			},
+        ],
+        "modifiers": 
+        {
+            "ForlornVessel_Strong_Chargebow_SpecialAtk_GadgetHandler":
+            {
+                "onRemoved": 
+                [
+                    {
+                        "$type": "KillSelf",
+                        "otherTargets":
+                        {
+                            "$type": "SelectTargetsByChildren",
+                            "configID": 42207023,
+                        },
+                    },
+                ],
+            },
+        },
+    },
+},
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Damage",
+        "onAbilityStart": 
+        [
+            {
+                "$type": "RemoveUniqueModifier",
+                "modifierName": "UNIQUE_ForlornVessel_Strong_Chargebow_SpecialAtk_Effect",
+            },
+            {
+                "$type": "FireEffect",
+                "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Launch",
+            },
+            {
+                "$type": "TriggerAbility",
+                "abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_DamageArea",
+                "otherTargets":
+                {
+                    "$type": "SelectTargetsByChildren",
+                    "configID": 42207023,
+                },
+            },
+        ],
+    },
+},
+{
+    "Default": 
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Effect",
+        "abilityMixins": 
+        [
+            {
+                "$type": "AttachToStateIDMixin",
+                "stateIDs": ["SpecialAtk"],
+                "modifierName": "ForlornVessel_Strong_Chargebow_SpecialAtk_EffectHandler",
+            },
+        ],
+        "onAbilityStart": 
+        [
+            {
+                "$type": "ApplyModifier",
+                "modifierName": "UNIQUE_ForlornVessel_Strong_Chargebow_SpecialAtk_Effect",
+            },
+        ],
+        "modifiers": 
+        {
+            "ForlornVessel_Strong_Chargebow_SpecialAtk_EffectHandler":
+            {
+                "onRemoved": 
+                [
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Strong_Chargebow_SpecialAtk_Effect",
+                    },
+                ],
+            },
+            "UNIQUE_ForlornVessel_Strong_Chargebow_SpecialAtk_Effect":
+            {
+                "isUnique": true,
+                "onAdded": 
+                [
+                    {
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_BS",
+                    },
+                ],
+            },
+        },
+    },
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_DamageArea",
+		"onAdded":
+		[
+            {
+				"$type": "ApplyModifier",
+				"target": "Self",
+				"modifierName": "ForlornVessel_Chargebow_SpecialAtk_Alert",
+			},
+            {
+                "$type": "TriggerAbility",
+                "abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_LifeHandler",
+            },
+		],
+        "onAbilityStart": 
+        [
+            {
+				"$type": "ApplyModifier",
+				"target": "Self",
+				"modifierName": "ForlornVessel_Chargebow_SpecialAtk_Damage",
+			},
+        ],
+		"modifiers":
+		{
+			"ForlornVessel_Chargebow_SpecialAtk_Alert" :
+			{
+                "onAdded": 
+                [
+                    {
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Alert",
+                        "born":
+                        {
+                            "$type": "ConfigBornBySelf",
+                            "onGround": true,
+                            "alongGround": true,
+                            "onGroundIgnoreWater": false,
+                        },
+                    },
+                ],
+			},
+			"ForlornVessel_Chargebow_SpecialAtk_Damage" :
+			{
+                "duration": 0.6,
+                "onRemoved": 
+                [
+                    {
+                        "$type" : "TriggerAttackEvent",
+                        "targetType" : "Enemy",
+                        "attackEvent":
+                        {
+                            "attackPattern" :
+                            {
+                                "$type" : "ConfigAttackCircle",
+                                "triggerType" : "TriggerNoRepeat",
+                                "height": 4.9,
+                                "fanAngle": 360.0,
+                                "radius": 4.0,
+                                "ignoreMassive": false,
+                                "born":
+                                {
+                                    "$type": "ConfigBornBySelf",
+                                    "offset":
+                                    {
+                                        "x": 0.0,
+                                        "y": -2.5,
+                                        "z": 0.0,
+                                    },    
+                                },
+                            },
+                            "attackInfo":
+                            {
+                                "attackTag": "Monster_ForlornVessel_Attack",
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackProperty":
+                                {
+                                    "damagePercentage": 1.0,
+                                    "strikeType": "Default",
+                                    "enBreak": 100,
+                                    "elementDurability":50,
+                                    "elementType": "Ice",
+                                },
+                                "hitPattern" :
+                                {
+                                    "onHitEffectName" : "default",
+                                    "hitImpulseType":"LV4",
+                                    "hitHaltTime": 0.0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false,
+                                },
+                                "forceCameraShake": false,
+                            },
+                        },
+                    },
+                    {
+                        "$type": "FireEffect",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_SpecialAtk_Attack",
+                        "born":
+                        {
+                            "$type": "ConfigBornBySelf",
+                            "direction":
+                            {
+                                "$type": "ConfigDirectionByEntity",
+                                "angleOffset": 
+                                {
+                                    "x": 0.0,
+                                    "y": 180.0,
+                                    "z": 0.0,
+                                },
+                            },
+                            "alongGround": true,
+                            "onGround": true,
+                        },
+                    },
+                    {
+                        "$type": "RemoveModifier",
+                        "modifierName": "ForlornVessel_Chargebow_SpecialAtk_Alert",
+                    },
+                    {
+                        "$type": "KillSelf",
+                        "duration": 0.2,
+                    },
+                ],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_LifeHandler",
+        "onAbilityStart": 
+        [
+            {
+				"$type": "ApplyModifier",
+				"target": "Self",
+				"modifierName": "ForlornVessel_Chargebow_SpecialAtk_LifeHandler",
+			},
+        ],
+		"modifiers":
+		{
+			"ForlornVessel_Chargebow_SpecialAtk_LifeHandler" :
+			{
+                "stacking": "Refresh",
+                "duration": 5.0,
+                "onRemoved": 
+                [
+                    {
+                        "$type": "KillSelf",
+                    },
+                ],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExitBattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_ForlornVessel_Strong_Chargebow_ExitBattle",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [0],
+				"modifierName": "ExitBattle",
+			},
+		],
+		"modifiers": 
+		{
+			"ExitBattle":
+			{
+				"onAdded":
+				[
+					{
+                        "$type": "SetGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_POSE_TAG_",
+                        "value": 0,
+                        "target": "Self",
+                    },
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "_FORLORNVESSEL_CHARGEBOW_ATTACKENHANCE_",
+                        "value": 0,
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "target": "Self",
+                        "modifierName": "UNIQUE_ForlornVessel_Warbanner_ElementShield_ShieldHandler",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_HitShield_Succ",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_ShieldHandler",
+                    },
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_ForlornVessel_Chargebow_AttackEnhance",
+                    },
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Alert
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_ForlornVessel_Strong_Chargebow_Alert",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToAIAlertnessMixin",
+				"alertness":[0, 1],
+				"modifierName":"ForlornVessel_Strong_Chargebow_AlertHandler",
+			},
+		],
+		"modifiers":
+		{
+			"ForlornVessel_Strong_Chargebow_AlertHandler":
+			{
+				"onRemoved":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"Leisure",
+						"value":false,
+					},
+                    {
+						"$type":"SetPoseBool",
+						"boolID":"Patrol",
+						"value":false,
+					},
+                    {
+						"$type":"SetPoseBool",
+						"boolID":"Rest",
+						"value":false,
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Weapon Freeze/Petrifaction
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_ForlornVessel_Strong_Chargebow_WeaponSpecialElementState",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAbilityStateMixin",
+				"abilityStates": ["ElementFreeze"],
+				"modifierName": "WeaponElementFreezeHandler",
+			},
+			{
+				"$type": "AttachToAbilityStateMixin",
+				"abilityStates": ["ElementPetrifaction"],
+				"modifierName": "WeaponElementPetrifactionHandler",
+			},
+		],
+		"modifiers":
+		{
+			"WeaponElementFreezeHandler" :
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachModifier",
+						"modifierName" : "WeaponElementFreeze",
+						"otherTargets" :
+						{
+							"$type":"SelectTargetsByEquipParts",
+							"equipPartNames" : ["equip01","equip02"],
+						},
+					},
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_LifeHandler",
+                        "otherTargets":
+                        {
+                            "$type": "SelectTargetsByChildren",
+                            "configID": 42207023,
+                        },
+                    },
+				],
+			},
+			"WeaponElementPetrifactionHandler" :
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachModifier",
+						"modifierName" : "WeaponElementPetrifaction",
+						"otherTargets" :
+						{
+							"$type":"SelectTargetsByEquipParts",
+							"equipPartNames" : ["equip01","equip02"],
+						},
+					},
+                    {
+                        "$type": "TriggerAbility",
+                        "abilityName": "ForlornVessel_Strong_Chargebow_SpecialAtk_LifeHandler",
+                        "otherTargets":
+                        {
+                            "$type": "SelectTargetsByChildren",
+                            "configID": 42207023,
+                        },
+                    },
+                ],
+			},
+			"WeaponElementFreeze" :
+			{
+				"state" : "ElementFreeze",
+                "onAdded": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldFreeze",
+                        "type": "Bool",
+                        "value": 1,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+                "onRemoved": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldFreeze",
+                        "type": "Bool",
+                        "value": 0,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+			},
+			"WeaponElementPetrifaction" :
+			{
+				"state" : "ElementPetrifaction",
+                "onAdded": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldPetrifaction",
+                        "type": "Bool",
+                        "value": 1,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+                "onRemoved": 
+                [
+                    {
+                        "$type": "SendEffectTrigger",
+                        "effectPattern": "Eff_Monster_ForlornVessel_Strong_Chargebow_Shield",
+                        "parameter": "ShieldPetrifaction",
+                        "type": "Bool",
+                        "value": 0,
+                        "canBeHandledOnRecover": true,
+                    },
+                ],
+			},
+		},
+	},
+},
+]

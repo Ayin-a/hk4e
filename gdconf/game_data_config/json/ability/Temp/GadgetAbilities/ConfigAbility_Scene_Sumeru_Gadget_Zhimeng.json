@@ -1,0 +1,2201 @@
+[
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Create By Mazijun
+//	该文件收纳织梦之森
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 最终核心
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_FinalCore_01_Ability",
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "PollutionState",
+				},			
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "PurifyState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "Flash",
+				},
+			],
+			"modifiers":
+			{
+				"PollutionState":
+				{
+					"onAdded":
+					[		
+						{
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":0,
+                            "effectPattern": "Eff_SceneObj_POI_Xm_JRZB_FinalCore_01",
+                        },	
+					],
+				},
+				"PurifyState":
+				{
+					"onAdded":
+					[
+						{
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_SceneObj_POI_Xm_JRZB_FinalCore_01",
+                        },				
+					],					
+				},
+				"Flash":
+				{
+					"duration":2.5,
+					"thinkInterval":2,
+					"onAdded":
+					[
+						{
+                            "$type": "SendEffectTrigger",
+                            "parameter": "Flash",
+                            "effectPattern": "Eff_SceneObj_POI_Xm_JRZB_FinalCore_01",
+                        },				
+					],
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 0,
+                        },						
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 最终核心 飞弹发射器
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_FinalCore_01_Lanuch",
+			"abilitySpecials":
+			{
+				"SkillCD": 10,
+				"FireRate":0.5,
+			},
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToGadgetStateMutexMixin",
+					"gadgetStates": [0, 201],
+					"modifierNames": [["Standby"], ["Fire"]],
+				},
+				{//CD监视Mxin
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_MaranaMissle_CD",
+					"valueSteps" : [-0.5,0.8,1.5],
+					"modifierNameSteps" : ["ShootingCD","IntervalShooting"],
+				},
+				{//Effect显示Mixin
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_MaranaMissle_CD",
+					"valueSteps" : [0,10],
+					"modifierNameSteps" : ["ShowBall"],
+				},
+				{//计算在LCTrigger内的玩家
+	                "$type": "FieldEntityCountChangeMixin",
+	                "campTargetType": "AllExceptSelf",
+	                "targetPredicates": 
+	                [
+	                    {
+	                        "$type": "ByEntityTypes",
+	                        "entityTypes": ["Avatar"],
+	                    },
+	                ],
+	                "onFieldEnter": 
+	                [
+	                    {
+	                        "$type": "AddGlobalValue",
+	                        "key": "EntityCount",
+	                        "value": 1,
+	                        "target":"Self",
+	                    },
+	                ],
+	                "onFieldExit": 
+	                [
+	                    {
+	                        "$type": "AddGlobalValue",
+	                        "key": "EntityCount",
+	                        "value": -1,
+	                        "target":"Self",
+	                    },
+	                ],
+	            },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FireBullet",
+				},
+			],
+			"modifiers":
+			{
+				"Standby":
+				{
+				},
+				"Fire":
+				{
+					"onAdded":
+					[
+						{
+                            "$type": "SendEffectTrigger",
+                            "parameter": "Stage",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_SceneObj_POI_Xm_JRZB_Finalcore_01",
+                        },				
+					],					
+				},
+				"ShootingCD":
+				{//CD重新计时
+					"thinkInterval":"%SkillCD/2",
+					"onThinkInterval":
+					[
+						{//时间到,技能CD结束
+							"$type": "AddGlobalValue",
+							"key": "_MaranaMissle_CD",
+							"value": 0.5,
+						},
+
+					],
+				},
+				"ShowBall":
+				{//显示能量球特效
+					"onAdded":
+					[
+						/*
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaMissle_Idle_Size4",
+						},
+						*/					
+					],
+				},
+				"IntervalShooting":
+				{//每{FireRate}秒尝试发射死域飞弹
+					"thinkInterval":"%FireRate",
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Area_Common_Property_Prop_FinalCore_01_Lanuch",
+							"target": "Self",
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Area_Common_Property_Prop_FinalCore_01_Lanuch",
+							"target": "Self",
+						},
+					],
+				},
+				"FireBullet":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{//仅当有Team在范围内,会尝试发射
+							"$type":"Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{//CD已结束
+									"$type": "ByTargetGlobalValue",
+									"key": "_MaranaMissle_CD",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "EntityCount",
+									"value": 1,
+									"compareType": "MoreThanAndEqual",
+								},
+							],
+							"successActions":
+							[
+								{//随机选择范围内合法攻击目标
+									"$type" : "SetSelfAttackTarget",
+									"otherTargets":
+									{
+										"$type": "SelectTargetsByLCTrigger",
+										"campTargetType": "Enemy",
+										"sortType": "Random",
+										"topLimit": 1,
+									},
+									"predicates":
+									[
+										{
+											"$type": "ByEntityTypes",
+											"entityTypes": ["Avatar"],
+										},
+									],
+								},
+								{//根据Field随机选择1个目标发射70290512子弹
+									"$type": "TriggerBullet",
+									"bulletID": 70290493,//死域专属飞弹
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName": "EffectPoint",
+										"offset": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+									"predicates": 
+									[
+										{
+											"$type": "ByHasAttackTarget",
+										},
+									],
+								},
+								{//子弹发射成功,CD重新计
+									"$type": "SetGlobalValue",
+									"key": "_MaranaMissle_CD",
+									"value": 0,
+									"predicates": 
+									[
+										{
+											"$type": "ByHasAttackTarget",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},	
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 最终核心 死域飞弹 70290512
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{//子弹触发逻辑
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_FinalCore_01_Bullet",
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":3,
+			},
+			"onAdded":
+			[
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "doOffStage": true,
+			        "key": "ElementLevelCo",
+			        "type": "ElementLevelCo",
+		      	},
+		      	{
+					"$type":"ApplyModifier",
+					"modifierName":"HitWatcher",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName"  : "MaranaMissle_BulletEffect",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_MaranaMissle_Bullet_Size4_Hit",
+				},
+				{//击中时的攻击事件
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"entityTypes": ["Avatar"],
+					"attackEvent": 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius": 4,
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",//子弹限定
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackProperty":
+							{
+								"damageExtra": "%ElementLevelCo*%DamageRatio",
+								"strikeType": "Pierce",
+								"attackType": "Range",
+								"enBreak": 50.0,
+								"ignoreAttackerProperty": true,
+								"trueDamage":true,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV5"
+							},
+						},
+					},
+				},
+				{
+					"$type" : "RemoveModifier",
+					"modifierName"  : "MaranaMissle_BulletEffect",
+				},
+				{
+					"$type" : "KillSelf",
+				},
+			],
+			"modifiers":
+			{
+				"MaranaMissle_BulletEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern"  : "Eff_SceneObj_MaranaMissle_Bullet_Size4",
+						},
+					],
+				},
+				"HitWatcher":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+							[
+								{
+					              "$type": "ByEntityTypes",
+					              "entityTypes": [ "Avatar"],
+					            },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+				                    "modifierName"  : "DeathZone_ExtraDamage",
+				                    "target": "Other",
+								},
+							],
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+			},
+		},
+	},		
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 灵药采集物
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_Elixir_Material_01_Ability",
+			"abilityMixins" : 
+			[			
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "EnableGather",
+				},
+			],
+			"modifiers":
+			{
+				"EnableGather":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_Hint_Small",
+						},
+						{//解锁交互
+							"$type": "ExecuteGadgetLua",
+						},				
+					],					
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 灵药采集物封印
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_Elixir_Seal_01_Ability",
+			"abilityMixins" : 
+			[			
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Key01",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "Key02",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 203,
+					"modifierName": "Key03",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 204,
+					"modifierName": "Disappear",
+				},
+			],
+			"modifiers":
+			{
+				"Key01":
+				{
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":201,
+                            "effectPattern": "Eff_SceneObj_Elixir_Seal_01",
+                        },						
+					],					
+				},
+				"Key02":
+				{
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":202,
+                            "effectPattern": "Eff_SceneObj_Elixir_Seal_01",
+                        },						
+					],					
+				},
+				"Key03":
+				{
+					"duration":1.8,
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":203,
+                            "effectPattern": "Eff_SceneObj_Elixir_Seal_01",
+                        },						
+					],
+					"onRemoved":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 204,
+                        },
+					],		
+				},
+				//消失状态
+				"Disappear":
+				{
+					"duration":3,
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":204,
+                            "effectPattern": "Eff_SceneObj_Elixir_Seal_01",
+                        },
+                        {
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider"],
+							"setEnable":false,
+						},						
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 观测站增补封门用 小型封印门
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_Smallsealdoor_01_Ability",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_01_Small",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "AttachPoint",
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Small",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point1",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point1",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Small",
+					"attachPoint":"Point1",
+				},
+				{//保底删除
+		          	"$type": "KillSelf",
+		          	"predicates":
+					[
+                        {
+                            "$type": "ByTargetGadgetState",
+                            "gadgetState": 901
+                        },
+					],
+		        },
+			],
+			"abilityMixins" : 
+			[			
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Key01",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 901,
+					"modifierName": "Disappear",
+				},
+			],
+			"modifiers":
+			{
+				//钥匙01状态
+				"Key01":
+				{
+					"thinkInterval":1.6,
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 901,
+                        },
+					],
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":0,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01_Small",
+                        },
+                        {//钥匙解锁
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Small",
+                            "attachPoint":"Point1",
+                        },
+					],							
+				},
+				//消失状态
+				"Disappear":
+				{
+					"onAdded":
+					[
+						{//门消失
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01_Small",
+                        },
+                        {//钥匙钥匙
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Small",
+                            "attachPoint":"Point1",
+                        },
+                        {//关闭空气墙
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["AirWall"],
+							"setEnable":false,
+						},
+					],
+				},
+			},
+		},
+	},	
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 巨型封印门 织梦之森：10*12，1个洞
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_Giantsealdoor_01_Ability",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_01",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "AttachPoint",
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point1",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point1",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"attachPoint":"Point1",
+				},
+				{//保底删除
+		          	"$type": "KillSelf",
+		          	"predicates":
+					[
+                        {
+                            "$type": "ByTargetGadgetState",
+                            "gadgetState": 901
+                        },
+					],
+		        },
+		        {
+                    "$type": "AttachModifier",
+                    "target": "Self",
+                    "modifierName": "EffectControler"
+                },
+			],
+			"modifiers":
+			{
+				"EffectControler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 201,
+							"modifierName": "Key01",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 901,
+							"modifierName": "Disappear",
+						},
+					],
+				},
+				//钥匙01状态
+				"Key01":
+				{
+					"thinkInterval":1.6,
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 901,
+                        },
+					],
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":0,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01",
+                        },
+                        {//钥匙解锁
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point1",
+                        },
+					],							
+				},
+				//消失状态
+				"Disappear":
+				{
+					"onAdded":
+					[
+						{//门消失
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01",
+                        },
+                        {//钥匙钥匙
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point1",
+                        },
+                        {//关闭空气墙
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["AirWall"],
+							"setEnable":false,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 巨型封印门 织梦之森：10*12，2个洞
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_Giantsealdoor_02_Ability",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_01",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "AttachPoint",
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point1",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point1",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"attachPoint":"Point1",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point2",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point2",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+					"attachPoint":"Point2",
+				},
+				{//保底删除
+		          	"$type": "KillSelf",
+		          	"predicates":
+					[
+                        {
+                            "$type": "ByTargetGadgetState",
+                            "gadgetState": 901
+                        },
+					],
+		        },
+		        {
+                    "$type": "AttachModifier",
+                    "target": "Self",
+                    "modifierName": "EffectControler"
+                },
+			],
+			"modifiers":
+			{
+				"EffectControler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 201,
+							"modifierName": "Key01",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 202,
+							"modifierName": "Key02",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 901,
+							"modifierName": "Disappear",
+						},
+					],
+				},
+				//钥匙01状态
+				"Key01":
+				{
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point1",
+                        },
+					],
+				},
+				//钥匙02状态
+				"Key02":
+				{
+					"thinkInterval":1.6,
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 901,
+                        },
+					],					
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point2",
+                        },
+					],
+				},
+				//消失状态
+				"Disappear":
+				{
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01",
+                        },
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02",
+                            "attachPoint":"Point2",
+                        },
+                        {//关闭空气墙
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["AirWall"],
+							"setEnable":false,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 巨型封印门 织梦之森：30*30，2个洞
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_Giantsealdoor_03_Ability",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_01_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "AttachPoint",
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point1",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point1",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"attachPoint":"Point1",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point2",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point2",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"attachPoint":"Point2",
+				},
+				{//保底删除
+		          	"$type": "KillSelf",
+		          	"predicates":
+					[
+                        {
+                            "$type": "ByTargetGadgetState",
+                            "gadgetState": 901
+                        },
+					],
+		        },
+		        {
+                    "$type": "AttachModifier",
+                    "target": "Self",
+                    "modifierName": "EffectControler"
+                },
+			],
+			"modifiers":
+			{
+				"EffectControler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 201,
+							"modifierName": "Key01",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 202,
+							"modifierName": "Key02",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 901,
+							"modifierName": "Disappear",
+						},
+					],
+				},
+				//钥匙01状态
+				"Key01":
+				{
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+					],
+				},
+				//钥匙02状态
+				"Key02":
+				{
+					"thinkInterval":1.6,
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 901,
+                        },
+					],
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point2",
+                        },
+					],					
+				},
+				//消失状态
+				"Disappear":
+				{
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01_Big",
+                        },
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point2",
+                        },
+                        {//关闭空气墙
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["AirWall"],
+							"setEnable":false,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 3.0 织梦之森 巨型封印门 织梦之森：30*30，3个洞
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_Giantsealdoor_04_Ability",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_01_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "AttachPoint",
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point1",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point1",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"attachPoint":"Point1",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point2",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point2",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"attachPoint":"Point2",
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"born":
+					{//注意一下AttachPoint的旋转似乎不支持-300这种设计
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Point3",
+						"useRotation": true,
+					},
+				},
+				{
+					"$type": "SetEffectFollowPath",
+					"followPath":"Point3",
+					"effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+					"attachPoint":"Point3",
+				},
+				{//保底删除
+		          	"$type": "KillSelf",
+		          	"predicates":
+					[
+                        {
+                            "$type": "ByTargetGadgetState",
+                            "gadgetState": 901
+                        },
+					],
+		        },
+		        {
+                    "$type": "AttachModifier",
+                    "target": "Self",
+                    "modifierName": "EffectControler"
+                },
+			],
+			"modifiers":
+			{
+				"EffectControler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 201,
+							"modifierName": "Key01",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 202,
+							"modifierName": "Key02",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 203,
+							"modifierName": "Key03",
+						},
+						{
+							"$type": "AttachToGadgetStateMixin",
+							"gadgetState": 901,
+							"modifierName": "Disappear",
+						},
+					],
+				},
+				//钥匙01状态
+				"Key01":
+				{
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+					],
+				},
+				//钥匙02状态
+				"Key02":
+				{
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point2",
+                        },
+					],
+				},
+				"Key03":
+				{
+					"thinkInterval":1.6,
+					"onThinkInterval":
+					[
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 901,
+                        },
+					],
+					"onAdded":
+					[
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point2",
+                        },
+                        {//钥匙3可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point3",
+                        },
+					],
+				},
+				//消失状态
+				"Disappear":
+				{
+					"onAdded":
+					[
+						{//门可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":1,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_01_Big",
+                        },
+                        {//钥匙1可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point1",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point2",
+                        },
+                        {//钥匙2可见
+                            "$type": "SendEffectTrigger",
+                            "parameter": "State",
+                            "type":"Int",
+                            "value":2,
+                            "effectPattern": "Eff_ScenObj_Giantsealdoor_02_Big",
+                            "attachPoint":"Point3",
+                        },
+                        {//关闭空气墙
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["AirWall"],
+							"setEnable":false,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 破碎远古方碑(修复之力)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_AncientTablets_01_Ability",
+			"onAdded":
+			[
+				{
+	              "$type": "AttachAbilityStateResistance",
+	              "resistanceListID": 11002,
+	            },
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "SeparateState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 1,
+					"modifierName": "RepairedState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "ActiveState",
+				},
+				{//与其交互时，只能放在Ability上使用
+					"$type": "WidgetMpSupportMixin",
+					"succActions":
+					[
+						{
+							"$type" : "ChangeGadgetState",
+							"state":201,
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 1,
+	                            },
+							]
+						},
+					],
+				},
+			],
+			"modifiers": 
+			{
+				"SeparateState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":2,
+							"canBeHandledOnRecover": true,
+						},
+					],
+					"onBeingHit":
+					[//被兰纳罗击中时切GadgetState=>201
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 1,
+							"predicates":
+							[
+								{//被兰那罗的修复技能打中
+                                    "$type": "ByAttackTags",
+                                    "target": "Target",
+                                    "attackTags": [
+                                    	"Activity_Lannaluo_Type_01",
+                                    ]
+		                        },
+							]
+						},
+					],
+				},
+				"RepairedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":0,
+							"canBeHandledOnRecover": true,
+							"useCurve": true,
+							"lerpTime":1,
+							"lerpCurveIndex": 0,
+						},
+						{
+                            "$type": "SetGlobalValue",
+                            "key": "BreathLight",
+                            "value": 1,
+                        },
+                        {
+		                    "$type": "AttachModifier",
+		                    "modifierName": "BreathLight",
+		                },
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_AncientTablets_Active_01",
+						},	
+					],
+				},
+				"BreathLight":
+				{
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+							[
+				                {
+				                	"$type": "ByTargetGlobalValue",
+				                 	"key": "BreathLight",
+				                 	"value": 1,
+				                 	"compareType": "Equal",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetMaterialParamFloatByTransform",
+									"matName":"Mat",
+									"patternName":"_EmissionStrength",
+									"value":0,
+									"canBeHandledOnRecover": true,
+									"useCurve": true,
+									"lerpTime":1,
+									"lerpCurveIndex": 0,
+								},
+								{
+		                            "$type": "SetGlobalValue",
+		                            "key": "BreathLight",
+		                            "value": 0,
+		                        },							
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetMaterialParamFloatByTransform",
+									"matName":"Mat",
+									"patternName":"_EmissionStrength",
+									"value":2,
+									"canBeHandledOnRecover": true,
+									"useCurve": true,
+									"lerpTime":1,
+									"lerpCurveIndex": 0,
+								},
+								{
+		                            "$type": "SetGlobalValue",
+		                            "key": "BreathLight",
+		                            "value": 1,
+		                        },								
+							],						
+						},						
+					],
+				},
+				"ActiveState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":2,
+							"canBeHandledOnRecover": true,
+							"useCurve": true,
+							"lerpTime":1,
+							"lerpCurveIndex": 0,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_AncientTablets_Active_01_Loop",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 破碎远古方碑(抬升之力)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_AncientTablets_02_Ability",
+			"onAdded":
+			[
+				{
+	              "$type": "AttachAbilityStateResistance",
+	              "resistanceListID": 11002,
+	            },
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "DownState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 1,
+					"modifierName": "UpState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "ActiveState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["UP"],
+					"modifierName": "WaterEffect",
+				},
+				{//与其交互时
+					"$type": "WidgetMpSupportMixin",
+					"succActions":
+					[
+						{
+							"$type" : "ChangeGadgetState",
+							"state":201,
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 1,
+	                            },
+							]
+						},
+					],
+				},
+			],
+			"modifiers": 
+			{
+				"DownState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":2,
+							"canBeHandledOnRecover": true,
+						},
+					],
+					"onBeingHit":
+					[//被兰纳罗击中时切GadgetState=>201
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 1,
+							"predicates":
+							[
+								{//被兰那罗的抬升技能打中
+                                    "$type": "ByAttackTags",
+                                    "target": "Target",
+                                    "attackTags": [
+                                    	"Activity_Lannaluo_Type_03",
+                                    ]
+		                        },
+							]
+						},
+					],
+				},
+				"UpState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":0,
+							"canBeHandledOnRecover": true,
+							"useCurve": true,
+							"lerpTime":1,
+							"lerpCurveIndex": 0,
+						},
+						{
+                            "$type": "SetGlobalValue",
+                            "key": "BreathLight",
+                            "value": 1,
+                        },
+                        {
+		                    "$type": "AttachModifier",
+		                    "modifierName": "BreathLight",
+		                },	
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_AncientTablets_Active_01",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},	
+					],
+				},
+				"BreathLight":
+				{
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates": 
+							[
+				                {
+				                	"$type": "ByTargetGlobalValue",
+				                 	"key": "BreathLight",
+				                 	"value": 1,
+				                 	"compareType": "Equal",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetMaterialParamFloatByTransform",
+									"matName":"Mat",
+									"patternName":"_EmissionStrength",
+									"value":0,
+									"canBeHandledOnRecover": true,
+									"useCurve": true,
+									"lerpTime":1,
+									"lerpCurveIndex": 0,
+								},
+								{
+		                            "$type": "SetGlobalValue",
+		                            "key": "BreathLight",
+		                            "value": 0,
+		                        },							
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetMaterialParamFloatByTransform",
+									"matName":"Mat",
+									"patternName":"_EmissionStrength",
+									"value":2,
+									"canBeHandledOnRecover": true,
+									"useCurve": true,
+									"lerpTime":1,
+									"lerpCurveIndex": 0,
+								},
+								{
+		                            "$type": "SetGlobalValue",
+		                            "key": "BreathLight",
+		                            "value": 1,
+		                        },								
+							],						
+						},						
+					],
+				},
+				"ActiveState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_EmissionStrength",
+							"value":2,
+							"canBeHandledOnRecover": true,
+							"useCurve": true,
+							"lerpTime":1,
+							"lerpCurveIndex": 0,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_AncientTablets_Active_01_Loop",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"WaterEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_AncientTablets_02_UpFWater",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},					
+					],
+				},
+			},
+		},
+	},		
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 破碎草元素方碑(修复之力)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_BrokeGrassTablet_01_Ability",
+			"onAdded":
+			[
+				{
+	              "$type": "AttachAbilityStateResistance",
+	              "resistanceListID": 11002,
+	            },
+	            {
+					"$type":"EnableSceneTransformByName",
+					"transformNames":["RootNode"],
+					"setEnable":true,
+					"predicates":
+					[
+						{
+							"$type": "ByAny",
+                            "predicates": 
+                            [
+								{
+		                            "$type": "ByTargetGadgetState",
+		                            "gadgetState": 0
+		                        },
+		                        {
+		                            "$type": "ByTargetGadgetState",
+		                            "gadgetState": 100
+		                        },
+                            ],
+						},
+                        
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 100,
+					"modifierName": "RepairingState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 1,
+					"modifierName": "RepairedState",
+				},
+			],
+			"modifiers": 
+			{
+				"IdleState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "gadgetState",
+							"type": "Int",
+							"value": 0,
+							"effectPattern": "Eff_SceneObj_Elem_Grass",
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hiboxRepair"],
+							"setEnable":true
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hitboxCore"],
+							"setEnable":false
+						},	
+					],
+					"onBeingHit":
+					[//被兰纳罗击中时切GadgetState=>201
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 100,
+							"predicates":
+							[
+								{
+                                    "$type": "ByAttackTags",
+                                    "target": "Target",
+                                    "attackTags": [
+                                    	"Activity_Lannaluo_Type_01",
+                                    ]
+		                        },
+							]
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWidgetMusicGameMixin",
+							"musicId":12,
+							"range":8,
+							"onSuccess":
+							[
+								{
+									"$type": "ChangeGadgetState",
+									"state": 100,
+								},
+							],
+						},
+					],
+				},
+				"RepairingState":
+				{
+					"duration":1.2,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_BrokeGrassTablet_01",
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hiboxRepair"],
+							"setEnable":false
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hitboxCore"],
+							"setEnable":false
+						},	
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 1,
+						},
+					],
+				},
+				"RepairedState":
+				{//这个地方得让人演完再切比较好
+					"duration":0.5,
+					"onRemoved":
+					[						
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["RootNode"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hiboxRepair"],
+							"setEnable":false
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["hitboxCore"],
+							"setEnable":false
+						},
+						{
+	                        "$type": "KillSelf",
+	                        "hideEntity":true,
+	                    }
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 遗迹巨石 6m
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Stone_RelicRock_01_Ability",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "DestoryState",
+				},
+			],
+			"modifiers": 
+			{
+				"IdleState":
+				{
+					"onBeingHit":
+					[//被兰纳罗击中时切GadgetState=>201
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 201,
+							"predicates":
+							[
+								{//被草种子或大型草种子攻击时
+                                    "$type": "ByAttackTags",
+                                    "target": "Target",
+                                    "attackTags": [
+                                    	"Activity_Lannaluo_Type_02",
+                                    ]
+		                        },
+							]
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ChangeColliderTagMixin",
+							"transName": "Collider",
+							"tag": "Airwall",
+						},
+					],
+					"duration":1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "Disappear",
+							"MPTriggerOnRemote": true,
+						},
+
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type": "FireEffect",
+	                        "effectPattern": "Eff_SceneObj_Stone_RelicRock_Disappear",
+	                        "born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+	                    },
+	                    {
+	                    	"$type" : "KillSelf",
+	                    },
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 遗迹巨石 3m
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Stone_RelicRock_02_Ability",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "DestoryState",
+				},
+			],
+			"modifiers": 
+			{
+				"IdleState":
+				{
+					"onBeingHit":
+					[//被兰纳罗击中时切GadgetState=>201
+						{
+							"$type": "ChangeGadgetState",
+                            "state": 201,
+							"predicates":
+							[
+								{//被草种子或大型草种子攻击时
+                                    "$type": "ByAttackTags",
+                                    "target": "Target",
+                                    "attackTags": [
+                                    	"Activity_Lannaluo_Type_02",
+                                    ]
+		                        },
+							]
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ChangeColliderTagMixin",
+							"transName": "Collider",
+							"tag": "Airwall",
+						},
+					],
+					"duration":1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "Disappear",
+							"MPTriggerOnRemote": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type": "FireEffect",
+	                        "effectPattern": "Eff_SceneObj_Stone_RelicRock_Disappear",
+	                        "born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+	                    },
+	                    {
+	                    	"$type" : "KillSelf",
+	                    },
+					],
+				},
+			},
+		},
+	},
+]

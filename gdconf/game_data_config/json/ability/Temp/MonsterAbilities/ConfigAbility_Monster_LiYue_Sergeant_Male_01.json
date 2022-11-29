@@ -1,0 +1,539 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ResetBackSprintCD
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		//重置后跳技能CD
+		"$type": "ConfigAbility",
+		"abilityName": "Human_Male_Pole_ResetBackSprintCD",
+		"abilityMixins": 
+		[
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["GroupAttack01", "GroupAttack02"],
+				"exitActions":
+				[
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [401],
+					},
+				],
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  SuroundAttack
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		//包围位置记录清零
+		"$type": "ConfigAbility",
+		"abilityName": "TestFixedCombatMove",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "SetGlobalPos",
+				"target": "SelfAttackTarget",
+				"key": "_ABILITY_Millelith_Target_Pos",
+				"born": 
+				{
+					"$type": "ConfigBornByTarget",
+				},
+				"setTarget": false,
+				"doOffStage": true,
+			},
+			{
+				"$type": "SetCombatFixedMovePoint",
+				"setPoint": true,
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey":"_ABILITY_Millelith_Target_Pos",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 4.0,
+					},
+					"direction": 
+					{
+						"$type": "ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x": 0.0,
+							"y": 30.0,//角度偏移
+							"z": 0.0,
+						}
+					},
+				},
+			},
+			{
+				"$type": "SetPoseBool",
+				"boolID": "Surround",
+				"value": true,
+				"target": "Self",
+			},
+		],
+	},
+},
+{
+	"Default": 
+	{
+		//包围位置记录清零
+		"$type": "ConfigAbility",
+		"abilityName": "Human_Male_Pole_ResetSurroundPosition",
+		"onAdded":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_ABILITY_Millelith_SorroundPositionID",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 0,
+				"minValue" : 0,
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key" : "_ABILITY_Millelith_SorroundPositionID",
+				"value" : -10,
+				"useLimitRange" : true,
+				"maxValue" : 0,
+				"minValue" : 0,
+			},
+		],
+	},
+},
+{
+	"Default": 
+	{
+		//切换Pose，进入包围战术
+		"$type": "ConfigAbility",
+		"abilityName": "Human_Male_Pole_TurnToSurround",
+		"abilityMixins": 
+		[
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["TurnToSurround"],
+				"enterActions":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Surround",
+						"value": true,
+						"target": "Self",
+					},
+				],
+			},
+		],
+	},
+},
+{
+	"Default": 
+	{
+		//切换Pose，进入等待；等待结束时，切回正常战斗Pose
+		"$type": "ConfigAbility",
+		"abilityName": "Human_Male_Pole_WaitState",
+		"abilityMixins": 
+		[
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["Wait"],
+				"enterActions":
+				[
+					{
+						"$type":"TriggerAbility",
+						"abilityName":"Human_Male_Pole_ResetSurroundPosition",
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Wait",
+						"value": true,
+						"target": "Self",
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Surround",
+						"value": false,
+						"target": "Self",
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"WaitTimer",
+					},
+					{
+						//通知周围的队长自己到达包围位置
+						"$type": "AddGlobalValue",
+						"key" : "_ABILITY_Count_WaitingSoldiers",
+						"value" : 1,
+						"useLimitRange" : true,
+						"maxValue" : 4,
+						"minValue" : 0,
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR25",
+							"centerBasedOn": "Self",
+							"campTargetType": "AllExceptSelf",
+							"campBasedOn": "Self",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+							{
+								"$type": "ByHasFeatureTag",
+								"featureTagIDs":[4007],
+			                },
+			                {
+								"$type": "ByHasFeatureTag",
+								"featureTagIDs":[4903],
+			                },
+						],
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"WaitTimer": 
+			{
+				//最多等待5秒，超时切回Pose
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Wait",
+						"value": false,
+						"target": "Self",
+					},
+				],
+			},
+		},
+	},
+},
+
+{
+	"Default" : 
+	{
+		//根据分配到的编号，找到自己的包围位置
+		"$type" : "ConfigAbility",
+		"abilityName" : "Human_Male_Pole_SetSurroundPosition",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_ABILITY_Millelith_SorroundPositionID",
+				"valueSteps" : [-0.5, 0.5, 1.5, 2.5, 3.5],
+				"removeAppliedModifier": false,
+				"modifierNameSteps":["T","T","T","T"],
+				"actionQueues":
+				[
+					[
+						{
+							"$type": "SetCombatFixedMovePoint",
+							"setPoint": false,
+						},
+					],
+					[
+						{
+							"$type": "SetGlobalPos",
+							"target": "SelfAttackTarget",
+							"key": "_ABILITY_Millelith_Target_Pos",
+							"born": 
+							{
+								"$type": "ConfigBornByTarget",
+								"offset": 
+								{
+									"x": 2.4,
+									"y": 0.0,
+									"z": 1.5,
+								},
+							},
+							"setTarget": false,
+							"doOffStage": true,
+						},
+						// {
+						// 	//根据队长决定位置
+						// 	"$type": "SetGlobalPos",
+						// 	"otherTargets":
+						// 	{
+						// 		"$type": "SelectTargetsByShape",
+						// 		"shapeName": "CircleR25",
+						// 		"centerBasedOn": "Self",
+						// 		"campTargetType": "AllExceptSelf",
+						// 		"campBasedOn": "Self",
+						// 	},
+						// 	"targetPredicates":
+						// 	[
+						// 		{
+						// 			"$type" : "ByEntityTypes",
+						// 			"entityTypes" : ["Monster"],
+						// 		},
+						// 		{
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4007],
+				  //               },
+				  //               {
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4903],
+				  //               },
+						// 	],
+						// 	"key": "_ABILITY_Millelith_Target_Pos",
+						// 	"born": 
+						// 	{
+						// 		"$type": "ConfigBornByTarget",
+						// 		"offset": 
+						// 		{
+						// 			"x": 3.0,
+						// 			"y": 0.0,
+						// 			"z": 0.0,
+						// 		},
+						// 	},
+						// 	"setTarget": false,
+						// 	"doOffStage": true,
+						// },
+						{				
+							"$type": "SetCombatFixedMovePoint",
+							"setPoint": true,
+							"toPos":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey":"_ABILITY_Millelith_Target_Pos",
+							},
+						},
+					],
+					[
+						{
+							"$type": "SetGlobalPos",
+							"target": "SelfAttackTarget",
+							"key": "_ABILITY_Millelith_Target_Pos",
+							"born": 
+							{
+								"$type": "ConfigBornByTarget",
+								"offset": 
+								{
+									"x": -2.4,
+									"y": 0.0,
+									"z": 1.5,
+								},
+							},
+							"setTarget": false,
+							"doOffStage": true,
+						},
+						// {
+						// 	//根据队长决定位置
+						// 	"$type": "SetGlobalPos",
+						// 	"otherTargets":
+						// 	{
+						// 		"$type": "SelectTargetsByShape",
+						// 		"shapeName": "CircleR25",
+						// 		"centerBasedOn": "Self",
+						// 		"campTargetType": "AllExceptSelf",
+						// 		"campBasedOn": "Self",
+						// 	},
+						// 	"targetPredicates":
+						// 	[
+						// 		{
+						// 			"$type" : "ByEntityTypes",
+						// 			"entityTypes" : ["Monster"],
+						// 		},
+						// 		{
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4007],
+				  //               },
+				  //               {
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4903],
+				  //               },
+						// 	],
+						// 	"key": "_ABILITY_Millelith_Target_Pos",
+						// 	"born": 
+						// 	{
+						// 		"$type": "ConfigBornByTarget",
+						// 		"offset": 
+						// 		{
+						// 			"x": -3.0,
+						// 			"y": 0.0,
+						// 			"z": 0.0,
+						// 		},
+						// 	},
+						// 	"setTarget": false,
+						// 	"doOffStage": true,
+						// },
+						{
+							"$type": "SetCombatFixedMovePoint",
+							"setPoint": true,
+							"toPos":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey":"_ABILITY_Millelith_Target_Pos",
+							},
+						},
+					],
+					[
+						{
+							"$type": "SetGlobalPos",
+							"target": "SelfAttackTarget",
+							"key": "_ABILITY_Millelith_Target_Pos",
+							"born": 
+							{
+								"$type": "ConfigBornByTarget",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": -3.0,
+								},
+							},
+							"setTarget": false,
+							"doOffStage": true,
+						},
+						// {
+						// 	//根据队长决定位置
+						// 	"$type": "SetGlobalPos",
+						// 	"otherTargets":
+						// 	{
+						// 		"$type": "SelectTargetsByShape",
+						// 		"shapeName": "CircleR25",
+						// 		"centerBasedOn": "Self",
+						// 		"campTargetType": "AllExceptSelf",
+						// 		"campBasedOn": "Self",
+						// 	},
+						// 	"targetPredicates":
+						// 	[
+						// 		{
+						// 			"$type" : "ByEntityTypes",
+						// 			"entityTypes" : ["Monster"],
+						// 		},
+						// 		{
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4007],
+				  //               },
+				  //               {
+						// 			"$type": "ByHasFeatureTag",
+						// 			"featureTagIDs":[4903],
+				  //               },
+						// 	],
+						// 	"key": "_ABILITY_Millelith_Target_Pos",
+						// 	"born": 
+						// 	{
+						// 		"$type": "ConfigBornByTarget",
+						// 		"offset": 
+						// 		{
+						// 			"x": 0.0,
+						// 			"y": 0.0,
+						// 			"z": 2.0,
+						// 		},
+						// 	},
+						// 	"setTarget": false,
+						// 	"doOffStage": true,
+						// },
+						{
+							"$type": "SetCombatFixedMovePoint",
+							"setPoint": true,
+							"toPos":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey":"_ABILITY_Millelith_Target_Pos",
+							},
+						},
+					],
+				],
+			},	
+		],
+		"modifiers": 
+		{
+			"T":
+			{},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  OrderedState
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		//进入得令Pose
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Millelith_TurnToOrdered",
+		"abilityMixins": 
+		[
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["TurnToOrdered"],
+				"enterActions":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_OrderedState",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_OrderedState":
+			{
+				//一段时间后结束得令状态
+				"isUnique":true,
+				"duration": 5.0,
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Ordered",
+						"value": true,
+						"target": "Self",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Ordered",
+						"value": false,
+						"target": "Self",
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [201, 202],
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		//结束得令Pose
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Millelith_OutOfOrdered",
+		"onAbilityStart":
+		[
+			{
+				"$type":"RemoveUniqueModifier",
+				"modifierName":"UNIQUE_OrderedState",
+			},
+		],
+	},
+},
+
+]

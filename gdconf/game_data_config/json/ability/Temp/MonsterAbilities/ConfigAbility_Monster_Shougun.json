@@ -1,0 +1,8046 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Hp Control
+//  首先血量锁到75%，60s内hp低于75%，立即释放“眼狩”，否则60s时释放
+//  然后血量锁到60%，30s内hp低于65%，立即触发CS，否则30s时触发
+//  Stage1 : 长枪
+//  Stage2 : 眼狩
+//  Stage3 : 长枪
+//  WaitingForCS : CS
+//  TransformToTachi : 切换太刀
+//  Stage4 : 太刀
+//  Stage5 : End
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_HpControl",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_SHOUGUN_STAGE_",
+				"valueSteps" : [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5],
+				"removeAppliedModifier": true,
+				"defaultGlobalValueOnCreate": 0,
+				"modifierNameSteps" : ["UNIQUE_Monster_Shougun_Stage1","UNIQUE_Monster_Shougun_Stage2","UNIQUE_Monster_Shougun_Stage3","UNIQUE_Monster_Shougun_WatingForCS","UNIQUE_Monster_Shougun_TransformToTachi","UNIQUE_Monster_Shougun_Stage4","UNIQUE_Monster_Shougun_Stage5"],
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [101],
+				"modifierName": "Monster_Shougun_AIFight",
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "SGV_MONSTER_SHOUGUN_CHANGETOTACHI",
+				"valueSteps" : [-0.5, 0.5, 999],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["Empty","UNIQUE_Monster_Shougun_CSEnded"],
+			},
+		],
+		"onAdded":
+		[
+			{
+              "$type": "AttachAbilityStateResistance",
+              "resistanceListID": 13002,
+            },
+            {
+				"$type": "SetGlobalPos",
+				"target": "Self",
+				"key": "_MONSTER_SHOUGUN_BORN_POS_",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"direction":
+					{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+				"onGround": true,
+				"setTarget": false,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Monster_Shougun_Stage1":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.725,
+				},
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToHPPercentMixin",
+						"valueSteps": [0.75],
+						"modifierNameSteps" : ["Empty","UNIQUE_Monster_Shougun_HpControl1"],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage1",
+						"value": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage1",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Stage2":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.725,
+				},
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage2",
+						"value": true,
+					},
+					{
+						"$type":"RemoveModifier",
+						"modifierName":"Monster_Shougun_ForceEyeStrip",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage2",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Stage3":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.625,
+				},
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToHPPercentMixin",
+						"valueSteps": [0.65],
+						"modifierNameSteps" : ["Empty","UNIQUE_Monster_Shougun_HpControl2"],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage3",
+						"value": true,
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [901, 902, 911],
+					},
+					{
+						"$type":"RemoveModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage3",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_WatingForCS":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.625,
+				},
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "CSStart",
+						"value": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "CSStart",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_TransformToTachi":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.625,
+				},
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "TransformToTachi",
+						"value": true,
+					},
+					{						
+						"$type": "ReviveDeadAvatar",
+						"amountByTargetMaxHPRatio": 1,
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+					{
+						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_Avatar_EyeStriped_Handler",
+						"target":"Team",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_EyeStriped",
+						"doOffStage": true,
+						"target": "AllPlayerAvatars",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_EyeStriped_ChangeSkill",
+						"doOffStage": true,
+						"target": "AllPlayerAvatars",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_AddElemEnergy",
+						"doOffStage": true,
+						"target": "AllPlayerAvatars",
+					},
+					{
+						"$type": "HealHP",
+						"target":"AllPlayerAvatars",
+						"amountByTargetMaxHPRatio": 1,
+						"doOffStage":true,
+					},
+					{
+						"$type": "ReviveElemEnergy",
+						"value": 100,
+						"target": "AllPlayerAvatars",
+						"doOffStage": true,
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_Avatar_BlessOfEyes_Handler",
+						"target":"Team",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target":"Team",
+						"key": "_BLESSOFEYES_LEVEL_",
+						"value": 1,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "TransformToTachi",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Stage4":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.01,
+				},
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToHPPercentMixin",
+						"valueSteps": [0.03],
+						"modifierNameSteps" : ["Empty","UNIQUE_Monster_Shougun_HpControl3"],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage4",
+						"value": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage4",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Stage5":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.01,
+				},
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage5",
+						"value": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Stage5",
+						"value": false,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_CSEnded":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 4,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_HpControl1":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 1,
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_HpControl2":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type":"SetAISkillCDAvailableNow",
+						"skillIDs":[901,902,911],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_HpControl3":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 6,
+					},
+				],
+			},
+			"Monster_Shougun_AIFight":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation": "XOR",
+							"value": 11,
+							"compareType": "Equal",
+						},
+						"successActions":
+						[
+							{
+								"$type": "SetGlobalPos",
+								"target": "Target",
+								"key": "_MONSTER_SHOUGUN_BORN_POS_",
+								"born":
+								{
+									"$type": "ConfigBornByTarget",
+									"direction":
+									{
+										"$type": "ConfigDirectionByDefault",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"onGround": true,
+								"setTarget": false,
+							},
+						]
+					},
+					{
+						"$type": "SetSkillAnchor",
+						"target": "Self",
+						"key": "_MONSTER_SHOUGUN_BORN_POS_",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_MONSTER_SHOUGUN_BORN_POS_",
+						},
+					},
+					{
+						"$type": "Randomed",
+						"target": "Caster",
+						"chance": 0.5,
+						"successActions": 
+						[
+							{
+								"$type": "ShowReminder",
+								"id": 201120103,
+								"predicates":
+								[
+									{
+										"$type":"ByTargetGlobalValue",
+										"target": "Self",
+										"key":"_MONSTER_SHOUGUN_POLE_",
+										"value":1,
+										"compareType":"Equal"
+									}
+								],
+							},
+							{
+								"$type": "ShowReminder",
+								"id": 201120201,
+								"predicates":
+								[
+									{
+										"$type":"ByTargetGlobalValue",
+										"target": "Self",
+										"key":"_MONSTER_SHOUGUN_TACHI_",
+										"value":1,
+										"compareType":"Equal"
+									}
+								],
+							},
+						],
+						"failActions": 
+						[
+							{
+								"$type": "ShowReminder",
+								"id": 201120104,
+								"predicates":
+								[
+									{
+										"$type":"ByTargetGlobalValue",
+										"target": "Self",
+										"key":"_MONSTER_SHOUGUN_POLE_",
+										"value":1,
+										"compareType":"Equal"
+									}
+								],
+							},
+							{
+								"$type": "Randomed",
+								"target": "Caster",
+								"chance": 0.5,
+								"successActions": 
+								[
+									{
+										"$type": "ShowReminder",
+										"id": 201120202,
+										"predicates":
+										[
+											{
+												"$type":"ByTargetGlobalValue",
+												"target": "Self",
+												"key":"_MONSTER_SHOUGUN_TACHI_",
+												"value":1,
+												"compareType":"Equal"
+											}
+										],
+									},
+								],
+								"failActions": 
+								[
+									{
+										"$type": "ShowReminder",
+										"id": 201120203,
+										"predicates":
+										[
+											{
+												"$type":"ByTargetGlobalValue",
+												"target": "Self",
+												"key":"_MONSTER_SHOUGUN_TACHI_",
+												"value":1,
+												"compareType":"Equal"
+											}
+										],
+									},
+								],
+							},
+						],
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Shougun_AvatarCounts_Handler",
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Shougun_ForceEyeStrip",
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Handler":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin", 
+						"globalValueKey": "_BLESSOFEYES_LEVEL_",
+						"valueSteps" : [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
+						"removeAppliedModifier": true,
+						"modifierNameSteps" : ["UNIQUE_Avatar_BlessOfEyes_Level1","UNIQUE_Avatar_BlessOfEyes_Level2","UNIQUE_Avatar_BlessOfEyes_Level3","UNIQUE_Avatar_BlessOfEyes_Level4","UNIQUE_Avatar_BlessOfEyes_Level5"],
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Level1":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "CurLocalAvatarMixin",
+						"modifierName": "UNIQUE_Avatar_BlessOfEyes_State",
+					},
+					{
+						"$type": "DoReviveMixin",
+						"type":"Both",
+						"onKillActions":
+						[
+							{
+								"$type": "ReviveAvatar",
+								"doOffStage" : true,
+								"amountByTargetMaxHPRatio": 1,
+								"target":"CurLocalAvatar",
+							},
+						],
+						"onReviveActions":
+						[
+							{
+								"$type": "FireEffect",
+								"doOffStage":true,
+								"target":"CurLocalAvatar",
+								"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes_Revive",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BLESSOFEYES_LEVEL_",
+								"target": "Self",
+								"value": 2,
+							},
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes04",
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Level2":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "CurLocalAvatarMixin",
+						"modifierName": "UNIQUE_Avatar_BlessOfEyes_State",
+					},
+					{
+						"$type": "DoReviveMixin",
+						"type":"Both",
+						"onKillActions":
+						[
+							{
+								"$type": "ReviveAvatar",
+								"doOffStage" : true,
+								"amountByTargetMaxHPRatio": 1,
+								"target":"CurLocalAvatar",
+							},
+						],
+						"onReviveActions":
+						[
+							{
+								"$type": "FireEffect",
+								"doOffStage":true,
+								"target":"CurLocalAvatar",
+								"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes_Revive",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BLESSOFEYES_LEVEL_",
+								"target": "Self",
+								"value": 3,
+							},
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes03",
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Level3":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "CurLocalAvatarMixin",
+						"modifierName": "UNIQUE_Avatar_BlessOfEyes_State",
+					},
+					{
+						"$type": "DoReviveMixin",
+						"type":"Both",
+						"onKillActions":
+						[
+							{
+								"$type": "ReviveAvatar",
+								"doOffStage" : true,
+								"amountByTargetMaxHPRatio": 1,
+								"target":"CurLocalAvatar",
+							},
+						],
+						"onReviveActions":
+						[
+							{
+								"$type": "FireEffect",
+								"doOffStage":true,
+								"target":"CurLocalAvatar",
+								"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes_Revive",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BLESSOFEYES_LEVEL_",
+								"target": "Self",
+								"value": 4,
+							},
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes02",
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Level4":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "CurLocalAvatarMixin",
+						"modifierName": "UNIQUE_Avatar_BlessOfEyes_State",
+					},
+					{
+						"$type": "DoReviveMixin",
+						"type":"Both",
+						"onKillActions":
+						[
+							{
+								"$type": "ReviveAvatar",
+								"doOffStage" : true,
+								"amountByTargetMaxHPRatio": 1,
+								"target":"CurLocalAvatar",
+							},
+						],
+						"onReviveActions":
+						[
+							{
+								"$type": "FireEffect",
+								"doOffStage":true,
+								"target":"CurLocalAvatar",
+								"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes_Revive",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BLESSOFEYES_LEVEL_",
+								"target": "Self",
+								"value": 5,
+							},
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BlessOfEyes01",
+					},
+				],
+			},
+			"UNIQUE_Avatar_BlessOfEyes_Level5":
+			{
+				"isUnique": true,
+			},
+			"UNIQUE_Avatar_BlessOfEyes_State":
+			{
+				"isUnique": true,
+				"thinkInterval": 1,
+				"properties":
+				{
+					"Actor_AddHurtDelta": 2,
+				},
+				"onThinkInterval":
+				[
+					{
+						"$type": "HealHP",
+						"amountByTargetMaxHPRatio": 0.02,
+						"target":"Self",
+					},
+					{
+						"$type": "ReviveElemEnergy",
+						"value": 2,
+						"target": "AllPlayerAvatars",
+						"doOffStage": true,
+					},
+				],
+			},
+			"Monster_Shougun_AvatarCounts_Handler":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "AvatarCountsMixin", 
+						"aliveAvatarCount": 4,
+						"actionList":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler",
+								"target":"Self",
+							},
+							{
+								"$type":"RemoveModifier",
+								"modifierName":"Monster_Shougun_AvatarCounts_Handler",
+								"target":"Self",
+							},
+						],
+					},
+					{
+						"$type": "AvatarCountsMixin", 
+						"aliveAvatarCount": 3,
+						"actionList":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler",
+								"target":"Self",
+							},
+							{
+								"$type":"RemoveModifier",
+								"modifierName":"Monster_Shougun_AvatarCounts_Handler",
+								"target":"Self",
+							},
+						],
+					},
+					{
+						"$type": "AvatarCountsMixin", 
+						"aliveAvatarCount": 2,
+						"actionList":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler",
+								"target":"Self",
+							},
+							{
+								"$type":"RemoveModifier",
+								"modifierName":"Monster_Shougun_AvatarCounts_Handler",
+								"target":"Self",
+							},
+						],
+					},
+					{
+						"$type": "AvatarCountsMixin", 
+						"aliveAvatarCount": 1,
+						"actionList":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarLimbo_Handler",
+								"target":"CurLocalAvatar",
+							},
+							{
+								"$type":"RemoveModifier",
+								"modifierName":"Monster_Shougun_AvatarCounts_Handler",
+								"target":"Self",
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"modifierMixins":
+				[
+					{
+						"$type": "AvatarCountsMixin", 
+						"aliveAvatarCount": 1,
+						"actionList":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_ForceTriggerCS_Handler",
+								"target":"Self",
+							},
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarLimbo_Handler",
+								"target":"CurTeamAvatars",
+							},
+							{
+								"$type":"RemoveModifier",
+								"modifierName":"UNIQUE_Monster_Shougun_AvatarDeadCounts_Handler",
+								"target":"Self",
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_AvatarLimbo_Handler":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.01,
+				},
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToHPPercentMixin",
+						"valueSteps": [0.1],
+						"modifierNameSteps" : ["Empty","UNIQUE_Monster_Shougun_AvatarLimbo_TriggerCS_Handler"],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_AvatarLimbo_TriggerCS_Handler":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_ForceTriggerCS_Handler",
+						"target":"Caster",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_ForceTriggerCS_Handler":
+			{
+				"isUnique": true,
+				"stacking":"Unique",
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Shougun_ForceTriggerCS",
+					},
+				],
+			},
+			"Monster_Shougun_ForceTriggerCS":
+			{
+				"duration": 0.1,
+				"onAdded":
+				[
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [801],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 1,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 2,
+					},
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [901, 902, 911],
+					},
+				],
+			},
+			"Monster_Shougun_ForceEyeStrip":
+			{
+				"duration": 120,
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 1,
+					},
+				],
+			},
+			"Empty":
+			{
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Elf
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Elf_Effect",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_SHOUGUN_ELF_STATE_",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"defaultGlobalValueOnCreate": 0,
+				"modifierNameSteps" : ["UNIQUE_Monster_Shougun_ElfOn","UNIQUE_Monster_Shougun_ElfOff"],
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type":"SetGlobalValue",
+				"key":"_MONSTER_SHOUGUN_ELF_STATE_",
+				"value":0,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Monster_Shougun_ElfOn":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Elf",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_ElfOff":
+			{
+				"isUnique": true,
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  EyeStrip
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_EyeStrip",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["EyeStrip","EyeStrip_AS"],
+				"modifierName":"Monster_Shougun_EyeStrip",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["EyeStrip_AS"],
+				"modifierName":"Monster_Shougun_EyeStrip_Handler",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["EyeStrip_BS","EyeStrip"],
+				"modifierName":"Monster_Shougun_EyeStrip_WindZone",
+			},
+		],
+		"onKill":
+		[
+			{
+				"$type":"RemoveUniqueModifier",
+				"modifierName":"UNIQUE_Avatar_EyeStriped_Handler",
+				"target":"Team",
+			},
+			{
+				"$type":"RemoveUniqueModifier",
+				"modifierName":"UNIQUE_Avatar_BlessOfEyes_Handler",
+				"target":"Team",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_EyeStrip":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_EyeStripBS"
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Shougun_EyeStrip_Timer",
+					},
+				],
+			},
+			"Monster_Shougun_EyeStrip_Handler":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_Avatar_EyeStriped_Handler",
+						"target":"Team",
+					},
+					{
+		                "$type": "DamageByAttackValue",
+		                "attacker" : "Self",
+		                "otherTargets":
+		                {
+		                    "$type": "SelectTargetsByShape",
+		                    "shapeName": "CircleR12",
+		                    "centerBasedOn": "Self",
+		                    "campTargetType": "Enemy",
+		                    "campBasedOn": "Self",
+		                },
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Target",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 0.166,
+		                        "elementType": "Electric",
+		                        "elementDurability": 50,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+								"attackType": "Default",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV5",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		            },
+		            {
+						"$type": "ShowReminder",
+						"id": 201120101,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"target": "Self",
+								"key":"_MONSTER_SHOUGUN_POLE_",
+								"value":1,
+								"compareType":"Equal"
+							}
+						],
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 201170101,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"target": "Self",
+								"key":"_MONSTER_SHOUGUN_TACHI_",
+								"value":1,
+								"compareType":"Equal"
+							}
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 2,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"ReTriggerAISkillInitialCD",
+						"skillIDs":[901,902],
+					},
+				],
+				"modifierMixins":
+                [
+                    {
+						"$type":"TriggerPostProcessEffectMixin",
+						"postEffectAssetName":"PostEffect_Monster_Shougun_EyeStripTarget_ScreenEffect",
+						"duration": 1,
+					},
+                ],
+			},
+			"Monster_Shougun_EyeStrip_WindZone":
+			{
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.725,
+				},
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_EyeStripArea"
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR7",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_EyeStrip_Timer":
+			{
+				"duration": 0.95,
+				"onRemoved":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_EyeStrip_Effect",
+						"target": "SelfAttackTarget",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_EyeStrip_Effect":
+			{
+				"isUnique": true,
+				"duration": 3,
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_EyeStripTargetBS"
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_EyeStripFailed",
+						"target":"Self",
+						"predicates": 
+						[
+							{
+								"$type": "ByHasFeatureTag",
+								"target": "Self",
+								"featureTagIDs": [1011],
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Avatar_EyeStriped_Handler":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "CurLocalAvatarMixin",
+						"modifierName": "UNIQUE_Avatar_EyeStriped",
+					},
+				],
+			},
+			"UNIQUE_Avatar_EyeStriped":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type":"AttachModifier",
+						"modifierName":"UNIQUE_Avatar_EyeStriped_ChangeSkill",
+						"target":"Self",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+                                "$type": "ByNot",
+                                "predicates": 
+                                [
+									{
+										"$type": "ByHasFeatureTag",
+										"target": "Self",
+										"featureTagIDs": [1011],
+									},
+                                ],
+                            },
+						],
+					},
+					{
+						"$type":"AttachModifier",
+						"modifierName":"UNIQUE_Avatar_AddElemEnergy",
+						"target":"AllPlayerAvatars",
+						"predicates": 
+						[
+							{
+                                "$type": "ByNot",
+                                "predicates": 
+                                [
+									{
+										"$type": "ByHasFeatureTag",
+										"target": "Target",
+										"featureTagIDs": [1011],
+									},
+                                ],
+                            },
+						],
+					},
+				],
+			},
+			"UNIQUE_Avatar_EyeStriped_ChangeSkill":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_EyeStripTargetLoop"
+					},
+					{
+						"$type": "AttachUIEffect",
+						"effectPattern": "Eff_UI_Skill_Monster_Shougun_EyeStrip",
+						"effectSlot": "ElementArt",
+					},
+					{
+						"$type": "AttachUIEffect",
+						"effectPattern": "Eff_UI_Skill_Monster_Shougun_EyeStrip",
+						"effectSlot": "ElementBurst",
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority":"Playmode",
+						"skillIndex": 1,
+						"skillID": 20030,
+					},
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority":"Playmode",
+						"skillIndex": 4,
+						"skillID": 20031,
+					},
+				],
+			},
+			"UNIQUE_Avatar_AddElemEnergy":
+			{
+				"isUnique": true,
+				"state": "IgnoreAddEnergy", 
+				"onAdded":
+				[
+					{
+						"$type": "ReviveElemEnergy",
+						"value": -100,
+						"target": "Self",
+						"doOffStage": true,
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  NormalAtk
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_NormalAtk_DistancePredicated",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "SelfAttackTarget",
+				"targetPredicates" :
+				[
+					{
+						"$type": "ByTargetPositionToSelfPosition",
+						"compareType": "XZ",
+						"value": 9,
+						"logic": "Greater",
+					},
+				],
+				"successActions" :
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "TargetDistanceFar",
+						"value": true,
+					},
+				],
+				"failActions" :
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "TargetDistanceFar",
+						"value": false,
+					},
+				],
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_NormalAtk_05",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NormalAtk_Combo02",
+				"modifierName": "Monster_Shougun_NormalAtk_05_State",
+				"normalizeStart": 0.37,
+				"normalizeEnd": 0.47,
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "SetGlobalPos",
+				"target": "SelfAttackTarget",
+				"key": "_MONSTER_SHOUGUN_NORMAL_05_POS_",
+				"setTarget": false,
+				"born":
+				{
+					"$type": "ConfigBornByTargetLinearPoint",
+					"linearOffset": 2.5,
+					"baseOnTarget": true,
+					"linearXZ": true,
+					"linearMin": 6,
+					"linearMax": 12.5,
+					"onGround": true,
+				},
+			},
+			{
+				"$type": "TurnDirectionToPos",
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_NORMAL_05_POS_",
+				},
+			},
+			{
+				"$type": "FixedMonsterRushMove",
+				"timeRange": 0.1,
+				"checkAnimatorStateOnExitOnly": true,
+				"animatorStateIDs": ["NormalAtk_Combo02"],
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_NORMAL_05_POS_",
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42906002,
+				"lifeByOwnerIsAlive": true,
+				"trackTarget":"Self",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_NormalAtk_05_State":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_NormalAtk05_Trail",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_NormalAtk_05_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_NormalAtk_05_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "KillSelf",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42906002,
+							"sortType": "Default",
+						}
+					},
+				],
+			},
+			"Monster_Shougun_NormalAtk_05_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_NormalAtk_05_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_NormalAtk_RushBullet",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.166,
+							"strikeType": "Blunt",
+							"attackType": "Default",
+							"elementType": "Electric",
+							"elementDurability": 25,
+							"enBreak": 999999.0,
+						},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV4",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+							"retreatType":"ByHitDirection",
+						},
+					}
+				}			
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_NormalAtk_05_Damage",
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_NormalAtk_05_Damage1",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_NormalAtk_05_Damage2",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_NormalAtk_05_Damage3",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_NormalAtk_05_Damage1":
+			{
+				"duration": 0.2,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": -5.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"strikeType": "Slash",
+									"attackType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100.0,
+								},
+								"hitPattern" :
+								{
+									"hitImpulseType":"LV3",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+									"retreatType":"ByHitDirection",
+								},
+							}
+						}			
+					},
+				],
+			},
+			"Monster_Shougun_NormalAtk_05_Damage2":
+			{
+				"duration": 0.3,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": -5.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"strikeType": "Slash",
+									"attackType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100.0,
+								},
+								"hitPattern" :
+								{
+									"hitImpulseType":"LV3",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+									"retreatType":"ByHitDirection",
+								},
+							}
+						}			
+					},
+				],
+			},
+			"Monster_Shougun_NormalAtk_05_Damage3":
+			{
+				"duration": 0.4,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": -5.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.25,
+									"strikeType": "Blunt",
+									"attackType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 100.0,
+								},
+								"hitPattern" :
+								{
+									"hitImpulseType":"LV5",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+									"retreatType":"ByHitDirection",
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.5,
+									"shakeTime": 0.25,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								}
+							}
+						}			
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_NormalAtk_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NormalAtk_Combo02_Tachi",
+				"modifierName": "Monster_Shougun_NormalAtk_Tachi_Rush",
+				"normalizeStart": 0.03,
+				"normalizeEnd": 0.16,
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_NormalAtk_Tachi_Rush":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_NormalAtk_05_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_NormalAtk_05_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+				],
+			},
+			"Monster_Shougun_NormalAtk_05_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_NormalAtk_05_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ElectricBurst
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Pole_ElectricBurst",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["ElectricBurst_BS"],
+				"modifierName":"Monster_Shougun_ElectricBurst_CreateElectricEye",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["ElectricBurst_BS","ElectricBurst_Loop"],
+				"modifierName":"Monster_Shougun_ElectricBurst_Charge",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["ElectricBurst_Loop"],
+				"modifierName":"Monster_Shougun_ElectricBurst_Loop",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["ElectricBurst_Attack"],
+				"modifierName":"Monster_Shougun_ElectricBurst_Attack",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_ElectricBurst_CreateElectricEye":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42906004,
+						"campID": 4001,
+						"target": "Self",
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 1.25,
+								"z": 13.5,
+							},
+							"onGround": true,
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42906004,
+						"campID": 4001,
+						"target": "Self",
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",
+							"offset":
+							{
+								"x": -10.5,
+								"y": 1.25,
+								"z": -6.5,
+							},
+							"onGround": true,
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42906004,
+						"campID": 4001,
+						"target": "Self",
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",
+							"offset":
+							{
+								"x": 10.5,
+								"y": 1.25,
+								"z": -6.5,
+							},
+							"onGround": true,
+						},
+					},
+				],
+			},
+			"Monster_Shougun_ElectricBurst_Charge":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_ElectricBurstBS"
+					},
+				],
+			},
+			"Monster_Shougun_ElectricBurst_Loop":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_ElectricBurst_Attack":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Monster_Shougun_Pole_ElectricBurst"
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "ElectricBurst_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "ElectricBurst_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+				],
+			},
+			"ElectricBurst_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"ElectricBurst_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_Pole_ElectricEye",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "ElectricEye_Explode",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Shougun_Pole_ElectricEye_ElementShield",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"ElectricEye_Explode":
+			{
+				"duration": 8,
+				"thinkInterval":6.25,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_ElectricEye",
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "ElectricEye_ExplodeTag",
+						"target": "AllPlayerAvatars",
+					},
+				],
+				"onThinkInterval":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_ElectricEyeExplode",
+					},
+					{
+		                "$type": "DamageByAttackValue",
+		                "otherTargets":
+		                {
+		                    "$type": "SelectTargetsByShape",
+		                    "shapeName": "CircleR20",
+		                    "centerBasedOn": "Self",
+		                    "campTargetType": "Enemy",
+		                    "campBasedOn": "Self",
+		                },
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Target",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                	"attackTag": "Monster_Shougun_ElectricEye",
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 0,
+		                        "enBreak": 0,
+		                        "strikeType": "None",
+								"attackType": "Default",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV0",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		            },
+		            {
+						"$type": "HideUIBillBoard",
+						"hide": true,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBox"],
+						"setEnable":false
+					},
+				],
+				"onAttackLanded":
+				[
+					{
+						"$type" : "Predicated",
+						"target" : "Target",
+						"targetPredicates":
+						[
+							{
+								"$type" : "ByAttackTags",
+								"attackTags" : ["Monster_Shougun_ElectricEye"],
+							},
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "ElectricEye_Explode_FlagHandler",
+								"target": "Target",
+							},
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "ElectricEye_Explode_DamageHandler",
+								"target": "Target",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"ElectricEye_ExplodeTag":
+			{
+				"duration": 1,
+				"onAdded":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"target": "Self",
+						"key":"_ELECTRICEYE_EXPLODE_CONUT_",
+						"value":0,
+					},
+				],
+			},
+			"ElectricEye_Explode_FlagHandler":
+			{
+				"stacking": "Multiple",
+				"duration": 0.1,
+				"onAdded":
+				[
+					{
+						"$type":"AddGlobalValue",
+						"target": "Self",
+						"key":"_ELECTRICEYE_EXPLODE_CONUT_",
+						"value":1,
+						"useLimitRange":true,
+						"minValue":0,
+						"maxValue":3,
+					},
+				],
+			},
+			"ElectricEye_Explode_DamageHandler":
+			{
+				"stacking": "Unique",
+				"duration": 0.2,
+				"onRemoved":
+				[
+					{
+		                "$type": "DamageByAttackValue",
+		                "target": "Self",
+		                "attacker": "Caster",
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Self",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 1.333,
+		                        "elementType": "Electric",
+		                        "elementDurability": 50,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+								"attackType": "Default",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV5",
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		                "predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"target": "Self",
+								"key":"_ELECTRICEYE_EXPLODE_CONUT_",
+								"value":1,
+								"compareType":"Equal"
+							}
+						],
+		            },
+		            {
+		                "$type": "DamageByAttackValue",
+		                "target": "Self",
+		                "attacker": "Caster",
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Self",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 0.333,
+		                        "elementType": "Electric",
+		                        "elementDurability": 50,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+								"attackType": "Default",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV5",
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		                "predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"target": "Self",
+								"key":"_ELECTRICEYE_EXPLODE_CONUT_",
+								"value":2,
+								"compareType":"Equal"
+							}
+						],
+		            },
+		            {
+		                "$type": "DamageByAttackValue",
+		                "target": "Self",
+		                "attacker": "Caster",
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Self",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 0.133,
+		                        "elementType": "Electric",
+		                        "elementDurability": 50,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+								"attackType": "Default",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV5",
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		                "predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"target": "Self",
+								"key":"_ELECTRICEYE_EXPLODE_CONUT_",
+								"value":3,
+								"compareType":"Equal"
+							}
+						],
+		            },
+				],
+			},
+			"UNIQUE_Shougun_Pole_ElectricEye_ElementShield":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"elementType": "None",
+				"elementDurability": 7,
+				"properties":
+				{
+					"Actor_EndureDelta": 0.0,
+				},
+				"modifierMixins":
+				[
+					{
+						"$type": "ElementShieldMixin",
+						"elementType": "None",
+						"shieldHPRatio": 1.0,
+						"damageRatio": 0,
+						"onShieldBroken":
+						[
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "UNIQUE_Shougun_Pole_ElectricEye_ElementShield",
+							},
+						],
+					},
+				],
+				"onBeingHit":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_ElectricEye_BeHit",
+					},
+					{
+						"$type" : "AddElementDurability",
+						"modifierName" : "UNIQUE_Shougun_Pole_ElectricEye_ElementShield",
+						"useLimitRange" : true,
+						"maxValue" : 7,
+						"minValue" : 0,
+						"value" : -1,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "ElectricEye_Explode",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_ElectricEyeAS",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Pole_ElectricBurstExplode",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_ElectricBurstExplode",
+			},
+			{
+                "$type": "DamageByAttackValue",
+                "attacker" : "Self",
+                "otherTargets":
+                {
+                    "$type": "SelectTargetsByShape",
+                    "shapeName": "CircleR5",
+                    "centerBasedOn": "Self",
+                    "campTargetType": "Enemy",
+                    "campBasedOn": "Self",
+                },
+                "born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "RootNode",
+					"target": "Target",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+                "attackInfo":
+                {
+                    "attackProperty":
+                    {
+                        "damagePercentage": 0.166,
+                        "elementType": "Electric",
+                        "elementDurability": 50,
+                        "enBreak": 999999,
+                        "strikeType": "Blunt",
+						"attackType": "Default",
+                    },
+                    "hitPattern" :
+					{
+						"hitImpulseType":"LV5",
+						"reboundRatio" : 0,
+						"hitHaltTime" : 0.0,
+						"hitHaltTimeScale" : 0.05,
+						"muteHitText" : false,
+					},
+                },
+            },
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAtk
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_ExtraAtk",
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"target": "Self",
+				"bulletID": 42906001,
+				"born": 
+				{
+					"$type": "ConfigBornBySelf",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 1.0,
+						"z": 2,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByDefault",
+					},
+				},
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_ExtraBlade_Hit",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.333,
+							"strikeType": "Slash",
+							"elementType":"Electric",
+							"elementDurability": 50,
+							"enBreak": 200,
+			        	},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV5",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+					},
+				},
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern":"Eff_Monster_Shougun_Pole_ExtraBlade"
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  RushAtk
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_RushAtk_ChangePos",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "RushAtk",
+				"modifierName": "Monster_Shougun_RushState",
+				"normalizeStart": 0.24,
+				"normalizeEnd": 0.3,
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "SetGlobalPos",
+				"target": "SelfAttackTarget",
+				"key": "_MONSTER_SHOUGUN_RUSHATK_POS_",
+				"setTarget": false,
+				"born":
+				{
+					"$type": "ConfigBornByTargetLinearPoint",
+					"linearOffset": -2,
+					"baseOnTarget": true,
+					"linearXZ": true,
+					"linearMin": 5.0,
+					"linearMax": 25.0,
+					"onGround": true,
+				},
+			},
+			{
+				"$type": "TurnDirectionToPos",
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_RUSHATK_POS_",
+				},
+			},
+			{
+				"$type": "FixedMonsterRushMove",
+				"timeRange": 0.15,
+				"checkAnimatorStateOnExitOnly": true,
+				"animatorStateIDs": ["RushAtk"],
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_RUSHATK_POS_",
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42906002,
+				"lifeByOwnerIsAlive": true,
+				"trackTarget":"Self",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_RushState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": true,
+						"index": 0,
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_RushAtkBS",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_RushMove_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_RushMove_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "ActCameraRadialBlur",
+						"cameraRadialBlur": 
+						{
+							"power": 1,
+							"blurTime": 0.4,
+							"fadeTime": 0.2,
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": false,
+						"index": 0,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "KillSelf",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42906002,
+							"sortType": "Default",
+						}
+					},
+				],
+			},
+			"Monster_Shougun_RushMove_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_RushMove_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  AreaAtk
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_AreaAtk_Effect",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["AreaAtk"],
+				"modifierName":"Monster_Shougun_AreaAtk",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_AreaAtk",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_AreaAtk":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_AreaAtkPole",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_AreaAtk_Atk",
+		"onAbilityStart":
+		[
+			{
+                "$type": "DamageByAttackValue",
+                "attacker" : "Self",
+                "otherTargets":
+                {
+                    "$type": "SelectTargetsByShape",
+                    "shapeName": "CircleR10",
+                    "centerBasedOn": "Self",
+                    "campTargetType": "Enemy",
+                    "campBasedOn": "Self",
+                },
+                "born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "RootNode",
+					"target": "Target",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+                "attackInfo":
+                {
+                    "attackProperty":
+                    {
+                        "damagePercentage": 0.666,
+                        "elementType": "Electric",
+                        "elementDurability": 50,
+                        "enBreak": 999999,
+                        "strikeType": "Blunt",
+						"attackType": "Default",
+                    },
+                    "hitPattern" :
+					{
+						"hitImpulseType":"LV5",
+						"reboundRatio" : 0,
+						"hitHaltTime" : 0.0,
+						"hitHaltTimeScale" : 0.05,
+						"muteHitText" : false,
+					},
+                },
+            },
+            {
+				"$type":"ActCameraShake",
+				"cameraShake":
+				{
+					"shakeRange": 2,
+					"shakeTime": 0.5,
+					"shakeDistance": 50,
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_AreaAtk":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_AreaAtkPole",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Blink
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkB_Echo",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_BlinkEchoB",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkR_Echo",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_BlinkEchoR",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkL_Echo",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_BlinkEchoL",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkState",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Blink","ReturnToBorn"],
+				"modifierName": "Blink_State",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Blink",
+			},
+		],
+		"modifiers":
+		{
+			"Blink_State":
+			{
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Shougun_Blink",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Blink":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+				],
+			},
+			"Blink_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Blink_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_FindBlinkPointR",
+		"onAbilityStart":
+		[
+			{
+				"$type": "SetGlobalPos",
+				"target": "SelfAttackTarget",
+				"key": "_MONSTER_SHOUGUN_BLINKR_POS_",
+				"setTarget": false,
+				"born":
+				{
+					"$type": "ConfigBornByTargetLinearPoint",
+					"linearOffset": -1.75,
+					"baseOnTarget": true,
+					"linearXZ": true,
+					"linearMin": 5.0,
+					"linearMax": 40.0,
+					"onGround": true,
+				},
+			},
+			{
+				"$type":"TryFindBlinkPointByBorn",
+				"target":"Self",
+				"hitSceneTest":false,
+				"born":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_BLINKR_POS_",				
+					"offset":
+					{
+						"x":1.5,
+						"y":0,
+						"z":0,
+					},
+					"bornRandom":
+					{
+						"$type":"BornRandomFromCenter",
+						"minRandomRange":0.0,
+						"maxRandomRange":0.5,
+					},
+					"onGround":true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_FindBlinkPointL",
+		"onAbilityStart":
+		[
+			{
+				"$type": "SetGlobalPos",
+				"target": "SelfAttackTarget",
+				"key": "_MONSTER_SHOUGUN_BLINKL_POS_",
+				"setTarget": false,
+				"born":
+				{
+					"$type": "ConfigBornByTargetLinearPoint",
+					"linearOffset": -2.5,
+					"baseOnTarget": true,
+					"linearXZ": true,
+					"linearMin": 5.0,
+					"linearMax": 40.0,
+					"onGround": true,
+				},
+			},
+			{
+				"$type":"TryFindBlinkPointByBorn",
+				"target":"Self",
+				"hitSceneTest":false,
+				"born":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_BLINKL_POS_",				
+					"offset":
+					{
+						"x":-2,
+						"y":0,
+						"z":0,
+					},
+					"bornRandom":
+					{
+						"$type":"BornRandomFromCenter",
+						"minRandomRange":0,
+						"maxRandomRange":1,
+					},
+					"onGround":true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_FindBlinkPointB",
+		"onAbilityStart":
+		[
+			{
+				"$type":"TryFindBlinkPointByBorn",
+				"target":"Self",
+				"hitSceneTest":true,
+				"hitSceneType":"BlinkHitSceneTestByThreeSegments",
+				"born":
+				{
+					"$type":"ConfigBornBySelf",					
+					"offset":
+					{
+						"x":0,
+						"y":0,
+						"z":-6,
+					},
+					"bornRandom":
+					{
+						"$type":"BornRandomFromCenter",
+						"minRandomRange":0,
+						"maxRandomRange":1.5,
+					},
+					"onGround":true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_FindBlinkPoint_ReturnToBorn",
+		"onAbilityStart":
+		[
+			{
+				"$type":"TryFindBlinkPointByBorn",
+				"target":"Self",
+				"hitSceneTest":false,
+				"born":
+				{
+					"$type":"ConfigBornByGlobalValue",	
+					"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",				
+					"offset":
+					{
+						"x":0,
+						"y":0,
+						"z":0,
+					},
+					"bornRandom":
+					{
+						"$type":"BornRandomFromCenter",
+						"minRandomRange":0,
+						"maxRandomRange":1,
+					},
+					"onGround":true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Blink",
+		"onAbilityStart":
+		[
+			{
+				"$type": "DoBlink",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkAS",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["BlinkBAS","BlinkLAS","BlinkRAS"],
+				"modifierName": "BlinkAS_State",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 1.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0,
+							"strikeType": "Blunt",
+							"enBreak": 999999,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "none",
+							"hitImpulseType": "LV0",
+							"reboundRatio": 0,
+							"canBeDefenceHalt": true,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Pole_BlinkAS",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"offset":
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Blink",
+			},
+		],
+		"modifiers":
+		{
+			"BlinkAS_State":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Shougun_Blink",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Show01
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Show01",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["Show01"],
+				"modifierName":"Monster_Shougun_Show01_State",
+			},
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["TransformToTachi"],
+				"modifierName":"Monster_Shougun_TransformToTachi_State",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+                "$type": "DamageByAttackValue",
+                "attacker" : "Self",
+                "otherTargets":
+                {
+                    "$type": "SelectTargetsByShape",
+                    "shapeName": "CircleR10",
+                    "centerBasedOn": "Self",
+                    "campTargetType": "Enemy",
+                    "campBasedOn": "Self",
+                },
+                "born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "RootNode",
+					"target": "Target",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+                "attackInfo":
+                {
+                    "attackProperty":
+                    {
+                        "damagePercentage": 0.166,
+                        "elementType": "Electric",
+                        "elementDurability": 50,
+                        "enBreak": 999999,
+                        "strikeType": "Blunt",
+						"attackType": "Default",
+                    },
+                    "hitPattern" :
+					{
+						"hitImpulseType":"LV5",
+						"reboundRatio" : 0,
+						"hitHaltTime" : 0.0,
+						"hitHaltTimeScale" : 0.05,
+						"muteHitText" : false,
+					},
+                },
+            },
+            {
+				"$type":"ApplyModifier",
+				"modifierName":"Monster_Shougun_Show01BS_Windzone",
+				"target":"Self",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_Show01BS_Windzone":
+			{
+				"duration": 0.75,
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR10",
+						"strength" : -10,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_Show01_State":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_Show01Loop",
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Shougun_Show01Loop_Timer",
+						"target":"Self",
+					},
+					{
+						"$type": "ShowReminder",
+						"id": 201120102,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 3,
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR8",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_Show01Loop_Timer":
+			{
+				"duration": 5,
+				"onRemoved":
+				[
+					{
+						"$type":"Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation": "XOR",
+							"value": 10,
+							"compareType": "Equal",
+						},
+						"successActions":
+						[
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"Monster_Shougun_TriggerCS_Handler",
+								"target":"Target",
+							},
+							{
+								"$type": "DebugLog",
+								"content": "Start Trigger CS",
+							},
+						]
+					},
+					{
+						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_AvatarLimbo_Handler",
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+				],
+			},
+			"Monster_Shougun_TriggerCS_Handler":
+			{
+				"duration": 1,
+				"onAdded":
+				[
+					{
+						"$type" : "ExecuteGadgetLua",
+						"param1": 201,
+					},
+					{
+						"$type": "DebugLog",
+						"content": "Trigger CS",
+					},
+				],
+			},
+			"Monster_Shougun_TransformToTachi_State":
+			{
+				"state":"LockHP",
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 3,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_AvatarLimbo_Handler",
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+					{
+						"$type": "ServerLuaCall",
+						"luaCallType": "FromGroup",
+						"funcName": "SLC_PlayCutScene",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  MoveEffect
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_MoveEffectR",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_MoveEffect",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "FootR",
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_MoveEffectL",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_MoveEffect",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "FootL",
+				},
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Steer",
+		"abilityMixins":
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01"],
+				"startNormalizedTime": 0.0,
+				"endNormalizedTime": 0.1,
+				"angularSpeed": 360,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01"],
+				"startNormalizedTime": 0.21,
+				"endNormalizedTime": 0.23,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01"],
+				"startNormalizedTime": 0.33,
+				"endNormalizedTime": 0.36,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo02"],
+				"startNormalizedTime": 0.00,
+				"endNormalizedTime": 0.06,
+				"angularSpeed": 540,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo02"],
+				"startNormalizedTime": 0.3,
+				"endNormalizedTime": 0.36,
+				"angularSpeed": 540,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ExtraAtk"],
+				"startNormalizedTime": 0.0,
+				"endNormalizedTime": 0.08,
+				"angularSpeed": 540,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ExtraAtk"],
+				"startNormalizedTime": 0.14,
+				"endNormalizedTime": 0.19,
+				"angularSpeed": 1080,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["EyeStrip"],
+				"startNormalizedTime": 0.0,
+				"endNormalizedTime": 0.6,
+				"angularSpeed": 60,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["RushAtk"],
+				"startNormalizedTime": 0.0,
+				"endNormalizedTime": 0.6,
+				"angularSpeed": 120,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["RushAtk"],
+				"startNormalizedTime": 0.32,
+				"endNormalizedTime": 0.34,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["RushAtk"],
+				"startNormalizedTime": 0.45,
+				"endNormalizedTime": 0.5,
+				"angularSpeed": 540,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01_Tachi"],
+				"startNormalizedTime": 0.03,
+				"endNormalizedTime": 0.08,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01_Tachi"],
+				"startNormalizedTime": 0.22,
+				"endNormalizedTime": 0.26,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo01_Tachi"],
+				"startNormalizedTime": 0.35,
+				"endNormalizedTime": 0.4,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk_Combo02_Tachi"],
+				"startNormalizedTime": 0,
+				"endNormalizedTime": 0.03,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Laido"],
+				"startNormalizedTime": 0,
+				"endNormalizedTime": 0.15,
+				"angularSpeed": 240,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["AreaAtk_Tachi"],
+				"startNormalizedTime": 0,
+				"endNormalizedTime": 0.15,
+				"angularSpeed": 180,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SwordArt"],
+				"startNormalizedTime": 0,
+				"endNormalizedTime": 0.12,
+				"angularSpeed": 180,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SwordArt"],
+				"startNormalizedTime": 0.23,
+				"endNormalizedTime": 0.25,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SwordArt"],
+				"startNormalizedTime": 0.36,
+				"endNormalizedTime": 0.43,
+				"angularSpeed": 360,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SwordArt"],
+				"startNormalizedTime": 0.57,
+				"endNormalizedTime": 0.6,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Dodge"],
+				"startNormalizedTime": 0.19,
+				"endNormalizedTime": 0.24,
+				"angularSpeed": 720,
+				"attackTrigger" : "",
+				"attackDistance" : 12,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Transform To Tachi
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Transform",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_SHOUGUN_WEAPONTYPE_",
+				"valueSteps" : [-0.5, 0.5, 1.5, 2.5],
+				"removeAppliedModifier": true,
+				"defaultGlobalValueOnCreate": 0,
+				"modifierNameSteps" : ["UNIQUE_Monster_Shougun_Pole","UNIQUE_Monster_Shougun_Tachi","UNIQUE_Monster_Shougun_NoWeapon"],
+			},
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["Transform"],
+				"modifierName":"Monster_Shougun_ChangeWeaponForce",
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type":"SetGlobalValue",
+				"key":"_MONSTER_SHOUGUN_WEAPONTYPE_",
+				"value":0,
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type":"SetGlobalValue",
+				"key":"_MONSTER_SHOUGUN_WEAPONTYPE_",
+				"value":1,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_SHOUGUN_STAGE_",
+				"value": 5,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Monster_Shougun_Pole":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip01"],
+					},
+				],
+				"onReconnect":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip01"],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Tachi":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+				],
+				"onReconnect":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_NoWeapon":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+				],
+				"onReconnect":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+				],
+			},
+			"Monster_Shougun_ChangeWeaponForce":
+			{
+				"state": "LockHP",
+				"onAdded":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_Monster_Shougun_AvatarLimbo_Handler",
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SHOUGUN_STAGE_",
+						"value": 5,
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Transform_PoleDisappear",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Transom_PoleDisappear",
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "WeaponR",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Laido
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Laido",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Laido",
+				"modifierName": "Monster_Shougun_Laido_RushState",
+				"normalizeStart": 0.27,
+				"normalizeEnd": 0.4,
+			},
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["Laido"],
+				"modifierName":"Monster_Shougun_Laido_Effect",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "SelfAttackTarget",
+				"targetPredicates" :
+				[
+					{
+						"$type": "ByTargetPositionToSelfPosition",
+						"compareType": "XZ",
+						"value": 6.5,
+						"logic": "Greater",
+					},
+				],
+				"successActions" :
+				[
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"key": "_MONSTER_SHOUGUN_LAIDO_POS_",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornByTargetLinearPoint",
+							"linearOffset": -1.5,
+							"baseOnTarget": true,
+							"linearXZ": true,
+							"linearMin": 5,
+							"linearMax": 12.5,
+							"onGround": true,
+						},
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42906002,
+						"lifeByOwnerIsAlive": true,
+						"trackTarget":"Self",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"failActions" :
+				[
+					{
+						"$type": "SetGlobalPos",
+						"target": "Self",
+						"key": "_MONSTER_SHOUGUN_LAIDO_POS_",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 5.0,
+							},
+						},
+					},
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackBox",
+								"triggerType": "TriggerNoRepeat",
+								"size":
+								{
+									"x":1.5,
+									"y":2,
+									"z":5,
+								},
+								"born":
+								{
+									"$type":"ConfigBornBySelf",
+									"offset" :
+									{
+										"x":0,
+										"y":1,
+										"z":0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.166,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 999999,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+									"retreatType": "ByHitDirection",
+								},
+							},
+						},
+					},
+				],
+			},
+			{
+				"$type": "TurnDirectionToPos",
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_LAIDO_POS_",
+				},
+			},
+			{
+				"$type": "FixedMonsterRushMove",
+				"timeRange": 0.12,
+				"checkAnimatorStateOnExitOnly": true,
+				"animatorStateIDs": ["Laido"],
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_LAIDO_POS_",
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Tachi_LaidoRushBS",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_Laido_Effect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_LaidoWeapon",
+					},
+				],
+			},
+			"Monster_Shougun_Laido_RushState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": true,
+						"index": 0,
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_LaidoRush",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Laido_RushState_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Laido_RushState_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "ActCameraRadialBlur",
+						"cameraRadialBlur": 
+						{
+							"power": 1,
+							"blurTime": 0.15,
+							"fadeTime": 0.1,
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": false,
+						"index": 0,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "KillSelf",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42906002,
+							"sortType": "Default",
+						}
+					},
+				],
+			},
+			"Monster_Shougun_Laido_RushState_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_Laido_RushState_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  AreaAtk_Tachi
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_AreaAtk_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "AreaAtk_Tachi",
+				"modifierName": "Monster_Shougun_AreaAtk_Tachi_Disappear",
+				"normalizeStart": 0.55,
+				"normalizeEnd": 0.6,
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_AreaAtk_Tachi_Disappear":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_AreaAtk_Disapper",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_AreaAtk_Tachi_Disappear_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_AreaAtk_Tachi_Disappear_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TurnDirectionToPos",
+						"target": "SelfAttackTarget",
+						"toPos":
+						{
+							"$type": "ConfigBornByTarget",
+						},
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_AreaAtk_Apper",
+					},
+				],
+			},
+			"Monster_Shougun_AreaAtk_Tachi_Disappear_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_AreaAtk_Tachi_Disappear_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Dodge
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Dodge",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Dodge",
+				"modifierName": "Monster_Shougun_Dodge_RushState1",
+				"normalizeStart": 0.12,
+				"normalizeEnd": 0.18,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Dodge",
+				"modifierName": "Monster_Shougun_Dodge_RushState2",
+				"normalizeStart": 0.275,
+				"normalizeEnd": 0.35,
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "SelfAttackTarget",
+				"targetPredicates" :
+				[
+					{
+						"$type": "ByTargetPositionToSelfPosition",
+						"compareType": "XZ",
+						"value": 5,
+						"logic": "Greater",
+					},
+				],
+				"successActions" :
+				[
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"key": "_MONSTER_SHOUGUN_DODGE_POS_",
+						"setTarget": false,
+						"born":
+						{
+							"$type": "ConfigBornByTargetLinearPoint",
+							"linearOffset": 1,
+							"baseOnTarget": true,
+							"linearXZ": true,
+							"linearMin": 6.5,
+							"linearMax": 15,
+							"onGround": true,
+						},
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42906011,
+						"lifeByOwnerIsAlive": true,
+						"trackTarget":"Self",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"failActions" :
+				[
+					{
+						"$type": "SetGlobalPos",
+						"target": "Self",
+						"key": "_MONSTER_SHOUGUN_DODGE_POS_",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 6.5,
+							},
+						},
+					},
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackBox",
+								"triggerType": "TriggerNoRepeat",
+								"size":
+								{
+									"x":1.5,
+									"y":2,
+									"z":6.5,
+								},
+								"born":
+								{
+									"$type":"ConfigBornBySelf",
+									"offset" :
+									{
+										"x":0,
+										"y":1,
+										"z":0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.166,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 999999,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+									"retreatType": "ByHitDirection",
+								},
+							},
+						},
+					},
+				],
+			},
+			{
+				"$type": "FixedMonsterRushMove",
+				"timeRange": 0.15,
+				"checkAnimatorStateOnExitOnly": true,
+				"animatorStateIDs": ["Dodge"],
+				"toPos":
+				{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_MONSTER_SHOUGUN_DODGE_POS_",
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_Dodge_RushState1":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": true,
+						"index": 0,
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_Dodge_Rush01",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Dodge_RushState_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Dodge_RushState_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": false,
+						"index": 0,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+				],
+			},
+			"Monster_Shougun_Dodge_RushState2":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": true,
+						"index": 0,
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_Dodge_Rush02",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Dodge_RushState_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Shougun_Dodge_RushState_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableAfterImage",
+						"enable": false,
+						"index": 0,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "KillSelf",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42906011,
+							"sortType": "Default",
+						}
+					},
+				],
+			},
+			"Monster_Shougun_Dodge_RushState_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Monster_Shougun_Dodge_RushState_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Tachi_RushBullet",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.166,
+							"strikeType": "Blunt",
+							"attackType": "Default",
+							"elementType": "Electric",
+							"elementDurability": 25,
+							"enBreak": 999999.0,
+						},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV3",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+							"retreatType":"ByHitDirection",
+						},
+					}
+				}			
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  SwordArt
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_SwordArt_Wave01",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["SwordArt"],
+				"modifierName":"Monster_Shougun_SwordArt_Effect",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"target": "Self",
+				"bulletID": 42906009,
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "SwordArtAttachPoint1",
+					"attachPointTargetType": "Self",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+					"direction": 
+					{
+						"$type": "ConfigDirectionByAttachPoint",
+						"attachPointName": "SwordArtAttachPoint1",
+						"attachPointTargetType": "Self",
+					},
+					"useRotation": true,
+				},
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_SwordArt_Effect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_SwordArtBS",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_SwordArt_Wave02",
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"target": "Self",
+				"bulletID": 42906009,
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "SwordArtAttachPoint2",
+					"attachPointTargetType": "Self",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+					"direction": 
+					{
+						"$type": "ConfigDirectionByAttachPoint",
+						"attachPointName": "SwordArtAttachPoint2",
+						"attachPointTargetType": "Self",
+					},
+					"useRotation": true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_SwordArt_Wave03",
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"target": "Self",
+				"bulletID": 42906009,
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "SwordArtAttachPoint3",
+					"attachPointTargetType": "Self",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+					"direction": 
+					{
+						"$type": "ConfigDirectionByAttachPoint",
+						"attachPointName": "SwordArtAttachPoint3",
+						"attachPointTargetType": "Self",
+					},
+					"useRotation": true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_SwordArt_Wave04",
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"target": "Self",
+				"bulletID": 42906010,
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "SwordArtAttachPoint4",
+					"attachPointTargetType": "Self",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+					"direction": 
+					{
+						"$type": "ConfigDirectionByAttachPoint",
+						"attachPointName": "SwordArtAttachPoint4",
+						"attachPointTargetType": "Self",
+					},
+					"useRotation": true,
+				},
+			},
+			{
+				"$type":"ActCameraShake",
+				"cameraShake":
+				{
+					"shakeRange": 0.5,
+					"shakeTime": 0.2,
+					"shakeDistance": 30,
+				},
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_Tachi_SwortArt_ElectricCircle_Hit",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.333,
+							"strikeType": "Slash",
+							"elementType":"Electric",
+							"elementDurability": 50,
+							"enBreak": 100,
+			        	},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV2",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+					},
+				},
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern":"Eff_Monster_Shougun_Tachi_SwordArt_ElectricCircle"
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_Tachi_SwortArt_ElectricBlade_Hit",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.5,
+							"strikeType": "Slash",
+							"elementType":"Electric",
+							"elementDurability": 50,
+							"enBreak": 999999,
+			        	},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV5",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+					},
+				},
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern":"Eff_Monster_Shougun_Tachi_SwordArt_ElectricBlade"
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAtk Tachi
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_ExtraAtk_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["ExtraAtk_TachiLoop"],
+				"modifierName": "ExtraAtk_TachiLoop_Effect",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Shougun_ExtraAtk_Tachi_Timer",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Shougun_ExtraAtk_Tachi_Timer":
+			{
+				"duration": 0.2,
+				"onAdded":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42906007,
+						"campID": 4001,
+						"target": "SelfAttackTarget",
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type":"ConfigBornByPredicatePoint",
+							"timeForPredictive":0.65,
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+							"onGround": true,
+						},
+					},
+				],
+			},
+			"ExtraAtk_TachiLoop_Effect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_Scabbard",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_ScabbardAS",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_Tachi_DimensionRift",
+		"onAdded":
+		[
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Shougun_Tachi_ExtraAtk",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Shougun_Tachi_DimensionRift_DamageTimer",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Shougun_Tachi_DimensionRift_DamageTimer":
+			{
+				"duration": 0.35,
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Shougun_Tachi_DimensionRift_Damage",
+						"target": "Self",
+					},
+				],
+			},
+			"Shougun_Tachi_DimensionRift_Damage":
+			{
+				"duration": 0.5,
+				"thinkInterval": 0.15,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 1,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 1.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.166,
+									"strikeType": "Slash",
+									"attackType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 25.0,
+								},
+								"hitPattern" :
+								{
+									"hitImpulseType":"LV2",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+									"retreatType":"ByHitDirection",
+								},
+							}
+						}			
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Tachi Blink
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Blink_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Blink_Tachi","ReturnToBorn_Tachi"],
+				"modifierName": "Blink_State",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Blink_Tachi",
+			},
+		],
+		"modifiers":
+		{
+			"Blink_State":
+			{
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Shougun_Blink_Tachi",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Blink_Tachi":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+				],
+			},
+			"Blink_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Blink_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Blink_Tachi_Effect",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Randomed",
+				"chance": 0.5,
+				"successActions": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_Blink",
+					},
+				],
+				"failActions": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BlinkMirror",
+					},
+				],
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  BurstAtk Tachi
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_BurstAtk_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToStateIDMixin",
+				"stateIDs":["BurstAtk"],
+				"modifierName":"Monster_Shougun_BurstAtk_Tachi_BurstAtkBS",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["BurstAtk_Loop"],
+				"modifierName":"Monster_Shougun_BurstAtk_Tachi_BurstAtkLoop",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_BurstAtk_Tachi_BurstAtkBS":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_BurstAtkWeapon"
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_BurstAtkCharge"
+					},
+				],
+			},
+			"Monster_Shougun_BurstAtk_Tachi_BurstAtkLoop":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42906008,
+						"campID": 4001,
+						"target": "Self",
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+							"onGround": true,
+							"direction":
+							{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+						},
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Shougun_BurstAtk_Tachi_LastBladeTimer",
+						"target": "Self",
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_BurstAtk_Tachi_LastBladeTimer":
+			{
+				"duration": 4.4,
+				"onRemoved":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_BurstAtk_BurstBS",
+						"born":
+						{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey":"_MONSTER_SHOUGUN_BORN_POS_",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+							"onGround": true,
+						},
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_BurstAtk_Tachi_LastBlade",
+		"onAbilityStart":
+		[
+			{
+				"$type":"FireEffect",
+				"effectPattern":"Eff_Monster_Shougun_Tachi_BurstAtk_Burst"
+			},
+			{
+				"$type": "TriggerAbility",
+				"abilityName": "Shougun_BurstAtk_Tachi_LastBlade",
+				"otherTargets":
+				{
+					"$type": "SelectTargetsByChildren",
+					"configID": 42906008,
+				},
+			},
+		],
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_BurstAtk_Tachi_LastBlade",
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_BurstAtk_Tachi_LastBlade_Damage",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_BurstAtk_Tachi_LastBlade_Explode",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_BurstAtk_Tachi_LastBlade_Detect",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_BurstAtk_Tachi_LastBlade_Damage":
+			{
+				"duration": 0.35,
+				"thinkInterval": 0.1,
+				"onThinkInterval":
+				[
+					{
+		                "$type": "DamageByAttackValue",
+		                "otherTargets":
+		                {
+		                    "$type": "SelectTargetsByShape",
+		                    "shapeName": "CircleR10H20",
+		                    "centerBasedOn": "Self",
+		                    "campTargetType": "Enemy",
+		                    "campBasedOn": "Self",
+		                },
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Target",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                	"attackTag": "Monster_Shougun_BurstAtk_Tachi_LastBlade",
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 0.333,
+		                        "elementType": "Electric",
+		                        "elementDurability": 25,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+		                    },
+		                    "hitPattern" :
+							{
+								"onHitEffectName": "default",
+								"overrideHitImpulse":
+								{
+									"hitLevel": "Heavy",
+					          		"hitImpulseX": 50,
+					          		"hitImpulseY": 0,
+								},
+								"canBeDefenceHalt": false,
+								"reboundRatio" : 0,
+								"hitHaltTime" : 1.25,
+								"hitHaltTimeScale" : 0.00,
+								"muteHitText" : false,
+							},
+		                },
+		            },
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 10,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.0,
+									"strikeType": "Blunt",
+									"enBreak": 999999.0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+									"hitImpulseType":"LV0",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 1.5,
+									"shakeTime": 0.5,
+									"shakeDistance": 100,
+								},
+							},
+						},			
+					},
+				],
+			},
+			"Monster_Shougun_BurstAtk_Tachi_LastBlade_Explode":
+			{
+				"duration": 1.5,
+				"onRemoved":
+				[
+					{
+		                "$type": "DamageByAttackValue",
+		                "otherTargets":
+		                {
+		                    "$type": "SelectTargetsByShape",
+		                    "shapeName": "CircleR10H20",
+		                    "centerBasedOn": "Self",
+		                    "campTargetType": "Enemy",
+		                    "campBasedOn": "Self",
+		                },
+		                "born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"target": "Target",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+		                "attackInfo":
+		                {
+		                	"attackTag": "Monster_Shougun_BurstAtk_Tachi_LastBladeExplode",
+		                    "attackProperty":
+		                    {
+		                        "damagePercentage": 1,
+		                        "elementType": "Electric",
+		                        "elementDurability": 50,
+		                        "enBreak": 999999,
+		                        "strikeType": "Blunt",
+		                    },
+		                    "hitPattern" :
+							{
+								"hitImpulseType":"LV5",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+		                },
+		            },
+		            {
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 10,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.0,
+									"strikeType": "Blunt",
+									"enBreak": 999999.0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+									"hitImpulseType":"LV0",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.25,
+									"shakeDistance": 100,
+								},
+							},
+						},			
+					},
+				],
+			},
+			"Monster_Shougun_BurstAtk_Tachi_LastBlade_Detect":
+			{
+				"duration": 3,
+				"onAttackLanded":
+				[
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar"],
+							},
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Monster_Shougun_BurstAtk_Tachi_LastBladeExplode"],
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Shougun_BurstAtk_Tachi_LastBlade_Detect_Effect",
+								"target": "Target",
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_BurstAtk_Tachi_LastBlade_Detect_Effect":
+			{
+				"duration": 1,
+				"onAdded":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_BurstAtk_Hit",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "RootNode",
+							"offset" :
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Shougun_Tachi_ElectricArea",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_ThunderDropEffect",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_ElectricAreaEndTimer",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage1",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage2",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage3",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage4",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage5",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage6",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage7",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage8",
+				"target": "Self",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Tachi_ElectricArea_TunderDrop_Damage9",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Tachi_ElectricArea_ThunderDropEffect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BurstAtk_ThunderDrop",
+					},
+				],
+			},
+			"Tachi_ElectricArea_ElectricAreaEndTimer":
+			{
+				"duration": 7,
+				"onRemoved":
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_BurstAtk_ThunderDrop",
+						"parameter": "End",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage1":
+			{
+				"duration": 2,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": -10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage1",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage1":
+			{
+				"duration": 3.15,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": -10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": -10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage2":
+			{
+				"duration": 2.375,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 2.7,
+										"y": 0.0,
+										"z": -15.25,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage2",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage2":
+			{
+				"duration": 2.8,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 2.7,
+										"y": 0.0,
+										"z": -15.25,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 2.7,
+										"y": 0.0,
+										"z": -15.25,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage3":
+			{
+				"duration": 2.75,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": -13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage3",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage3":
+			{
+				"duration": 2.4,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": -13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": -13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage4":
+			{
+				"duration": 3.125,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": -5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage4",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage4":
+			{
+				"duration": 2,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": -5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": -5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage5":
+			{
+				"duration": 3.5,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": 5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage5",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage5":
+			{
+				"duration": 1.65,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": 5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -14.5,
+										"y": 0.0,
+										"z": 5.3,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage6":
+			{
+				"duration": 3.875,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": 13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage6",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage6":
+			{
+				"duration": 1.3,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": 13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": -7.75,
+										"y": 0.0,
+										"z": 13.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage7":
+			{
+				"duration": 4.25,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 2.7,
+										"y": 0.0,
+										"z": 15.25,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage7",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage7":
+			{
+				"duration": 0.85,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 2.7,
+										"y": 0.0,
+										"z": 15.25,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": 10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage8":
+			{
+				"duration": 4.625,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": 10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage8",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage8":
+			{
+				"duration": 0.4,
+				"thinkInterval": 0.375,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": 10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 11.8,
+										"y": 0.0,
+										"z": 10.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.125,
+									"elementType": "Electric",
+									"enBreak": 1,
+									"strikeType": "Default",
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV1",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						}			
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_Damage9":
+			{
+				"duration": 5,
+				"onRemoved":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 15.5,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.666,
+									"strikeType": "Blunt",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"enBreak": 200,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV5",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.75,
+									"shakeTime": 0.3,
+									"shakeDistance": 15,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0
+									}
+								},
+							},
+						}			
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Tachi_ElectricArea_TunderDrop_AreaDamage9",
+						"target": "Self",
+					},
+				],
+			},
+			"Tachi_ElectricArea_TunderDrop_AreaDamage9":
+			{
+				"duration": 2.7,
+				"thinkInterval": 0.5,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "Predicated",
+						"target": "CurLocalAvatar",
+						"targetPredicates" :
+						[
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value":2,
+								"compareType":"Y",
+								"logic":"LesserOrEqual"
+							},
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value": 20,
+								"compareType":"XZ",
+								"logic":"LesserOrEqual"
+							},
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value": 10,
+								"compareType":"XZ",
+								"logic":"Greater",
+							},
+						],
+						"successActions" :
+						[
+	                        {
+	                            "$type": "DamageByAttackValue",
+	                            "attacker": "Caster",
+	                            "target": "Target",
+	                            "born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "RootNode",
+									"target": "Target",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+	                           	"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0.125,
+										"elementType": "Electric",
+										"enBreak": 1,
+										"strikeType": "Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV1",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+								},
+	                        },
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type" : "Predicated",
+						"target": "CurLocalAvatar",
+						"targetPredicates" :
+						[
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value":2,
+								"compareType":"Y",
+								"logic":"LesserOrEqual"
+							},
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value": 20,
+								"compareType":"XZ",
+								"logic":"LesserOrEqual"
+							},
+							{
+								"$type":"ByTargetPositionToSelfPosition",
+								"value": 10,
+								"compareType":"XZ",
+								"logic":"Greater",
+							},
+						],
+						"successActions" :
+						[
+	                        {
+	                            "$type": "DamageByAttackValue",
+	                            "attacker": "Caster",
+	                            "target": "Target",
+	                            "born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "RootNode",
+									"target": "Target",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+	                           	"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0.125,
+										"elementType": "Electric",
+										"enBreak": 1,
+										"strikeType": "Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV1",
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+								},
+	                        },
+						],
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Show02 Tachi
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Shougun_Show02_Tachi",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["Show02_BS"],
+				"modifierName":"Monster_Shougun_Tachi_Show02BS",
+			},
+			{
+				"$type":"AttachToAnimatorStateIDMixin",
+				"stateIDs":["Show02_AS"],
+				"modifierName":"Monster_Shougun_Tachi_Show02AS",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Show02Blink_Tachi",
+			},
+			{
+				"$type":"FireEffect",
+				"effectPattern":"Eff_Monster_Shougun_Tachi_Move"
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_Tachi_Show02BS":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_MoveBS"
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_Shougun_Tachi_Show02BS_WindZone",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Monster_Shougun_Show02Blink_Tachi",
+					},
+				],
+			},
+			"Monster_Shougun_Tachi_Show02BS_WindZone":
+			{
+				"duration": 1.8,
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"Monster_Shougun_Tachi_Show02AS":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_Show02BS"
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Shougun_Tachi_Show02"
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01","equip02"],
+					},
+					{
+						"$type": "ServerLuaCall",
+						"luaCallType": "FromGroup",
+						"funcName": "SLC_EnterPhaseThird",
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Show02Blink_Tachi":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_Invincible",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Blink_DenyLockOn",
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip02"],
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true,
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"target": "Self",
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": false,
+						"partNames": ["equip01"],
+					},
+					{
+						"$type": "TriggerHideWeapon",
+						"modifyAnotherValue": true,
+						"visible": true,
+						"partNames": ["equip02"],
+					},
+				],
+			},
+			"Blink_Invincible" :
+			{
+				"state": "Invincible",
+			},
+			"Blink_DenyLockOn" :
+			{
+				"state": "DenyLockOn",
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkAlert_Tachi",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Tachi_MoveAlert",
+				"born":
+				{
+					"$type": "ConfigBornByTeleportToPoint",
+					"offset":
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+					"onGround": true,
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_BlinkAS_Tachi",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0.033,
+							"strikeType": "Blunt",
+							"elementType": "Electric",
+							"elementDurability": 50,
+							"enBreak": 999999,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType": "LV5",
+							"reboundRatio": 0,
+							"canBeDefenceHalt": true,
+							"muteHitText": false,
+						},
+						"forceCameraShake": true,
+						"cameraShake":
+						{
+							"shakeType": "CustomVector",
+							"shakeRange": 1,
+							"shakeTime": 0.3,
+							"shakeDistance": 50,
+							"shakeDir":
+							{
+								"x": 0,
+								"y": -1,
+								"z": 0
+							}
+						},
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Tachi_MoveAS",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"offset":
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Show02Blink_Tachi",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Shougun_BlinkAS_Tachi_WindZone",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_BlinkAS_Tachi_WindZone":
+			{
+				"duration": 0.5,
+				"modifierMixins":
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5",
+						"strength" : -7.5,
+						"born" : 
+						{
+							"$type": "ConfigBornBySelf",
+							"offset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_ReturnToBornAS_Tachi",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 1.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0,
+							"strikeType": "Blunt",
+							"enBreak": 999999,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "none",
+							"hitImpulseType": "LV0",
+							"reboundRatio": 0,
+							"canBeDefenceHalt": true,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Blink_Tachi",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Show02_WeaponDisappear",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Shougun_Tachi_Show02_Rift",
+				"born": 
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "WeaponR",
+					"offset": 
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type":"SetGlobalValue",
+				"key":"_MONSTER_SHOUGUN_WEAPONTYPE_",
+				"value":2,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  CS Trigger
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Shougun_CS_Trigger",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToGadgetStateMixin",
+				"gadgetState": 201,
+				"modifierName": "GadgetState_201",
+			},
+		],
+		"modifiers":
+		{
+			"GadgetState_201":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_GADGETSTATE_",
+						"value": 201,
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Switch Skill Info
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Avatar_SkillInfo",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type": "AddAvatarSkillInfo",
+				"skillID": 20030,
+				"doOffStage": true,
+				"predicates": 
+				[
+					{
+                        "$type": "ByNot",
+                        "predicates": 
+                        [
+							{
+								"$type": "ByHasFeatureTag",
+								"target": "Self",
+								"featureTagIDs": [1011],
+							},
+                        ],
+                    },
+				],
+			},
+			{
+				"$type": "AddAvatarSkillInfo",
+				"skillID": 20031,
+				"doOffStage": true,
+				"predicates": 
+				[
+					{
+                        "$type": "ByNot",
+                        "predicates": 
+                        [
+							{
+								"$type": "ByHasFeatureTag",
+								"target": "Self",
+								"featureTagIDs": [1011],
+							},
+                        ],
+                    },
+				],
+			},
+		],		
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Weapon Effect
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_WeaponEffect",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "BackAtk",
+				"modifierName": "Monster_Shougun_WeaponEffect",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.29,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "BackAtkR",
+				"modifierName": "Monster_Shougun_WeaponEffect",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.29,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "RushAtk",
+				"modifierName": "Monster_Shougun_WeaponEffect",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.18,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NormalAtk_Combo01_Tachi",
+				"modifierName": "Monster_Shougun_WeaponEffect_Scabbard",
+				"normalizeStart": 0.11,
+				"normalizeEnd": 0.18,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Laido",
+				"modifierName": "Monster_Shougun_WeaponEffect_Scabbard",
+				"normalizeStart": 0.12,
+				"normalizeEnd": 0.32,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Dodge",
+				"modifierName": "Monster_Shougun_WeaponEffect_Scabbard",
+				"normalizeStart": 0.21,
+				"normalizeEnd": 0.29,
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Shougun_WeaponEffect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Pole_WeaponEffect",
+					},
+				],
+			},
+			"Monster_Shougun_WeaponEffect_Scabbard":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_Scabbard",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Shougun_Tachi_ScabbardAS",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Shougun Type Flag
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_TypePole",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_SHOUGUN_POLE_",
+				"value": 1,
+			},
+			{
+				"$type": "UseSkillEliteSet",
+				"skillEliteSetID": 1,
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_TypeTachi",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_SHOUGUN_TACHI_",
+				"value": 1,
+			},
+			{
+				"$type": "UseSkillEliteSet",
+				"skillEliteSetID": 2,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Switch Skill Info
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Shougun_Tachi_Revive",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Monster_Shougun_Tachi_Revive_Start",
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Monster_Shougun_Tachi_Revive_Start":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"modifierMixins":
+				[
+					{
+						"$type":"CurLocalAvatarMixin",
+						"modifierName":"UNIQUE_Monster_Shougun_Tachi_Revive_Handler",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Tachi_Revive_Handler":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "ApplyModifier",
+						"target": "Caster",
+						"modifierName": "UNIQUE_Monster_Shougun_Tachi_ReviveCount",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Tachi_ReviveCount":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"thinkInterval": 2,
+				"onThinkInterval":
+				[
+					{
+						"$type": "ApplyModifier",
+						"target": "Self",
+						"modifierName": "UNIQUE_Monster_Shougun_Tachi_Revive",
+					},
+				],
+			},
+			"UNIQUE_Monster_Shougun_Tachi_Revive":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{						
+						"$type": "ReviveDeadAvatar",
+						"amountByTargetMaxHPRatio": 1,
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+					{
+						"$type": "HealHP",
+						"target":"AllPlayerAvatars",
+						"amountByTargetMaxHPRatio": 1,
+						"doOffStage":true,
+					},
+					{
+						"$type": "ReviveElemEnergy",
+						"value": 100,
+						"target": "AllPlayerAvatars",
+						"doOffStage": true,
+					},
+				],
+			},
+		},		
+	},
+},
+]

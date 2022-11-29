@@ -1,0 +1,376 @@
+[
+	// 镀金旅团-长柄    yiming.liao
+
+	// .d8888. d888888b d88888b d88888b d8888b.
+	// 88'  YP `~~88~~' 88'     88'     88  `8D
+	// `8bo.      88    88ooooo 88ooooo 88oobY'
+	//   `Y8b.    88    88~~~~~ 88~~~~~ 88`8b
+	// db   8D    88    88.     88.     88 `88.
+	// `8888Y'    YP    Y88888P Y88888P 88   YD
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 攻击动作旋转Mixin
+			"abilityName": "Eremite_Pole_AnimatorSteer",
+			"abilityMixins": [
+				// Slash
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Slash_BS"],
+					"angularSpeed": 120
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Slash_AS"],
+					"startNormalizedTime": 0.635,
+					"endNormalizedTime": 0.728,
+					"angularSpeed": 300
+				},
+				// Rush
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Rush_BS"],
+					"startNormalizedTime": 0,
+					"endNormalizedTime": 0.514,
+					"angularSpeed": 100
+				},
+				{
+					"$type": "SteerAttackTraceMixin",
+					"steerStateIDs": ["Rush_Loop"],
+					"endNormalizedTime": 99,
+					"angularSpeed": 40,
+					"attackDistance": 8.2,
+					"attackTrigger": "Rush2Slash"
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Rush_AS"],
+					"startNormalizedTime": 0.454,
+					"endNormalizedTime": 0.544,
+					"angularSpeed": 420
+				},
+				// Special Alert
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Crossleg_Alert"],
+					"startNormalizedTime": 0.169,
+					"endNormalizedTime": 0.8,
+					"angularSpeed": 240
+				},
+				// Alert
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Alert"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 1.0,
+					"angularSpeed": 400
+				}
+				// // 避免撞墙！
+				// {
+				// 	"$type": "AttackHittingSceneMixin",
+				// 	"animEventIDs": ["AE_RushDetection"],
+				// 	"onHittingScene": [
+				// 		{
+				// 			"$type": "SetAnimatorTrigger",
+				// 			"triggerID": "RushEnd"
+				// 		}
+				// 	]
+				// }
+			]
+		}
+	},
+	// Rush
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 触发： 冲锋接劈砍判定 以及打出一个较低伤害的攻击盒
+			"abilityName": "Eremite_Pole_Rush_Detection",
+			//  距离够近则设定状态机，是否是面向玩家则由状态机连线的角度确定
+			"onAbilityStart": [
+				// 距离判断  接跳跃攻击
+				{
+					"$type": "SetAnimatorTrigger",
+					"triggerID": "Rush2Slash",
+					"predicates": [
+						{
+							"$type": "ByTargetPositionToSelfPosition",
+							"target": "SelfAttackTarget",
+							"compareType": "XZ",
+							"logic": "Lesser",
+							"value": 8.2
+						}
+					]
+				},
+				// 打攻击盒
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": {
+								"x": 1,
+								"y": 1,
+								"z": 4.5
+							},
+							"born": {
+								"$type": "ConfigBornBySelf",
+								"offset": {
+									"x": 0.0,
+									"y": 0.75,
+									"z": 0.0
+								}
+							}
+						},
+						"attackInfo": {
+							"attackProperty": {
+								"damagePercentage": 0.15,
+								"attackType": "Melee",
+								"strikeType": "Spear",
+								"enBreak": 200
+							},
+							"hitPattern": {
+								"hitImpulseType": "LV1"
+							}
+						}
+					}
+				}
+			]
+		}
+	},
+
+	// .d8888. db   db  .d88b.  db   d8b   db      d88888b  .d88b.  db    db d888888b d8888b.
+	// 88'  YP 88   88 .8P  Y8. 88   I8I   88      88'     .8P  Y8. 88    88   `88'   88  `8D
+	// `8bo.   88ooo88 88    88 88   I8I   88      88ooooo 88    88 88    88    88    88oodD'
+	//   `Y8b. 88~~~88 88    88 Y8   I8I   88      88~~~~~ 88    88 88    88    88    88~~~
+	// db   8D 88   88 `8b  d8' `8b d8'8b d8'      88.     `8P  d8' 88b  d88   .88.   88
+	// `8888Y' YP   YP  `Y88P'   `8b8' `8d8'       Y88888P  `Y88'Y8 ~Y8888P' Y888888P 88
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 长柄武器展示表现 | 触发： 展示武器 并播放特效
+			"abilityName": "Eremite_Pole_Equip_Display_Manager",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_EREMITE_POLE_HIDE_WEAPON_",
+					"defaultGlobalValueOnCreate": 1,
+					"valueSteps": [-0.5, 0.5, 1.5], // 0和1！
+					"modifierNameSteps": [
+						"UNIQUE_Eremite_Pole_ShowWeapon",
+						"UNIQUE_Eremite_Pole_HideWeapon"
+					]
+				},
+				// 所有确定不显示武器的 战前 PoseID需要在这里列举
+				{
+					"$type": "DoActionByPoseIDMixin",
+					"poseIDs": [
+						9001, 9002, 9003, 9004, 9005, 9501, 9502, 9503, 9504, 9505, 9506,
+						9511, 9512
+					],
+					"enterActions": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_EREMITE_POLE_HIDE_WEAPON_",
+							"value": 1
+						}
+					]
+				},
+				// 所有确定显示武器的 战前 PoseID需要在这里列举
+				{
+					"$type": "DoActionByPoseIDMixin",
+					"poseIDs": [1, 9007],
+					"enterActions": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_EREMITE_POLE_HIDE_WEAPON_",
+							"value": 0
+						}
+					]
+				},
+				// Struggle状态下额外处理
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Struggle"],
+					"modifierName": "UNIQUE_Eremite_Pole_Struggle_Weapon"
+				}
+				// 丑陋的补丁套补丁的做法！ 换用另一种实现方案了
+				// // 3.0 Bug修复：在被击飞和击退时，额外执行一次类似Alert时执行的逻辑(武器显示与Pose切换)
+				// {
+				// 	"$type": "DoActionByAnimatorStateIDMixin",
+				// 	"stateIDs": ["Hit_L", "Hit_H", "HitThrow"],
+				// 	"enterActions": [
+				// 		// 触发控制Pose的技能
+				// 		{
+				// 			"$type": "TriggerAbility",
+				// 			"abilityName": "Eremite_Universal_Alert"
+				// 		},
+				// 		// 显示武器
+				// 		{
+				// 			"$type": "SetGlobalValue",
+				// 			"key": "_EREMITE_POLE_HIDE_WEAPON_",
+				// 			"value": 0
+				// 		}
+				// 	]
+				// },
+				// // 3.0 尝试修复怪物被环境伤害影响导致武器黏手上的问题
+				// // 仅当入战时，怪物Alert才可以把武器放到手上
+				// {
+				// 	"$type": "AttachToAIAlertnessMixin",
+				// 	"alertness": [0],
+				// 	"modifierName": "NotAlertMark"
+				// }
+			],
+			"onAbilityStart": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_EREMITE_POLE_HIDE_WEAPON_",
+					"value": 0
+				}
+			],
+			"modifiers": {
+				"UNIQUE_Eremite_Pole_HideWeapon": {
+					"isUnique": true,
+					"onAdded": [
+						//
+						// 3.0 Bug修复：Trigger不再通过怪物本身来控制，因为Ability可能先于Weapon加载，
+						// 导致TriggerHideWeapon这个Action在武器还没有出来的时候执行，进而导致武器不能正确隐藏。
+						// 解决方案，让武器自己去读Owner的GV来调整自身显隐:  Eremite_Gloves_Equip_Display_Logic
+						//
+						// {
+						// 	"$type": "TriggerHideWeapon",
+						// 	"visible": false,
+						// 	"partNames": ["equip01"],
+						// 	"modifyAnotherValue": true,
+						// 	"canBeHandledOnRecover": true
+						// },
+						{
+							"$type": "SetPoseBool",
+							"boolID": "WeaponInHand",
+							"value": false,
+							"canBeHandledOnRecover": true
+						}
+					],
+					"onReconnect": [
+						// {
+						// 	"$type": "TriggerHideWeapon",
+						// 	"visible": false,
+						// 	"partNames": ["equip01"],
+						// 	"modifyAnotherValue": true
+						// },
+						{
+							"$type": "SetPoseBool",
+							"boolID": "WeaponInHand",
+							"value": false
+						}
+					],
+					"onChangeAuthority": [
+						// {
+						// 	"$type": "TriggerHideWeapon",
+						// 	"visible": false,
+						// 	"partNames": ["equip01"],
+						// 	"modifyAnotherValue": true
+						// },
+						{
+							"$type": "SetPoseBool",
+							"boolID": "WeaponInHand",
+							"value": false
+						}
+					]
+				},
+				"UNIQUE_Eremite_Pole_ShowWeapon": {
+					"isUnique": true,
+					"onAdded": [
+						// {
+						// 	"$type": "TriggerHideWeapon",
+						// 	"visible": true,
+						// 	"partNames": ["equip01"],
+						// 	"modifyAnotherValue": true
+						// },
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Eremite_Weapon_Disappear",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": ["equip01"]
+							}
+						},
+						{
+							"$type": "SetPoseBool",
+							"boolID": "WeaponInHand",
+							"value": true
+						}
+					]
+				},
+				"UNIQUE_Eremite_Pole_Struggle_Weapon": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_EREMITE_POLE_HIDE_WEAPON_",
+							"value": 1
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_EREMITE_POLE_HIDE_WEAPON_",
+							"value": 0
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc  长柄武器通过读取怪物自身的GV，控制自身显隐
+			"abilityName": "Eremite_Pole_Equip_Display_Logic",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToGlobalValueMixin",
+					"globalValueKey": "_EREMITE_POLE_HIDE_WEAPON_",
+					"globalValueTarget": "Owner",
+					"valueSteps": [-0.5, 0.5, 1.5], // 0和1！
+					"modifierNameSteps": [
+						"EremiteWeapon_Pole_ShowWeapon",
+						"EremiteWeapon_Pole_HideWeapon"
+					]
+				}
+			],
+			"modifiers": {
+				"EremiteWeapon_Pole_ShowWeapon": {
+					"onAdded": [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true
+						}
+					]
+				},
+				"EremiteWeapon_Pole_HideWeapon": {
+					"onAdded": [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"canBeHandledOnRecover": true
+						}
+					],
+					"onReconnect": [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false
+						}
+					],
+					"onChangeAuthority": [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false
+						}
+					]
+				}
+			}
+		}
+	}
+]

@@ -1,0 +1,308 @@
+[
+     {//对敌人造成伤害时触发一次草元素含量为x，伤害系数为x的草元素协同攻击，每x秒触发一次
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "ActivityAbility_ForestWQ_AssistAttack",
+            "isDynamicAbility": true,
+            "abilityMixins": 
+            [
+                {//特效相关
+                    "$type": "AttachModifierToGlobalValueMixin", 
+                    "globalValueTarget": "Team",
+                    "globalValueKey": "SGV_Ability_ForestWQ",
+                    "valueSteps" : [-0.5,0.5,1.5],
+                    "modifierNameSteps" : 
+                    [
+                        "Blank",
+                        "UNIQUE_Ability_ForestWQ_StartHandle",
+                    ],
+                },
+            ],
+            "modifiers": 
+            {
+                "Blank":{},
+                "UNIQUE_Ability_ForestWQ_StartHandle":
+                {
+					"isUnique": true,
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "target": "Self",
+                            "modifierName": "UNIQUE_Ability_ForestWQ_AssistAttack",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "target": "Self",
+                            "modifierName": "UNIQUE_Ability_ForestWQ_RecoverHP",
+                            "doOffStage": true,
+                        },                  
+                    ],
+                },
+                "UNIQUE_Ability_ForestWQ_AssistAttack":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "onAttackLanded": 
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Other",
+                            "doOffStage": true,
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "GeneratePurpleState",
+                                    "target": "Team",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                                {
+                                    "$type": "ByHitDamage",
+                                    "target": "Other",
+                                    "damage": 0,
+                                    "logic": "Greater"
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"]
+                                },
+                                {//排除小动物
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+                            ],
+                            "successActions": 
+                            [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "doOffStage": true,
+                                    "target": "Other",
+                                    "modifierName": "Ability_ForestWQ_AssistAttack_Delay",
+                                },
+                                {
+                                    "$type": "ApplyModifier",
+                                    "doOffStage": true,
+                                    "target": "Team",
+                                    "modifierName": "UNIQUE_Ability_ForestWQ_AssistAttack_CD"
+                                },
+                            ]
+                        },
+                        {//判断死域核心
+                            "$type": "Predicated",
+                            "target": "Other",
+                            "doOffStage": true,
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "GeneratePurpleState",
+                                    "target": "Team",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Gadget"]
+                                },
+                                // {
+                                //     "$type": "ByHitDamage",
+                                //     "target": "Other",
+                                //     "damage": 0,
+                                //     "logic": "Greater"
+                                // },
+                                {
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_WeakMode",
+									"value": 1,
+									"compareType": "Equal",
+								},
+                            ],
+                            "successActions": 
+                            [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "doOffStage": true,
+                                    "target": "Other",
+                                    "modifierName": "Ability_ForestWQ_AssistAttack_Delay",
+                                },
+                                {
+                                    "$type": "ApplyModifier",
+                                    "doOffStage": true,
+                                    "target": "Team",
+                                    "modifierName": "UNIQUE_Ability_ForestWQ_AssistAttack_CD"
+                                },
+                            ]
+                        }
+                    ]
+                },
+                "Ability_ForestWQ_AssistAttack_Delay":
+                {
+                    "duration": 1,
+                    "onAdded": 
+                    [
+                        {
+							"$type": "SetRandomOverrideMapValue",	//辅助攻击随机角度设置，特效中读取
+							"overrideMapKey": "Grass_Slash_RandomDir",
+							"valueRangeMin": 0,
+							"valueRangeMax": 100,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_WitheredForest_Grass_Slash_RandomDir",
+							//"key": "_ABILITY_Shougun_Elf_Attack_RandomDir",
+							"value": "%Grass_Slash_RandomDir",
+							"doOffStage": true,
+						},
+                        {
+                            "$type": "FireEffect",	//攻击特效
+                            "doAfterDie": true,
+							"effectPattern": "Eff_Activity_WitheredForest_Grass_Slash",
+							//"effectPattern": "Eff_Avatar_Lady_Pole_Shougun_Elf_Attack01",
+                            "born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "Fx_ChestNode",
+								"attachPointTargetType": "Self",
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+								},
+							},
+                        },
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "doAfterDie": true,
+                            "target": "Applier",
+                            "attackEvent": 
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 4,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                    }
+                                },
+                                "attackInfo": 
+                                {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackProperty": 
+                                    {
+                                        //"damageExtra": "%DamageValue*%ImpactDamageSystemValue",
+                                        "damagePercentage": "%DamageValue",
+                                        //"ignoreAttackerProperty": true,//忽略角色属性加成
+                                        //"ignoreModifyDamage": true,
+                                        //"trueDamage": true,
+                                        "attackType": "Melee",
+                                        "elementType": "Grass",//元素类型为无
+                                        "elementDurability": 10,//元素含量为0
+                                        "enBreak": 0
+                                    },
+                                    "hitPattern": 
+                                    {
+                                        "onHitEffectName": "default",//击中特效名称，
+                                        "hitImpulseType": "LV2",//击退？
+                                        "reboundRatio": 0,//需要解释
+                                        "canBeDefenceHalt": false,//持盾防御者无法产生额外卡肉
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false,//不跳字
+                                    },//打击效果
+                                }
+                            }
+                        },//生成圆形攻击盒
+                    ],
+                },
+                "UNIQUE_Ability_ForestWQ_AssistAttack_CD":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",//防止cd被覆盖
+                    "duration": "%GenerateCDTime",
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "GeneratePurpleState",
+                            "value": -1,
+                        }
+                    ],
+                    "onRemoved": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "GeneratePurpleState",
+                            "value": 0,
+                        }
+                    ]
+                },
+                "UNIQUE_Ability_ForestWQ_RecoverHP":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "isLimitedProperties": true,
+                    "onAdded":
+                    [
+                        {//减少死域值
+                            "$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraHeal",
+                            "target": "Team",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "thinkInterval": "%HealHPInterval",
+                    "onThinkInterval": 
+                    [
+                        {
+                            "$type": "HealHP",
+                            "target": "Self",
+                            "amountByTargetMaxHPRatio": "%HealHPRatio",
+                        },
+                        {
+                            "$type": "ReviveElemEnergy",
+                            "target": "Self",
+                            "value": "%ReviveElemEnergyValue"
+                        },
+                        {//减少死域值
+                            "$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraHeal",
+                            "target": "Team",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                        // {//减少死域核心
+                        //     "$type": "AddRegionalPlayVarValue",
+                        //     "varType": "DeathZoneExtraErosion",
+                        //     "addValue": -10.0
+                        // },
+                    ],
+                    "properties":
+					{
+						"Actor_EndureDelta": 0, //霸体
+					},
+                }
+            },
+            "abilitySpecials": 
+            {
+                "GenerateCDTime": 0,
+                "DamageValue": 0,
+                "DamageSystemValue": 0,
+                "Grass_Slash_RandomDir": 0,
+                "HealHPRatio": 0,
+                "HealHPInterval": 0,
+                "ReviveElemEnergyValue": 0,
+            },
+        },
+    },
+]

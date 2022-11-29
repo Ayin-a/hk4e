@@ -1,0 +1,635 @@
+[
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// 荆棘阻挡
+//	关联ID：70220003
+//
+/////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_Bramble_Interact",
+			"onAdded":
+			[
+				{
+					//自定义反应时的动态攻击盒类型
+					//1表示shpere
+					//2表示box
+					//3表示circle
+					"$type": "AddGlobalValue",
+					"key": "_CUSTOM_ATTACK_SHAPE_TYPE",
+					"value": 2,
+					"useLimitRange": true,
+					"maxValue": 2,
+					"minValue": 2,
+				},
+				{
+					//燃烧时免疫其余燃烧攻击
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_BURNING_IGNITE_ONLY",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Bramble_Burning",
+				},
+			],
+			"modifiers":
+			{
+				"Bramble_Burning":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+						{
+							"$type": "RejectAttackMixin",
+							"attackTag": "_Bramble_Attack",
+						},
+						{
+							"$type": "DoActionByEventMixin",
+							"type": "Current",
+							"onAbilityStateAdded": 
+							[
+								{
+									"abilityState": "ElementBurning",
+									"actions":
+									[
+										{
+											"$type" : "AttachModifier",
+											"modifierName" : "Burning_Effect",
+										},
+									],
+								}
+							],
+							"onAbilityStateRemoved": 
+							[
+								{
+									"abilityState": "ElementBurning",
+									"actions":
+									[
+										{
+											"$type" : "RemoveModifier",
+											"modifierName" : "Burning_Effect",
+										},
+									],
+								}
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint1",
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint2",
+							},
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				"Burning_Effect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern" : "Eff_Element_Burning",
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_Bramble_Attack",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "DamageByAttackValue",
+					"target": "Target",
+					"attackInfo":
+					{
+						"attackTag": "_Bramble_Attack",
+						"attackProperty":   
+						{
+							"damagePercentage": 1,
+							"elementType" : "Grass",
+							"elementDurability" : 10,
+							"strikeType": "Default",
+							"ignoreLevelDiff": true,
+							"enBreak": 100,
+						},
+						"hitPattern": 
+						{
+							"onHitEffectName": "default",
+			          		"hitImpulseType":"LV4",
+			          		"reboundRatio": 0,
+			          		"canBeDefenceHalt": false,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+						},	
+					},
+				},
+			],
+		},
+	},
+///////////////////////////////////////////////////////////////////
+//
+//	木箱烧毁特效_测试
+//
+///////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_WoodenObject_Interact",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WoodMaterial",
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_WoodenObject_DeathType",
+					"value": 0,
+				},
+				{
+					//燃烧时免疫其余燃烧攻击
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_BURNING_IGNITE_ONLY",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+			"modifiers":
+			{
+				"WoodMaterial":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"state" : "Limbo",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Die_Effect",
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHitElement",
+											"element": "Fire",
+										},
+										{
+											"$type": "ByHitDamage",
+											"damage": 0,
+											"logic": "Equal",
+										},
+									],
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHasElement",
+											"element": "Fire",
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_SceneObj_WoodenObject_Broken",
+								},
+								{
+									"$type": "KillSelf",
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHasElement",
+									"element": "Water",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHitDamage",
+											"damage": 0,
+											"logic": "Equal",
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_SceneObj_WoodenObject_Broken",
+								},
+								{
+									"$type": "KillSelf",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_WoodenObject_DeathType",
+							"value": 1,
+						},
+					],
+				},
+				"Die_Effect":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_WoodenObject_DeathType",
+									"value": 0,
+									"compareType": "MoreThan",
+								},
+							],
+						},
+						{
+							"$type": "KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_WoodenObject_DeathType",
+									"value": 0,
+									"compareType": "MoreThan",
+								},
+							],
+						},
+					],
+				},
+			}
+		},
+	},
+//////////////////////////////////////////////////////////////////
+//
+// 木柴堆烧尽
+//
+//////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_FirewoodStacks_Interact",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "NormalModifier",
+				},
+				{
+					//燃烧时免疫其余燃烧攻击
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_BURNING_IGNITE_ONLY",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+			"modifiers": 
+			{
+				"NormalModifier": 
+				{
+					"elementType": "Wood",
+					"elementDurability": 50,
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_LeafBlanket_01_Burnout",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint",
+							},
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+			},
+		},
+	},
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// 荆棘大世界阻挡
+// 关联ID：70220020
+//
+/////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_BrambleWorld_Interact",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Burning",
+				},
+				{
+					//燃烧时免疫其余燃烧攻击
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_BURNING_IGNITE_ONLY",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+			"modifiers":
+			{
+				"Burning":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+					],
+					"onAttackLanded":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Double_Attack",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Double_Attack",							
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint1",
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint2",
+							},
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				"Double_Attack":
+				{
+					"duration": 1.0,
+					"thinkInterval": 0.75,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"doOffStage" : true,
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type" : "ConfigAttackBox",
+									"triggerType" : "TriggerNoRepeat",
+									"checkHitLayerType" : "OnlyHitBox",
+									"born" :
+									{
+										"$type": "ConfigBornByTarget",
+										"offset":
+										{
+											"x": 0.15,
+											"y": 0.75,
+											"z": -0.5,
+										},
+									},
+									"size" : 
+									{
+										"x" : 4.4,
+										"y" : 1.5,
+										"z" : 0.8,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1,
+										"elementType": "Grass",
+										"elementDurability": 10,
+										"strikeType": "Pierce",
+										"enBreak": 9999999,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV4",
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText": false,
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_BrambleWorld_Attack",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "DamageByAttackValue",
+					"target": "Target",
+					"attackInfo":
+					{
+						"attackProperty":   
+						{
+							"damagePercentage": 1,
+							"elementType" : "Grass",
+							"elementDurability" : 10,
+							"strikeType": "Default",
+							"ignoreLevelDiff": true,
+							"enBreak": 100,
+						},
+						"hitPattern": 
+						{
+							"onHitEffectName": "default",
+			          		"hitImpulseType":"LV4",
+			          		"reboundRatio": 0,
+			          		"canBeDefenceHalt": false,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+						},	
+					},
+				},
+			],
+		},
+	},
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// 移动激光
+// 关联ID：70380006
+//
+/////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Item_Moving_Trap_Attack",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "DamageByAttackValue",
+					"target": "Target",
+					"attackInfo":
+					{
+						"attackProperty":   
+						{
+							"damagePercentage": 1,
+							"elementType" : "Fire",
+							"elementDurability" : 10,
+							"strikeType": "Default",
+							"ignoreLevelDiff": true,
+							"enBreak": 100,
+						},
+						"hitPattern": 
+						{
+							"onHitEffectName": "",
+			          		"hitImpulseType":"LV4",
+			          		"reboundRatio": 0,
+			          		"canBeDefenceHalt": false,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+						},	
+					},
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"test"
+				}
+			],
+			"modifiers":
+			{
+				"test":
+				{
+					"duration":3,
+					"onAdded":
+					[
+						
+					],
+				},
+			},
+			
+		},
+	},
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// 人参果树
+//
+/////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Environment_WoodenMaterial_GinSengTree",
+			"onFieldEnter":
+			[
+				{
+					"$type": "ExecuteGadgetLua",
+					"param1": 0,
+				},
+			],
+			"modifiers":
+			{
+				
+			},
+			
+		},
+	},
+]

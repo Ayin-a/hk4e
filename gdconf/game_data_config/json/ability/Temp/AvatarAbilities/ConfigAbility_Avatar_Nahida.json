@@ -1,0 +1,4660 @@
+[
+
+//************************************************************************************************//
+///  
+///  全局索引：                                                                                   
+///  Avatar_Nahida_ExtraAttack                普攻、重击触发逻辑
+///  Avatar_Nahida_ExtraAttack_Damage         重击生成点
+///  Avatar_Nahida_ExtraAttack_Gadget		  Gadget_重击攻击盒及伤害逻辑
+///  Avatar_Nahida_Attack01                   普攻第一击
+///  Avatar_Nahida_Attack02                   普攻第二击
+///  Avatar_Nahida_Attack03                   普攻第三击
+///  Avatar_Nahida_Attack04                   普攻第四击
+///  Avatar_Nahida_ElementalArt               元素战技二择 + 锁链脉冲伤害控制
+///  Avatar_Nahida_ElementalArt_Click         点按伤害 + 相关上印记逻辑
+///  Avatar_Nahida_ElementalArt_RayCast       长按扫描 + 相关上印记逻辑
+///  Avatar_Nahida_ElementalBurst             元素爆发镜头及相关美术表现
+///  Avatar_Nahida_ElementalBurst_Hollow_Gadget  元素爆发宫殿主要Buff逻辑
+///  Avatar_Nahida_FallingAnthem              下落攻击
+///  Avatar_Nahida_PermanentSkill_1           突破1   提升宫殿内场上角色精通
+///  Avatar_Nahida_PermanentSkill_2           突破2   提升自身脉冲伤害+暴击率
+///  Avatar_Nahida_Constellation_1            命之座1 提升宫殿计算角色个数
+///  Avatar_Nahida_Constellation_4            命之座4 根据周围印记数量提升自身精通
+///  Avatar_Nahida_Constellation_6            命之座6 释放大招后普攻/重击触发锁链脉冲
+///  
+//************************************************************************************************//
+
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	//点按/长按操作反馈区分
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ExtraAttack",   
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10731,
+					"chargeTime": 0.12,
+					"secondChargeTime": 0.12,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 0,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",   //由于草神普攻逻辑特殊，这里的skillId配置与其他角色有一定差异，其他角色勿抄
+							"intID": "SkillID",
+							"value": 98,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+							"predicates":
+							[
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 0,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_Is_AttackBS",  //判定在BS动作中
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Catalyst_Stamina_Cost*%Nahida_ExtraAttack_StaminaCost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Catalyst_Stamina_Cost*%Nahida_ExtraAttack_StaminaCost+%Flexible_Stamina",//留出服务器误差体力
+									"logic": "Lesser",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"chargeStateIDs": ["Attack01","Attack02","Attack03","ExtraAttack_BS","ExtraAttack","ExtraAttack_AS"],
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "ExtraAttack",
+					"normalizeStart": 0.163,
+					"normalizeEnd": 1.0,
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack_BS"],
+					"modifierName": "Avatar_Nahida_ExtraAttack_BS_Check",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10003,
+							"costStaminaRatio":"%Nahida_ExtraAttack_StaminaCost*%ExtraAttack_Catalyst_Stamina_Cost",
+						},
+					],
+				},
+				"Avatar_Nahida_ExtraAttack_BS_Check":  //特殊_检测普攻BS动作
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_Is_AttackBS",
+							"value": 1,
+							"doOffStage": true
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_Is_AttackBS",
+							"value": 0,
+							"doOffStage": true
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Nahida_ExtraAttack_StaminaCost": 1,
+				"ExtraAttack_Catalyst_Stamina_Cost": 0,//读表
+				"Flexible_Stamina": -5,  //因为延迟触发体力消耗，可适当放宽一点点
+			},
+		},
+	},
+	//重击特效表现
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ExtraAttack_Damage",
+			"onAbilityStart":  //Eventpattern触发
+			[
+				
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "ExtraAttack",
+					"normalizeStart": 0.0,
+					"normalizeEnd": 0.85,
+					"modifierName": "Avatar_Nahida_ExtraAttack_Hand_FX",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "ExtraAttack",
+					"normalizeStart": 0.163,
+					"normalizeEnd": 1.0,
+					"modifierName": "Avatar_Nahida_ExtraAttack_Block_FX",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ExtraAttack_Hand_FX":  //重击过程中的特效表现
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Loli_Catalyst_Nahida_ExtraAttack_HandR",
+						},
+					],
+				},
+				"Avatar_Nahida_ExtraAttack_Block_FX":  //重击过程中确定框选位置及过程特效变现（可随时被Sprint打断）
+				{
+					"onAdded":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHasAttackTarget",
+								},
+							],
+							"successActions":  //有敌方目标
+							[
+								{
+									"$type": "SetGlobalPos",
+									"key": "_ABILITY_Nahida_ExtraAttack_Pos",  //确定重击施法位置
+									"target": "SelfAttackTarget",
+									"setTarget": false,
+									"born":
+									{
+										"$type": "ConfigBornBySelectedPoint",
+										"onGround":true,
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+							"failActions":   //没有敌方目标
+							[
+								{
+									"$type": "SetGlobalPos",
+									"key": "_ABILITY_Nahida_ExtraAttack_Pos",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 5.0,
+										},
+										"onGround":true,
+										"onGroundRaycastUpDist": 4.0,
+									},
+								},
+							],
+						},
+						{
+							"$type": "CreateGadget",  //创建重击攻击盒
+							"gadgetID": 41073001,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey":"_ABILITY_Nahida_ExtraAttack_Pos",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+								"onGround": true,
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+	//Gadget_41073001  重击攻击盒
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ExtraAttack_Gadget",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ExtraAttack_Block",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Nahida_ExtraAttack_Delay_Damage",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ExtraAttack_Delay_Damage":  //重击框选延迟爆炸
+				{
+					"duration": 0.732,
+					"onRemoved":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target": "OriginOwner",    //直接让纳西妲自身打伤害
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size" : 
+									{
+										"x" : 6.0,
+										"y" : 6.0,
+										"z" : 6.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.5,
+											"z": -3.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag" : "ExtraAttack",
+									"canBeModifiedBy": "OriginOwner",
+									"attackProperty":
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak" : 80,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_Hit",
+										"hitImpulseType":"LV3",
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+									"forceCameraShake": true,
+						        	"cameraShake":
+						        	{
+						        		"shakeType": "CustomVector",
+										"shakeRange": 0.1,
+										"shakeTime": 0.2,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseCycle": 0.36,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.1,
+										},
+						        	},
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  NormalAttack01
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Attack01",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_01",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByGroundNormalRange",
+							"range": 2,
+							"checkOffset": true,
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 2.0,
+							},
+						},
+						"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size" : 
+							{
+								"x" : 2.0,
+								"y" : 4.0,
+								"z" : 8.0,
+							},
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGroundNormalRange",
+									"range": 2,
+									"checkOffset": true,
+									"offset":
+									{
+										"x": 0,
+										"y": 0,
+										"z": 2.0,
+									},
+								},
+								"offset":
+								{
+									"x": 0,
+									"y": 0.2,
+									"z": 0,
+								},
+								"onGround": true,
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "NormalAttack_01",
+							"attenuationTag": "NormalAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%NormalAttack_01_Damage",
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak" : 7.557,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_Hit",
+								"hitImpulseType": "LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack01",
+					"normalizeStart": 0,
+					"normalizeEnd": 0.34,
+					"modifierName": "Avatar_Nahida_Block_Die_01",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Block_Die_01":  //控制地面砖块消失
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Block_Die",
+							"type": "Trigger",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_01_Block",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"NormalAttack_01_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  NormalAttack02
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Attack02",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_02",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByGroundNormalRange",
+							"range": 2,
+							"checkOffset": true,
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 2.0,
+							},
+						},
+						"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size" : 
+							{
+								"x" : 2.5,
+								"y" : 4.0,
+								"z" : 8.0,
+							},
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGroundNormalRange",
+									"range": 2,
+									"checkOffset": true,
+									"offset":
+									{
+										"x": 0,
+										"y": 0,
+										"z": 2.0,
+									},
+								},
+								"offset":
+								{
+									"x": 0,
+									"y": 0.2,
+									"z": 0,
+								},
+								"onGround": true,
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "NormalAttack_02",
+							"attenuationTag": "NormalAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%NormalAttack_02_Damage",
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak" : 6.933,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_Hit",
+								"hitImpulseType": "LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack02",
+					"normalizeStart": 0,
+					"normalizeEnd": 0.337,
+					"modifierName": "Avatar_Nahida_Block_Die_02",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Block_Die_02":  //控制地面砖块消失
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Block_Die",
+							"type": "Trigger",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_02_Block",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"NormalAttack_02_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  NormalAttack03
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Attack03",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_03",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByGroundNormalRange",
+							"range": 2,
+							"checkOffset": true,
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 2.0,
+							},
+						},
+						"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size" : 
+							{
+								"x" : 2.5,
+								"y" : 4.0,
+								"z" : 8.0,
+							},
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGroundNormalRange",
+									"range": 2,
+									"checkOffset": true,
+									"offset":
+									{
+										"x": 0,
+										"y": 0,
+										"z": 2.0,
+									},
+								},
+								"offset":
+								{
+									"x": 0,
+									"y": 0.2,
+									"z": 0,
+								},
+								"onGround": true,
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "NormalAttack_03",
+							"attenuationTag": "NormalAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%NormalAttack_03_Damage",
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak" : 8.601,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_Hit",
+								"hitImpulseType": "LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack03",
+					"normalizeStart": 0,
+					"normalizeEnd": 0.354,
+					"modifierName": "Avatar_Nahida_Block_Die_03",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack03",
+					"normalizeStart": 0,
+					"normalizeEnd": 0.375,
+					"modifierName": "HideWeapon",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack_BS", "ExtraAttack", "Attack01", "Attack02"],
+					"modifierName": "HideWeapon",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Block_Die_03":  //控制地面砖块消失
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Block_Die",
+							"type": "Trigger",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_03_Block",
+							"doOffStage": true,
+						},
+					],
+				},
+				"HideWeapon":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+							"modifyAnotherValue": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+							"modifyAnotherValue": true,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"NormalAttack_03_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  NormalAttack04
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Attack04",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_04",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByGroundNormalRange",
+							"range": 2,
+							"checkOffset": true,
+							"offset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 2.0,
+							},
+						},
+						"onGround": true,
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size" : 
+							{
+								"x" : 3.0,
+								"y" : 4.0,
+								"z" : 10,
+							},
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGroundNormalRange",
+									"range": 2,
+									"checkOffset": true,
+									"offset":
+									{
+										"x": 0,
+										"y": 0,
+										"z": 2.0,
+									},
+								},
+								"offset":
+								{
+									"x": 0,
+									"y": 0.2,
+									"z": -1.5,
+								},
+								"onGround": true,
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "NormalAttack_04",
+							"attenuationTag": "NormalAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%NormalAttack_04_Damage",
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak" : 10.951,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_NormalAttack_Hit",
+								"hitImpulseType": "LV3",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.12,
+								"shakeTime": 0.12,
+								"shakeDistance": 30.0,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 1,
+								},
+							},
+						},
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack04",
+					"normalizeStart": 0.0,
+					"normalizeEnd": 0.688,
+					"modifierName": "HideWeapon",
+				},
+			],
+			"modifiers":
+			{
+				"HideWeapon":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+							"modifyAnotherValue": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+							"modifyAnotherValue": true,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"NormalAttack_04_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技  点按/长按二择 + 智慧锁链标记
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ElementalArt",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalArt_Tag_Handler",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalArt_ChainCD_Handler",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalArt_DropBall_Handler",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nahida_ElementalArt_TagNum",
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "SkillButtonHoldChargeMixin",
+					"skillID": 10732,
+					"beforeStateIDs": ["Nahida_ElementalArt_BS", "Nahida_ElementalArt_Move"],
+					"chargeLoopStateIDs": ["Nahida_ElementalArt_Loop"],
+					"chargeLoopDurations": [5.0],               //Loop持续时长
+					"nextLoopTriggerID": "NextLoopTrigger",
+					"endHoldTrigger": "EndHoldTrigger",
+				},
+				{
+					"$type": "AttackChainReceiverMixin",   //接受怪物侧传来的Trigger信息
+					"cd": "%Chain_CD-%WitChain_CD_Reduce",
+					"attackChainReceiverKey": "Nahida_Normal",    //常规状态
+					"actionQueue":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Hit",
+							"target": "Target",
+							"doOffStage": true,
+						},
+						{
+							"$type": "DamageByAttackValue",
+							"target": "Target",
+							"doOffStage": true,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset":
+								{
+									"x": 0,
+									"y": 0.3,
+									"z": 0,
+								},
+							},
+							"attackInfo":
+							{
+								"attackTag": "Elemental_Art",  //该标记用于记录锁链伤害
+								"attenuationTag": "Nahida_Chain_Normal",   //常规小技能的元素衰减组
+								"attenuationGroup": "Nahida_Chain_Normal",
+								"attackProperty":
+								{
+									"damagePercentage": "%Chain_Damage_PerAtk",
+									"damageExtra": "%Chain_Damage_PerMastery*%FIGHT_PROP_ELEMENT_MASTERY",
+									"attackType": "Range",
+									"strikeType": "Default",
+									"elementType": "Grass",
+									"elementDurability": 25,
+									"enBreak" : 30,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+						{
+							"$type": "SendEffectTriggerToLineEffect",
+							"parameter": "Attack",
+							"type": "Trigger",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Line",
+							"target": "Target",
+							"doOffStage": true,
+						},
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_BS", "Nahida_ElementalArt_Click", "Nahida_ElementalArt_Click_AS", "Nahida_ElementalArt_Move", "Nahida_ElementalArt_Loop", "Nahida_ElementalArt_Hold", "Nahida_ElementalArt_Hold_AS", "Nahida_ElementalBurst", "Nahida_ElementalBurst_AS"],
+					"modifierName": "Avatar_Nahida_ElementalArt_HairEmission",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nahida_ElementalArt_Click_AS",
+					"normalizeStart": 0.6,
+					"normalizeEnd": 1.0,
+					"modifierName": "Avatar_Nahida_ElementalArt_HairEmission_Remover",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nahida_ElementalArt_Hold_AS",
+					"normalizeStart": 0.6,
+					"normalizeEnd": 1.0,
+					"modifierName": "Avatar_Nahida_ElementalArt_HairEmission_Remover",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ElementalArt_Tag_Handler":  //智慧链接端点Node触发检测
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type": "ByAttackType",
+									"attackType": "Default",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_ElementalArt_TagNum",
+									"value": 7,
+									"compareType": "LessAndEqual",
+									"target": "Self",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Avatar_Nahida_RayTag_OnMonster",
+									"target": "Target",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Avatar_Nahida_RayTag_OnMonster",
+									"target": "Target",
+								},
+
+								//限制单次技能的叠加印记上限
+								{
+									"$type": "AddGlobalValue",
+									"key": "_ABILITY_Nahida_ElementalArt_TagNum",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 0,
+									"maxValue": 8,
+									"target": "Self",
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Nahida_ElementalArt_Tag_ClearTimer",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_Tag_ClearTimer":  //短时清零叠加蕴种印的计数
+				{
+					"duration": 0.3,
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_ElementalArt_TagNum",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_ChainCD_Handler":  //处理锁链脉冲攻击冷却时间
+				{
+					"thinkInterval": 1.0, 
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Nahida_ReduceChainCD",
+							"overrideMapKey": "WitChain_CD_Reduce",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Avatar_Nahida_RayTag_OnMonster":   //元素战技施加在敌方目标上的标记（自动互相连线）
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Chain_Duration",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_RayTag",
+							"value": 1,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Avatar_Nahida_Constellation_2_OnMonster",
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Nahida_Constellation_2",
+									"target": "Caster",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_RayTag",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttackChainMixin",
+							"attackChainReceiverKey": "Nahida_Normal",  //普通0命小技能对应Key
+							"reactionTypes": 
+							[
+								"Overdose",
+								"OverdoseElectric",
+								"OverdoseGrass",
+								"Overgrow",
+								"OvergrowMushroomFire",
+								"OvergrowMushroomElectric",
+								"Burning",
+
+								"Explode",
+								"Shock",
+								"Superconductor",
+								"SwirlFire",
+								"SwirlWater",
+								"SwirlElectric",
+								"SwirlIce",
+
+								"Stream",
+								"Melt",
+								"Freeze",
+								"FrozenBroken",
+
+								"CrystallizeFire",
+								"CrystallizeWater",
+								"CrystallizeElectric",
+								"CrystallizeIce",
+							],
+							"attackTags":
+							[
+								// "BurningDamage",
+								// "ShockDamage",
+								"OverGrowDamage",
+								"OverGrow_Alter_Damage",
+								"OverGrow_Fire_Damage",
+								"OverGrow_Electric_Damage",
+							],
+							"effectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Tag",
+							"effectAttachPoint": "Fx_ChestNode",
+							"lineRange": 30,
+						},
+						{
+							"$type": "AttackChainMixin",
+							"attackChainReceiverKey": "Nahida_Constellation",  //命6对应Key发射器，需要对应触发者满足6命接收器才能打伤害
+							"attackTags":
+							[
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"ExtraAttack",
+							],
+							"predicates":
+							[
+								{
+									"$type": "ByHasFeatureTag",  //判定是纳西妲
+									"featureTagIDs": [10073],
+									"target": "Target",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_Constellation_6_Num",  //有效触发次数
+									"value": 0,
+									"compareType": "MoreThan",
+									"target": "Target",
+								},
+							],
+							"effectAttachPoint": "Fx_ChestNode",  //AttachPoint不能为空
+							"lineRange": 30,
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "UNIQUE_Avatar_Nahida_RayTag_OnMonster",
+							"target": "Self",
+						},
+					],
+				},
+				"UNIQUE_Avatar_Nahida_Constellation_2_OnMonster":  //命2额外草剧变+激化效果
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						//与激化降防相关
+						{
+							"$type": "DoActionBySelfElementReactionMixin",
+							"reactionTypes":
+							[
+								"Overdose",
+								"OverdoseElectric",
+								"OverdoseGrass",
+							],
+							"actionQueue":
+							[
+								{
+									"$type": "ApplyModifier",   //预期智慧印记消失，Debuff照样可以存在 与其脱钩
+									"modifierName": "UNIQUE_Avatar_Nahida_Constellation_2_DefenseDown",
+									"target": "Self",
+								},
+							],
+						},
+						//与燃烧+绽放增暴击爆伤相关
+						{
+							"$type": "ModifyBeHitDamageMixin",
+							"Actor_ElementReactionCriticalDelta": "%Reaction_Crit_Ratio",
+							"ignoreEventInfo": true,
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByElementReactionType",
+											"reactionType": "Burning",
+										},
+										{
+											"$type": "ByElementReactionType",
+											"reactionType": "Overgrow",
+										},
+										{
+											"$type": "ByElementReactionType",
+											"reactionType": "OvergrowMushroomFire",
+										},
+										{
+											"$type": "ByElementReactionType",
+											"reactionType": "OvergrowMushroomElectric",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Avatar_Nahida_Constellation_2_DefenseDown":  //命2受到激化影响后自身防御力降低
+				{
+					"isUnique": true,
+					"stacking": "Refresh",
+					"duration": "%DefenseDown_Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties": true,
+					"properties":
+					{ 
+						"Actor_DefenceRatio": "-1*%DefenseDown_Ratio",
+					},
+				},
+				"Avatar_Nahida_ElementalArt_DropBall_Handler":  //掉球检测处理
+				{
+					"onHittingOther":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],  //兼顾命6共享掉球逻辑与CD
+								},
+								{
+									"$type": "ByAttackType",
+									"attackType": "Range",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Nahida_ElementalArt_DropBall",
+									"target": "Self",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_DropBall":  //掉草球
+				{
+					"duration": 7.0,  //内置触发CD
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2019,
+							"baseEnergy": 9,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 1.0,
+								},
+								"bornRandom":
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 1,
+								},
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_HairEmission":   //纳西妲小技能头发发光
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetEmissionScaler",
+							"materialType": "Hair",
+							"value": 20,
+							"duration": 5,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetEmissionScaler",
+							"materialType": "Hair",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_IsInHollow",  //判断纳西妲不在领域中才会变暗
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_HairEmission_Dissipate",
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_IsInHollow",  //判断纳西妲不在领域中才会变暗
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_HairEmission_Remover":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_ElementalArt_HairEmission",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"WitChain_CD_Reduce": 0,    	//不导表  大招领域内脉冲冷却降低
+
+				"Chain_CD": 0,              	//锁链触发间隔CD
+				"Chain_Damage_PerAtk": 0,   	//锁链脉冲伤害攻击倍率
+				"Chain_Damage_PerMastery": 0,   //锁链脉冲伤害精通倍率
+				"Chain_Duration": 0,        	//智慧印记持续时间
+
+				//命2相关导表数值
+				"DefenseDown_Dura":  0,     	//命2防御下降持续时间
+				"DefenseDown_Ratio": 0,     	//命2防御下降百分比
+				"Reaction_Crit_Ratio": 0,   	//草剧变暴击率
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技  智慧音波（点按）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ElementalArt_Click",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nahida_ElementalArt_Click",
+					"modifierName": "Avatar_Nahida_ElementalArt_Click_Strike",
+					"normalizeStart": 0.4,
+					"normalizeEnd": 1.0,
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_Click", "Nahida_ElementalArt_Click_AS"],
+					"modifierName": "Avatar_Nahida_ElementalArt_Click_Effect",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ElementalArt_Click_Strike":  //点按伤害触发
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10732,
+							"cdRatio": 1.0,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Strike_Click",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360,
+									"height": 3.0,
+									"radius": 4.6,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0,
+											"y" : -1.0,
+											"z" : 0.2,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%Click_Damage",
+										"attackType": "Default",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak" : 75,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "NotifyNahidaTrigger",    //专用触发Npc隐藏对话
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Tag_NPC_Once",
+							"selectTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR4H4",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"sortType": "Nearest",
+								"topLimit": 1,
+							},
+						},
+						{
+							"$type": "TriggerGatherCollect",    //专用触发采集效果
+							"maxCount": 4,
+							"selectTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR4H4",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"sortType": "Nearest",
+								"topLimit": 4,
+							},
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalArt_Click_Effect":  //点按时身上的特效表现
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_HandL",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Dust",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Click_Damage": 0,   //点按瞬间伤害
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技  天眼扫描仪（长按）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ElementalArt_RayCast",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_Reconnect_Handler",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nahida_ElementalArt_Hold",
+					"modifierName": "Avatar_Nahida_RayCast_Trigger",
+					"normalizeStart": 0.2,
+					"normalizeEnd": 1.0,
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nahida_ElementalArt_Hold",
+					"modifierName": "Avatar_Nahida_RayCast_CloseFx",
+					"normalizeStart": 0.0,
+					"normalizeEnd": 1.0,
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_Move", "Nahida_ElementalArt_Loop", "Nahida_ElementalArt_Hold"],
+					"modifierName": "Avatar_Nahida_RayCast_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_Move", "Nahida_ElementalArt_Loop", "Nahida_ElementalArt_Hold"],
+					"modifierName": "Focus",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_Move", "Nahida_ElementalArt_Loop", "Nahida_ElementalArt_Hold", "Nahida_ElementalArt_Hold_AS"],
+					"modifierName": "Avatar_Nahida_RayCast_Camera_Fx",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalArt_Loop", "Nahida_ElementalArt_Hold"],
+					"modifierName": "Avatar_Nahida_RayCast_HitBoxOffset",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_RayCast_Handler":   //控制发射器的生存周期
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_ElementalArt_AimNum",
+							"value": 0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10732,
+							"cdRatio": 1.2,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByAimMixin",
+							"entityTypes": ["Monster"],
+							"colliderNodeName": "PRIVATE_RayCast",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+									"target": "Target",
+								},
+								{
+									"$type": "ByTargetGlobalValue",  //非小动物
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"target": "Target",
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Nahida_ElementalArt_AimNum",   //限制单次标记上限，定为8个
+									"value": 7,
+									"compareType": "LessAndEqual",
+								},
+							],
+							"actionQueue":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"key": "_ABILITY_Nahida_ElementalArt_AimNum",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 0,
+									"maxValue": 10,
+									"target": "Self",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Avatar_Nahida_RayCast_Bomb_OnMonster_Fx",
+									"target": "Target",
+								},
+							],
+							"onRemoveActionQueue":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Nahida_RayCast_Bomb_OnMonster_Damage",
+									"target": "Target",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "NahidaAimNpcGatherMixin",
+							"detectRangeForNPC": 25,
+							"widthForNPC": 0.23,  //根据屏幕比例计算
+							"heightForNPC": 0.23,
+							"npcAttachEffect": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Tag_Npc",
+							"detectRangeForGather": 35,
+							"widthForGather": 0.23,
+							"heightForGather": 0.23,
+							"gatherAttachEffect": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Tag_Gather",
+							"gatherMaxCount": 4,
+							"gatherIgnoreRaycastThreshold": 0.3,
+							"disableRayCheck": false,
+						},
+						{
+							"$type": "TriggerPostProcessEffectMixin",
+							"duration": 15,
+							"postEffectAssetName": "PostEffect_Avatar_Nahida_ElementalArt_ScreenEffect",
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_Bomb_OnMonster_Fx":  //长按扫描滑过敌方目标的标记特效
+				{
+					"duration": 10,  //加个时间保护
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Tag", 
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_Bomb_OnMonster_Damage":  //长按松手时对所有标记目标造成单体伤害
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "DamageByAttackValue",
+							"target": "Self",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset":
+								{
+									"x": 0,
+									"y": 0.3,
+									"z": 0,
+								},
+							},
+							"attackInfo":
+							{
+								"attackTag": "Elemental_Art",
+								"attackProperty":
+								{
+									"damagePercentage": "%Hold_Damage",
+									"attackType": "Default",
+									"strikeType": "Default",
+									"elementType": "Grass",
+									"elementDurability": 25,
+									"enBreak" : 100,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+				},
+				"Focus":  //进入Loop动作时的瞄准镜头
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":   //最大俯角offset
+							{
+								"x": 0.75,
+								"y": 0.3,
+								"z": -1.7,
+							},
+							"cameraFollowUpper":   //最大仰角offset
+							{
+								"x": 0.75,
+								"y": 0.2,
+								"z": -1.9,
+							},
+							"cameraFollowMaxDegree": 50,   //最大仰角
+							"cameraFollowMinDegree": -60,  //最大俯角
+							// "cameraFastFocusMode": true,
+							"faceToTarget": false,
+							"faceToTargetAngleThreshold": 0,
+							"dragButtonName": "Skill2",
+							"targetAnchorY": 1.8,   //填-1为不变，其余值则直接覆盖
+							"assistance":
+							{
+								"ps4":
+								{
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useGyro": false,
+								},
+								"other":
+								{
+									"useGyro": true,
+								},
+							},
+							"canMove": false,
+							"showCrosshair": false,
+							"vcam_fov": 45,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarExitFocus",
+							"exitCameraRadius": 4.8,
+							"keepRotation": true,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "DisableMotionBlurMixin",
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_Trigger":  //触发长按生效时间点
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_RayCast_Handler",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Camera_Effect",
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_HitBoxOffset":  //长按扫描状态HitBox偏移（跟随人物向上）
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox"],
+							"setEnable" : false,
+							"doOffStage": true,
+						},
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox_Skill"],
+							"setEnable" : true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox"],
+							"setEnable" : true,
+							"doOffStage": true,
+						},
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox_Skill"],
+							"setEnable" : false,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_Reconnect_Handler":  //断线重连HitBox恢复保护
+				{
+					"onReconnect":
+					[
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox"],
+							"setEnable" : true,
+							"doOffStage": true,
+						},
+						{
+							"$type" : "EnableHitBoxByName",
+							"hitBoxNames" : ["HitBox_Skill"],
+							"setEnable" : false,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_Camera_Fx":  //长按瞄准时的镜头特效
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Avatar_Nahida_RayCast_Camera_Fx_OnTeam",
+							"target": "Team",
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_Camera_Fx_OnTeam":  //必须通过Team保证成对的特效上下
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachActionToModifierMixin",  //在极限情况保证成对匹配
+							"onAdded":
+							[
+								{
+									"$type": "DungeonFogEffects",
+									"enable": true,
+									"muteRemoteAction": true,
+									"cameraFogEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Camera_Aim",
+								},
+								{
+									"$type": "TriggerHideWeapon",
+									"doOffStage": true,
+									"visible": false,
+									"partNames": [ "equip01", "equip02", "sheathPoint" ],
+								},
+							],
+							"onRemoved":
+							[
+								{
+									"$type": "DungeonFogEffects",
+									"enable": false,
+									"muteRemoteAction": true,
+									"cameraFogEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Camera_Aim",
+									"doOffStage": true,
+								},
+								{
+									"$type": "TriggerHideWeapon",
+									"doOffStage": true,
+									"visible": true,
+									"partNames": [ "equip01", "equip02", "sheathPoint" ],
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_RayCast_CloseFx":  //控制开始关闭特效
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SendDungeonFogEffectTrigger",
+							"parameter": "Aim_Close",
+							"cameraFogEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Camera_Aim",
+							"muteRemoteAction": true,
+						},
+					],
+				},
+				"Camera_Effect":  //拍照镜头模糊
+				{
+					"duration": 0.2,
+					"modifierMixins":
+					[
+						{
+							"$type": "CameraBlurMixin",
+							"cameraRadialBlur":
+							{
+								"power": 0.2,
+								"fadeTime": 0.15,
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Hold_Damage": 0,  //长按瞬间伤害
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素爆发  虚空展开？
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ElementalBurst",
+			"onAbilityStart":   //Trigger释放领域
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_CreateHollow",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_CheckAvatarElement",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_GVinitialize",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_Initialize",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst", "Nahida_ElementalBurst_AS"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_EmotionControl",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_Camera_Effect",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst", "Nahida_ElementalBurst_AS"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_Camera_Handler",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Nahida_ElementalBurst",
+					"modifierName":"Avatar_Nahida_ElementalBurst_Camera_PushTarget",
+					"normalizeStart":0,
+					"normalizeEnd":0.7,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst", "Nahida_ElementalBurst_AS"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_Invincible",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nahida_ElementalBurst", "Nahida_ElementalBurst_AS"],
+					"modifierName":"Avatar_Nahida_ElementalBurst_WeatherChange",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ElementalBurst_Initialize":   	//初始化充能技参数
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_IsInBurstState",
+							"value": 1,
+						},
+						{
+							"$type": "KillGadget",
+							"gadgetInfo":
+                            {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41073002,
+                            },
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10735,
+							"cdRatio": 1.0,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10735,
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_IsInBurstState",
+							"value": 0,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_CreateHollow":    //虚空展开
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_WeatherChange",  //干掉原有的天气压黑
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41073002,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 1.0,
+								},
+								"onGround": true,
+							},
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Camera_Effect":   //镜头前的特效表现
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_EyeL",
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_EyeR",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Camera_Transition",  //播放转镜消散特效
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target": "Team",
+							"startDuration": 0.2,
+							"endDuration": 0.3,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Camera_Handler":  //控制对应Camera进出及镜头检测
+				{
+					"onAdded":
+					[
+						{
+							//周围碰撞检测，近身有障碍时将不播放镜头动画
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackNotHitScene",
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"height": 0.5,
+										"fanAngle": 360,
+										"radius": 1.5,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x" : 0.0,
+												"y" : 1.0,
+												"z" : 0.0,
+											},
+										},
+									},
+									"checkWaterLayer":true,
+								},
+								{
+									"$type": "ByAvatarInWaterDepth",
+									"compareType": "LessAndEqual",
+									"depth": 0.5,
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AvatarEnterCameraShot",
+									"cameraMoveCfgPath": "Camera_Nahida_ElementalBurst",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Avatar_Nahida_ElementalBurst_Camera_DungeonEffect", 
+								},
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Camera_Palace",
+									"muteRemoteAction": true,  //联机时队友不需要看到
+								},
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Camera_Cloak",
+								},
+							],
+							"failActions":
+							[
+								//第三视角特效
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Camera_Thirdparty",
+								},
+							],
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+							"blend": false,
+						},
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01", "equip02", "sheathPoint"],
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Camera_DungeonEffect":  //播放镜头时的镜头特效
+				{
+					"duration": 3.0,
+					"onAdded":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": true,
+							"muteRemoteAction": true,
+							"cameraFogEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Fog",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": false,
+							"muteRemoteAction": true,
+							"cameraFogEffectName": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Fog",
+							"doOffStage": true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_Camera_DungeonEffect",
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_EmotionControl":      //镜前动画中表情屏蔽，只受动画K帧影响
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"interruptBlink": true,
+							"toggleBlink" : false,
+							"toggleEyeKey": false,
+							"toggleEmoSync": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEyeKey": true,
+							"toggleEmoSync": true,
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Camera_PushTarget":   //镜前动画推开敌方目标，别挡哥的镜头
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR3",
+							"strength" : -3,
+							"attenuation" : 2,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "Enemy",
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Grass"],
+								},
+								{
+									"$type" : "ByTargetWeight", //WindZoneLevel = 2
+									"logic" : "LesserOrEqual",  //WindZoneLevel = 2
+									"weight" : 250.0,   //WindZoneLevel = 2
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Invincible":      //充能技过程中无敌保护
+				{
+					"duration": 2.0,    //加个限定时间，防止摆pose很久了还无敌
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},	
+				"Avatar_Nahida_ElementalBurst_WeatherChange":   //天气变化
+				{
+					"duration": 2.0,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Nahida_ElementalBurst",
+							"transDuration" : 0.3,
+							"duration" : 1.5,
+						},
+					],
+				},
+
+				"Avatar_Nahida_ElementalBurst_CheckAvatarElement":  //虚空探测 实时检查队伍元素配置
+				{
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+							"value": 0,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Fire",
+									"number": 0,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Fire",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+							"value": 2,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Fire",
+									"number": 2,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Water",
+							"value": 0,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Water",
+									"number": 0,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Water",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Water",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Water",
+							"value": 2,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Water",
+									"number": 2,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+							"value": 0,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Electric",
+									"number": 0,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Electric",
+									"number": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+							"value": 2,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByBigTeamHasElementType",
+									"elementType": "Electric",
+									"number": 2,
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+
+						//解锁命1 默认配色+1
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Avatar_Nahida_Constellation_1",
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Nahida_Constellation_1",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_GVinitialize":  //GV初始化+重连恢复
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_IsInHollow",  //GV初始化
+							"value": 0,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_ReduceChainCD",  //GV初始化
+							"value": 0,
+						},
+					],
+					"onReconnect":
+					[
+						{
+							"$type": "SetEmissionScaler",  //断线重连时还原发色
+							"materialType": "Hair",
+							"value": 1,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素爆发  Gadget_虚空场  41073002
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_ElementalBurst_Hollow_Gadget",
+			"onAdded":
+			[
+				{
+					"$type": "CopyGlobalValue",
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "_ABILITY_Nahida_Team_MaxMastery",
+					"dstKey": "_ABILITY_Nahida_Team_MaxMastery",
+				},
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "_ABILITY_Nahida_Team_MaxMastery",
+					"overrideMapKey": "Hollow_MasteryUp_Count",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_Hollow_TeamFormula",   //生成领域时即决定配色规则
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_Hollow_Fx",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_Hollow_LifeTimer",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_CheckInHollow",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_ElementalBurst_Hollow_TeamFormula":   //领域内配色影响规则初始化（由创建的时的队伍配色决定）
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						//火配色  决定领域内角色释放的锁链伤害提升
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddChainDmg",
+							"value": 0,
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddChainDmg",
+							"value": "%Hollow_Fire_Lv1",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+									"value": 1,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddChainDmg",
+							"value": "%Hollow_Fire_Lv2",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+									"value": 2,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+						//雷配色  决定领域内角色释放的锁链伤害提升
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_ReduceCD",
+							"value": 0,
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_ReduceCD",
+							"value": "%Hollow_Electric_Lv1",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+									"value": 1,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_ReduceCD",
+							"value": "%Hollow_Electric_Lv2",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+									"value": 2,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+						//水配色  决定领域延长时间
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddTime",
+							"value": 0,
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddTime",
+							"value": "%Hollow_Water_Lv1",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Water",
+									"value": 1,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Hollow_AddTime",
+							"value": "%Hollow_Water_Lv2",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_CheckElemNum_Water",
+									"value": 2,
+									"target": "OriginOwner",
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Hollow_Fx":  //宫殿领域特效
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Hollow_Field",
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Hollow_LifeTimer":  //虚空领域生命计时器
+				{
+					"duration": "%Hollow_Duration+%Hollow_AddTime",
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_CheckInHollow",  //即刻清掉后续加成
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				"Delay_RemoveFx":
+				{
+					"duration": 1.0,
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_Hollow_Fx",
+						},
+					],
+				},
+				//---------------------检测虚空领域中的角色--------------------//
+				"Avatar_Nahida_ElementalBurst_CheckInHollow":  //检测虚空领域范围内的场上角色
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByLCTriggerAll",  //筛选Team时必须要这个类型，其他无法筛到Team（因为其为Ghost）
+							},
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_Hollow_InDistance_Keeper",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByLCTriggerAll",
+							},
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "FieldEntityCountChangeMixin",
+							"campTargetType": "All",
+							"ignoreCamp": true,  //由于Team是Ghost的，想要筛选到Team时需增加该配置 
+							"onFieldEnter":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam",
+									"otherTargets":
+									{
+										"$type": "SelectTargetsByLCTriggerAll",
+									},
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam",
+									"otherTargets":
+									{
+										"$type": "SelectTargetsByLCTriggerAll",
+									},
+								},
+								{
+									"$type": "DebugLog",
+									"content": "Enter"
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam":  //当前场上的角色检测在领域中
+				{
+					"isUnique": true,
+					"duration": 1.0,
+					"elementDurability": 100,
+					"stacking": "Refresh",
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnNahida",
+							"target": "CurTeamAvatars",
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByHasFeatureTag",   //草神才上
+									"featureTagIDs": [10073],
+								},
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "CurLocalAvatarMixinV2",
+							"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_PermanentSkill_Handler",
+						},
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Nahida_ElementalBurst",
+							"transDuration" : 0.5,
+							"duration" : 50,
+						},
+						{
+							"$type": "NahidaHollowFlowerMixin",  //跟随Team此起彼伏的花束效果
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Flower",
+							"effectTrigger": "Die",
+							"interval": 0.3,
+							"createMaxNumPerInterval": 2,
+							"maxCount": 5,
+							"minRange": 0,
+							"maxRange": 1.0,
+							"destroyRange": 1.5,
+							"createOffset":
+							{
+								"x": 0,
+								"y": 0,
+								"z": -0.2,
+							},
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_Hollow_InDistance_Keeper": //续航器
+				{
+					"duration": 0.5,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "AddElementDurability",
+							"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam",
+							"value": 100,
+							"doOffStage": true,
+						},
+					],
+				},	
+				"UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnNahida":  //队内纳西妲处于宫殿领域中（包含前台+后台）
+				{
+					//测试Case 需要严格测试以下多个草神联机放大时是否会出现叠加多个Buff出现的情况
+					"isUnique": true,
+					"useDummyAbility": true,
+					"stacking": "MultipleRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 1,  //保证队友给自己上的modifier唯一性
+						"enableMixedUnique": true,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_IsInHollow",
+							"value": 1,
+							"doOffStage": true,	
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_ReduceChainCD",
+							"value": "%Hollow_ReduceCD",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Avatar_Nahida_ElementalBurst_HairEmission",
+						},
+					],
+					"onRemoved":  //需要测试断线重连GV恢复
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_IsInHollow",
+							"value": 0,
+							"doOffStage": true,	
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_ReduceChainCD",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": ["Elemental_Art"],
+							"damagePercentageRatio": "%Hollow_AddChainDmg",  //命6锁链伤害需要受到加成
+							"predicates":
+							[
+								{
+									"$type": "ByAttackType",
+									"attackType": "Range",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_ElementalBurst_HairEmission":  //纳西妲头发发光表现处理
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetEmissionScaler",  //宫殿内纳西妲头发发光
+							"materialType": "Hair",
+							"value": 20,
+							"duration": 5,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetEmissionScaler",
+							"materialType": "Hair",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_IsInBurstState",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_HairEmission_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_IsInBurstState",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+				},
+				//---------------------突破1-宫殿内元素精通加成-------------------//
+				"UNIQUE_Nahida_ElementalBurst_Hollow_PermanentSkill_Handler":  //宫殿内前场角色处理精通加成
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_PermanentSkill_MasterUp",
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Nahida_PermanentSkill_1",
+									"target": "Caster",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Nahida_ElementalBurst_Hollow_PermanentSkill_MasterUp":  //领域内场上角色元素精通提升
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryExtraDelta": "%Hollow_MasteryUp_Count",  //Extra这部分不能进行转化
+					},
+				},
+			},
+			"onFieldExit":  //離開區域時需要瞎掉對應Buff
+			[
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Nahida_ElementalBurst_Hollow_InDistance_OnTeam",
+					"target": "Target",  //这里Target是指向对应Team
+				},
+			],
+			"onKill":
+			[
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "Die",
+					"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalBurst_Hollow_Field",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Delay_RemoveFx",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "Avatar_Nahida_ElementalBurst_CheckInHollow",  //初始化时快速清除
+				},
+			],
+			"abilitySpecials":
+			{
+				//OverrideMapKey  不导表
+				"Hollow_AddTime": 0,          //虚空领域额外增加的持续时间  
+				"Hollow_AddChainDmg": 0,      //虚空领域内锁链伤害提升 
+				"Hollow_ReduceCD": 0,         //虚空领域减少锁链伤害CD 
+				"Hollow_MasteryUp_Count": 0,  //虚空领域提升场上角色精通 
+
+				//导表数值
+				"Hollow_Duration": 0,        //虚空领域持续时间
+
+				"Hollow_Fire_Lv1": 0,        //火系锁链伤害提升Lv1
+				"Hollow_Fire_Lv2": 0,        //火系锁链伤害提升Lv2
+				"Hollow_Electric_Lv1": 0,    //雷系锁链冷却降低Lv1
+				"Hollow_Electric_Lv2": 0,    //雷系锁链冷却降低Lv2
+				"Hollow_Water_Lv1": 0,       //水系领域时间延长Lv1
+				"Hollow_Water_Lv2": 0,		 //水系领域时间延长Lv2
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  空中攻击
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Nahida_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5073010,
+                    "flySkillID": 5073010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+                    ],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+                        "FallingAnthem_AS_1",
+                    ],
+                    "modifierName": "FallingAnthem_Attach_SelfEffect",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                    ],
+                    "modifierName": "FallingAnthem_Remove_SelfEffect",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                    ],
+                    "modifierName": "FallingAnthem_SetVisible",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                    ],
+                    "modifierName": "HideWeapon",
+                },
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                            	"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+				  				"strikeType": "Default",
+				  				"elementType": "Grass",
+				  				"elementDurability": 25,
+				  				"enBreak": 50,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV3",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.5,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+				  				"strikeType": "Default",
+				  				"elementType": "Grass",
+				  				"elementDurability": 25,
+				  				"enBreak" : 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV4",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Strike_01_Grass",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Strike_02_Grass",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "HideWeapon":
+                {
+                    "onAdded": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "doOffStage": true,
+                            "visible": false,
+                            "partNames": [ "equip01", "equip02", "sheathPoint" ],
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "doOffStage": true,
+                            "visible": true,
+                            "partNames": [ "equip01", "equip02", "sheathPoint" ],
+                        },
+                    ],
+                },
+                "FallingAnthem_SetVisible":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"doOffStage":true,
+						},
+					],
+                    "onRemoved":
+                    [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_BS_Grass",
+                        },
+						{
+							"$type": "ApplyModifier",
+							"modifierName":"FallingAnthem_BSCameraRadialBlur",
+						},
+					],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.5,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+						  				"strikeType": "Default",
+						  				"elementType": "Grass",
+						  				"elementDurability": 0,
+						  				"enBreak" : 5,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Attach_SelfEffect":
+                {
+                    "onAdded":
+                    [
+				        {
+				          	"$type": "AttachEffect",
+				          	"effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Self_Grass",
+				        },
+					],
+                },
+                "FallingAnthem_Remove_SelfEffect":
+                {
+					"duration":0.1,
+                    "onRemoved":
+                    [
+				        {
+				          	"$type": "RemoveModifier",
+				          	"modifierName": "FallingAnthem_Attach_SelfEffect",
+				        },
+					],
+                },
+				"FallingAnthem_BSCameraRadialBlur":
+				{
+					"duration":0.3,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+				},
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//  突破1 虚空领域继承队内最高的元素精通，并以一定比例提供给领域内的场上角色
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_PermanentSkill_1",
+			"isDynamicAbility": true,
+			"onAdded":  //重要GV初始化
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nahida_Team_MaxMastery",
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",  //避免大招刚释放就记录精通，考虑放宽一定时间
+					"stateID": "Nahida_ElementalBurst",
+					"normalizeStart": 0.2,
+					"normalizeEnd": 1.0,
+					"modifierName": "Trigger_PermanentSkill_1",
+				},
+			],
+			"modifiers":
+			{
+				"Trigger_PermanentSkill_1":  //触发记录全队最高精通值
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetTeamFightPropertyToOverrideMapKey",
+							"type": "Max",
+							"fightProperty": "FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",  //取值时剔除Extra部分
+							"overrideMapKey": "Team_Max_Mastery",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_Team_MaxMastery",
+							"value": "%Team_Max_Mastery*%Mastery_Ratio",
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": "%Mastery_Max",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Team_Max_Mastery": 0,   //取队内最高的元素精通  不导表
+
+				"Mastery_Ratio": 0,    //精通转化比例
+				"Mastery_Max": 0,      //精通最大转化值
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  突破2 自身元素精通超出XX的部分，每点精通锁链脉冲伤害提升XX%，暴击率提升YY%
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_PermanentSkill_2",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",  //GV初始化
+					"key": "_ABILITY_Nahida_PermanentSkill_2_Mastery",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_PermanentSkill_EnhanceChainDamage",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_PermanentSkill_EnhanceChainDamage":  //锁链伤害up+暴击率up
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "HittingOtherMixin",   //套了一层Mixin后，逻辑会优先于ModifyDamageMixin
+							"onHittingOther":
+							[
+								{
+									"$type" : "Predicated",  //兼顾6命触发时的精通Tick
+									"target" : "Target",
+									"doOffStage": true,
+									"targetPredicates":
+									[
+										{
+											"$type" : "ByAttackTags",
+											"attackTags" : ["Elemental_Art"],  
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type": "ApplyModifier",
+											"modifierName": "Avatar_Nahida_PermanentSkill_TickMastery",
+											"target": "Self",
+											"doOffStage": true
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": ["Elemental_Art"],  //小技能+命座都能吃到加成
+							"damagePercentageRatio": "%Chain_Damage_Up*%PermanentSkill_2_EffMastery",
+							"bonusCritical": "%Chain_Crit_Up*%PermanentSkill_2_EffMastery",
+							"predicates":
+							[
+								{
+									"$type": "ByAttackType",
+									"attackType": "Range",
+								},
+							],
+						},
+					],
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Nahida_PermanentSkill_TickMastery",
+							"doOffStage": true
+						},
+					],
+				},
+				"Avatar_Nahida_PermanentSkill_TickMastery":  //关键时刻tick自身精通数值
+				{
+					"duration": 0.2,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_PermanentSkill_2_Mastery",
+							"value": "%FIGHT_PROP_ELEMENT_MASTERY-%Base_Mastery",
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": "%Max_Mastery",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Nahida_PermanentSkill_2_Mastery",
+							"overrideMapKey": "PermanentSkill_2_EffMastery",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"PermanentSkill_2_EffMastery": 0,  //不导表 OverrideKey
+
+				"Base_Mastery": 0,     //基础最低精通加成线
+				"Max_Mastery": 0,      //最高有效精通加成值
+				"Chain_Damage_Up": 0,  //每点精通提升伤害
+				"Chain_Crit_Up": 0,    //每点精通提升暴击率
+
+				
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座1 虚空领域启动时，火/水/雷配色默认+1档
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Constellation_1",
+			"isDynamicAbility": true,
+			"onAbilityStart":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Nahida_CheckElemNum_Fire",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 2,
+					"doOffStage": true,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Nahida_CheckElemNum_Water",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 2,
+					"doOffStage": true,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Nahida_CheckElemNum_Electric",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 2,
+					"doOffStage": true,
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座2 
+//  智慧锁链下的目标 燃烧/三种绽放均可暴击，暴击率XX%/暴击伤害XX%
+//  激化/超激化/蔓激化后，该目标防御力降低XX%
+//
+////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座4 纳西妲周围25m内每有一个智慧印记的目标，自身元素精通提升XX点，至多提升YY点
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Constellation_4",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nahida_Constellation_4_Num",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nahida_Constellation_4_Handler",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Nahida_Constellation_4_Num",
+					"valueSteps": [-0.5, 0.5, 1.5, 2.5, 3.5, 100],
+					"modifierNameSteps":
+					[
+						"Blank",
+						"Avatar_Nahida_Constellation_4_MasteryUp_Lv1",
+						"Avatar_Nahida_Constellation_4_MasteryUp_Lv2",
+						"Avatar_Nahida_Constellation_4_MasteryUp_Lv3",
+						"Avatar_Nahida_Constellation_4_MasteryUp_Lv4",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Constellation_4_Handler":  //检测周围智慧印记目标个数
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetTargetNumToGlobalValue",
+							"srcOtherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR30H10",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"sortType": "Nearest",
+								"entityTypes": ["Monster"],
+							},
+							"srcPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nahida_RayTag",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"dstTarget": "Self",
+							"key": "_ABILITY_Nahida_Constellation_4_Num",
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Blank":{},
+				"Avatar_Nahida_Constellation_4_MasteryUp_Lv1":  //精通提升1档
+				{
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Constellation_4_Lv1",
+					},
+				},
+				"Avatar_Nahida_Constellation_4_MasteryUp_Lv2":  //精通提升2档
+				{
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Constellation_4_Lv2",
+					},
+				},
+				"Avatar_Nahida_Constellation_4_MasteryUp_Lv3":  //精通提升3档
+				{
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Constellation_4_Lv3",
+					},
+				},
+				"Avatar_Nahida_Constellation_4_MasteryUp_Lv4":  //精通提升4档
+				{
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Constellation_4_Lv4",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Constellation_4_Lv1": 0,   //精通提升1档
+				"Constellation_4_Lv2": 0,   //精通提升2档
+				"Constellation_4_Lv3": 0,   //精通提升3档
+				"Constellation_4_Lv4": 0,   //精通提升4档
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座6
+//  元素爆发启动时进入特殊状态
+//  接下来N次普攻/重击命中印记目标时可直接触发锁链脉冲攻击
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Constellation_6",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nahida_Constellation_6_Num",  //GV初始化
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Nahida_Constellation_6_Num",
+					"valueSteps": [-0.5, 0.5, 100],
+					"modifierNameSteps":
+					[
+						"Blank",
+						"Avatar_Nahida_Constellation_6_AttackState",
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Nahida_ElementalBurst_AS"],
+					"modifierName": "Avatar_Nahida_Constellation_6_Trigger",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Constellation_6_Trigger":  //触发命6状态时点
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_Constellation_6_Num",
+							"value": "%Attack_Count",
+						},
+						{
+							"$type": "AddElementDurability",
+							"modifierName": "Avatar_Nahida_Constellation_6_Fx",
+							"value": 100,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Nahida_Constellation_6_Timer",
+						},
+					],
+				},
+				"Avatar_Nahida_Constellation_6_ReduceNum":  //命6普攻触发连携减少计数器
+				{
+					"duration": 0.1,    //保证一次攻击行为所有目标都可触发的时间内
+					"stacking": "Unique",
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Nahida_Constellation_6_Num",  //需要保证次数为0.1s延迟触发，其他链接目标才能受到攻击
+							"value": -1,
+							"doOffStage": true,
+						},
+					],
+					"thinkInterval": 0.1,
+					"onThinkIntervalIsFixedUpdate": true,
+					"onThinkInterval":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_Constellation_6_ReduceNum",
+							"doOffStage": true,
+						},
+					],
+
+				},
+				"Avatar_Nahida_Constellation_6_Timer":  //特殊状态计时器
+				{
+					"duration": "%Duration+1",  //延迟补正
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nahida_Constellation_6_Num",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Blank":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Delay_KillFx",
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Nahida_Constellation_6_AttackState":  //特殊模式：普攻命中锁链目标额外触发锁链伤害
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Nahida_Constellation_6_Fx",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttackChainReceiverMixin",   //接受怪物侧传来的Trigger信息
+							"cd": 0.2,
+							"attackChainReceiverKey": "Nahida_Constellation",    //命6接收key
+							"actionQueue":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Ray_Hit",
+									"target": "Target",
+									"doOffStage": true,
+								},
+								{
+									"$type": "DamageByAttackValue",
+									"target": "Target",
+									"doOffStage": true,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName": "RootNode",
+										"offset":
+										{
+											"x": 0,
+											"y": 0.3,
+											"z": 0,
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag": "Elemental_Art",   //该标记用于记录锁链伤害
+										"attenuationTag": "Nahida_Chain_Constellation",    //命6独立的元素衰减组
+										"attenuationGroup": "Nahida_Chain_Constellation",
+										"attackProperty":
+										{
+											"damagePercentage": "%Constellation_6_Dmg_PerAtk",
+											"damageExtra": "%Constellation_6_Dmg_PerMastery*%FIGHT_PROP_ELEMENT_MASTERY",
+											"attackType": "Range",
+											"strikeType": "Default",
+											"elementType": "Grass",
+											"elementDurability": 25,
+											"enBreak" : 30,
+										},
+										"hitPattern" :
+										{
+											"onHitEffectName": "default",
+											"hitImpulseType":"LV2",
+											"reboundRatio": 0,
+											"hitHaltTime": 0.0,
+											"hitHaltTimeScale": 0.05,
+											"muteHitText": false,
+										},
+										"forceCameraShake": false,
+									},
+								},
+								{
+									"$type": "SendEffectTriggerToLineEffect",
+									"parameter": "Attack",
+									"type": "Trigger",
+									"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_ElementalArt_Line",
+									"target": "Target",
+									"doOffStage": true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Nahida_Constellation_6_ReduceNum",
+									"target": "Caster",
+									"doOffStage": true,
+								},
+							],
+							"attackerPredicates":  //判断抛事件的攻击者必须为自己，才会对链接目标进行脉冲攻击
+							[
+								{
+									"$type": "ByTargetIsSelf",
+									"target": "Target",
+									"isSelf": true,
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Nahida_Constellation_6_Fx":  //命6的状态特效Fx
+				{
+					"duration": 15,  //比持续时间适当长点
+					"elementDurability": 100,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_Constellation_6",
+						},
+					],
+				},
+				"Delay_KillFx":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Die",
+							"type": "Trigger",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_Constellation_6",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nahida_Constellation_6_Fx",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Constellation_6_Dmg_PerAtk": 0,       //命6额外触发锁链伤害攻击倍率
+				"Constellation_6_Dmg_PerMastery": 0,   //命6额外触发锁链伤害精通倍率
+				"Attack_Count": 0,  				   //触发攻击次数
+				"Duration": 0,   					   //状态持续时间
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  休闲待机 荡秋千
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nahida_Show_01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["StandbyShow_01_BS", "StandbyShow_01_Loop_A", "StandbyShow_01_Loop_B", "StandbyShow_01_Special"],
+					"modifierName": "Avatar_Nahida_Show01_Fx",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Nahida_Show01_Fx":  //播放show01的特效控制
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_Show01",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Loli_Catalyst_Nahida_Show01_Disappear",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+		},
+	},
+
+]

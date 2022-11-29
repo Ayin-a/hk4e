@@ -1,0 +1,763 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ContinuousBubble
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Oceanid_Crab_02_LifeAlert",
+		"onAdded":
+		[
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"Monster_Oceanid_Crab_02_LifeAlert"
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Oceanid_Crab_02_LifeAlert":
+			{
+				"duration":8,
+				"onRemoved":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"Fight",
+						"value":true
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Animal_Oceanid_Crab_02_BubbleAtkTimer",
+		"onAdded":
+		[
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"Animal_Oceanid_Crab_02_BeHitFight"
+			}
+		],
+		"modifiers":
+		{
+			"Animal_Oceanid_Crab_02_BeHitFight":
+			{
+				"onBeingHit":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"BeHitFight",
+						"value":true
+					}
+				]
+			}	
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Oceanid_Crab_Bubble_Explode",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Oceanid_Crab_Bubble_Explode_Tail",
+				"target": "Self",
+			},
+			{
+				"$type":"AttachModifier",
+				"modifierName":"Oceanid_Crab_Bubble_Explode_OpenColliderDelay"
+			}
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Oceanid_Crab_Bubble_Explode_Tail",
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"attackTag":"SnowBallAttack",
+						"attenuationTag":"SnowBall_Damage",
+						"attenuationGroup": "Skirmisher_Fat_SprayGun_Ice",
+						"attackProperty":
+						{
+							"damagePercentage": 1,
+							"strikeType": "Blunt",
+							"attackType": "Default",
+							"elementType": "Water",
+							"elementDurability": 50,
+							"enBreak": 50.0,
+						},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV4",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+							"retreatType":"ByHitDirection"
+						}
+					}
+				}			
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Oceanid_Crab_BigBubbleExplode",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"alongGround":true
+				},
+				"direction":
+				{
+					"$type":"ConfigDirectionByEntity"
+				}
+			},		
+		],
+		"modifiers":
+		{
+			"Oceanid_Crab_Bubble_Explode_Tail":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern": "Eff_Monster_Oceanid_Crab_BigBubble",
+					}				
+				]
+			},
+			"Oceanid_Crab_Bubble_Explode_OpenColliderDelay":
+			{
+				"duration":0.1,
+				"onRemoved":
+				[
+					{
+						"$type":"EnableBulletCollisionPluginTrigger",
+						"target":"Self",
+						"setEnable":true
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  WaterBubble
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Oceanid_Crab_WaterBubble",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["NormalMove"],
+				"modifierName": "WaterStreamHandler",
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_WATERSTREAM_STATE_",
+				"defaultGlobalValueOnCreate":0,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier":true,
+				"modifierNameSteps":["Empty","WaterStream"],
+			},
+			{
+				"$type": "AttachToAbilityStateMixin",
+				"abilityStates": ["ElementFrozen","ElementPetrifaction"],
+				"modifierName": "SpecialStateDetect",
+			}
+		],
+		"modifiers":
+		{
+			"WaterStream" :
+			{
+				"thinkInterval": 0.2,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackBox",
+								"triggerType": "TriggerNoRepeat",
+								"size":
+								{
+									"x":1.5,
+									"y":1.5,
+									"z":8,
+								},
+								"born": 
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "BulletAttachPoint",
+									"offset": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": -0.5,
+									},//避免贴近时没有伤害，把攻击盒扩大到身前
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.1,
+									"elementType" : "Water",
+									"elementDurability" : 25,
+									"strikeType": "Default",
+									"enBreak": 1,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV1",
+									"reboundRatio" : 0,
+									"canBeDefenceHalt" : false,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+							},
+						},
+						"predicates":
+						[
+							{
+								"$type":"ByAny",
+								"predicates":
+								[
+									{
+										"$type":"ByAnimatorFloat",
+										"parameter":"PoseID",
+										"value":2,
+										"logic": "Equal",
+									},
+									{
+										"$type":"ByAnimatorFloat",
+										"parameter":"PoseID",
+										"value":101,
+										"logic": "Equal",
+									}
+								]
+							}
+						]
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern": "Eff_Monster_Oceanid_Crab_BubbleStream",
+						"predicates":
+						[
+							{
+								"$type":"ByAny",
+								"predicates":
+								[
+									{
+										"$type":"ByAnimatorFloat",
+										"parameter":"PoseID",
+										"value":2,
+										"logic": "Equal",
+									},
+									{
+										"$type":"ByAnimatorFloat",
+										"parameter":"PoseID",
+										"value":101,
+										"logic": "Equal",
+									}
+								]
+							}
+						]
+					},
+				],
+			},
+			"SpecialStateDetect" :
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_WATERSTREAM_STATE_",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 0,
+						"minValue" : 0,
+					},
+				],
+			},
+			"WaterStreamHandler" :
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_WATERSTREAM_STATE_",
+						"value" : 1,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 1,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_WATERSTREAM_STATE_",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 0,
+						"minValue" : 0,
+					},
+				],
+			},
+			"Empty" :
+			{
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Crab_WaterBubble_Explode",
+		"onAdded":
+		[
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Oceanid_Crab_BubbleLoop",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Oceanid_Crab_BubbleAS",
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius" : 0.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x" : 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Default",
+							"elementType": "Water",
+							"elementDurability": 25,
+							"enBreak": 1.0,
+						},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV1",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+					},
+				},
+			},
+			{
+				"$type": "KillSelf",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ElementState
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Oceanid_Crab_ElementState",
+		"onAdded":
+		[
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"UNIQUE_ElementState",
+			},
+			{
+				"$type" : "AttachAbilityStateResistance",
+				"resistanceBuffDebuffs": ["ElementWet","Struggle"],
+			},
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"Monster_Oceanid_Crab_CommonEffect",
+				"predicates":
+				[
+					{
+						"$type":"ByNot",
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_MONSTERAFFIX_OCEANID_ANIMAL_FOOTEFFECT_OFF",
+								"value":1,
+								"compareType":"Equal"
+							}
+						]
+					}	
+				]
+			}	
+		],
+		"modifiers":
+		{
+			"UNIQUE_ElementState":
+			{
+				"isUnique": true,
+				"elementType": "Water",
+				"elementDurability": 100,
+				"isElementDurabilityMutable": false,
+			},
+			"Monster_Oceanid_Crab_CommonEffect":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern": "Eff_Monster_Oceanid_Crab_CommonEffectLoop",
+
+					}
+				]
+			}
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  BeingHit
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Oceanid_Crab_BeingHit",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_BEINGHITSTATE_",
+				"defaultGlobalValueOnCreate":1,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier":true,
+				"modifierNameSteps":["Empty","BeingHit"],
+			},
+			{
+				"$type": "AttachToAbilityStateMixin",
+				"abilityStates": ["ElementPetrifaction","ElementFreeze"],
+				"modifierName": "ChangeBeingHitState",
+			},
+		],
+		"modifiers":
+		{
+			"BeingHit" :
+			{
+				"onBeingHit":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern": "Eff_Monster_Oceanid_AnimalBeHitSpecial",
+						"born": 
+						{
+							"$type": "ConfigBornByHitPoint",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0.1,
+							},
+						},
+					},
+				],
+			},
+			"ChangeBeingHitState" :
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_BEINGHITSTATE_",
+						"value": 0,
+						"useLimitRange": true,
+						"maxValue": 0,
+						"minValue": 0,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_BEINGHITSTATE_",
+						"value": 1,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 1,
+					},
+				],
+			},
+			"Empty" :
+			{
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Monster_Oceanid_Crab_02_FearFallAttack
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Oceanid_Crab_02_FearFallAttack",
+		"onAdded":
+		[
+			{
+				"$type":"AddGlobalValue",
+				"key":"_MONSTER_OCEANID_CRAB_FEARFALLATK",
+				"value":1,
+				"useLimitRange":true,
+				"maxValue":1
+			}
+		],
+		"onBeingHit":
+		[
+			{
+				"$type":"ApplyModifier",
+				"target":"Target",
+				"modifierName":"Monster_Oceanid_Crab_02_Watcher",
+				"predicates":
+				[
+					{
+						"$type":"ByAttackTags",
+						"attackTags":["FallingAttack"]
+					}
+				]
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Oceanid_Crab_02_Watcher":
+			{
+				"duration":3,
+				"onAdded":
+				[
+					{
+						"$type":"ServerLuaCall",
+						"luaCallType":"FromGroup",
+						"CallParamList":[133102112],
+						"funcName":"SLC_FallingAttack_Crab",
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  HealHp
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Oceanid_Crab_HealHp_Challenge",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_HEALHP_STATE_",
+				"defaultGlobalValueOnCreate":1,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier":true,
+				"modifierNameSteps":["Empty","UNIQUE_Crab_Water_HealHp"],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Crab_Water_HealHp" :
+			{
+				"isUnique" : true,
+				"thinkInterval":1.5,
+				"onThinkInterval":
+				[
+					{
+						"$type":"Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_MONSTERAFFIX_OCEANID_02_ANIMALHEAL_UP",
+								"value":1,
+								"compareType":"Equal"
+							}
+						],
+						"successActions":
+						[
+							{
+								"$type": "HealHP",
+								"amountByCasterMaxHPRatio": "%HealHPHigh",
+							},
+							{
+								"$type":"FireEffect",
+								"effectPattern": "Eff_Monster_Oceanid_Boar_Heal",
+							},
+						],
+						"failActions":
+						[
+				
+						]
+					}
+				],
+				"onBeingHit":
+				[
+					{
+						"$type":"Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_MONSTERAFFIX_OCEANID_02_ANIMALHEAL_UP",
+								"value":1,
+								"compareType":"Equal"
+							}
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "HealHP_Pause_AffixUp",
+							}
+						],
+						"failActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "HealHP_Pause",
+							}
+						]
+					}
+				],
+			},
+			"HealHP_Pause" :
+			{
+				"duration": 3,
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_HEALHP_STATE_",
+						"value": 0,
+						"useLimitRange": true,
+						"maxValue": 0,
+						"minValue": 0,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_HEALHP_STATE_",
+						"value": 1,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 1,
+					},
+				],
+			},
+			"HealHP_Pause_AffixUp" :
+			{
+				"duration": 1.5,
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_HEALHP_STATE_",
+						"value": 0,
+						"useLimitRange": true,
+						"maxValue": 0,
+						"minValue": 0,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_HEALHP_STATE_",
+						"value": 1,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 1,
+					},
+				],
+			},
+			"Empty" :
+			{
+			},
+		},
+		"abilitySpecials" :
+		{
+			"HealHPHigh":0.15
+		},
+	},
+},
+]

@@ -1,0 +1,1969 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  DigOutAttack Alert
+//
+////////////////////////////////////////////////////////////////
+{
+	//钻出攻击的预警特效
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_DigOut_Alert",
+		"abilityMixins":
+		[
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "DigOut_BS",
+				"target" : "Self",
+				"normalizeStart" : 0,
+				"normalizeEnd" : 0.4,
+				"modifierName" : "DigOut_Alert",
+			},
+		],
+		"modifiers":
+		{
+			"DigOut_Alert":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_DigOutAttack_Warning",
+						"target": "Self",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Attack02
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_Attack02_Effect",
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Attack02_Effect",
+			},
+		],
+		"onKill":
+		[
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Attack02_Effect",
+			},
+		],
+		"modifiers":
+		{
+			"Attack02_Effect" :
+			{
+				"duration": 3.0,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Attack02_01",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FruitManagement
+//
+////////////////////////////////////////////////////////////////
+//TODO:初始化果实数量
+//TODO:吸收果实开始,扣减果实数量
+//TODO:按顺序隐藏果实,定义1,2,3
+//TODO:果实数量为0,开始逃跑
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_FruitManager",
+		"abilityMixins":
+		[
+			{
+				//第1颗果实存在的状态
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1, 
+					2101, 2201, 2301, 
+					3101, 3201, 3301, 
+					1101, 1201, 1301, 
+					5101, 5201, 5301, 
+					6101, 6201, 6301, 
+					7101, 7201, 7301, 
+					8101, 8102, 
+					8201, 8202, 
+					8301, 8302
+				],
+				"modifierName": "UNIQUE_Fruit01",
+			},
+			{
+				//第2颗果实存在的状态
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1, 
+					2201, 2301, 
+					3201, 3301, 
+					1201, 1301, 
+					5201, 5301, 
+					6201, 6301, 
+					7201, 7301, 
+					8201, 8202, 
+					8301, 8302
+				],
+				"modifierName": "UNIQUE_Fruit02",
+			},
+			{
+				//第3颗果实存在的状态
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1, 
+					2301, 
+					3301, 
+					1301, 
+					5301, 
+					6301, 
+					7301, 
+					8301, 8302
+				],
+				"modifierName": "UNIQUE_Fruit03",
+			},
+		],
+		"onAdded":
+		[
+			{
+				//初始化果实数量GlobalValue
+				"$type": "AddGlobalValue",
+				"key": "_MONSTER_MIMIK_FRUITCOUNT",
+				"value": 3,
+				"useLimitRange": true,
+				"maxValue": 3,
+				"minValue": 0,
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Fruit01":
+			{
+				//第1颗果实显示与隐藏
+				"isUnique": true,
+				"onAdded":
+				[
+					//TODO:
+					//显示果实,播放果实特效
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light01"],
+						"setEnable"  : true,
+						"target"  : "Self",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit01_Idle",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Appear",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName":"Fruit01",
+						},
+					},
+				],
+				"onRemoved":
+				[
+					//TODO:
+					//隐藏果实,播放果实消失特效
+					{
+						"$type" : "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42601005,
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_MONSTER_MIMIK_IS_FRUITMOVETARGET",
+								"value": 1,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Bullet",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit01",
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName": "Fruit01",
+										"attachPointTargetType": "Self",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 180.0,
+											"z": 0.0,
+										},
+										"randomAngleHor": 0,
+										"randomAngleVer": 0,
+									},
+								},
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Disappear",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit01",
+								},
+							},
+						],
+					},
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light01"],
+						"setEnable"  : false,
+						"target"  : "Self",
+					},
+				],
+			},
+			"UNIQUE_Fruit02":
+			{
+				//第2颗果实显示与隐藏
+				"isUnique": true,
+				"onAdded":
+				[
+					//TODO:
+					//显示果实,播放果实特效
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light02"],
+						"setEnable"  : true,
+						"target"  : "Self",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit02_Idle",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Appear",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName":"Fruit02",
+						},
+					},
+				],
+				"onRemoved":
+				[
+					//TODO:
+					//隐藏果实,播放果实消失特效
+					{
+						"$type" : "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42601005,
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_MONSTER_MIMIK_IS_FRUITMOVETARGET",
+								"value": 1,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Bullet",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit02",
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName": "Fruit02",
+										"attachPointTargetType": "Self",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 180.0,
+											"z": 0.0,
+										},
+										"randomAngleHor": 0,
+										"randomAngleVer": 0,
+									},
+								},
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Disappear",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit02",
+								},
+							},
+						],
+					},
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light02"],
+						"setEnable"  : false,
+						"target"  : "Self",
+					},
+				],
+			},
+			"UNIQUE_Fruit03":
+			{
+				//第3颗果实显示与隐藏
+				"isUnique": true,
+				"onAdded":
+				[
+					//TODO:
+					//显示果实,播放果实特效
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light03"],
+						"setEnable"  : true,
+						"target"  : "Self",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit03_Idle",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Appear",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName":"Fruit03",
+						},
+					},
+				],
+				"onRemoved":
+				[
+					//TODO:
+					//隐藏果实,播放果实消失特效
+					{
+						"$type" : "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42601005,
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_MONSTER_MIMIK_IS_FRUITMOVETARGET",
+								"value": 1,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Bullet",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit03",
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName": "Fruit03",
+										"attachPointTargetType": "Self",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 180.0,
+											"z": 0.0,
+										},
+										"randomAngleHor": 0,
+										"randomAngleVer": 0,
+									},
+								},
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Disappear",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName":"Fruit03",
+								},
+							},
+						],
+					},
+					{
+						"$type" : "TriggerSetRenderersEnable",
+						"renderNames"  : ["Light03"],
+						"setEnable"  : false,
+						"target"  : "Self",
+					},
+				],
+			},
+		},
+		"abilitySpecials" :
+		{
+			//用于记录果实数量
+			"FruitCount" : 3,
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ElementState
+//
+////////////////////////////////////////////////////////////////
+//TODO:
+//有三种情况：平时（但地下不该被看到）、充能完成、被打破
+//平时应该是微微亮起
+//充能完成是完全亮起
+//被打破是暗掉
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_ElementState_On",
+		"onAbilityStart":
+		[
+			{
+				//打开发光材质动画
+				"$type": "SetAnimatorTrigger",
+				"triggerID": "NonetoStage1",
+				"target": "Caster",
+				"MPTriggerOnRemote": true,
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_ElementState_Off",
+		"onAbilityStart":
+		[
+			{
+				//关闭发光材质动画
+				"$type": "SetAnimatorTrigger",
+				"triggerID": "Stage1toNone",
+				"target": "Caster",
+				"MPTriggerOnRemote": true,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  AbsorbFruit
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		//在吸收果实时,改变受击盒,播放相应表现
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_Fruit_Effect",
+		"onAbilityStart":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Mimik_Electric_Fruit_Effect",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Mimik_Electric_Fruit_Effect":
+			{
+				//管理平时的受击盒和充能时的受击盒
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					//打开果实受击盒,关闭其它
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox_Fruit"],
+						"setEnable": true,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": false,
+					},
+				],
+				"onRemoved":
+				[
+					//关闭果实受击盒,打开其它
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox_Fruit"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnableHitBoxByName",
+						"hitBoxNames": ["HitBox", "HeadBox"],
+						"setEnable": true,
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		//技能过程中增加重量
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_AbsorbFruit_WeightManager",
+		"abilityMixins":
+		[
+			{
+				//在吸收果实期间挂载modifier
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["AbsorbFruit", "AbsorbFruit_Loop", "UpperShoot02"],
+				"modifierName": "AddWeight",
+			},
+		],
+		"modifiers":
+		{
+			"AddWeight":
+			{
+				"properties":
+				{
+					"Entity_WeightRatio": 5.0,
+				},
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		//吸收果实时,给拟态草挂载元素盾
+		//元素盾挂载时,自动触发果实充能表现
+		//元素盾被击破时,触发眩晕
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_AbsorbFruit",
+		"abilityMixins":
+		[
+			{
+				//在吸收果实期间挂载modifier
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["AbsorbFruit_Loop"],
+				"modifierName": "UNIQUE_Mimik_Electric_Fruit",
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Mimik_Electric_Fruit":
+			{
+				//实现果实相关逻辑的主要modifier
+				//带有ShieldBarMixin 在Durability被反应完时触发onShieldBroken,就是眩晕之类的效果
+				"stacking": "Unique",
+				"isUnique": true,
+				"forceSyncToRemote": true,
+				"elementType": "Electric",
+				"elementDurability": 10,
+				"modifierMixins":
+				[
+					{
+						"$type": "ShieldBarMixin",
+						"onShieldBroken":
+						[
+							//盾被击破时：
+							{
+								"$type": "ActCameraShake",
+								"cameraShake": 
+								{
+									"shakeType": "Center",
+									"shakeRange": 0.2,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"extension":
+									{
+										"baseOnCamera": true,
+									},
+								},
+							},
+							{
+								//开始击晕倒计时
+								"$type": "TriggerAbility",
+								"abilityName": "Monster_Mimik_Electric_DownManager",
+								"target": "Caster",
+							},
+							{
+								//进入击晕Pose状态
+								"$type": "SetPoseBool",
+								"boolID": "Down",
+								"value": true,
+								"target": "Caster",
+							},
+							{
+								//进入击晕Animator状态
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "DownTrigger",
+								"target": "Caster",
+								"MPTriggerOnRemote": true,
+							},
+						],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_ABILITY_MIMIK_ELECTRIC_FRUIT",
+						"value" : 1,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						//播放充能表现
+						"$type": "TriggerAbility",
+						"abilityName": "Monster_Mimik_Electric_Fruit_Effect",
+						"target": "Self",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_AbsorbFruit_Loop_01",
+					},
+				],
+				"onKill":
+				[
+					//被杀时销毁自身
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Mimik_Electric_Fruit",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_ABILITY_MIMIK_ELECTRIC_FRUIT",
+						"value" : -1,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Mimik_Electric_Fruit_Effect",
+					},
+
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		//控制击晕的持续时间
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_DownManager",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["Down_AS"],
+				"modifierName": "RecoverManager",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_DownTimer",
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_DownTimer" :
+			{
+				"isUnique": true,
+				"forceSyncToRemote": true,
+				"duration": 15.0,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Down_01",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Down_02",
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Recover",
+						"value": true,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Down",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "RecoverTrigger",
+						"MPTriggerOnRemote": true,
+					},
+				],
+			},
+			"RecoverManager" :
+			{
+				"forceSyncToRemote": true,
+				"duration": 1.5,
+				"onRemoved": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Recover",
+						"value": false,
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [301, 311, 312],
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FruitMoveEffect
+//
+////////////////////////////////////////////////////////////////
+
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Mimik_Electric_AbsorbFruit_DoFruitMoveEffect",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["AbsorbFruit_BS"],
+				"modifierName": "Effect",
+			},
+		],
+		"modifiers":
+		{
+			"Effect":
+			{
+				"onAdded" :
+				[
+					{
+						//创建核心位置
+						"$type": "CreateGadget",
+						"gadgetID": 42601005,
+						"target": "Self",
+						"campID": 4001,
+						"campTargetType": "Self",
+						"lifeByOwnerV2": true,
+						"born":
+						{
+							"$type":"ConfigBornByAttachPoint",
+							"attachPointName":"BulletSource",
+							"attachPointTargetType":"Self",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":0,
+							},
+						},
+					},
+					{
+						"$type": "SetPartControlTarget",
+						"target": "Self",
+						"partRootNames"  : ["Fruit01", "Fruit02", "Fruit03"],
+					},
+					{
+						"$type" : "EnablePartControl",
+						"partRootNames"  : ["Fruit01", "Fruit02", "Fruit03"],
+						"enable"  : true,
+					},
+				],	
+				"onRemoved" :
+				[
+					{
+						"$type": "KillGadget",
+						"gadgetInfo":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42601005,
+							"sortType": "Default",
+						},
+					},
+					{
+						"$type" : "EnablePartControl",
+						"partRootNames"  : ["Fruit01", "Fruit02", "Fruit03"],
+						"enable"  : false,
+					},
+				],					
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Mimik_AbsorbFruit_Electric_FruitMoveEffect",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Effect",
+			},
+		],
+		"modifiers":
+		{
+			"Effect":
+			{
+				"duration": 0.75,			
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Fruit_Bullet",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FruitReborn
+//
+////////////////////////////////////////////////////////////////
+{
+	//管理连续地刺攻击在打中玩家后就不再攻击
+	//通过Controller里的Attack01Stop 参数来停止连续的地刺攻击
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_FruitReborn_Effect",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": 
+				[
+					"FruitReborn_Act"
+				],
+				"modifierName": "FruitReborn_Effect",
+			},
+		],
+		"modifiers":
+		{
+			"FruitReborn_Effect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_FruitReborn_UnderGround",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  RangedAttack01
+//
+////////////////////////////////////////////////////////////////
+//向上点射
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_RangedAttack01_01",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Mimik_Electric_UpperShoot02_01",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42601010,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":-45.0,
+							"y":0,
+							"z":0
+						},
+					},
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_RangedAttack01_02",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Mimik_Electric_UpperShoot02_01",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42601010,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":-45.0,
+							"y":30,
+							"z":0
+						},
+					},
+				},
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_RangedAttack01_03",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Mimik_Electric_UpperShoot02_01",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42601010,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByEntity",
+						"angleOffset":
+						{
+							"x":-45.0,
+							"y":-30,
+							"z":0
+						},
+					},
+				},
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ForwardShoot02
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_SetAimTarget",
+		"onAbilityStart":
+		[
+			{
+				"$type": "ResetAIAttackTarget",
+			},
+			{
+				"$type" : "ApplyModifier",
+				"modifierName"  : "Monster_Mimik_Electric_SetAimTarget_TargetSearcher",
+				"target"  : "SelfAttackTarget",
+			},
+		],
+		"modifiers":
+		{
+			"Monster_Mimik_Electric_SetAimTarget_TargetSearcher":
+			{
+				"duration": 0.5,
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerBullet",
+						"bulletID"  : 42601013,
+						"campID": 4001,
+						"trackTarget"  : "Team",
+						"doOffStage": true,
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_ForwardShoot02_InitTarget",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "Predicated",
+				"otherTargets":
+				{
+					"$type": "SelectTargetsByShape",
+					"shapeName": "CircleR50",
+					"centerBasedOn": "Self",
+					"campTargetType": "All",
+					"campBasedOn": "Self",
+					"sortType": "Nearest",
+					"entityTypePriority":["Gadget"],
+				},
+				"targetPredicates"  : 
+				[
+					{
+						"$type" : "ByTargetGlobalValue",
+						"key"  : "Mimik_Electric_AimTarget",
+						"value"  : 1,
+						"compareType"  : "Equal",
+					},
+				],
+				"successActions"  : 
+				[
+					{
+						"$type" : "SetSelfAttackTarget",
+						"target": "Target",
+					},
+				],
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Mimik_Electric_ForwardShoot02",
+		"onAbilityStart":
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Mimik_Electric_ForwardShoot02_02",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByAttackTarget",
+						"maxAngle": 60,
+						"maxAngleType": "Free",
+						"angleOffsetCorrect":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42601011,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletSource",
+					"offset" : 
+					{
+						"x": 0.0,
+						"y": -1.0,
+						"z": 0.0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByAttackTarget",
+						"maxAngle": 60,
+						"maxAngleType": "Free",
+						"angleOffsetCorrect":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius" : 1.5,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "BulletSource",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": -1.5,
+								"z": 0.0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"attenuationTag":"Mimik_Electric_Bomb",
+						"attenuationGroup": "Mimik_Common",
+						"attackProperty":
+						{
+							"damagePercentage": 0.5,
+							"strikeType": "Default",
+							"attackType": "Range",
+							"elementType": "Electric",
+							"elementDurability": 100,
+							"enBreak": 70.0,
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "",
+							"hitImpulseType":"LV4",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+							//"retreatType":"ByAttacker",
+						},
+					},
+				},
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Bullets
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Mimik_Electric_Bomb_Hit",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Mimik_Electric_Bomb_Loop",
+				"target": "Self",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type" : "ByEntityTypes",
+						"entityTypes" : ["Avatar", "Partner"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Bomb_Bullet_01_Hit",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" : 
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius" : 1.5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset" : 
+									{
+										"x" : 0.0,
+										"y" : 0.0,
+										"z" : 0.0,
+									},
+									"onGround": true,
+									"alongGround": true,
+								},
+								"massiveAttackRatio":0.5,
+							},
+							"attackInfo":
+							{
+								"attenuationTag":"Mimik_Electric_Bomb",
+								"attenuationGroup": "Mimik_Common",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Default",
+									"attackType": "Range",
+									"elementType": "Electric",
+									"elementDurability": 100,
+									"enBreak": 70.0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV4",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+							},
+						},
+					},
+				],
+				"failActions":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Bomb_Bullet_01_Hit",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+							"onGround": true,
+							"alongGround": true,
+						},
+					},
+					{
+						"$type":"TriggerBullet",
+						"bulletID":42601014,
+						"born":
+						{
+							"$type":"ConfigBornBySelf",
+							"offset":
+							{
+								"x":0.0,
+								"y":0.0,
+								"z":0.0,
+							},
+							"direction":
+							{
+								"$type":"ConfigDirectionByEntity",
+								"angleOffset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+							"onGround": true,
+							"alongGround": true,
+						},
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Mimik_Electric_Bomb_Loop":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Bomb_Bullet_01",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_Bomb_Bullet_01_Trail",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Mimik_Electric_AreaBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Mimik_Electric_AreaBullet_Loop",
+				"target": "Self",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius" : 1.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+						"massiveAttackRatio":0.25,
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy":"OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 0.33,
+							"strikeType": "Blunt",
+							"elementType": "Electric",
+							"elementDurability": 50,
+							"enBreak": 25.0,
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "",
+							"hitImpulseType":"LV3",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.06,
+							"shakeTime": 0.09,
+							"shakeDistance": 20,
+						},		
+					},
+				},
+			},
+			{
+				"$type": "CreateGadget",
+				"gadgetID": 42601012,
+				"target": "Owner",
+				"campID": 4001,
+				"campTargetType": "Self",
+				"born":
+				{
+					"$type":"ConfigBornBySelf",
+					"offset":
+					{
+						"x":0,
+						"y":-0.5,
+						"z":0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByWorld",
+						"eularAngles":
+						{
+							"x" : 0,
+							"y" : 0,
+							"z" : 0,
+						},
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet_Deploy",
+				"target": "Self",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"offset":
+					{
+						"x":0,
+						"y":-0.5,
+						"z":0,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByWorld",
+						"eularAngles":
+						{
+							"x" : 0,
+							"y" : 0,
+							"z" : 0,
+						},
+					},
+				},
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Mimik_Electric_AreaBullet_Loop":
+			{
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Mimik_Electric_AreaBullet_Deployed",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Mimik_Electric_AreaBullet_Deployed_Loop",
+				"target": "Self",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type" : "Predicated",
+				"otherTargets":
+				{
+					"$type": "SelectTargetsByShape",
+					"topLimit": 4,
+					"shapeName": "CircleR1.5",
+					"centerBasedOn": "Self",
+					"campTargetType": "AllExceptSelf",
+					"campBasedOn": "Self",
+					"sortType": "Nearest",
+				},
+				"targetPredicates":
+				[
+					{
+						"$type" : "ByEntityTypes",
+						"entityTypes" : ["Avatar", "Partner"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type":"DamageByAttackValue",
+						"attacker":"Caster",
+						"target":"Target",
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attenuationTag":"Mimik_Ice_AreaBullet",
+							"attenuationGroup": "Mimik_Common",
+							"attackProperty":
+							{
+								"damagePercentage": 0.1,
+								"elementType": "Electric",
+								"strikeType": "Blunt",
+								"elementDurability": 25,
+								"enBreak": 200,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType": "LV4",
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"retreatType":"ByAttacker",
+							},
+						},
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet_Deployed_Attack",
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Mimik_Electric_AreaBullet_Deployed_Loop":
+			{
+				"duration": 5.0,
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet_Deployed",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet_Disappear",
+						"target": "Self",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					// {
+					// 	"$type": "RemoveUniqueModifier",
+					// 	"modifierName": "UNIQUE_Mimik_Electric_AreaBullet_Deployed_Active",
+					// },
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			// "UNIQUE_Mimik_Electric_AreaBullet_Deployed_Active":
+			// {
+			// 	//"duration": 5.0,
+			// 	"isUnique": true,
+			// 	"stacking": "Unique",
+			// 	"thinkInterval": 0.2,
+			// 	"onAdded":
+			// 	[
+			// 		{
+			// 			"$type": "AttachEffect",
+			// 			"effectPattern": "Eff_Monster_Mimik_Electric_AreaBullet_Deployed_Attack",
+			// 		},
+			// 		{
+			// 			"$type" : "Predicated",
+			// 			"otherTargets":
+			// 			{
+			// 				"$type": "SelectTargetsByShape",
+			// 				"topLimit": 4,
+			// 				"shapeName": "CircleR1.5",
+			// 				"centerBasedOn": "Self",
+			// 				"campTargetType": "AllExceptSelf",
+			// 				"campBasedOn": "Self",
+			// 				"sortType": "Nearest",
+			// 			},
+			// 			"targetPredicates":
+			// 			[
+			// 				{
+			// 					"$type" : "ByEntityTypes",
+			// 					"entityTypes" : ["Avatar"],
+			// 				},
+			// 			],
+			// 			"successActions":
+			// 			[
+			// 				{
+			// 					"$type":"DamageByAttackValue",
+			// 					"attacker":"Caster",
+			// 					"target":"Target",
+			// 					"attackInfo":
+			// 					{
+			// 						"attackProperty":
+			// 						{
+			// 							"damagePercentage": 0.3,
+			// 							"elementType": "Electric",
+			// 							"strikeType": "Blunt",
+			// 							"elementDurability": 50,
+			// 							"enBreak": 1000,
+			// 						},
+			// 						"hitPattern":
+			// 						{
+			// 							"onHitEffectName": "default",
+			// 							"hitImpulseType": "LV4",
+			// 							"hitHaltTime": 0,
+			// 							"hitHaltTimeScale": 0,
+			// 							"retreatType":"ByAttacker",
+			// 						},
+			// 					},
+			// 				},
+			// 			],
+			// 		},
+			// 	],
+			// 	"onThinkInterval":
+			// 	[
+			// 		{
+			// 			"$type" : "Predicated",
+			// 			"otherTargets":
+			// 			{
+			// 				"$type": "SelectTargetsByShape",
+			// 				"topLimit": 4,
+			// 				"shapeName": "CircleR1.5",
+			// 				"centerBasedOn": "Self",
+			// 				"campTargetType": "AllExceptSelf",
+			// 				"campBasedOn": "Self",
+			// 				"sortType": "Nearest",
+			// 			},
+			// 			"targetPredicates":
+			// 			[
+			// 				{
+			// 					"$type" : "ByEntityTypes",
+			// 					"entityTypes" : ["Avatar"],
+			// 				},
+			// 			],
+			// 			"successActions":
+			// 			[
+			// 				{
+			// 					"$type":"DamageByAttackValue",
+			// 					"attacker":"Caster",
+			// 					"target":"Target",
+			// 					"attackInfo":
+			// 					{
+			// 						"attackProperty":
+			// 						{
+			// 							"damagePercentage": 0.3,
+			// 							"elementType": "Electric",
+			// 							"strikeType": "Blunt",
+			// 							"elementDurability": 50,
+			// 							"enBreak": 1000,
+			// 						},
+			// 						"hitPattern":
+			// 						{
+			// 							"onHitEffectName": "default",
+			// 							"hitImpulseType": "LV4",
+			// 							"hitHaltTime": 0,
+			// 							"hitHaltTimeScale": 0,
+			// 							"retreatType":"ByAttacker",
+			// 						},
+			// 					},
+			// 				},
+			// 			],
+			// 		},
+			// 	],
+			// },
+		},
+	},
+},
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Mimik_Electric_AimTarget",
+		"onAdded":
+		[
+			{
+				"$type" : "AddGlobalValue",
+				"value"  : 1,
+				"key"  : "Mimik_Electric_AimTarget",
+				"useLimitRange"  : true,
+				"maxValue"  : 1,
+				"minValue"  : 0,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ShockWave
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Mimik_Electric_Bomb_ShockWave",
+		"onAdded":
+		[
+			{
+				"$type":"FireEffect",
+				"effectPattern":"Eff_Monster_Mimik_Electric_Bomb_Bullet_01_Hit_OnGround",
+				"born":
+				{
+					"$type":"ConfigBornBySelf"
+				},
+			},
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerOnce",
+						"height":4,
+						"radius": 2.5,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy":"OriginOwner",
+						"attenuationTag":"Mimik_Electric_Bomb",
+						"attenuationGroup": "Mimik_Common",
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Blunt",
+							"enBreak": 100.0,
+							"elementDurability":25,
+							"elementType": "Electric",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV7",
+			          		"retreatType": "ByHitDirection",
+			          		"reboundRatio": 0,
+			          		"hitHaltTime": 0.0,
+			          		"hitHaltTimeScale": 0.01,
+			          		"muteHitText": false,
+			          	},
+			        },
+			    },
+			},
+			{
+				"$type":"AttachModifier",
+				"modifierName":"Mimik_Electric_Bomb_ShockWave_Normal"
+			},
+		],
+		"modifiers":
+		{
+			"Mimik_Electric_Bomb_ShockWave_Delay":
+			{
+				"duration":0.2,
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Mimik_Electric_Bomb_ShockWave_Normal"
+					},
+				],
+			},
+			"Mimik_Electric_Bomb_ShockWave_Normal":
+			{
+
+				"duration":0.7,
+				"thinkInterval":0.2,
+				"onThinkInterval":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Monster_Mimik_Electric_Bomb_Bullet_01_Hit_OnGround",
+						"born":
+						{
+							"$type":"ConfigBornBySelf"
+						},
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackCircle",
+								"triggerType" : "TriggerOnce",
+								"radius": 2,
+								"height":3,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy":"OriginOwner",
+								"attenuationTag":"Mimik_Electric_Bomb_ShockWave",
+								"attenuationGroup": "Mimik_Common",
+								"attackProperty":
+								{
+									"damagePercentage": 1.0,
+									"strikeType": "Blunt",
+									"enBreak": 100.0,
+									"elementDurability":25,
+									"elementType": "Electric",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV7",
+									"retreatType": "ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				],
+			},
+		},
+	},
+},
+]

@@ -1,0 +1,1934 @@
+[
+///////////////////////////////////////////////////////////////
+//  Pose 1  Free
+//	Pose 2  FreeWalk
+//	Pose 901 902 903 ReturnToBorn
+//	Pose 101 FightNormal
+//	Pose 111 ForceImprove
+//	Pose 201 FightImproved
+//	Pose 301 FightWeak 
+///////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+//
+//  StateControl
+//
+////////////////////////////////////////////////////////////////
+// Fight Control
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Eremite_Female_Slim_PushDagger_Water_FightControl",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1,//free
+					2,
+					901,
+					902,
+					903,//reborn
+				],
+				"modifierName": "Eremite_OutFightState",
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					101,//FightNormal
+					102,//FightNormal_OutImproved
+					111,//ForceImprove
+					201,//FightImproved
+					301,//FightWeak
+				],
+				"modifierName": "Eremite_InFightState",
+			},
+		],
+		"onAdded": 
+		[
+			//强化状态
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_IMPROVED_",
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+				"value": 0,
+			},
+			//判定是否是从Weak出来后的普通状态
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_OUTIMPROVED",
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+				"value": 0,
+			},
+			//强化次数
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+				"minValue": 0,
+				"maxValue": 99,
+				"useLimitRange": true,
+				"value": 0,
+			},
+			//是否入战
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_ISINFIGHT_",
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+				"value": 0,
+			},
+			//虚弱状态
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_WEAK_",
+				"minValue": 0,
+				"maxValue": 1,
+				"useLimitRange": true,
+				"value": 0,
+			},
+			//是否处于重生状态
+			{
+				"$type": "SetGlobalValue",
+				"key" : "_MONSTER_EREMITE_RETURNTOBORN_",
+				"value" : 0,
+				"useLimitRange" : true,
+				"maxValue" : 1,
+				"minValue" : 0,
+			},
+		],
+		"modifiers": 
+		{
+			"Eremite_OutFightState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_ISINFIGHT_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},// out fight
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_InFightState",
+					},//remove in fight
+				],
+			},
+			"Eremite_InFightState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_ISINFIGHT_",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},// in fight
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_OutFightState",
+					},//remove out fight
+				],
+			},
+		},
+	},
+},
+// Alert
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_Alert",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "SetPoseInt",
+				"intID": "FreePoseMark",
+				"value": 0
+			},		
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Improve
+//
+////////////////////////////////////////////////////////////////
+// improve logic
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Eremite_Female_Slim_PushDagger_Water_Improve",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_EREMITE_IMPROVED_",
+				"defaultGlobalValueOnCreate": 0,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["Eremite_NormalState","Eremite_ImproveState"],
+			},//强化状态判定
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_EREMITE_WEAK_",
+				"defaultGlobalValueOnCreate": 0,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["Eremite_IsNotWeak","Eremite_IsWeak"],
+			},//虚弱状态判定
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_EREMITE_OUTIMPROVED",
+				"defaultGlobalValueOnCreate": 0,
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["Eremite_ISNotOutImproved","Eremite_IsOutImproved"],
+			},//从强化状态退出后的普通状态判定
+			{
+				"$type": "AttachModifierToHPPercentMixin",
+				"valueSteps": [0.7],
+				"modifierNameSteps": ["Empty","UNIQUE_Eremite_Force_ImproveState"],
+			},//强制进行强化
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [1,2],
+				"modifierName": "ResetMonsterSkill",
+			},//技能重置
+			{
+				"$type": "DoActionByStateIDMixin",
+				"stateIDs": ["Die","Die_RagDoll"],
+				"enterActions": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_Improve_Effect",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Effect",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Effect02",
+					},
+				],
+			},//移除强化特效
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Improve"],
+				"modifierName": "Improve_AddEndure",
+			},//霸体
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [201],
+				"modifierName": "Improve_AddEndure",
+			},//霸体跟体重
+		],
+		"onAdded": 
+		[
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Eremite_ImproveState_Properties",
+			},//进入强化状态
+		],
+		"modifiers": 
+		{
+			"Improve_AddEndure":
+			{
+				"properties": 
+				{
+					"Actor_EndureDelta": 0.0,
+					"Entity_WeightRatio": 5.0,
+				},
+			},
+			"Empty":
+			{
+
+			},
+			"UNIQUE_Eremite_Force_ImproveState":
+			{
+				"stacking": "Unique",
+				"isUnique": true,
+				"onAdded":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ForceImprove",
+						"value": true,
+						"canBeHandledOnRecover": true,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [401],
+					},//重置cd
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ForceImprove",
+						"value": false,
+					},
+				],				
+			},
+			"Eremite_NormalState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ImproveState",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_ImproveState",
+					},
+				],
+			},
+			"Eremite_ImproveState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ImproveState",
+						"value": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_NormalState",
+					},
+				],
+			},
+			"Eremite_IsNotWeak":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "WeakState",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_IsWeak",
+					},
+				],
+			},
+			"Eremite_IsWeak":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "WeakState",
+						"value": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_IsNotWeak",
+					},
+				],
+			},
+			"UNIQUE_Eremite_ImproveState_Properties":
+			{
+				"duration": 20,
+				"isUnique": true,
+				"stacking": "Unique",
+				// "state": "LockHP",
+				// "thinkInterval": 1.0,
+				"properties": 
+				{
+					"Actor_EndureDelta": 0.0,
+					"Entity_WeightRatio": 5.0,
+					// "Actor_WaterSubHurtDelta":-0.6,//水元素抗性降低
+				},
+				// "modifierMixins": 
+				// [
+				// 	{
+				// 		"$type": "ElementShieldMixin",
+				// 		"elementType": "None",
+				// 		"shieldHPRatio": 2.0,
+				// 		"damageRatio": 1,
+				// 		"onShieldBroken": 
+				// 		[
+				// 			{
+				// 				"$type": "RemoveModifier",
+				// 				"modifierName": "Eremite_Improve_Effect",
+				// 			},
+				// 			{
+				// 				"$type": "AddGlobalValue",
+				// 				"key" : "_MONSTER_EREMITE_WEAK_",
+				// 				"value" : 10,
+				// 				"useLimitRange" : true,
+				// 				"maxValue" : 1,
+				// 				"minValue" : 0,
+				// 			},// 进入虚弱状态
+				// 			{
+				// 				"$type": "RemoveUniqueModifier",
+				// 				"modifierName": "UNIQUE_Eremite_ImproveState_Properties",
+				// 			},
+				// 		],
+				// 	},
+				// ],
+				"onAdded": 
+				[
+					// 进入强化状态
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_IMPROVED_",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true
+					},
+					//强化次数+1
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_RECOVER_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true,
+					},//重置恢复状态为0
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+						"minValue": 0,
+						"maxValue": 99,
+						"useLimitRange": true,
+						"value": 1,
+					},
+					{
+						"$type":"SetAISkillGCD",
+						"value":0,
+						"canBeHandledOnRecover": true
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Eremite_Improve_Effect",
+					},
+					//在第15s的时候开始触发倒计时特效
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Eremite_ASHintEffect02",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Eremite_ASHintEffect01",
+					},						
+				],
+				// "onThinkInterval": 
+				// [
+				// 	{
+				// 		"$type": "GetFightProperty",
+				// 		"fightPropSourceTarget": "Self",
+				// 		"fightProp": "FIGHT_PROP_MAX_HP",
+				// 		"globalValueKey": "_MONSTER_MAX_HP_",
+				// 		"doOffStage": true,
+				// 	},//获取最大生命值
+				// 	{
+				// 		"$type": "SetGlobalValueToOverrideMap",
+				// 		"globalValueKey": "_MONSTER_MAX_HP_",
+				// 		"overrideMapKey": "Eremite_Max_HP",
+				// 		"doOffStage": true,
+				// 	},//设置overridemapkey
+				// 	{
+				// 		"$type": "DamageByAttackValue",
+				// 		"attacker": "Caster",
+				// 		"target": "Self",
+				// 		"attackInfo": 
+				// 		{
+				// 			"$type": "ConfigAttackInfo",
+				// 			"attackProperty": 
+				// 			{
+				// 				"$type": "ConfigAttackProperty",
+				// 				"ignoreAttackerProperty": true,
+				// 				"trueDamage": true,
+				// 				"damageExtra": "2*%Eremite_Max_HP*0.03",
+				// 				"damagePercentage": 0,
+				// 				"attackType": "Default",
+				// 				"elementType": "None",
+				// 				"enBreak": 0,
+				// 				"strikeType": "None",
+				// 			},
+				// 		},
+				// 	},//每秒对自身造成伤害
+				// ],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Weak",
+						"doOffStage": true,	
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_EREMITE_RETURNTOBORN_",
+								"value": 0,
+								"target": "Self",
+								"compareType": "Equal",
+							},
+						],											
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_Improve_Effect",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Effect",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Effect02",
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_IMPROVED_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true
+					},// 退出强化状态
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_WEAK_",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true,
+					},// 进入虚弱状态
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Force_ImproveState",
+					},//移除强制进入强化状态的状态
+					{
+						"$type":"SetAISkillGCD",
+						"value": 2,
+						"canBeHandledOnRecover": true,
+					},					
+				],
+			},
+			"RemoveImproveState":
+			{
+				"state": "Invincible",
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"target": "Self",
+						"key" : "_MOSNTER_EREMITE_RETURNTOBORN_",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_Eremite_ImproveState_Properties",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"target": "Self",
+						"key" : "_MOSNTER_EREMITE_RETURNTOBORN_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+				],
+			},
+			"ResetMonsterSkill":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+						"minValue": 0,
+						"maxValue": 99,
+						"useLimitRange": true,
+						"value": -99,
+					},
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [401],
+					},
+					// {
+					// 	"$type": "ReTriggerAISkillInitialCD",
+					// 	"skillIDs": [401],
+					// },
+				],
+			},
+			"Eremite_Improve_Effect":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Loop01",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Loop02",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Loop03",
+					},
+				],
+			},
+			"Eremite_IsOutImproved":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "OutImproved",
+						"value": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_ISNotOutImproved",
+					},
+				],
+			},
+			"Eremite_ISNotOutImproved":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "OutImproved",
+						"value": false,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Eremite_IsOutImproved",
+					},
+				],
+			},
+			"Eremite_ASHintEffect02":
+			{
+				"thinkInterval": 18.2,
+				"onThinkInterval":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_ASHint",
+					},
+				],
+			},
+			//倒计时提示
+			"Eremite_ASHintEffect01":
+			{
+				"thinkInterval": 15,
+				"onThinkInterval":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_ASHint02",
+					},
+				],
+			},
+			//倒计时提示
+		},
+		"abilitySpecials": 
+		{
+			"Eremite_Max_HP":0,
+		},
+	},
+},
+// die to del improve state
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Die",
+		"onAbilityStart":
+		[
+			{
+				"$type":"RemoveUniqueModifier",
+				"modifierName":"UNIQUE_Eremite_ImproveState_Properties",
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Effect",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Eremite_Effect",
+			},
+		],
+		"modifiers": 
+		{
+			
+			"UNIQUE_Eremite_Effect":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_BS01",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Monster_Eremite_Female_Slim_PushDagger_Water_Improve_Effect02",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Eremite_Effect02",
+			},
+		],
+		"modifiers": 
+		{
+			
+			"UNIQUE_Eremite_Effect02":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_BS02",
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_BS03",
+					},
+				],
+			},
+		},
+	},
+},
+// weak state
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_Weak",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[301],
+				"modifierName": "WeakState",
+			},
+		],
+		"modifiers": 
+		{
+			"WeakState":
+			{
+				"duration": 8,
+				"properties": 
+				{
+					"Actor_WaterSubHurtDelta":-0.6,//水元素抗性降低
+					"Actor_EndureDelta": 0.0,
+				},
+				"modifierMixins": 
+				[
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin", 
+						"globalValueKey": "_MONSTER_EREMITE_RECOVER_",
+						"defaultGlobalValueOnCreate": 0,
+						"valueSteps" : [-0.5, 0.5, 1.5],
+						"removeAppliedModifier": true,
+						"modifierNameSteps" : ["Empty","Recover"],
+					},
+				],
+				"onAdded": 
+				[
+					//虚弱受击特效
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_Improve_AS01",
+					},
+					//抗性降低特效
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Properties_Defense_Down",
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_WEAK_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 10,
+						"canBeHandledOnRecover": true,
+					},//进入虚弱状态
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_RECOVER_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true,
+					},//未进入恢复状态
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_RECOVER_",
+						"value" : 10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true,
+					},//进入恢复状态
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_WEAK_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": -10,
+						"canBeHandledOnRecover": true,
+					},//退出虚弱状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_OUTIMPROVED",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 1,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type":"ReTriggerAISkillInitialCD",
+						"skillIDs": [402],
+					},
+				],
+				"onChangeAuthority": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_WEAK_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 10,
+						"canBeHandledOnRecover": true,
+					},//进入虚弱状态
+					{
+						"$type": "AddGlobalValue",
+						"key" : "_MONSTER_EREMITE_RECOVER_",
+						"value" : -10,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"canBeHandledOnRecover": true,
+					},//未进入恢复状态
+				],
+			},
+			"Empty":
+			{
+
+			},
+			"Recover":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Recover",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Weapon 
+//
+////////////////////////////////////////////////////////////////
+//背上双刃武器
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_WeaponOnback",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					1,
+					2,
+					901,
+					902,
+					903,
+					9003,
+				],
+				"modifierName": "UNIQUE_WeaponOnBack_Equip",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier", 
+				"modifierName": "UNIQUE_WeaponOnBack_Equip", 
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_WeaponOnBack_Equip":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip01",
+						"realName": "WeaponOnBackL",
+					},
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip02",
+						"realName": "WeaponOnBackL",
+					},
+				],
+			},
+		},
+	},
+},
+//拔出双刃武器
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_DrawWeapon",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+				"target": "Self",
+				"value": 0,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},//默认收起武器
+		],
+		"abilityMixins":
+		[
+			//3.0 BUG 修复，当受到伤害时，让自身从休闲状态退出来，并拔刀
+			{
+				"$type": "DoActionByAnimatorStateIDMixin",
+				"stateIDs": 
+				[
+					"Hit_H",
+					"Hit_L",
+					"HitThrow",
+				],
+				"enterActions": 
+				[
+					{
+						"$type":"TriggerAbility",
+						"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_Alert",
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+						"target": "Self",
+						"value": 10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},
+				],
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Alert"],
+				"modifierName": "Reconnect_DrawWeapon",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Struggle"],
+				"modifierName": "DrawWeapon",
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": 
+				[
+					101
+				],
+				"modifierName": "Reconnect_DrawWeapon",
+			},//保底
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+				"target": "Self",
+				"value": 10,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},
+		],
+		"modifiers":
+		{
+			"Reconnect_DrawWeapon":
+			{
+				"duration": 2,
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+						"target": "Self",
+						"value": 10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},					
+				],
+			},
+			"DrawWeapon":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+						"target": "Self",
+						"value": 1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+						"canBeHandledOnRecover": true,
+					},//默认收起武器
+				]			
+			},
+
+		},
+	},
+},
+//收起双刃武器
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_SheathWeapon",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["SheathWeapon"],
+				"modifierName": "Reconnect_SheathWeapon",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+				"target": "Self",
+				"value": -10,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},
+		],
+		"modifiers": 
+		{
+			"Reconnect_SheathWeapon":
+			{
+				"onRemoved": 
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_MONSTER_EREMITE_SHEATH_WEAPON",
+						"target": "Self",
+						"value": -10,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+					},					
+				],
+			},
+		},
+	},
+},
+//隐藏双刃武器
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_HideWeapon",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_MONSTER_EREMITE_HIDE_WEAPON",
+				"target": "Self",
+				"value": 0,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},//默认不隐藏武器
+		],
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Lie","Sit_Loop"],
+				"modifierName": "HideWeapon",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key": "_MONSTER_EREMITE_SHEATH_HIDEWEAPON",
+				"target": "Self",
+				"value": 10,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},//默认不隐藏武器
+		],
+		"modifiers":
+		{
+			"HideWeapon":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_HIDE_WEAPON",
+						"target": "Self",
+						"value": 1,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_HIDE_WEAPON",
+						"target": "Self",
+						"value": 0,
+						"maxValue": 1,
+						"minValue": 0,
+						"useLimitRange": true,
+						"canBeHandledOnRecover": true,
+					},//默认不隐藏武器
+				],
+			},
+		},
+	},
+},
+//显示双刃武器
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_UnhideWeapon",
+		"abilityMixins":
+		[
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "AddGlobalValue",
+				"key": "_MONSTER_EREMITE_HIDE_WEAPON",
+				"target": "Self",
+				"value": -10,
+				"maxValue": 1,
+				"minValue": 0,
+				"useLimitRange": true,
+			},
+		],
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_DrawWeapon_R_Logic",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_EREMITE_SHEATH_WEAPON",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_SheathWeapon","UNIQUE_DrawWeapon"],
+				"globalValueTarget": "Owner",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_DrawWeapon":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+   						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_SheathWeapon",
+  					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "SetWeaponAttachPointRealName_OnHandR",
+						"target": "Owner",
+					},
+				],
+			},
+			"UNIQUE_SheathWeapon":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[	
+					{
+   						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_DrawWeapon",
+  					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "SetWeaponAttachPointRealName_OnBackR",
+						"target": "Owner",
+					},
+				],
+			},
+			"SetWeaponAttachPointRealName_OnHandR":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip01",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"SetWeaponAttachPointRealName_OnBackR":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip01",
+						"realName": "WeaponOnBackR",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_DrawWeapon_L_Logic",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToGlobalValueMixin", 
+				"globalValueKey": "_MONSTER_EREMITE_SHEATH_WEAPON",
+				"valueSteps" : [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps" : ["UNIQUE_SheathWeapon","UNIQUE_DrawWeapon"],
+				"globalValueTarget": "Owner",
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_DrawWeapon":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+   						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_SheathWeapon",
+  					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "SetWeaponAttachPointRealName_OnHandL",
+						"target": "Owner",
+					},
+				],
+			},
+			"UNIQUE_SheathWeapon":
+			{
+				"isUnique": true,
+				"stacking": "Unique",
+				"onAdded": 
+				[	
+					{
+   						"$type":"RemoveUniqueModifier",
+						"modifierName":"UNIQUE_DrawWeapon",
+  					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "SetWeaponAttachPointRealName_OnBackL",
+						"target": "Owner",
+					},
+				],
+			},
+			"SetWeaponAttachPointRealName_OnHandL":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip02",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+			"SetWeaponAttachPointRealName_OnBackL":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetWeaponAttachPointRealName",
+						"partName": "equip02",
+						"realName": "WeaponOnBackL",
+						"canBeHandledOnRecover": true,
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_SteerControl",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Turn"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 99,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Alert"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.6,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Sit_Alert"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.6,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Squat_Alert"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.6,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Improve"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["NormalAtk01"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeAttackBS"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeAttackBS02"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeRush"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 99,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeAtkAS"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.75,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SlamAtk01"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 0.2,
+				"angularSpeed" : 300,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["SlamAtk01"],
+				"startNormalizedTime" : 0.4,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveNormalAtk01"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" :150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveMeleeAttackBS"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveMeleeAttackBS02"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveMeleeRush"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 99,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveMeleeAtkAS"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveSlamAtk01"],
+				"startNormalizedTime" :0,
+				"endNormalizedTime" : 0.2,
+				"angularSpeed" : 300,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveSlamAtk01"],
+				"startNormalizedTime" :0.45,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["ImproveSlamAtk02"],
+				"startNormalizedTime":0,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 100,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  RushMove
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_RushMove",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["MeleeRush","MeleeAtkBS02"],
+				"modifierName": "MeleeRush_Effect",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["ImproveMeleeRush","ImproveMeleeAtkBS02"],
+				"modifierName": "ImproveMeleeRush_Effect",
+			},
+		],
+		"onAbilityStart": 
+		[
+
+		],
+		"modifiers": 
+		{
+			"MeleeRush_Effect":
+			{
+				"thinkInterval": 0.1,
+				// "onAdded": 
+				// [
+				// 	{
+				// 		"$type": "AttachEffect",
+				// 		"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_MeleeAttackLoop",
+				// 	},
+				// ],
+				"onThinkInterval": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "SelfAttackTarget",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",
+								"compareType": "XZ",
+								"value": 3,
+								"logic": "LesserOrEqual",
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "NearTarget",
+							},
+						],
+						"failActions": 
+						[
+
+						],
+					},
+				],
+			},
+			"ImproveMeleeRush_Effect":
+			{
+				"thinkInterval": 0.1,
+				// "onAdded": 
+				// [
+				// 	{
+				// 		"$type": "AttachEffect",
+				// 		"effectPattern": "Eff_Monster_Eremite_Female_Slim_PushDagger_Water_MeleeAttackLoop",
+				// 	},
+				// ],
+				"onThinkInterval": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "SelfAttackTarget",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",
+								"compareType": "XZ",
+								"value": 3,
+								"logic": "LesserOrEqual",
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "NearTarget",
+							},
+						],
+						"failActions": 
+						[
+
+						],
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_RushMove_Damage",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "RushMove_Damage",
+			},
+		],
+		"modifiers": 
+		{
+			"RushMove_Damage":
+			{
+				"duration": 0.39,
+				"thinkInterval": 0.1,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type" : "ConfigAttackBox",
+								"muteHitBehindScene": true,
+								"checkHitLayerType" : "OnlyHitBox",
+								"ignoreMassive": true,
+								"size": 
+								{
+									"x": 1.5,
+									"y": 2,
+									"z": 4,
+								},
+								"triggerType": "TriggerNoRepeat",
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName" : "RootNode",
+									"offset":
+									{
+										"x": -0.25,
+										"y": 0.0,
+										"z": -4.75,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByAttachPoint",
+										"attachPointName" : "RootNode",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.3,
+									"strikeType": "Slash",
+									"overrideByWeapon": false,
+									"elementType": "Water",
+									"attackType": "Melee",
+									"enBreak":100,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"canBeDefenceHalt": true,
+									"muteHitText": false,
+									"retreatType": "ByAttacker",
+								},
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.1,
+									"shakeTime": 0.1,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": 1,
+										"z": 1,
+									},
+								},
+							},
+						},
+					},
+				],
+			},
+		},
+	},
+			
+},
+////////////////////////////////////////////////////////////////
+//
+// Return to Born 
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Eremite_Female_Slim_PushDagger_Water_ReturnToBorn",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [901],
+				"modifierName": "ReturnToBorn_Start",
+			},
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["SheathWeapon"],
+				"modifierName": "ReturnToBornHandler",
+			},
+		],
+		"modifiers":
+		{
+			"ReturnToBorn_Start":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "SheathWeaponTrigger",
+					},
+				],
+				"onRemoved": 
+				[
+				],
+			},
+			"ReturnToBornHandler":
+			{
+				"onAdded": 
+				[
+					//强化状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key" : "_MONSTER_EREMITE_RETURNTOBORN_",
+						"value" : 1,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_WEAK_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+						"minValue": 0,
+						"maxValue": 99,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+						"minValue": 0,
+						"maxValue": 99,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_ImproveState_Properties",
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Eremite_Force_ImproveState",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Death_Sand_Eremite",
+					},
+					//强化状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					//强化次数
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_IMPROVED_COUNT_",
+						"minValue": 0,
+						"maxValue": 99,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					//是否入战
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_ISINFIGHT_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					//虚弱状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_WEAK_",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					//是否处于重生状态
+					{
+						"$type": "SetGlobalValue",
+						"key" : "_MONSTER_EREMITE_RETURNTOBORN_",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+					},
+					//判定是否是从Weak出来后的普通状态
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_EREMITE_OUTIMPROVED",
+						"minValue": 0,
+						"maxValue": 1,
+						"useLimitRange": true,
+						"value": 0,
+					},
+					
+				],
+			},
+		},
+	},
+},
+]

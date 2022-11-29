@@ -1,0 +1,582 @@
+[
+///触发字典：
+///	  能量堆满
+///	  能量获得
+///	  血量比例
+///	  元素
+///   攻击命中
+///   受击
+///   攻击次数/技能次数   堆叠
+///   某行为之后
+///   内置cd
+///   上下场
+///   缓慢获得
+
+
+///效果字典：
+///   回血
+///   全队回血
+///   攻击/防御/速度提升
+///   受治疗提升
+///   治疗效果提升
+///   伤害减轻
+///   能量获得率提升
+///   获得能量
+///   获得护盾/元素盾
+///   攻击提升（堆叠
+///   全伤提升
+///   属性伤害提升（类似朱丹圣痕
+///   体力恢复加快
+///   技能冷却减少（-20%这种，不是每次-1s这种）
+///   攻击附带伤害
+///   给敌人debuff
+///	  爬山速度提高？
+///	  重攻击消耗体力减少（大剑）
+///
+///	  如果类似fgo，dnf的数值维度。至少应该有
+///	  攻击力，暴击，爆伤，
+///	  伤害增加（黄字）
+///	  宝具威力增加（技能攻击力）
+///	  某属性伤害增加（属强，红魔放）
+///
+///	  招个特效卖卖萌，实际还是上buff。
+///
+///
+
+///设计手段：
+///	  积累一个效果，当xxx时消耗并触发效果
+
+
+///圣遗物效果：
+/// 触发以受击、血量触发为主
+/// 探索中发动。战斗类：探索/辅助/防御=2:8，
+/// buff为主，数值变化。不太会有打击向。
+/// 有套路的效果。   普攻+100%，技能伤害-50%。
+/// Build：
+/// 自身回血时，对周围敌人造成伤害。
+/// 特效套，攻击附带特效技能。
+/// 强化某种单属性伤害。
+///
+///负面效果：
+///	  速度下降
+///	  cd变长
+///	  受伤增加等
+
+
+///橙装字典：
+///	  将敌人弹开
+///	  持续伤害敌人
+///	  能量/血量缓慢恢复
+///	  增加箭的伤害（大概可行
+///
+
+//PS：武器的ability是加在角色身上的。可以考虑从天赋里拿创意到武器
+
+
+//代码规范：
+//1、attachmodifier。自己加的modifier需要在换武器的时候回收。
+//2、不得在remove时添加modifier，会导致武器卸下后重新上modifier。（不得modifier之间循环调用；A添加B，B添加A需要避免）
+//3、武器技能cd用EquipAffixStart和ByEquipAffixReady管理。圣遗物套不记录cd。
+//4、实在难以移除的modifier可以在ability的onRemoved中移除。
+
+
+//cd检测中
+
+///////////////////////////////////////////////////////////////
+//
+//  测试用
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSwirlFireDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSwirlFireDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSwirlFireDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSwirlFireDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSwirlIceDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSwirlIceDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSwirlIceDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSwirlIceDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSwirlWaterDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSwirlWaterDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSwirlWaterDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSwirlWaterDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSwirlElectricDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSwirlElectricDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSwirlElectricDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSwirlElectricDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSConductDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSConductDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSConductDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSConductDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactExplodeDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactExplodeDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactExplodeDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactExplodeDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactElectricDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactElectricDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactElectricDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactElectricDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemMasteryDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemMasteryDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemMasteryDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta":100,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactBurnDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactBurnDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactBurnDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactBurnDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactFreezeDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactFreezeDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactFreezeDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactFreezeDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactSteamDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactSteamDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactSteamDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSteamDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Test_Actor_ElemReactMeltDelta",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Test_Actor_ElemReactMeltDelta",
+				},
+			],
+			"modifiers":
+			{
+				"Test_Actor_ElemReactMeltDelta":
+				{
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactMeltDelta":1,
+					},
+				},
+			},
+		}
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  废弃
+//
+//  对血量高于self的敌人暴击率提高30%，对血量低于self的敌人暴击伤害提升30%
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_CompareHPEnhanceCrit",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_CompareHPEnhanceCrit"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_CompareHPEnhanceCrit":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCritical":"%Crit",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByCompareWithTarget",//注意次序，是self和target比。此处是敌方血量高于我方。
+									"target":"Target",
+									// "useOwner":true,  //角色的owner不是角色。所以挂给角色的时候绝对不能true，
+									"property":"HPRatio",
+									"logic":"LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"bonusCriticalHurt":"%CritHurt",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByCompareWithTarget",
+									"target":"Target",
+									// "useOwner":true,  //角色的owner不是角色。所以挂给角色的时候绝对不能true，
+									"property":"HPRatio",
+									"logic":"Greater",
+								},
+							],
+						},
+					],
+					/*"onAttackLanded":
+					[
+						{
+							"$type":"FireEffect",
+							"target":"Target",
+							"effectPattern":"Eff_Weapon_MusicBlast",
+							"predicates":
+							[
+								{
+									"$type":"ByCompareWithTarget",
+									"target":"Target",
+									"useOwner":true,
+									"property":"HPRatio",
+									"logic":"Lesser",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"target":"Target",
+							"effectPattern":"Eff_Weapon_Blast_R30",
+							"predicates":
+							[
+								{
+									"$type":"ByCompareWithTarget",
+									"target":"Target",
+									"useOwner":true,
+									"property":"HPRatio",
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},//这个判定确定是ok的。
+					],*/
+				},
+			},
+			"abilitySpecials":
+			{
+				"Crit":0,
+				"CritHurt":0,
+			},
+		},
+	},
+
+
+///////////////////////////////////////////////////////////////
+//
+//  旧 征服寒冬勇者  （不在使用）
+//  
+//  对受到寒冷、冻结效果影响的敌人，造成的伤害提升35%
+//
+///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_DamageUpAgainstIceAndFrozen",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_DamageUpAgainstIceAndFrozen_Handler",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_DamageUpAgainstIceAndFrozen_Handler":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "damagePercentageRatio": "%Rate",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+                                            "element": "Ice",
+                                        },
+										 {
+                                            "$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+                                            "element": "Frozen",
+                                        },
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "Rate": 0,
+            },
+        },
+    },
+
+
+
+]

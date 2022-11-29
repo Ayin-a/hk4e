@@ -1,0 +1,479 @@
+[
+//////////////////////////////////////////////////////////////////////////
+//
+//风花节 地城 无敌
+//
+/////////////////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "SceneObj_Dynamic_WindFlora_Wudi",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Wudi",
+			},
+		],
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachModifierToPredicateMixin",
+				"modifierName":"CommonFlora_ServerLuaCall",
+				"predicates":
+				[
+					{
+						"$type" : "ByTargetGlobalValue",
+						"target":"Self",
+						"key":"_GET_COMMONFLORA",
+						"value":1,
+						"compareType":"Equal",
+					},
+				],
+			}
+		],
+		"modifiers":
+		{
+			"Wudi":
+			{
+				"state": "LockHP",
+				"properties":
+				{
+					"Actor_FallingDamageRatio": -1,
+				},
+			},
+			"empty":
+			{},
+			"CommonFlora_ServerLuaCall":
+			{
+				"duration": 0.5,
+				"stacking": "Multiple",
+				"onAdded":
+				[
+					{
+						"$type": "ServerLuaCall",
+						"target": "Self",
+						"luaCallType": "SpecificGroup",
+						"CallParamList":[235800001],
+						"funcName": "AddWindFloraScore",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_GET_COMMONFLORA",
+						"value": 0,
+					},
+				]
+			},
+		},
+	},
+},
+//////////////////////////////////////////////////////////////////////////
+//
+//风花节射气球
+//
+//////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Dynamic_WindFlora_ShootBalloon",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "BallonTypeController",
+				},
+			],
+			"modifiers":
+			{
+
+
+				"BallonTypeController":
+				{
+					"onAttackLanded":
+					[
+						//高分气球
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "HighCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_HIGHBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+							],	
+						},
+						//低分气球
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "LowCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_LOWBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+							],	
+						},
+						//惩罚气球
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "SubCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_SUBBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+							],	
+						},
+						//爆炸气球
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "BombBalloonSeeker",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_BOMBBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+							],	
+						},
+					],
+				},
+
+				"BombBalloonSeeker":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",//被玩家打死时炸周围靶子
+							"modifierName": "FindBalloon",	
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR5H10",			//5x5
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",		//选周围盟友,打死
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								//{
+									//"$type": "ByEntityTypes",
+								//	"entityTypes": ["Monster"],
+								//},
+								{
+				                 	"$type": "ByTargetGlobalValue",	//目标有标记值才杀
+				                 	"key": "Balloon03_TargetFlag",
+				                 	"value": 1,
+				                 	"compareType": "Equal",
+				                },
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Ballon_03_Shoot",  //B.被击杀死亡临时特效
+						},	
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+
+				"FindBalloon":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Ballon_03_Shoot",  //B.被击杀死亡临时特效(被波及的)
+						},	
+						//高分气球
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "HighCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_HIGHBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],	
+						},
+						//低分气球
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "LowCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_LOWBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],	
+						},
+						//惩罚气球
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "SubCall",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_SUBBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],	
+						},
+						//爆炸气球
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "BombBalloonSeeker",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IS_BOMBBALLOON",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],	
+						},					
+						{
+							"$type": "KillSelf",  //受爆炸靶子波及,卒
+						},							
+					],
+				},
+
+				"HighCall":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ServerLuaCall",
+							"isTarget": true,
+							"target": "Caster",
+							"luaCallType": "CurGalleryControlGroup",
+							"funcName": "ShootBalloonHighScore",
+						},
+						{
+							"$type": "KillSelf",  
+						},
+					],
+				},
+
+				"LowCall":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ServerLuaCall",
+							"isTarget": true,
+							"target": "Caster",
+							"luaCallType": "CurGalleryControlGroup",
+							"funcName": "ShootBalloonLowScore",
+						},
+						{
+							"$type": "KillSelf",  
+						},
+					],
+				},
+
+				"SubCall":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ServerLuaCall",
+							"isTarget": true,
+							"target": "Caster",
+							"luaCallType": "CurGalleryControlGroup",
+							"funcName": "ShootBalloonSubScore",
+						},
+						{
+							"$type": "KillSelf",  
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////
+//
+//风花节记忆地板
+//
+/////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Dynamic_WindFlora_RecordFloorMemory",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Wudi",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToPredicateMixin",
+					"modifierName":"CommonFlora_ServerLuaCall",
+					"predicates":
+					[
+						{
+							"$type" : "ByTargetGlobalValue",
+							"target":"Self",
+							"key":"_GET_COMMONFLORA",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+				}
+			],
+			"onTriggerAvatarRay":
+			[
+				{
+					"$type": "DebugLog",
+					"content": "!!!!!!!!!!PLAYER RAY TRIGGERED!!!!!!!!!!",
+					"doOffStage": true,
+				},
+				{
+					"$type" : "Predicated",
+					"target" : "Target",
+					"targetPredicates" :
+					[
+						{
+							"$type": "ByTargetGadgetState",
+							"target": "Target",
+							"gadgetState": 201,
+						},
+					],
+					"successActions" :
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key" : "_HaveDisappear",
+							"target": "Target",
+							"value": 0,
+						},
+						{
+							"$type": "ExecuteGadgetLua",//201：切202
+							"target": "Target",
+							"param1": 202,
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "CALLSERVERLUA"
+						},
+					],
+				},
+				{
+					"$type": "ExecuteGadgetLua",//903：切902
+					"target": "Target",
+					"param1": 902,
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGadgetState",
+							"target": "Target",
+							"gadgetState": 903,
+						},
+					],
+				},	
+			],
+			"modifiers":
+			{
+				"Wudi":
+				{
+					"state": "LockHP",
+					"properties":
+					{
+						"Actor_FallingDamageRatio": -1,
+					},
+				},
+
+				"CALLSERVERLUA":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ServerLuaCall",
+							"target": "Team",
+							"isTarget": true,
+							"luaCallType": "SpecificGroup",
+							"CallParamList":[235800003],
+							"funcName": "OnEnterWrongFloor",
+						},
+					],
+				},
+
+				"CommonFlora_ServerLuaCall":
+				{
+					"duration": 0.5,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "ServerLuaCall",
+							"target": "Self",
+							"luaCallType": "SpecificGroup",
+							"CallParamList":[235800001],
+							"funcName": "AddWindFloraScore",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_GET_COMMONFLORA",
+							"value": 0,
+						},
+					]
+				},
+			},
+		},
+	},
+]

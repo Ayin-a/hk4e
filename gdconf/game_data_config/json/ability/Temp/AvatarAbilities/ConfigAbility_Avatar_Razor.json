@@ -1,0 +1,3847 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Razor_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10201,
+					"chargeTime": 0.25,
+					"secondChargeTime":"%Max_Dura",
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+						{//由于在chargeStateIDs外也会积累charge，导致触发releaseCharge里的EndholdTrigger，所以蓄力时先初始化一下。
+							"$type":"ResetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"SetTrigger",
+						},
+					],
+					"OnReleaseUncharged":
+					[
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",//原本会判断是否在大招中，现改用transation中IsLycan浮点数进行控制了。
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+						{
+							"$type":"ApplyModifier",  //因为在第二击进入时可能已经松开按键了，导致EndHoldTrigger被干掉。所以设置了一个modifier保持这个trigger1秒，transation一般都小于一秒，就没问题了。
+							"modifierName":"SetTrigger",
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+					],
+					"chargeStateIDs": ["Attack01_BS","Attack01","Attack02","Attack03","Attack04","ExtraAttack","ExtraAttack1"],
+				},
+				{
+					"$type":"AvatarSteerByCameraMixin",
+					"stateIDs": [ "ExtraAttack1"],
+					"angularSpeed" : 360,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ExtraAttack1"],
+					"modifierName":"Cost"
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ExtraAttack","ExtraAttack1","ExtraAttack2","ExtraAttack3"],//,"ExtraAttack3"
+					"modifierName":"Camera"
+				},
+			],
+			"modifiers":
+			{
+				"SetTrigger":
+				{
+					"duration":1,
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"EndHoldTrigger",
+						},
+					],
+				},
+				"Camera":
+				{
+					"onRemoved":
+					[
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+					],
+				},
+				"Cost":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "CostStaminaMixin",
+							"costStaminaDelta": "%ExtraAttack_Claymore_Stamina_Cost",
+							"onStaminaEmpty":
+							[
+								{
+									"$type" : "SetAnimatorTrigger",
+									"triggerID" : "EndHoldTrigger",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Claymore_Stamina_Cost":0,//大剑目前没做服务器误差，先体验看看。有问题就加。
+				"Max_Dura":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Razor Ultimate Adapter
+//  这个Ability决定了雷泽在大招状态下，切换对应的小技能和表演特效。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_General_Handler",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_LycanMode_Flag",
+					"valueSteps" : [-1, 0.5, 1.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["LycanMode_Blank", "LycanMode_Adapter"],
+				},
+			],
+			"onAdded" :
+			[
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_LycanMode_Flag",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 0,
+				},
+			],
+			"modifiers" :
+			{
+				"LycanMode_Blank" :
+				{
+					"stacking" : "Refresh",
+//这个人很懒，什么都没有留下。
+				},
+				"LycanMode_Adapter" :
+				{
+					"modifierMixins" :
+					[
+						{
+							"$type" : "ReplaceEventPatternMixin",
+							"oldPatterns" : ["Razor_Attack01","Razor_Attack02","Razor_Attack03","Razor_Attack04","Razor_ClawMark_Click","Audio_Boy_Razor_ClawMark_Charge"],
+							"newPatterns" : ["Razor_Attack01_LycanMode","Razor_Attack02_LycanMode","Razor_Attack03_LycanMode","Razor_Attack04_LycanMode","Razor_ClawMark_Click_Lycan","Audio_Boy_Razor_ClawMark_LycanMode_Charge"],
+						},
+//音效用EventPattern替换模块
+//在大招模式下，将状态机中预置好触发的EventPattern，替换为“newPatterns”里对应的EventPattern。
+//这样可以在不增加状态机复杂度的前提下，在大招模式中播出替换的对应音效
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  ClawMark
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_ClawMark_Main",
+			"abilityMixins":
+			[
+				{
+					"$type": "SkillButtonHoldChargeMixin",
+					"skillID": 10202,
+					"beforeStateIDs" : ["Razor_ClawMark_BS"],
+					"chargeLoopStateIDs" : ["Razor_ClawMark_Charge", "Razor_ClawMark_Burst"],
+					"chargeLoopDurations" : [ 0.05, ],
+					"nextLoopTriggerID" : "NextLoopTrigger",
+					"endHoldTrigger" : "EndHoldTrigger",
+				},
+			],
+		},
+	},
+//点按时普通攻击。
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_ClawMark_Click",
+			"abilityMixins":
+			[
+/*				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Click",],
+					"modifierName": "ClawMark_WeaponFade",
+				},*/
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Click",],
+					"modifierName": "ClawMark_Hand",
+				},
+			],
+			"onAbilityStart" :
+			[
+				//起初鬼爪一闪
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+			      		    "height": 1.6,
+			    		    "fanAngle": 240.0,
+			   			    "radius": 2.4,
+/*			          		"detectDirection": "Clockwise",*/
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 1.0,
+								},
+							},
+			        	},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%ClawMark_Damage",
+								"strikeType": "Slash",
+								"elementType": "Electric",
+								"elementDurability": 50,
+								"elementRank":1.5,
+								"enBreak": 140,
+								"attackType":"Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"reboundRatio": 0,
+								"canBeDefenceHalt":true,
+								"hitHaltTime": 0.1,
+								"hitHaltTimeScale": 0.03,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.6,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+				        	},
+						},
+					},
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_LycanMode_Flag",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+			      		    "height": 1.6,
+			    		    "fanAngle": 240.0,
+			   			    "radius": 3.0,
+/*			          		"detectDirection": "Clockwise",*/
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 1.0,
+								},
+							},
+			        	},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%ClawMark_Damage",
+								"strikeType": "Slash",
+								"elementType": "Electric",
+								"elementDurability": 50,
+								"elementRank":1.5,
+								"enBreak": 140,
+								"attackType":"Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"reboundRatio": 0,
+								"canBeDefenceHalt":true,
+								"hitHaltTime": 0.1,
+								"hitHaltTimeScale": 0.03,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.6,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+				        	},
+						},
+					},
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_LycanMode_Flag",
+							"forceByCaster": true,
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID" : 10202,
+					"cdRatio" : 1.0,
+				},
+			],
+			"modifiers" :
+			{
+				"ClawMark_WeaponFade" :
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01"],
+						},
+					],
+				},
+				"ClawMark_Hand" :
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Hand",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ClawMark_Damage": 0,
+			},
+		},
+	},
+//攻击的时候，判定给自己加个标记。
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_ClawMark_SetMark",
+			"onAdded" :
+			[
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_ClawMark_Count",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ClawMark_SetMark_ChargedBlade",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ClawMark_SetMark_Elemental_Art",
+				},
+			],
+			"abilityMixins" :
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_ClawMark_Count",
+					"valueSteps" : [-1, 0.5, 1.5, 2.5, 3.5, 4.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["ClawMark_Blank", "ClawMark_Mark_1", "ClawMark_Mark_2", "ClawMark_Mark_3", "ClawMark_Mark_4"],
+				},
+				// {
+				// 	"$type": "AttachToStateIDMixin",//放小技能时如果提前打断会导致跑不到onAttackLanded
+				// 	"stateIDs": ["Razor_ClawMark_Click","Razor_ClawMark_Click_Lycan",],
+				// 	"modifierName": "ClawMark_SetMark_Elemental_Art",
+				// },
+			],
+			//其后狼魂得彰
+			"modifiers" :
+			{
+				"ClawMark_SetMark_Elemental_Art" :
+				{
+					"onAttackLanded" :
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art",],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type":"ByHitStrikeType",//区分此次攻击是否是单点
+									"strikeType":"Slash",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "ClawMark_Mark_Add",
+									"target" : "Caster",
+								},
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "ClawMark_Click_DropBall_Base",
+									"target" : "Caster",
+									"predicates":
+									[
+										{
+											"$type" : "ByNot",
+											"predicates" :
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "_ABILITY_LycanMode_Flag",
+													"forceByCaster": true,
+													"value": 1,
+													"compareType": "Equal",
+												},
+											],
+										},
+									],
+								},
+								{
+									"$type" : "RemoveUniqueModifier",
+									"modifierName" : "UNIQUE_ElectrifiedScar_ArmorDown",
+									"target" : "Target",
+									"predicates" :
+									[
+										{
+											"$type" : "ByUnlockTalentParam",
+											"talentParam" : "Razor_ElectrifiedScar",
+										},
+									],
+								},
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "UNIQUE_ElectrifiedScar_ArmorDown",
+									"target" : "Target",
+									"predicates" :
+									[
+										{
+											"$type" : "ByUnlockTalentParam",
+											"talentParam" : "Razor_ElectrifiedScar",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"ClawMark_SetMark_ChargedBlade" :
+				{
+					"onAttackLanded" :
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["ChargedBlade",],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_LycanMode_Flag",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "ClawMark_ChargedBlade_Mark_Add",
+									"target" : "Caster",
+								},
+							],
+						},
+					],
+				},
+				"ClawMark_Mark_Add":
+				{
+					"duration" : 1.0,
+					"stacking" : "Unique",
+					"onAdded" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "UNIQUE_ClawMark_Mark_Count",
+						},
+					],
+				},
+				"ClawMark_ChargedBlade_Mark_Add":
+				{
+					"duration" : 1.0,
+					"stacking" : "Unique",
+					"onAdded" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "UNIQUE_ClawMark_Mark_Count",
+						},
+					],
+				},
+				"UNIQUE_ClawMark_Mark_Count":
+				{
+					"duration" : 18.0,
+					"isUnique" : true,
+					"stacking" : "MultipleAllRefresh",
+					"stackingOption" :
+					{
+						"maxModifierNumForMultipleType" : 3,
+					},
+					"onAdded" :
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"doOffStage" : true,
+							"key" : "_ABILITY_ClawMark_Count",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : "%ClawMark_MaxCount",
+							"minValue" : 0,
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"doOffStage" : true,
+							"key" : "_ABILITY_ClawMark_Count",
+							"value" : -1,
+							"useLimitRange" : true,
+							"maxValue" : "%ClawMark_MaxCount",
+							"minValue" : 0,
+						},
+					],
+				},
+				"ClawMark_Click_DropBall_Base":
+				{
+					"duration": 1.0,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2020,
+							"baseEnergy": 9,
+							"ratio": "%GetElementRatio",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 1.0,
+								},
+							},
+						},
+					],
+				},
+				"ClawMark_Blank":
+				{
+//这个人很懒，什么都没有留下
+				},
+				"ClawMark_Mark_1":
+				{
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_1",
+						},
+					],
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%ClawMark_EfficiencyDelta_1",
+					},
+				},
+				"ClawMark_Mark_2":
+				{
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_1",
+						},
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_2",
+						},
+					],
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%ClawMark_EfficiencyDelta_2",
+					},
+				},
+				"ClawMark_Mark_3":
+				{
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_1",
+						},
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_2",
+						},
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Sign_3",
+						},
+					],
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%ClawMark_EfficiencyDelta_3",
+					},
+				},
+				"ClawMark_Mark_4":
+				{
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Mark_3",
+						},
+					],
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%ClawMark_EfficiencyDelta_4",
+					},
+				},
+				"UNIQUE_ElectrifiedScar_ArmorDown" :
+				{
+					"isLimitedProperties": true,
+					"isUnique" : true,
+					"stacking" : "Refresh",
+					"duration" : 7.0,
+					"properties" :
+					{
+						"Actor_DefenceRatio" : "%ElectrifiedScar_ArmorDown",
+					},
+					// "onAdded" :
+					// [
+					// 	{
+					// 		"$type" : "AttachEffect",
+					// 		"effectPattern" : "Eff_Common_DefenseFall",
+					// 	},
+					// ],
+					"state":"DefenseDown",
+				},
+			},
+			"abilitySpecials":
+			{
+				"ClawMark_MaxCount" : 3,
+				"GetElementRatio" : 1.0,
+				"ClawMark_EfficiencyDelta_1" : 0.2,
+				"ClawMark_EfficiencyDelta_2" : 0.4,
+				"ClawMark_EfficiencyDelta_3" : 0.6,
+				"ClawMark_EfficiencyDelta_4" : 0.8,
+				"ElectrifiedScar_ArmorDown" : -0.15,
+			},
+		},
+	},
+//长按时，改变天气
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_ClawMark_Charging",
+			"abilityMixins" :
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Charge", "Razor_ClawMark_Burst","Razor_ClawMark_Burst_AS"],
+					"modifierName": "ClawMark_Weather_Flag",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Charge", "Razor_ClawMark_Burst"],
+					"modifierName": "ClawMark_Charging_Material_Flag",
+				},
+			],
+//解释一下为什么不直接用AttachToStateIDMixin
+//因为正常技能流程下，天气不是在ClawMark_AS这个状态【进入】时，而是它的【中途】褪去的，因此需要将这个变天的Modifier设成Unique，然后使用另一个技能触发来除去它
+//而写在这里的这个Flag，仅仅是为了在异常状况下，及时地去除这个变天的Modifier。
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_ClawMark_Weather_Controller",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_ClawMark_Charging_Material",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ClawMark_Weather_Controller":
+				{
+					"duration": 5,
+					"isUnique" : true,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Lisa_ThunderFall",
+							"transDuration" : 0.5,
+							"duration" : 5,
+						},
+					],
+				},
+				"ClawMark_Weather_Flag":
+				{
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_ClawMark_Weather_Controller",
+						},
+					],
+				},
+				"ClawMark_Charging_Material_Flag":
+				{
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_ClawMark_Charging_Material",
+						},
+					],
+				},
+				"UNIQUE_ClawMark_Charging_Material":
+				{
+					"isUnique": true,
+					"duration": 10.0,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Charge",
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Razor_ClawMark_Weather_Remove",
+			"onAbilityStart":
+			[
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_ClawMark_Weather_Controller",
+				},
+			],
+			"modifiers":
+			{
+/*				"UNIQUE_ClawMark_Weather_Controller":
+				{
+					"duration": 5,
+					"isUnique" : true,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Lisa_ThunderFall",
+							"transDuration" : 0.5,
+							"duration" : 5,
+						},
+					],
+				},*/
+			},
+		},
+	},
+//长按结束后，以自身为中心引发爆炸
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_ClawMark_Burst",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"ClawMark_Burst_DropBall_Handler",
+				},
+			],
+			// "abilityMixins":
+			// [
+			// 	{
+			// 		"$type": "AttachToStateIDMixin",//小技能长按提前打断会导致跑不到onAttackLanded
+			// 		"stateIDs": ["Razor_ClawMark_Burst"],
+			// 		"modifierName": "ClawMark_Burst_DropBall_Handler",
+			// 	},
+			// ],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "RemoveUniqueModifier",
+					"modifierName" : "UNIQUE_ClawMark_Charging_Material",
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Charge_Disappear",
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 5.0,
+						},
+						"attackInfo":
+						{
+							"attackTag" : "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%ExplodeDamage",
+								"strikeType": "Blunt",
+								"elementType": "Electric",
+								"elementDurability": 50,
+								"elementRank": 1.5,
+								"enBreak": 300,
+								"attackType":"Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV5",
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.6,
+								"shakeTime": 0.36,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+					},
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"forceByCaster": true,
+							"key": "_ABILITY_LycanMode_Flag",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 5.0,
+						},
+						"attackInfo":
+						{
+							"attackTag" : "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%ExplodeDamage",
+								"strikeType": "Blunt",
+								"elementType": "Electric",
+								"elementDurability": 50,
+								"elementRank": 1.5,
+								"enBreak": 300,
+								"attackType":"Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.6,
+								"shakeTime": 0.36,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+					},
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"forceByCaster": true,
+							"key": "_ABILITY_LycanMode_Flag",
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+				},
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID" : 10202,
+					"cdRatio" : 1.68,
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Explode",
+					"born":
+					{
+						"$type":"ConfigBornByTarget",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":0,
+						},
+						"onGround":true,
+						"alongGround":true,
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByNot",
+							"predicates" :
+							[
+								{
+									"$type" : "ByTargetGlobalValue",
+									"forceByCaster" : true,
+									"key": "_ABILITY_LycanMode_Flag",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Explode_Lycan",
+					"born":
+					{
+						"$type":"ConfigBornByTarget",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":0,
+						},
+						"onGround":true,
+						"alongGround":true,
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByTargetGlobalValue",
+							"forceByCaster" : true,
+							"key": "_ABILITY_LycanMode_Flag",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "TriggerAbility",
+					"abilityName": "Avatar_Razor_ClawMark_EnergyRegain",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"ClawMark_Burst_DropBall_Handler" :
+				{
+					"onAttackLanded" :
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art",],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type":"ByHitStrikeType",//区分此次攻击是否是长按
+									"strikeType":"Blunt",
+								},
+								{
+				                 	"$type": "ByTargetGlobalValue",
+				                 	"key": "_ANIMAL_ENTITY_TYPE",
+				                 	"value": 0,
+				                 	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "ClawMark_Burst_DropBall_Base",
+									"predicates":
+									[
+										{
+											"$type" : "ByNot",
+											"predicates" :
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"key": "_ABILITY_LycanMode_Flag",
+													"forceByCaster": true,
+													"value": 1,
+													"compareType": "Equal",
+												},
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"ClawMark_Burst_DropBall_Base":
+				{
+					"duration": 1.0,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2020,
+							"baseEnergy": 12,
+							"ratio": "%GetElementRatio",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 1.0,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExplodeDamage" : 0,
+				"GetElementRatio" : 1.0,
+				"ClawMark_MaxCount" : 3,
+				"ClawMark_Burst_EnergyRegain" : 0,
+				"ClawMark_Burst_EnergyRegain_Factor" : 5,
+			},
+		},
+	},
+//ClawMark Handler
+//Public for Elemental Art & Burst
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Razor_ClawMark_EnergyRegain",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "ClawMark_Burst_EnergyRegain_1",
+					"target" : "Self",
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_ClawMark_Count",
+							"value": 1,
+							"forceByCaster": true,
+							"compareType": "MoreThanAndEqual",
+						},
+					],
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "ClawMark_Burst_EnergyRegain_2",
+					"target" : "Self",
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_ClawMark_Count",
+							"value": 2,
+							"forceByCaster": true,
+							"compareType": "MoreThanAndEqual",
+						},
+					],
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "ClawMark_Burst_EnergyRegain_3",
+					"target" : "Self",
+					"predicates" :
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_ClawMark_Count",
+							"value": 3,
+							"forceByCaster": true,
+							"compareType": "MoreThanAndEqual",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"ClawMark_Burst_EnergyRegain_1":
+				{
+					"duration" : 0.6,
+					"modifierMixins":
+					[
+					],
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":5,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_ClawMark_Mark_Count",
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Restore_1",
+						},
+					],
+				},
+				"ClawMark_Burst_EnergyRegain_2":
+				{
+					"duration" : 0.6,
+					"modifierMixins":
+					[
+					],
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":5,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_ClawMark_Mark_Count",
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Restore_2",
+						},
+					],
+				},
+				"ClawMark_Burst_EnergyRegain_3":
+				{
+					"duration" : 0.6,
+					"modifierMixins":
+					[
+					],
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":5,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_ClawMark_Mark_Count",
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ClawMark_Restore_3",
+						},
+					],
+				},
+			},
+		},
+	},
+//大招的基本ability
+//注意核心是对LycanMode_Timer的挂载与卸除，几乎所有的核心功能都依赖于这个Modifier
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_LycanMode",
+			"abilityMixins" :
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01_Lycan"],
+					"damagePercentage": "%NormalAttack_01_DamagePercentage*%LycanMode_LycanAttackFactor",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02_Lycan"],
+					"damagePercentage": "%NormalAttack_02_DamagePercentage*%LycanMode_LycanAttackFactor",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03_Lycan"],
+					"damagePercentage": "%NormalAttack_03_DamagePercentage*%LycanMode_LycanAttackFactor",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04_Lycan"],
+					"damagePercentage": "%NormalAttack_04_DamagePercentage*%LycanMode_LycanAttackFactor",
+				},
+			],
+			"onAbilityStart" :
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 5.0,
+						},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%LycanMode_BlastDamage",
+								"strikeType": "Blunt",
+								"elementType": "Electric",
+								"elementDurability": 50,
+								"elementRank": 3,
+								"enBreak": 51.75,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"canBeDefenceHalt": false,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.6,
+								"shakeTime": 0.36,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+					},
+				},
+				{
+					"$type" : "ActCameraRadialBlur",
+					"cameraRadialBlur" :
+					{
+						"power": 1,
+						"blurTime": 0.4,
+						"fadeTime": 0.2,
+					},
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ThunderFang_Blast",
+				},
+				{
+					"$type": "TriggerAbility",
+					"abilityName": "Avatar_Razor_ClawMark_EnergyRegain",
+					"target": "Self",
+				},
+				{
+					"$type" : "ModifyAvatarSkillCD",
+					"skillID" : 10202,
+					"target" : "Self",
+					"cdRatio" : -1,
+					"predicates" :
+					[
+						{
+							"$type" : "ByUnlockTalentParam",
+							"talentParam" : "Razor_CombatReadiness",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"LycanMode_BlastDamage": 0,
+				"NormalAttack_01_DamagePercentage": 0,
+				"NormalAttack_02_DamagePercentage": 0,
+				"NormalAttack_03_DamagePercentage": 0,
+				"NormalAttack_04_DamagePercentage": 0,
+				"LycanMode_LycanAttackFactor": 0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+//我是一只狼（舔）
+			"abilityName" : "Avatar_Razor_LycanMode_LycanSimulator",
+			"onAbilityStart" :
+			[
+/*				{
+					"doOffStage" : true,
+					"$type" : "AvatarCameraParam",
+					"lockParam" : false,
+					"cameraParam" :
+					{
+						"forceRadius" : 0.0,
+					},
+				},
+				{
+					"$type" : "AvatarCameraParam",
+					"lockParam" : true,
+					"cameraParam" :
+					{
+						"forceRadius" : 6.0,
+						"forceRadiusDuration" : 0,
+					},
+				},*/
+				{
+					"$type" : "RemoveUniqueModifier",
+					"modifierName" : "UNIQUE_LycanMode_LycanMaterial",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"doOffStage" : true,
+					"modifierName" : "UNIQUE_LycanMode_LycanMaterial",
+				},
+				{
+					"$type" : "SendEffectTrigger",
+					"parameter" : "Start",
+					"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+				},
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_LycanMode_Flag",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 0,
+				},
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_LycanMode_Energy_FeedBack",
+					"value" : 5,
+					"useLimitRange" : true,
+					"maxValue" : 5,
+					"minValue" : 0,
+				},
+/*				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "UNIQUE_LycanMode_Weather_Controller",
+				},*/
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "LycanMode_Electrified",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "LycanMode_Timer",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "LycanMode_Leave",
+				},
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID" : 10203,
+					"cdRatio" : 1.0,
+				},
+			],
+			"abilityMixins" :
+			[
+				// {
+				// 	"$type": "AttachToStateIDMixin",
+				// 	"stateIDs": ["Attack01_BS"],
+				// 	"modifierName": "LycanSimulator_Attack01",
+				// },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_LycanMode"],
+					"modifierName": "LycanMode_Camera_Protection_Ghost",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_LycanMode"],
+					"modifierName": "LycanMode_Camera_Protection_Invincible",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_LycanMode"],
+					"modifierName": "LycanMode_Camera_Remover",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_LycanMode","Razor_LycanMode_AS"],
+					"modifierName": "LycanMode_EmoSync_Controller",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack01_BS",
+					"normalizeStart":0.5,
+					"modifierName":"LycanSimulator_Attack01_BS",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Attack02"],
+					"modifierName": "LycanSimulator_Attack02",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Attack03"],
+					"modifierName": "LycanSimulator_Attack03",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Attack04"],
+					"modifierName": "LycanSimulator_Attack04",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "LycanSimulator_ExtraAttack",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Click_Lycan"],
+					"modifierName": "LycanSimulator_ClawMark_Click",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_LycanMode_Flag",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_BS"],
+					"modifierName": "LycanSimulator_ClawMark_BS",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_LycanMode_Flag",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Charge"],
+					"modifierName": "LycanSimulator_ClawMark_Charge",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Razor_ClawMark_Burst"],
+					"modifierName": "LycanSimulator_ClawMark_Burst",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["WalkToRun","Walk","RunToWalk","Run","RunningTurn","SprintToRun","FallToGroundRun","FallToGroundRunHard","FallToGroundSprint","Sprint","SprintBS",],
+					"modifierName": "LycanSimulator_Move",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Jump","JumpWeapon"],
+					"modifierName": "LycanSimulator_Move",
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Razor_LycanMode",
+					"modifierName" : "UNIQUE_LycanMode_Weather_Controller",
+					"target" : "Self",
+					"normalizeStart" : 0.465,
+					"normalizeEnd" : 0.67,
+				},
+			],
+			"modifiers":
+			{
+				"LycanMode_Camera_Protection_Ghost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"LycanMode_Camera_Protection_Invincible":
+				{
+					"state": "Invincible",
+				},
+				"LycanMode_EmoSync_Controller":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEmoSync" : false,
+							"toggleEyeKey" : false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEmoSync" : true,
+							"toggleEyeKey" : true,
+						},
+					],
+				},
+				"LycanMode_Electrified":
+				{
+					"isLimitedProperties" : true,
+					"thinkInterval" : 2.0,
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "LycanMode_Electric_Buff",
+							"target" : "Self",
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta" : 0.5,
+						"Actor_ElecSubHurtDelta" : 0.8,
+
+					},
+					"modifierMixins":
+					[
+						{
+							"$type" : "RejectAttackMixin",
+							"attackTag" : "ShockDamage",
+							"limitTime" : 0,
+							"type" : "RejectAll",
+						},
+					],
+				},
+				"LycanMode_Electric_Buff":
+				{
+					"stacking" : "Refresh",
+					"state" : "ElementElectric",
+					"duration" : 2.1,
+					"elementType" : "Electric",
+					"elementDurability" : 25,
+/*					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ThunderFang_Electrified",
+						},
+					],*/
+				},
+				"UNIQUE_LycanMode_Weather_Controller":
+				{
+					"duration": 0.5,
+					"isUnique" : true,
+					"stacking" : "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Razor_LycanMode",
+							"transDuration" : 0.1,
+							"duration" : 0.5,
+						},
+					],
+				},
+				"LycanMode_Camera_Remover":
+				{
+					"onRemoved":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AvatarCameraParam",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 6.0,
+								"forceRadiusDuration" : 0,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+					],
+				},
+//时间结束的时候取消状态
+//此外，这个Timer同时也提供异常退出时返还能量的凭据
+				"LycanMode_Timer":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Attack01_BS","Attack01","Attack02","Attack03","Attack04","ExtraAttack","ExtraAttack_AS"],
+							"modifierName": "LycanMode_Accelerate",
+							"predicates":
+							[
+								{
+									"$type" : "ByTargetGlobalValue",
+									"forceByCaster" : true,
+									"key": "_ABILITY_LycanMode_Flag",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+					"duration" : "%LycanMode_Time",
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "CanSpecialPerform",
+							"value": false,
+						},
+/*						{
+							"$type": "AttachModifier",
+							"modifierName": "LycanMode_Timer_ExtraattackBanner",
+						},*/
+						{
+							"doOffStage" : true,
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsLycan",
+							"value" : 1,
+						},
+					],
+					"thinkInterval" : 3.0,
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_LycanMode_Energy_FeedBack",
+							"value" : -1,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"doOffStage" : true,
+							"key" : "_ABILITY_LycanMode_Flag",
+							"value" : -5,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,
+						},
+						{
+							"$type" : "ApplyModifier",
+							"doOffStage" : true,
+							"modifierName" : "LycanMode_LycanMaterial_Remover",
+						},
+						{
+							"$type" : "RemoveModifier",
+							"doOffStage" : true,
+							"modifierName" : "LycanMode_Electrified",
+						},
+						{
+							"$type" : "ApplyModifier",
+							"doOffStage" : true,
+							"modifierName" : "LycanMode_Energy_FeedBack",
+						},
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "LycanMode_LycanMaterial_Dissipate",
+						},
+						{
+							"doOffStage": true,
+							"$type": "SetAnimatorBool",
+							"boolID": "CanSpecialPerform",
+							"value": true,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsLycan",
+							"value" : 0,
+						},
+					],
+				},
+				"LycanMode_LycanMaterial_Dissipate":
+				{
+					"duration" : 2.5,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_ThunderFang_Dissipate",
+						},
+					],
+				},
+//换人、死亡的时候也取消该状态
+				"LycanMode_Leave":
+				{
+					"onAvatarOut":
+					[
+						{
+							"$type" : "RemoveModifier",
+							"doOffStage" : true,
+							"modifierName" : "LycanMode_Timer",
+						},
+						{
+							"$type" : "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName" : "UNIQUE_LycanMode_LycanMaterial",
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type" : "RemoveModifier",
+							"doOffStage" : true,
+							"modifierName" : "LycanMode_Timer",
+						},
+					],
+				},
+				"LycanMode_Accelerate":
+				{
+					"isLimitedProperties" : true,
+					"properties":
+					{
+						"Animator_AttackSpeedRatio" : "%LycanMode_Accelerate_SpeedRatio",
+					}
+				},
+				"LycanMode_Energy_FeedBack":
+				{
+					"duration" : 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"doOffStage": true,
+							"globalValueKey": "_ABILITY_LycanMode_Energy_FeedBack",
+							"overrideMapKey": "Energy_FeedBack_Level",
+							"isFromOwner": false,
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"doOffStage": true,
+							"modifierName": "LycanMode_Energy_Regain",
+						},
+					],
+				},
+				"LycanMode_Energy_Regain":
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":"%Energy_FeedBack_Level*2",
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+				},
+				"LycanMode_LycanMaterial_Remover":
+				{
+					"duration" : 1.2,
+					"onAdded":
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Fade",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+/*						{
+							"doOffStage" : true,
+							"$type" : "AvatarCameraParam",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 0.0,
+							},
+						},*/
+					],
+//万一玩家就是能量很多，连续放了大招，不应该莫名其妙移除了狼
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName" : "UNIQUE_LycanMode_LycanMaterial",
+							"predicates":
+							[
+								{
+									"$type" : "ByNot",
+									"predicates" :
+									[
+										{
+											"$type" : "ByTargetGlobalValue",
+											"forceByCaster" : true,
+											"key": "_ABILITY_LycanMode_Flag",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_LycanMode_LycanMaterial":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+/*				"LycanMode_Timer_ExtraattackBanner":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsLycan",
+							"value" : 1,
+						},
+					],
+					"thinkInterval": 0.2,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsLycan",
+							"value" : 1,
+							"persistent" : false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsLycan",
+							"value" : 0,
+						},
+					],
+				},*/
+				"LycanSimulator_Attack01_BS":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Attack01",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_Attack02":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Attack02",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_Attack03":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Attack03",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_Attack04":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Attack04",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_ExtraAttack":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "ExtraAttack",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_ClawMark_BS":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "ClawMark_BS",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_ClawMark_Click":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "ClawMark_Click",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_ClawMark_Charge":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "ClawMark_Charge",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+				"LycanSimulator_ClawMark_Burst":
+				{
+					"duration" : 0.2,
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "ClawMark_Burst",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+//move是一个长期状态，因此进出move状态需要各自触发对应的Trigger。
+				"LycanSimulator_Move":
+				{
+					"onAdded" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Move",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type" : "SendEffectTrigger",
+							"parameter" : "Stop",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Energy_FeedBack_Level": 5,
+				"LycanMode_Time": 16,
+				"LycanMode_Accelerate_SpeedRatio": 0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+//第一击循环的时候这个狼不会重复打，所以要单独处理
+			"abilityName" : "Avatar_Razor_LycanMode_FirstAttackGuaranteer",
+			////BS这段现在不会多次进入就不需要这个单独处理了。
+			// "onAbilityStart" :
+			// [
+			// 	{
+			// 		"$type" : "SendEffectTrigger",
+			// 		"parameter" : "Attack01",
+			// 		"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_LycanMode_Lycan",
+			// 	},
+			// ],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 野性狂奔 冲刺疾跑、游泳体力消耗降低
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_Talent_RunningWild",
+			"abilityMixins":
+			[
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["Sprint","SprintBS","Swim"],
+					"modifierName" : "RunningWild_Buff",
+					"target" : "Self",
+				},
+			],
+			"modifiers":
+			{
+				"RunningWild_Buff":
+				{
+					"isLimitedProperties" : true,
+					"properties":
+					{
+						"Actor_CostStaminaRatio": "%RunningWild_CostStaminaRatio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"RunningWild_CostStaminaRatio": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 电涌之刃 每过一段时间，雷泽的大剑将被充能，下一次普通攻击就会对目标附加单体降雷打击。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_Talent_ChargedBlade",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"doOffStage" : true,
+					"$type" : "ApplyModifier",
+					"modifierName" : "ChargedBlade_Charger_Handler",
+					"target" : "Self",
+				},
+				{
+					"doOffStage" : true,
+					"$type" : "ApplyModifier",
+					"modifierName" : "ChargedBlade_Charger",
+					"target" : "Self",
+				},
+				{
+					"doOffStage" : true,
+					"$type" : "ApplyModifier",
+					"modifierName" : "ChargedBlade_WeaponMaterial_Checker",
+					"target" : "Self",
+				},
+				{
+					"doOffStage" : true,
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_Talent_ChargedBlade_IsCharged",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 0,
+				},
+			],
+			"modifiers" :
+			{
+				"ChargedBlade_Charger":
+				{
+					"stacking" : "Unique",
+					"onAdded":
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "UNIQUE_ChargedBlade_WeaponMaterial",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01", "sheathPoint"],
+							},
+/*							"otherTargets" :
+							{
+					"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR1",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Equip",],
+								},
+							],*/
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Talent_ChargedBlade_IsCharged",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,
+						},
+					],
+				},
+				"ChargedBlade_Charger_Handler":
+				{
+					"onAttackLanded" :
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates" :
+							[
+								{
+									"$type" : "ByTargetGlobalValue",
+									"forceByCaster" : true,
+									"key": "_ABILITY_Talent_ChargedBlade_IsCharged",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+							],
+							"successActions" :
+							[
+								{
+									"$type" : "ApplyModifier",
+									"modifierName" : "ChargedBlade_Charger_Handler_EXE",
+									"target" : "Self",
+								},
+							],
+						},
+					],
+				},
+				"ChargedBlade_Charger_Handler_EXE":
+				{
+					"duration":1.0,
+					"onAdded":
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "ChargedBlade_Charger_Timer",
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 1.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.7,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag" : "ChargedBlade",
+									"attackProperty":
+									{
+										"damagePercentage": "%ChargedBlade_Damage",
+										"elementType": "Electric",
+										"elementDurability": 25,
+										"elementRank": 1.0,
+										"enBreak" : 69,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByHitDirection",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false
+									},
+									"forceCameraShake": true,
+						        	"cameraShake":
+						        	{
+						        		"shakeType": "CustomVector",
+										"shakeRange": 0.3,
+										"shakeTime": 0.12,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 0,
+										},
+						        	},
+								},
+							},
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_Talent_ChargedBlade_Thunderfall",
+							"born" :
+							{
+								"$type" : "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.7,
+								},
+							},
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "ChargedBlade_WeaponMaterial_Remover",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01", "sheathPoint"],
+							},
+/*							"otherTargets" :
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR1",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Equip",],
+								},
+							],*/
+						},
+						{
+							"$type" : "RemoveModifier",
+							"modifierName" : "ChargedBlade_Charger",
+							"target" : "Self",
+						},
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Talent_ChargedBlade_IsCharged",
+							"value" : -10,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,
+						},
+					],
+				},
+				"UNIQUE_ChargedBlade_WeaponMaterial" :
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Boy_Claymore_Razor_Talent_ChargedBlade",
+						},
+					],
+				},
+				"ChargedBlade_WeaponMaterial_Remover" :
+				{
+					"duration" : 0.5,
+					"onAdded" :
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_ChargedBlade_WeaponMaterial",
+						},
+					],
+				},
+				"ChargedBlade_Charger_Timer":
+				{
+					"duration" : "%ChargedBlade_Period",
+					"stacking" : "Unique",
+					"onRemoved" :
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "ApplyModifier",
+							"modifierName" : "ChargedBlade_Charger",
+							"target" : "Self",
+						},
+					],
+				},
+				"ChargedBlade_WeaponMaterial_Checker":
+				{
+					"thinkInterval" : 0.5,
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "UNIQUE_ChargedBlade_WeaponMaterial",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01", "sheathPoint"],
+							},
+/*							"otherTargets" :
+							{
+					"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR1",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},*/
+							"predicates":
+							[
+/*								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Equip",],
+								},*/
+								{
+									"$type" : "ByTargetGlobalValue",
+									"forceByCaster" : true,
+									"key": "_ABILITY_Talent_ChargedBlade_IsCharged",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials" :
+			{
+				"ChargedBlade_Period" : 10.0,
+				"ChargedBlade_Damage" : 1,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  天赋 电容效应 能量槽在50%以下时，充能效率提升
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_Talent_Capacitor",
+			"isDynamicAbility":true,
+/*			"abilityMixins" :
+			[
+				{
+					"$type":"DoActionByEnergyChangeMixin",
+					"elementType":"Electric",
+					"doWhenEnergyMax":true,
+					"onGainEnergyByAll":
+					[
+						{
+							"doOffStage" : true,
+							"$type": "ApplyModifier",
+							"modifierName" : "Capacitor_EnergyGain_Up",
+							"target": "Self",
+							"predicates":
+							[
+								{
+									"$type" : "ByEnergyRatio",
+									"ratio" : 0.5,
+									"logic" : "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"doOffStage" : true,
+							"$type": "RemoveModifier",
+							"modifierName" : "Capacitor_EnergyGain_Up",
+							"target": "Self",
+							"predicates":
+							[
+								{
+									"$type" : "ByEnergyRatio",
+									"ratio" : 0.5,
+									"logic" : "Greater",
+								},
+							],
+						},
+					],
+				},
+			],*/
+			"onAdded":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Capacitor_EnergyGain_Detect",
+				},
+			],
+			"modifiers" :
+			{
+				"Capacitor_EnergyGain_Detect":
+				{
+					"thinkInterval" : 2.0,
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "Predicated",
+							"doOffStage" : true,
+							"target" : "Self",
+							"targetPredicates" :
+							[
+								{
+									"$type" : "ByEnergyRatio",
+									"ratio" : 0.5,
+									"logic" : "LesserOrEqual",
+								},
+							],
+							"successActions" :
+							[
+								{
+									"$type": "ApplyModifier",
+									"doOffStage" : true,
+									"modifierName" : "Capacitor_EnergyGain_Up",
+									"target": "Self",
+								},
+							],
+							"failActions" :
+							[
+								{
+									"$type": "RemoveModifier",
+									"doOffStage" : true,
+									"modifierName" : "Capacitor_EnergyGain_Up",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"Capacitor_EnergyGain_Up" :
+				{
+					"isLimitedProperties" : true,
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%Capacitor_EfficiencyDelta",
+					},
+				},
+			},
+			"abilitySpecials" :
+			{
+				"Capacitor_EfficiencyDelta" : 0.3,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 魔力狂宴 每次恢复能量时，接下来若干秒内的全伤害提升，多次触发会刷新持续时间。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_Talent_ArcaneFeast",
+			"isDynamicAbility":true,
+			"abilityMixins" :
+			[
+				{
+					"$type":"DoActionByEnergyChangeMixin",
+					"elementTypes":["Electric","Fire","Water","Rock","None","Wind","Grass","Ice"],
+					"doWhenEnergyMax":true,
+					"onGainEnergyByBall":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName" : "UNIQUE_ArcaneFeast_Attack_Up",
+							"target": "Self",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ArcaneFeast_Attack_Up":
+				{
+					"isLimitedProperties" : true,
+					"isUnique" : true,
+					"stacking" : "Refresh",
+					"duration" : "%ArcaneFeast_Duration",
+					"properties" :
+					{
+						"Actor_AddHurtDelta" : "%ArcaneFeast_AttackDelta",
+					},
+					// "onAdded" :
+					// [
+					// 	{
+					// 		"doOffStage" : true,
+					// 		"$type" : "AttachEffect",
+					// 		"effectPattern" : "Eff_Avatar_Properties_Attack_Up",
+					// 	}
+					// ],
+					"state":"AttackUp",
+				},
+			},
+			"abilitySpecials" :
+			{
+				"ArcaneFeast_Duration" : 8.0,
+				"ArcaneFeast_AttackDelta" : 0.1,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  天赋 压制 对于生命值低于30%的敌人，雷泽的全伤害暴击率提升10%
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_Talent_OverPower",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "OverPower_Damage_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"OverPower_Damage_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type" : "ModifyDamageMixin",
+							"attackTags" : ["ChargedBlade","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst","ExtraAttack","NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","FallingAttack"],
+							"bonusCritical" : "%OverPower_BonusCritical",
+/*							"damagePercentageRatio" : "%OverPower_BonusCritical",*/
+							"predicates" :
+							[
+								{
+									"$type" : "ByTargetHPRatio",
+									"target" : "Target",
+									"HPRatio" : 0.3,
+									"logic" : "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"OverPower_BonusCritical": 0.1,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 冲刺疾跑体力消耗降低
+//
+////////////////////////////////////////////////////////////////
+	// {
+	// 	"Default":
+	// 	{
+	// 		"$type": "ConfigAbility",
+	// 		"abilityName": "Avatar_Razor_DashStaminaReduction",
+	// 		"onAdded": //给队伍添加一个modifierMixin
+	// 		[
+	// 			{
+	// 				"$type":"ApplyModifier",
+	// 				"modifierName":"UNIQUE_WatchingCurAvatarModifier_Dash",
+	// 				"target":"Team",
+	// 			}
+	// 		],
+	// 		"modifiers":
+	// 		{
+	// 			"UNIQUE_WatchingCurAvatarModifier_Dash"://给当前出场的角色添加一个modifierMixin
+	// 			{
+	// 				"isUnique":true,
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type":"CurLocalAvatarMixin",
+	// 						"modifierName":"DashStaminaReduction_Handler",
+	// 					}
+	// 				]
+	// 			},
+	// 			"DashStaminaReduction_Handler"://给sprint状态下的角色添加一个property
+	// 			{
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type": "AttachToStateIDMixin",
+	// 						"stateIDs": ["Sprint","SprintBS"],
+	// 						"modifierName": "DashStaminaReduction",
+	// 					},
+	// 				],
+	// 			},
+	// 			"DashStaminaReduction":
+	// 			{
+	// 				"properties":
+	// 				{
+	// 					"Actor_CostStaminaRatio": "%Razor_DashStaminaReduction",
+	// 				},
+	// 			},
+	// 		},
+	// 		"abilitySpecials"://临时配的明显一点，后续统一调整
+	// 		{
+	// 			"Razor_DashStaminaReduction":-0.2,
+	// 		},
+
+	// 	}
+	// },
+////////////////////////////////////////////////////////////////
+//
+//  天赋 队伍疾跑体力消耗降低 ver1.0.1(on team)  未在使用 by htc
+//
+////////////////////////////////////////////////////////////////
+	// {
+	// 	"Default":
+	// 	{
+	// 		"$type":"ConfigAbility",
+	// 		"abilityName":"Avatar_Razor_DashStaminaReduction",
+			// "onAdded":
+			// [
+			// 	{
+			// 		"$type": "ApplyModifier",
+			// 		"modifierName": "CheckMixin",
+			// 		"doOffStage":true,
+			// 	},
+			// ],
+			// "modifiers":
+			// {
+			// 	"CheckMixin":
+			// 	{
+			// 		"modifierMixins":
+			// 		[
+			// 			{
+			// 				"$type": "AttachModifierToSelfGlobalValueMixin",
+			// 				"globalValueKey": "_ABILITY_Talent_DashStaminaReduction_Trigger",
+			// 				"defaultGlobalValueOnCreate":0,
+			// 				"valueSteps" : [-0.5, 0.5, 1.5],
+			// 				"removeAppliedModifier": true,
+			// 				"modifierNameSteps" : ["Blank", "DashStaminaReduction_Trigger"],
+			// 			},
+			// 		],
+			// 	},
+			// 	"Blank":
+			// 	{
+			// 		"duration": 0.1,
+			// 	},
+			// 	"DashStaminaReduction_Trigger":
+			// 	{
+			// 		"duration": 0.1,
+			// 		"onRemoved":
+			// 		[
+			// 			{
+			// 				"$type" : "AddGlobalValue",
+			// 				"key" : "_ABILITY_Team_Talent_DashStaminaReduction",
+			// 				"value" : 1,
+			// 				"useLimitRange" : true,
+			// 				"maxValue" : 1,
+			// 				"minValue" : 0,
+			// 				"doOffStage":true,
+			// 				"target": "Team",
+			// 			},
+			// 		],
+			// 	},
+			// },
+	// 	}
+	// },
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 队伍冲刺体力消耗降低 ver1.0.1(on team)
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Razor_DashStamina_Reduction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",        //复制的后面的interval内容
+					"target":"CurTeamAvatars",
+					"modifierName": "UNIQUE_DashStaminaReduction",
+					"doOffStage":true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Razor_DashStaminaReduction_Handler",
+					"doOffStage":true,
+				},
+			],
+			"modifiers":
+			{
+				"Razor_DashStaminaReduction_Handler":
+				{
+					"thinkInterval":5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",  
+							"target":"CurTeamAvatars",
+							"modifierName": "UNIQUE_DashStaminaReduction",
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_DashStaminaReduction":
+				{
+					"isUnique" : true,
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Sprint","SprintBS"],
+							"modifierName": "DashStamina_Reduction",
+						},
+					],
+				},
+				"DashStamina_Reduction":
+				{
+					"properties":
+					{
+						"Actor_CostStaminaRatio":-0.2,
+					}
+				},
+			},
+		}
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  技能升级 普通攻击和重击
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Razor_NormalAttack_DamageHandler",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%NormalAttack_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%NormalAttack_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%NormalAttack_03_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04"],
+					"damagePercentage": "%NormalAttack_04_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack1"],
+					"damagePercentage": "%ExtraAttack_Loop_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack2"],
+					"damagePercentage": "%ExtraAttack_End_DamagePercentage",
+				},
+			],
+			"abilitySpecials":
+			{
+				"NormalAttack_01_DamagePercentage": 0,
+				"NormalAttack_02_DamagePercentage": 0,
+				"NormalAttack_03_DamagePercentage": 0,
+				"NormalAttack_04_DamagePercentage": 0,
+				"ExtraAttack_Loop_DamagePercentage": 0,
+				"ExtraAttack_End_DamagePercentage": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Razor_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5020010,
+                    "flySkillID": 5020010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["FallingAnthem_Loop"],
+					"modifierName": "FallingAnthem_Loop_Normal",
+				},
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                    ],
+                    "modifierName": "FallingAnthem_AttachSelfEffect",
+                },
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "strikeType": "Blunt",
+                                "overrideByWeapon": true,
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            /*				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": 1,
+									"z": 0,
+								},
+				        	},*/
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "strikeType": "Blunt",
+                                "overrideByWeapon": true,
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 200,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachSelfEffect":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Claymore_FallAnthem_Self_02",
+						},
+                    ],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Claymore_FallAnthem_Self",
+						},
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 35,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Set True!",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 3.0,
+									"logic": "Greater",
+								},
+							],
+						},*/
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Reset!",
+						},*/
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                    /*					"onRemoved":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces": ["RushMoveType"],
+						},
+					],*/
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+
+]

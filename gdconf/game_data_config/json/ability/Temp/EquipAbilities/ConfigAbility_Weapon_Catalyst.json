@@ -1,0 +1,6756 @@
+[
+
+
+///////////////////////////////////////////////////////////////
+//
+// 14301 魔导绪论
+//
+// 对水、雷附着单位增加20%伤害
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_DamageUpToEnemy",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_DamageUpToEnemy_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_DamageUpToEnemy_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							// "bonusCritical":"%Rate",
+							"damagePercentageRatio":"%Rate",//暴击率太弟弟了,不用
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									// "target":"Target",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByAny",
+									"predicates":
+									[
+										{
+											"$type":"ByHasElement",//Predicate的目标默认是Target，就是传进来的参数.
+											// "target":"Target",
+											"element":"Electric",
+										},
+										{
+											"$type":"ByHasElement",//Predicate的目标默认是Target，就是传进来的参数.
+											// "target":"Target",
+											"element":"Water",
+										},
+									],
+								}
+							],
+						},
+					],
+					"isUnique":true,
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  14302 讨龙英杰谭
+//  讨龙英杰谭：主动切换角色时，新登场的角色攻击力提升XX%，持续X秒。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_OnChangeAttackUp",
+			"isDynamicAbility":true,
+			"onRemoved":
+			[
+				{
+					"$type":"RemoveModifier",
+					"modifierName":"Catalyst_OnChangeAttackUpCheckIn",
+					"target":"CurTeamAvatars",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Catalyst_OnChangeAttackUp",
+					"target":"CurTeamAvatars",
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+                    "globalValueKey": "_ABILITY_Catalyst_OnChangeAttackUp", //默认应该会置0
+                    "valueSteps":[-1.5,-0.5,0.5],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps":["UNIQUE_Catalyst_OnChangeAttackUp_CD","UNIQUE_Catalyst_OnChangeAttackUp_Handler"],
+                },
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_OnChangeAttackUp_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"thinkInterval":1.0,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"Catalyst_OnChangeAttackUpCheckIn",
+							"target":"CurTeamAvatars",
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+							],
+						},
+					],
+					"onAvatarIn":
+					[
+						{
+							//加个入场保护，角色刚切入瞬间离场也能触发
+							"$type":"AttachModifier",
+							"modifierName":"Catalyst_OnChangeAttackUpCheckIn",
+							"target":"CurTeamAvatars",
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							//删除无关人员的检测
+							"$type":"RemoveModifier",
+							"modifierName":"Catalyst_OnChangeAttackUpCheckIn",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_OnChangeAttackUp_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onRemoved":
+					[
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Catalyst_OnChangeAttackUp",
+                            "value": 1,
+                            "useLimitRange":true,
+                            "maxValue":0,
+                            "minValue":0,
+                            "doOffStage":true,
+
+                        },
+					],
+				},
+				"Catalyst_OnChangeAttackUpCheckIn":
+				{
+					"stacking":"Unique",
+					"onAvatarIn":
+					[
+						{
+                        	//给切换上场的角色上Buff
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Catalyst_OnChangeAttackUp",
+						},
+						{
+							//重置CD
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Catalyst_OnChangeAttackUp",
+                            "target":"Applier",
+                            "value": -1,
+                            "useLimitRange":true,
+                            "maxValue":-1,
+                            "minValue":-1,
+							"doOffStage":true,
+                        },
+					],
+				},
+				"UNIQUE_Catalyst_OnChangeAttackUp":
+				{
+					"duration":"%Time",
+					"isUnique":true,
+					"stacking":"Unique",
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%AttackUp",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"AttackUp":0,
+				"Time":0,
+				"CDTime":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  14303
+//  异世界行记：每次获得元素能量球时，恢复自身【x】点生命值；
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_OnGainEnergyHealHP",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_OnGainEnergyHealHP_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_OnGainEnergyHealHP_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByEnergyChangeMixin",
+							"elementTypes":["Electric","Fire","Water","Grass","Ice","Wind","Rock"],
+							"doWhenEnergyMax":true,
+							"onGainEnergyByBall":
+							[
+								{//去掉了cd控制，改成直接回血
+									"$type": "HealHP",
+									"amountByTargetMaxHPRatio": "%HealHP",
+									"target": "Self",
+								},
+							],
+						},
+					]
+				},
+			},
+			"abilitySpecials" :
+			{
+					"HealHP" : 0,
+					"CDTime": 0
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//
+// 14304 翡玉法球
+//
+// 触发冰系相关反应，提升攻击20%~40%，持续12秒。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_AttacktUpAfterReaction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_AttacktUpAfterReaction_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_AttacktUpAfterReaction_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Stream","Freeze","Shock","SwirlWater","Overgrow"],//水相关
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_AttacktUpAfterReaction",
+								}
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Catalyst_AttacktUpAfterReaction":
+				{
+					"duration":12,
+					"state":"AttackUp",
+					"isUnique":true,
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+			//这个列表是所有元素反应["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce",],
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14305
+	//
+	//  甲级宝珏：击杀敌人后移动速度和攻击力提升10%~18%，持续15秒，重复触发刷新。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_SpeedUponEnemeyKilled",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByKillingMixin",
+					//算的是此角色最后一击的tag。不一定是击杀那一击（可能是别人击杀的）
+					"detectWindow":0.6, //这段时间之后击杀都算，但是无论是modifiermixin还是abilitymixin都需要角色在场。
+					"onKill":
+					[
+						{
+							"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+							"target":"Other",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AttachModifier",
+									"modifierName" : "UNIQUE_Weapon_SpeedUponEnemeyKilled",
+									"target" : "Self",
+								},
+							],
+						},
+					]
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Weapon_SpeedUponEnemeyKilled":
+				{
+					"isUnique":true,
+					"state":"SpeedUp",
+					"duration":"%Time",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate",
+						"Animator_MoveSpeedRatio":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Time":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  14306 琥珀玥
+	//
+	//  每次普通攻击命中会提升自身*8%全元素伤害，持续6秒，最多可以叠加2层。 仅普攻。考虑以后将普攻和重击合起来。不至于迷惑行为。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_ElementUpWhenNormalHit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_ElementUpWhenNormalHit_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_ElementUpWhenNormalHit_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Catalyst_ElementUpWhenNormalHit",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ElementUpWhenNormalHit":
+				{
+					"duration":"%Time",
+					"isUnique":true,
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":2,
+					},
+					"state":"AttackUp",
+					/*"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern" :"Eff_Weapon_TriggerGreen",
+						},
+					],*/
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta" : "%ElementDamageUp",
+						"Actor_WaterAddHurtDelta" : "%ElementDamageUp",
+						"Actor_GrassAddHurtDelta" : "%ElementDamageUp",
+						"Actor_IceAddHurtDelta" : "%ElementDamageUp",
+						"Actor_RockAddHurtDelta" : "%ElementDamageUp",
+						"Actor_ElecAddHurtDelta" : "%ElementDamageUp",
+						"Actor_WindAddHurtDelta" : "%ElementDamageUp",
+					},
+				},
+			},
+			"abilitySpecials" :
+			{
+					"ElementDamageUp" : 0,
+					"Time":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14401
+	//
+	//  西风秘典：造成的伤害暴击时，有【X%】的概率制造一个通用原子能量球。 需内置cd。 所有攻击均可触发。 但需要有伤害。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_GenerateBallWhenCritic",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_GenerateBallWhenCritic_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_GenerateBallWhenCritic_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Randomed",
+							"target":"Target",
+							"chance":"%Rate",
+							"predicates":
+							[
+								{
+									"$type":"ByHitCritical",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+								   "$type":"ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":114401,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_GenerateBallWhenCritic",
+									"target":"Self",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_GenerateBallWhenCritic" :
+				{
+					"duration": "%CDTime",
+					"isUnique":true,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":114401,
+                        },
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Weapon_ExtraElementBall",//考虑了下，在自己身上播特效比较容易看到。
+						},
+						{
+                            "$type": "GenerateElemBall",
+                            "configID": 2024,
+                            "baseEnergy": 6,
+                            "ratio": 1,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset" :
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": -1,
+                                },
+                                "bornRandom" :
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange":0,
+                                    "maxRandomRange":0.5,
+                                },
+                            },
+                        },
+					],
+				},
+			},
+			"abilitySpecials" :
+			{
+				"Rate" : 0,
+				"CDTime":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14402
+	//  流浪乐章：角色登场时，随机获得一枚”音符“，持续10秒，该效果每45秒只能触发一次；
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_RandomBuff",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Catalyst_RandomBuff",//初始默认为0
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_RandomBuff_Timer","UNIQUE_RandomBuff_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_RandomBuff_Handler":
+				{
+					"isUnique":true,
+					"onAvatarIn":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_RandomBuff",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+							"predicates":
+							[
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":114402,
+                                    "target":"Self",
+                                },
+							],
+						},
+					]
+				},
+				"UNIQUE_Do":
+				{
+					"duration":"%Time",
+					"isUnique":true,
+					"state":"AttackUp",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MusicOnEnter1",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%AttackUp",
+					},
+				},
+				"UNIQUE_Re":
+				{
+					"duration":"%Time",
+					"isUnique":true,
+					"state":"AttackUp",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MusicOnEnter2",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_ElecAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_WaterAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_GrassAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_WindAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_IceAddHurtDelta":"%Actor_ElementAddDelta",
+						"Actor_RockAddHurtDelta":"%Actor_ElementAddDelta",
+					},
+				},
+				"UNIQUE_Mi":
+				{
+					"duration":"%Time",
+					"isUnique":true,
+					"state":"AttackUp",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MusicOnEnter3",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta":"%ElemMastery",
+					},
+				},
+				"UNIQUE_RandomBuff_Timer":
+				{
+					"duration":"%CDTime",
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":0.33,
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Do",
+									"target":"Self",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":0.5,
+									"successActions":
+									[
+										{
+											"$type":"AttachModifier",
+											"modifierName":"UNIQUE_Re",
+											"target":"Self",
+										},
+									],
+									"failActions":
+									[
+										{
+											"$type":"AttachModifier",
+											"modifierName":"UNIQUE_Mi",
+											"target":"Self",
+										},
+									]
+								},
+							]
+						},
+						{
+							"$type":"EquipAffixStart",
+							"CD":"%CDTime",
+							"equipAffixDataID":114402,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_RandomBuff",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能加上去
+						}
+					],
+				},
+			},
+			"abilitySpecials" :
+			{
+					"AttackUp" : 0,//
+					"Actor_ElementAddDelta" : 0,//
+					"ElemMastery":0,
+					"Time":0,
+					"CDTime":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  14403
+	//  祭礼残章：小技能造成伤害时，有【X%】的概率重置小技能的CD；
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_ResetCDWhenSkillHit",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Catalyst_ResetCDWhenSkillHit",
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Catalyst_ResetCDWhenSkillHit_CD","UNIQUE_Catalyst_ResetCDWhenSkillHit_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_ResetCDWhenSkillHit_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater"
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art",],//Elemental_Art_Hold和Elemental_Art_Extra的时候并未进入cd，不该触发减cd效果。
+								},
+								{
+									"$type":"ByEquipAffixReady",
+									"target":"Self",
+									"equipAffixDataID":114403,
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Catalyst_ResetCDWhenSkillHit_SanCheck",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ResetCDWhenSkillHit_SanCheck":
+				{
+					"duration":1.9,
+					"stacking":"Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 3,//2秒里只允许3次判断。
+					},
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":"%Rate",
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"target":"Self",
+									"key":"_ABILITY_Weapon_Catalyst_ResetCDWhenSkillHit",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+									// "doOffStage":true, //这个可选，后台的话触不触发都可接受。
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ResetCDWhenSkillHit_CD" :
+				{
+					"duration":"%CDTime",
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAdded":
+					[
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Weapon_ResetCD",
+                        },
+						{
+							"$type":"EquipAffixStart",
+							"equipAffixDataID":114403,
+							"CD":"%CDTime",
+						},
+						{
+							"$type":"ModifyAvatarSkillCD",
+							"skillSlot":[2],
+							"cdRatio":-1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Weapon_Catalyst_ResetCDWhenSkillHit",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+			},
+		  "abilitySpecials":
+		  {
+			"Rate": 0,
+			"CDTime": 0,
+		  },
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  废弃 备用
+	//  普通攻击命中时有【x%】概率随机对目标敌人发射秘法之箭，造成【200%】攻击力的物理伤害。冷却时间10秒。
+	//  注意，gadget都应当受到owner增伤加成。
+	//  (暂时屏蔽该词缀,待后续给其他武器使用)
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_ChanceBoltWhenNormalAttack",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)，初始globalvalue会被设成0.
+					"globalValueKey": "_ABILITY_Weapon_Catalyst_ChanceBoltWhenNormalAttack",//不配置初始值的话默认为0
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Catalyst_ChanceBoltWhenNormalAttack_CD","UNIQUE_Catalyst_ChanceBoltWhenNormalAttack_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_ChanceBoltWhenNormalAttack_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06",]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":"%Rate",
+									"target":"Self",
+									"predicates":
+									[
+										{
+		                                    "$type":"ByEquipAffixReady",
+		                                    "equipAffixDataID":114404,
+		                                    "target":"Self",
+		                                },
+									],
+									"successActions":
+									[
+										{
+											"$type":"TriggerBullet",
+											// "target":"SelfAttackTarget",//貌似子弹默认就是自己攻击目标
+											// "bulletID":40000160,
+											// "bulletID":41021010,
+											"bulletID":40010001,
+											"born":
+											{
+												// "$type":"ConfigBornByTarget",
+												"$type": "ConfigBornByAttachPoint",
+												"attachPointName" : "WeaponL",
+												"offset":
+												{
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.2,
+												},
+											},
+											"trackTarget":"SelfAttackTarget",
+										},
+										{
+		                                    "$type":"EquipAffixStart",
+		                                    "CD":"%CDTime",
+		                                    "equipAffixDataID":114404,
+		                                },
+										{
+											"$type":"AddGlobalValue",
+											"key":"_ABILITY_Weapon_Catalyst_ChanceBoltWhenNormalAttack",
+											"value":-1,
+											"useLimitRange":true,
+											"maxValue":-1,
+											"minValue":-1,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ChanceBoltWhenNormalAttack_CD": //冷却的时候尽量不监视命中，节省程序开销。
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onRemoved"://在ability移除的时候，还会把key重置为0.所以一定要注意remove时一定是恢复全局值到默认值（0）
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Weapon_Catalyst_ChanceBoltWhenNormalAttack",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"CDTime":0,
+			},
+		},
+	},
+	//下面是子弹的ability
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Arcane_Arrow",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Arcane_Arrow",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType":"Enemy",
+					"born":
+					{
+						"$type":"ConfigBornByCollisionPoint", //此处是collison位置需要注意
+					},
+					// "target":"Target",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+					  		"$type": "ConfigAttackSphere",
+					  		"triggerType": "TriggerNoRepeat",
+					  		"radius": 1.2,   //天空之从1.5下调至0.9，和天空卷一致。
+					  		"target":"Self",
+					  		"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage": "%Rate",
+					  			"strikeType": "Default",
+								"elementType" : "None",
+								"enBreak" : 20,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Hit_None_Blunt_Small",
+								"hitImpulseType":"LV2",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	// 14404 宗室秘法录
+	//
+	// 每次攻击暴击增加%Rate，发动暴击后解除
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_CritUpWhenHitNoCrit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_CritUpWhenHitNoCrit_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_CritUpWhenHitNoCrit_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHitCritical",
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Catalyst_CritUpWhenHitNoCrit_CD",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByHitCritical",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "UNIQUE_Catalyst_CritUpWhenHitNoCrit",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_CritUpWhenHitNoCrit_CD":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_CritUpWhenHitNoCrit",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_CritUpWhenHitNoCrit":
+				{
+					"stacking": "Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CriticalDelta": "%Rate",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "UNIQUE_Catalyst_CritUpWhenHitNoCrit",
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14405
+	//  匣里日月：普攻提升技能伤害20%，技能释放提升普攻伤害20%，持续6秒，独立cd。 注意没有提到重击，而且不能叠加。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_NormalAttackAndSkillAttack",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_NormalAttackAndSkillAttack_Handler"
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_NormalAttackAndSkillAttack_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                 	"$type": "ByTargetGlobalValue",
+				                 	"key": "_ANIMAL_ENTITY_TYPE",
+				                 	"value": 0,
+				                 	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Catalyst_SkillUp",
+								},
+							],
+						},
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Catalyst_NormalAttackUp",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_NormalAttackUp":
+				{
+					"isUnique":true,
+					"duration":6,
+					"state":"AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"],
+							"damagePercentageRatio":"%Rate",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_SkillUp":
+				{
+					"isUnique":true,
+					"duration":6,
+					"state":"AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+							"damagePercentageRatio":"%Rate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14406
+	//  试作金珀 ：充能技后每2秒恢复自身能量4点，全队回血，2秒1次，持续6秒。
+	//
+	////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_TeamHealAfterElementalBurst",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							//自身回能
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Catalyst_TeamHealAfterElementalBurst_Energy",
+							"doOffStage":true,
+						},
+						{
+							//由于不同Caster之间UniqueModifier无法挂上，只有先下掉之前的modifier后挂新的
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Weapon_Catalyst_TeamHealAfterElementalBurst_Heal",
+							"target":"AllPlayerAvatars",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							//全队回血
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Catalyst_TeamHealAfterElementalBurst_Heal",
+							"target":"AllPlayerAvatars",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers" :
+			{
+				"UNIQUE_Weapon_Catalyst_TeamHealAfterElementalBurst_Energy":
+				{
+					"duration":"%Time+1", //由于切换后台tick偏少，需要补偿更多时间保证不丢效果。从0.1增加至1秒。
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ReviveElemEnergyMixin",
+							"type":"Both",
+							"period":"%Interval",
+							"baseEnergy":"%Energy",
+						},
+					],
+				},
+				"UNIQUE_Weapon_Catalyst_TeamHealAfterElementalBurst_Heal" : //这个也没法unique
+				{
+					"isUnique":true,
+					"duration" : "%Time+1",//改成充能技触发之后就不需要add的时候触发一次了。因为表演有时间，不再需要即时表现。
+					"thinkInterval":"%Interval",
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "HealHP",
+							"amountByTargetMaxHPRatio": "%HealRatio",
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials" :
+			{
+				"Time":0,
+				"Interval":0,
+				"Energy":0,
+				"HealRatio" : 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14407 万国诸海图谱
+	//  触发元素反应后，提升自身全元素伤害14%~22%，持续10秒，最高叠加2层。   【3.0修正】：新增了草元素相关反应
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_ElementUpAfterReaction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_ElementUpAfterReaction_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_ElementUpAfterReaction_Handler":
+				{
+					"modifierMixins":
+					[
+						{//一个检测发生了元素反应的mixin
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce","CrystallizeFire","CrystallizeWater","CrystallizeElectric","CrystallizeIce","Overdose","OverdoseElectric","OverdoseGrass","Overgrow","OvergrowMushroomFire","OvergrowMushroomElectric"],
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_ElementUpAfterReaction",
+								},
+							],
+						},
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Catalyst_ElementUpAfterReaction":
+				{
+					"duration":10,
+					"state":"AttackUp",
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":2,
+					},
+					"isUnique":true,
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate",
+						"Actor_ElecAddHurtDelta":"%Rate",
+						"Actor_WaterAddHurtDelta":"%Rate",
+						"Actor_GrassAddHurtDelta":"%Rate",
+						"Actor_WindAddHurtDelta":"%Rate",
+						"Actor_IceAddHurtDelta":"%Rate",
+						"Actor_RockAddHurtDelta":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14408 黑岩绯玉
+	//
+	//  击倒敌人后获得15%攻击力提升，持续30秒，最多叠加3层。每层时间独立 2020.3.26 测试完成
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Blackrock",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPON_Blackrock_COUNT", //默认应该会置0
+					"valueSteps":
+					[
+                        // -0.5
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+                        // "Weapon_Blank",
+						"UNIQUE_Catalyst_Blackrock_Buff1",
+						"UNIQUE_Catalyst_Blackrock_Buff2",
+						"UNIQUE_Catalyst_Blackrock_Buff3",
+					],
+				},
+				{
+					"$type":"DoActionByKillingMixin",
+					"detectWindow":0.6,
+					"onKill":
+					[
+						{
+							"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+							"target":"Other",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_Blackrock_Timer_Ind",
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 3,
+									"minValue": 0,
+									"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Blackrock_Timer_Ind": //独立计时，每次失效就会减少1层
+				{
+					"isUnique":true,
+					"duration":"%Dua",
+					"stacking": "MultipleRefresh",
+					"state":"AttackUp",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Blackrock_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Blackrock1_Catalyst",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",//有这个会略微调整朝向。
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Blackrock_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock2_Catalyst",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",//有这个会略微调整朝向。
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*2",
+					},
+				},
+				"UNIQUE_Catalyst_Blackrock_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock3_Catalyst",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",//有这个会略微调整朝向。
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*3",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"Dua": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//   14409 昭心
+	//
+	//   普攻重击命中时，概率生成连续弹射的光球。 已测试。12.24 //技能效果有问题 2020.3.25
+	//   注意，gadget都应当受到owner增伤加成。 2020.10.12确认
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_BouncingBall",
+			"isDynamicAbility":true,
+			// "onAdded":
+			// [
+			// 	{
+			// 		"$type":"AddGlobalValue",
+			// 		"key":"_ABILITY_Weapon_BouncingBall_Times",
+			// 		"value":"%Times",
+			// 		"useLimitRange":true,
+			// 		"maxValue":"%Times",
+			// 		"minValue":"%Times",
+			// 	},
+			// ],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Catalyst_BouncingBall",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Catalyst_BouncingBall_CD","UNIQUE_Catalyst_BouncingBall_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_BouncingBall_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":114409,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"target":"Target",
+									"chance":"%Chance",
+									"successActions":
+									[
+										{
+											"$type":"TriggerBullet",
+											"target":"Self",//这个target的意思应该是自己执行。
+											"bulletID":40010005,
+											// "campID":1001,
+											"born":
+											{
+												"$type": "ConfigBornByAttachPoint",
+												"attachPointTargetType":"Self",
+												"attachPointName" : "WeaponL",
+												// "$type":"ConfigBornBySelf",
+												"offset":
+												{
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.2,
+												},
+												/*"direction":
+												{
+													"$type": "ConfigDirectionByDefault",
+													"angleOffset":
+													{
+														"x": 0.0,
+														"y": 0.0,
+														"z": 0.0,
+													},
+												},*/
+											},
+											"trackTarget":"SelfAttackTarget",
+											// "predicates":
+											// [
+											// 	{
+											// 		"$type":"ByHasAttackTarget",
+											// 	},
+											// ],
+										},
+										{
+											"$type":"AddGlobalValue",
+											"key":"_ABILITY_Weapon_BouncingBall_Times",
+											"value":"%Times",
+											"useLimitRange":true,
+											"maxValue":"%Times",
+											"minValue":"%Times",//放在这里非常重要。。如果非太久结果cd重置了，也会导致下一次弹不动。所以不能在onAdded时添加。
+										},
+										{
+											"$type": "ApplyModifier",
+											"target": "SelfAttackTarget", //这个是将要命中的角色
+											"modifierName": "Weapon_SetMark",
+										},
+										{
+											"$type":"AddGlobalValue",
+											"target":"Self",
+											"key":"_ABILITY_Weapon_Catalyst_BouncingBall",
+											"value":-1,
+											"useLimitRange":true,
+											"maxValue":-1,
+											"minValue":-1,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_BouncingBall_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+	                        "$type":"EquipAffixStart",
+	                        "CD":"%CDTime",
+	                        "equipAffixDataID":114409,
+	                    },
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Weapon_Catalyst_BouncingBall",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"Weapon_SetMark": //设置mark用。
+				{
+					"duration": 0.1,
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_BouncingBall_Recently_Hit",
+							"value": 1,
+						},
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"Chance":0,
+				"Times":0,
+				"Rate":0,  //未使用
+				"CDTime":0,
+			},
+		},
+	},
+
+	//下面是子弹的ability
+	//每个子弹都是独一无二的，因为穿不穿透，带什么ability，触发效果是什么都是子弹写死的，这边无法做到引用造型但写独立效果。敢用新效果就必须新建一个id号。
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_BouncingBall_Bullet",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Purple_Bullet",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"OpenCollider",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent", //连续弹射的可能需要避免aoe，反正找不到目标。
+					"targetType":"Enemy",
+					// "target":"Target",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+					  		"$type": "ConfigAttackSphere",
+					  		"triggerType": "TriggerNoRepeat",
+					  		"radius": 0.6, //只有0.6半径，比天空0.9，宗室1.2都要小。
+					  		"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage": "%Rate",
+					  			"strikeType": "Default",
+								"elementType" : "None",
+								"enBreak" : 36,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Hit_None_Default_Small",
+								"hitImpulseType":"LV2",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+				{
+					"$type":"ApplyModifier",		//延迟进行标记删除，保证下次能打。
+					"target":"Target",             //这个是这次命中的角色
+					"modifierName":"Weapon_Mark",//Mark估计是不行的，不然4个玩家用这个弓的话，只能一个人打出链吗？
+				},
+				{
+					"$type":"SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR8",
+						"centerBasedOn": "Self",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Self",
+						"sortType": "Nearest", //从近开始选
+						// "topLimit":1
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByEntityTypes",
+							"target":"Target",
+							"entityTypes":["Monster"],
+						},
+						{
+		                	"$type": "ByTargetGlobalValue",
+		                	"key": "_ANIMAL_ENTITY_TYPE",
+		                	"value": 0,
+		                	"compareType": "NoneOrEqual",
+		                },
+						{
+							"$type" :"ByTargetGlobalValue",
+							"target":"Target",
+							"key" : "_ABILITY_Weapon_BouncingBall_Recently_Hit",
+							"value" : 0,
+							"compareType" : "NoneOrEqual",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"target": "SelfAttackTarget", //这个是将要命中的角色
+					"modifierName": "Weapon_SetMark",
+					"predicates": [
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "OriginOwner",
+							"key": "_ABILITY_Weapon_BouncingBall_Times",
+							"value": 1,
+							"compareType": "MoreThanAndEqual"
+						},
+					],
+				},
+				{
+					"$type":"AddGlobalValue",
+					"target":"OriginOwner",
+					"key":"_ABILITY_Weapon_BouncingBall_Times", //好像因为延迟问题，需要比同帧aciton先减。
+					"value":-1,
+				},
+				{
+					"$type":"TriggerBullet",  //最后打出子弹
+					"bulletID":40010005,
+					"campID":1001,
+					// "target":"SelfAttackTarget",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" :
+						{
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						},
+						// "onGround":true,
+						"direction":
+						{
+							"$type":"ConfigDirectionByAttackTarget",
+							"maxAngle":360,
+						},
+					},
+					"trackTarget":"SelfAttackTarget",
+					"predicates":
+					[
+						{
+							"$type":"ByHasAttackTarget",
+							"target":"Self",
+						},
+						{
+							"$type":"ByTargetGlobalValue",
+							"target":"OriginOwner",
+							"key":"_ABILITY_Weapon_BouncingBall_Times",
+							"value":1,
+							"compareType":"MoreThanAndEqual"
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"OpenCollider":
+				{
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type": "EnableBulletCollisionPluginTrigger",
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						/*{
+							"$type":"EnablePushColliderName",
+							"pushColliderNames":["Collider"],
+							"setEnable": true,
+						},*/
+						{
+							"$type":"EnableBulletCollisionPluginTrigger",
+							"setEnable":true,
+						},
+					],
+				},
+				"Weapon_Mark":
+				{
+					"duration":0.6,
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Weapon_BouncingBall_Recently_Hit",
+							"value":-10,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":0,
+						},
+					],
+				},
+				"Weapon_SetMark": //设置mark用。
+				{
+					"duration": 0.1,
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_BouncingBall_Recently_Hit",
+							"value": 1,
+						},
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,//
+			},
+		},
+	},
+
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   14410 暗巷的酒与诗  (旧)
+	//
+	//   队伍中每有一个来自蒙德角色，增加5%攻击和2%移速
+	//
+	//   试用角色其实是算的，但是限制最高4层
+	//
+	///////////////////////////////////////////////////////////////
+
+		// {  //虽然很长但是很稳。还有种办法是每次都remove掉再上，这样数值也会是正确的。
+		// 	"Default":
+		// 	{
+		// 		"$type": "ConfigAbility",
+		// 		"abilityName": "Weapon_Catalyst_Mengde",
+		// 		"isDynamicAbility":true,
+		// 		"onAdded":
+		// 		[
+		// 			{
+		// 				"$type":"AddGlobalValue", //不设置个初始值不让用这个key，治好先设一次。
+		// 				"doOffStage":true,
+		// 				"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 				"value":0,
+		// 			},
+		// 		],
+		// 		"abilityMixins":
+		// 		[
+		// 			{
+		// 				"$type":"DoActionByTeamStatusMixin",
+		// 				"actions":
+		// 				[
+		// 					{
+		// 						"$type":"AddGlobalValue",
+		// 						"doOffStage":true,
+		// 						"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"value":4,
+		// 						"useLimitRange":true,
+		// 						"maxValue":4,
+		// 						"predicates":
+		// 						[
+		// 							{
+		// 								"$type":"ByCurTeamHasFeatureTag",
+		// 								"featureTagID":1001,
+		// 								"number":4,
+		// 								"logic":"GreaterOrEqual",
+		// 							},
+		// 						],
+		// 					},
+		// 					{
+		// 						"$type":"AddGlobalValue",
+		// 						"doOffStage":true,
+		// 						"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"value":3,
+		// 						"useLimitRange":true,
+		// 						"maxValue":3,
+		// 						"predicates":
+		// 						[
+		// 							{
+		// 								"$type":"ByCurTeamHasFeatureTag",
+		// 								"featureTagID":1001,
+		// 								"number":3,
+		// 								"logic":"Equal",
+		// 							},
+		// 						],
+		// 					},
+		// 					{
+		// 						"$type":"AddGlobalValue",
+		// 						"doOffStage":true,
+		// 						"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"value":2,
+		// 						"useLimitRange":true,
+		// 						"maxValue":2,
+		// 						"predicates":
+		// 						[
+		// 							{
+		// 								"$type":"ByCurTeamHasFeatureTag",
+		// 								"featureTagID":1001,
+		// 								"number":2,
+		// 								"logic":"Equal",
+		// 							},
+		// 						],
+		// 					},
+		// 					{
+		// 						"$type":"AddGlobalValue",
+		// 						"doOffStage":true,
+		// 						"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"value":1,
+		// 						"useLimitRange":true,
+		// 						"maxValue":1,
+		// 						"predicates":
+		// 						[
+		// 							{
+		// 								"$type":"ByCurTeamHasFeatureTag",
+		// 								"featureTagID":1001,
+		// 								"number":1,
+		// 								"logic":"Equal",
+		// 							},
+		// 						],
+		// 					},
+		// 					{
+		// 						"$type":"AddGlobalValue",
+		// 						"doOffStage":true,
+		// 						"key":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"value":1,
+		// 						"useLimitRange":true,
+		// 						"maxValue":0,
+		// 						"minValue":0,
+		// 						"predicates":
+		// 						[
+		// 							{
+		// 								"$type":"ByCurTeamHasFeatureTag",
+		// 								"featureTagID":1001,
+		// 								"number":0,
+		// 								"logic":"LesserOrEqual",
+		// 							},
+		// 						],
+		// 					},
+		// 					{
+		// 						"$type":"SetGlobalValueToOverrideMap",
+		// 						"globalValueKey":"_ABILITY_Catalyst_Mengde_Num",
+		// 						"overrideMapKey":"Catalyst_Mengde_Num",
+		// 						"doOffStage":true,
+		// 					},
+		// 					{
+		// 						"$type":"RemoveUniqueModifier",
+		// 						"modifierName":"UNIQUE_Catalyst_MengdeBuff",
+		// 						"doOffStage":true,
+		// 					},
+		// 					{
+		// 						"$type":"AttachModifier",
+		// 						"modifierName":"UNIQUE_Catalyst_MengdeBuff",
+		// 						"doOffStage":true,
+		// 					},
+		// 				],
+		// 			},
+		// 			/*{
+		// 				"$type":"AttachModifierToSelfGlobalValueMixin",
+		// 				"globalValueKey": "_ABILITY_Catalyst_Mengde_Num",//不配置初始值的话默认为0
+		// 				"valueSteps" : [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5,],
+		// 				"removeAppliedModifier":true,
+		// 				"modifierNameSteps" : ["Blank","Weapon_Catalyst_MengdeBuff1","Weapon_Catalyst_MengdeBuff2","Weapon_Catalyst_MengdeBuff3","Weapon_Catalyst_MengdeBuff4","Weapon_Catalyst_MengdeBuff5"],
+		// 			},*/
+		// 		],
+		// 		"modifiers":
+		// 		{
+		// 			"UNIQUE_Catalyst_MengdeBuff":
+		// 			{
+		// 				"isUnique":true,
+		// 				"properties":
+		// 				{
+		// 					"Actor_AttackRatio":"%Rate*%Catalyst_Mengde_Num",
+		// 					"Animator_MoveSpeedRatio":"%Spd*%Catalyst_Mengde_Num",
+		// 				},
+		// 			},
+		// 		},
+		// 		"abilitySpecials":
+		// 		{
+		// 			"Rate":0,
+		// 			"Spd":0,
+		// 			"Catalyst_Mengde_Num":0,
+		// 		},
+		// 	},
+		// },
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14410 暗巷的酒与诗
+	//
+	//  使用冲刺或代替冲刺1s后，攻击力提升XX%，持续XX秒
+	//  每次普攻命中敌人时，自己冲刺和代替冲刺的体力消耗降低XX%，持续XX秒
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Outlaw",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Outlaw_Handler",
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Catalyst_AttackUp_AfterSprint",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Outlaw_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["SprintBS", "Sprint", "LiquidStrike_BS", "LiquidStrike_BS1", "LiquidStrike_Move", "LiquidStrike_MoveStandby"],
+							"modifierName": "UNIQUE_Catalyst_AttackUp_InSprint",
+						},
+					],
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06",]
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Catalyst_ReduceStaminaCost_Handler",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_AttackUp_InSprint":   //冲刺动作中的增益Buff
+				{
+					"isUnique": true,
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate_1",
+					},
+					"onAdded":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Catalyst_AttackUp_AfterSprint",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Catalyst_AttackUp_AfterSprint",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_AttackUp_AfterSprint":   //冲刺动作后的增益Buff
+				{
+					"duration": "%Dura_1",
+					"isUnique": true,
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate_1",
+					},
+				},
+				"UNIQUE_Catalyst_ReduceStaminaCost_Handler":   //普攻命中后的冲刺体力消耗减少
+				{
+					"duration": "%Dura_2",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Outlaw_Common_Buff",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["SprintBS", "Sprint", "LiquidStrike_BS", "LiquidStrike_BS1", "LiquidStrike_Move", "LiquidStrike_MoveStandby"],
+							"modifierName": "UNIQUE_Catalyst_ReduceStaminaCost_Buff",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ReduceStaminaCost_Buff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CostStaminaRatio": "-1*%Rate_2",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate_1": 0,
+				"Dura_1": 0,
+				"Rate_2": 0,
+				"Dura_2": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14411 幽澜明灯
+	//  普攻或重击命中时有20%概率随机发射明灯灯光或幽魂灯光，追踪15米范围敌人；
+	//  明灯造成xx%单体伤害，幽魂灯光则造成小范围减速效果，CD为10s
+	//  注意，gadget都应当受到owner增伤加成。 2020.10.12确认
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Catalyst_Lanternrite",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+			 		"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Catalyst_Lanternrite",
+					"removeAppliedModifier":true,
+					"valueSteps":[-1.5,-0.5,0.5],
+					"modifierNameSteps":
+					[
+						"UNIQUE_Catalyst_Lanternrite_CD",
+						"UNIQUE_Catalyst_Lanternrite_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Lanternrite_CD":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+	                        "$type":"EquipAffixStart",
+	                        "CD":"%CDTime",
+	                        "equipAffixDataID":114411,
+	                    },
+					],
+					"onRemoved":
+					[
+						{
+							//技能CD重置，必须后台也能检测，否则该技能一直不会被开启了
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Lanternrite",
+		 					"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Lanternrite_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":"%ChanceProb",
+							"target":"Target",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater",
+								},
+								{
+		                            "$type":"ByEquipAffixReady",
+		                            "equipAffixDataID":114411,
+		                            "target":"Self",
+		                        },
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":0.5,
+									"successActions":
+									[
+										{
+											//暂时用通用弹道替代
+											"$type":"TriggerBullet",
+											"bulletID":40010010,
+											"born":
+											{
+												"$type":"ConfigBornByAttachPoint",
+												"attachPointName":"WeaponL",
+												"offset":
+												{
+													"x":0,
+													"y":0,
+													"z":0.2,
+												},
+											},
+											"trackTarget":"SelfAttackTarget",
+										},
+									],
+									"failActions":
+									[
+										{
+											//暂时用通用弹道替代
+											"$type":"TriggerBullet",
+											"bulletID":40010011,
+											"born":
+											{
+												"$type":"ConfigBornByAttachPoint",
+												"attachPointName":"WeaponL",
+												"offset":
+												{
+													"x":0,
+													"y":0,
+													"z":0.2,
+												},
+											},
+											"trackTarget":"SelfAttackTarget",
+										},
+									],
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key":"_ABILITY_Catalyst_Lanternrite",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ChanceProb":0,
+				"Rate_Bright": 0,  //未使用
+				"Rate_Dark": 0,   //未使用
+				"CDTime":0,
+			},
+		},
+	},
+
+	//明灯Ability配置
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Lanternrite_Bright",
+			"onAdded":
+			[
+				{
+					//子弹生成时的触发及拖尾特效
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Lanternrite_Bright",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType":"Enemy",
+					"born":
+					{
+						"$type":"ConfigBornByCollisionPoint", //此处是collison位置需要注意
+					},
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+					  		"$type": "ConfigAttackSphere",
+					  		"triggerType": "TriggerNoRepeat",
+					  		"radius": 0.2,   //调整半径大小使其为单体伤害
+					  		"target":"Self",  //这里指认的self为gadget自身
+					  		"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage": "%Rate_Bright",
+					  			"strikeType": "Default",
+								"elementType" : "None",
+								"enBreak" : 20,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Hit_None_Blunt_Small",
+								"hitImpulseType":"LV2",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate_Bright":0,//
+			},
+		},
+	},
+	//魂灯Ability配置
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Lanternrite_Dark",
+			"onAdded":
+			[
+				{
+					//子弹生成时的触发及拖尾特效
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Lanternrite_Dark",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Weapon_Blast_R30",
+					"target":"Target",
+					"born":
+					{
+						"$type":"ConfigBornByCollisionPoint",
+						"direction":
+						{
+							"$type":"ConfigDirectionByEntity",
+						},
+					},
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType":"Enemy",
+					"born":
+					{
+						"$type":"ConfigBornByCollisionPoint", //此处是collison位置需要注意
+					},
+					// "target":"Target",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+					  		"$type": "ConfigAttackSphere",
+					  		"triggerType": "TriggerNoRepeat",
+					  		"radius": 3.5,   // 攻击半径适当大于视觉范围
+					  		"target":"Self",
+					  		"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage": "%Rate_Dark",
+					  			"strikeType": "Default",
+								"elementType" : "None",
+								"enBreak" : 20,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Hit_None_Blunt_Small", //不能没有受击特效
+								"hitImpulseType":"LV2",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate_Dark":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   14412 忍冬之果
+	//   普攻和重击命中敌人时，有50%概率在敌方头上生成不稳定的冰晶核，坠落造成100%单体伤害，CD为10s
+	//   注意，gadget都应当受到owner增伤加成。 2020.10.12确认
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Catalyst_Dragonfell",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Catalyst_Dragonfell",
+					"removeAppliedModifier":true,
+					"valueSteps":[-1.5,-0.5,0.5],
+					"modifierNameSteps":
+					[
+					 	"UNIQUE_Catalyst_Dragonfell_CD",
+						"UNIQUE_Catalyst_Dragonfell_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Dragonfell_CD":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":114412,
+                        },
+					],
+					"onRemoved":
+					[
+						{
+							//重置技能CD，必须后台也能检测
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Dragonfell",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Dragonfell_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":"%ChanceProb",
+							"target":"Target",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+								// {  //考虑不再限制造成伤害。不然免疫怪没法打。
+								// 	"$type":"ByHitDamage",
+								// 	"damage":0,
+								// 	"logic":"Greater",
+								// },
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":114412,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalPos",
+									"key":"_ABILITY_Weapon_Dragonfell_Pos",
+									"target":"Target",
+									"born":
+									{
+										"$type":"ConfigBornByHitPoint",
+										"offset":
+										{
+											"x":0,
+											"y":0,
+											"z":0,
+										},
+									},
+									"setTarget":false,
+								},{
+									"$type":"CreateGadget",
+									"gadgetID":40020007,
+									"campID":1001,
+									"campTargetType":"Enemy",
+									"born":
+									{
+										"$type":"ConfigBornByGlobalValue",
+										"positionKey": "_ABILITY_Weapon_Dragonfell_Pos",
+										// "direction":
+										// {
+										// 	"$type": "ConfigDirectionByGlobalValue",  //这个默认读的target导致功能废了。
+										// 	"target":"Self",
+										// 	"directionKey":"_ABILITY_Weapon_WorldDwon_Dir",//Direction没法用，测下来这个只有action的target存在globalvalue，才能读到这个参数。
+										// },
+									},
+								},
+								{
+									//重置技能CD，注意下场也会执行恢复cd
+									"$type":"AddGlobalValue",
+									"key":"_ABILITY_Catalyst_Dragonfell",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ChanceProb":0,
+				"Rate": 0,   //未使用
+				"RateToIce": 0,  //未使用
+				"CDTime":0,
+			},
+		},
+	},
+//Gadget的Ability
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Catalyst_Dragonfell_Gadget",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Dragonfell_Appear",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["WeaponSkill"],
+					"damagePercentage":"%RateToIce", //记得修改
+					"predicates":
+					[
+						{
+							"$type":"ByEntityTypes",
+							"entityTypes":["Monster",],
+						},
+						{
+                            "$type": "ByAny",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHasElement", //包括冰附着
+                                    "element": "Ice",
+                                },
+								{
+                                    "$type": "ByHasElement", //冰史莱姆冰深渊,和冻结
+                                    "element": "Frozen",
+                                },
+		                    ]
+                        },
+                    ],
+				},
+			],
+			"modifiers":
+			{
+				"Dragonfell_Appear":
+				{
+					"duration": 0.4,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_Dragonfell_Gadget",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"targetType":"Enemy",
+									"fanAngle": 360.0,
+									"height": 2,
+									"radius": 3,
+									"born":
+									{
+										"$type":"ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -1, //circle是向上扩展的，拉回来
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy":"OriginOwner",
+									"attackTag" : "WeaponSkill",
+									"attackProperty":
+									{
+										"damagePercentage": "%Rate",
+										"elementType": "None",
+										"attackType": "Range",
+										"elementDurability": 0,
+										"enBreak": 20,
+									},
+									"hitPattern":
+									{
+										"hitImpulseType":"LV4",
+										"overrideHitImpulse":
+										{
+											"hitLevel":"Heavy",
+											"hitImpulseX": 500,
+											"hitImpulseY": 0,
+										},
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt" : false,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.01,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"RateToIce":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   14413 活动法器
+	//   普攻命中敌人时，重击伤害提升XX%，持续XX秒；
+	//   重击命中敌人时，攻击力提升XX%，持续XX秒；
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_NormalAttackAndExtraAttack",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_NormalAttackAndExtraAttack_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_NormalAttackAndExtraAttack_Handler":  //普攻和重击命中检测器
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_NormalAttackHit_Buff",
+									"target":"Self",
+								},
+							],
+						},
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["ExtraAttack"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Catalyst_ExtraAttackHit_Buff",
+									"target":"Self",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_NormalAttackHit_Buff":   //普攻命中后的增益Buff
+				{
+					"isUnique": true,
+					"duration": "%Duration_1",
+					"state": "AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": ["ExtraAttack"],
+							"damagePercentageRatio": "%Rate_1",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_ExtraAttackHit_Buff":   //重击命中后的增益Buff
+				{
+					"isUnique": true,
+					"duration": "%Duration_2",
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate_2",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate_1": 0,
+				"Duration_1": 0,
+				"Rate_2": 0,
+				"Duration_2": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14501
+	//  天空之卷 普攻概率召唤魔龙幼龙，攻击周围敌人 15%全元素伤害
+	//
+	////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Legend_Dvalin",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_Legend_Dvalin_ElementUp"
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type":"KillGadget",
+					"gadgetInfo":
+					{
+						"$type":"SelectTargetsByChildren",
+						"configID":40010003,
+						"sortType":"Default",
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)，初始globalvalue会被设成0.
+					"globalValueKey": "_ABILITY_Catalyst_Legend_Dvalin",//不配置初始值的话默认为0
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Catalyst_Legend_Dvalin_CD","UNIQUE_Catalyst_Legend_Dvalin_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Legend_Dvalin_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06",]
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":"%Chance",
+									"predicates":
+									[
+										{
+		                                    "$type":"ByEquipAffixReady",
+		                                    "equipAffixDataID":114501,
+		                                    "target":"Self",
+		                                },
+									],
+									"successActions":
+									[
+										{
+											// "$type": "CreateGadget",
+											"$type":"TriggerBullet",
+											"bulletID": 40010003,
+											"campID":1001,
+											"campTargetType":"Enemy",
+											"born":
+											{
+												"$type": "ConfigBornBySelf",
+												"offset" :
+												{
+													"x": 0,
+													"y": 0,
+													"z": 0,
+												},
+											},
+											/*"forward" ://没forward的话会变成朝上，那么offset就都错了？？
+											{
+												"x" : 0.0,
+												"y" : 0.0,
+												"z" : 1.0,
+											},*/
+											/*"born":
+											{
+												"$type": "ConfigBornByAttachPoint",
+												"attachPointName" : "RootNode",
+												"offset" :
+												{
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+											},*/
+										},
+										{
+		                                    "$type":"EquipAffixStart",
+		                                    "CD":"%CDTime",
+		                                    "equipAffixDataID":114501,
+		                                },
+										{
+											"$type":"AddGlobalValue",
+											"key":"_ABILITY_Catalyst_Legend_Dvalin",
+											"value":-1,
+											"useLimitRange":true,
+											"maxValue":-1,
+											"minValue":-1,
+											"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Legend_Dvalin_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onRemoved"://在ability移除的时候，还会把key重置为0.所以一定要注意remove时一定是恢复全局值到默认值（0）
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Legend_Dvalin",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Legend_Dvalin_ElementUp":
+				{
+					"isUnique":true,
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate",
+						"Actor_ElecAddHurtDelta":"%Rate",
+						"Actor_WaterAddHurtDelta":"%Rate",
+						"Actor_GrassAddHurtDelta":"%Rate",
+						"Actor_WindAddHurtDelta":"%Rate",
+						"Actor_IceAddHurtDelta":"%Rate",
+						"Actor_RockAddHurtDelta":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Chance":0,
+				"Rate_2": 0,  //未使用
+				"CDTime":0,
+			},
+		},
+	},
+	//下面是生成的gadget的ability
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Legend_Dvalin_WindBall",
+			"onAdded":
+			[
+				{
+					"$type":"AttachEffect",
+					"effectPattern":"Eff_Weapon_WindBall",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Serch_And_Fire",
+				},
+			],
+			"modifiers":
+			{
+				"Serch_And_Fire":
+				{
+					"thinkInterval":2.5,
+					"onThinkInterval":
+					[
+						 {
+						  "$type": "SetSelfAttackTarget", //这些简单的gadget无法执行turndirection行为。eventPattern中的转向也是无效的。需要配合这个action才行。
+						  // "turnToTargetImmediately": true,
+						  "otherTargets": {
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR15",
+							"centerBasedOn": "Self",
+							"campTargetType": "Enemy",
+							"campBasedOn": "Self",
+							"topLimit": 1,
+							"sortType": "Nearest", //从近开始选
+						  },
+						  "predicates": [
+							{
+							  "$type": "ByEntityTypes",
+							  "entityTypes": [ "Monster" ],
+							},
+						  ],
+						},
+						{
+							"$type":"TriggerBullet",
+							"bulletID":40010004,//40010004
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+							},
+							"trackTarget":"SelfAttackTarget",
+							"predicates":
+							[
+								{
+									"$type":"ByHasAttackTarget",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	//下面是子弹的ability
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Arcane_Bullet",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Arcane_Bullet",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType":"Enemy",
+					"born":
+					{
+						"$type":"ConfigBornByCollisionPoint",
+					},
+					// "target":"Target",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+					  		"$type": "ConfigAttackSphere",
+					  		"triggerType": "TriggerNoRepeat",
+					  		"radius": 1.2,
+					  		"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage": "%Rate",
+					  			"strikeType": "Default",
+								"elementType" : "None",
+								"enBreak" : 20,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Hit_None_Blunt_Small",
+								"hitImpulseType":"LV2",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate":0,//
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//   14502
+	//
+	//   移动速度提高5%。
+	//   四风原典 在场上每4秒提升5%全元素伤害，最高4层。
+	//
+	//   目前书不在的时候可能上不了特效。真不行可以考虑给书上modifiermixin让书自己计算特效
+	//
+	////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Legend_Fourwinds",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"doOffStage":true,
+					"modifierName":"UNIQUE_Catalyst_Fourwinds_Handler"
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_Fourwinds_MoveSpeed"
+				},
+			],
+			"onAvatarIn":
+			[
+				/*{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Catalyst_Fourwinds_Handler",
+				},*/
+			],
+			"onAvatarOut":
+			[
+				/*{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Catalyst_Fourwinds_Handler",
+					"doOffStage":true,
+				},*/
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+					"value" : -100,
+					"useLimitRange" : true,
+					"maxValue" : 4,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+			],
+			/*"onRemoved":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+					"value" : -100,
+					"useLimitRange" : true,
+					"maxValue" : 4,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+			],*/
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-0.5,0.5,1.5,2.5,3.5,4.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["Blank","UNIQUE_Catalyst_FourwindsBuff1","UNIQUE_Catalyst_FourwindsBuff2","UNIQUE_Catalyst_FourwindsBuff3","UNIQUE_Catalyst_FourwindsBuff4"],
+				},
+			],
+			"onKill":
+			[
+			],
+			"modifiers":
+			{
+				"Blank":
+				{},
+				"UNIQUE_Catalyst_Fourwinds_Handler":
+				{
+					"isUnique":true,
+					"thinkInterval":4,//这个在后场应该不会生效。所以不用特意写in/out操作。
+					"onThinkInterval":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_Catalyst_FourwindsBuffTime",
+						},
+						// {//出现一下攻击特效很奇怪，就不出现了。
+						// 	"$type":"ApplyModifier",
+						// 	"modifierName":"UNIQUE_Catalyst_FourwindsTriggerEffect",
+						// 	"predicates":
+						// 	[
+						// 		{
+						// 			"$type":"ByTargetGlobalValue",
+						// 			"key":"_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+						// 			"value":3,
+						// 			"compareType":"LessAndEqual"
+						// 		},
+						// 	],
+						// },
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":4,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_FourwindsBuffTime"://这意味着切到后台后interval不跑就会将buff重置。
+				{
+					"isUnique":true,
+					"duration":6,
+					"stacking":"Refresh",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+							"value" : -100,
+							"useLimitRange" : true,
+							"maxValue" : 4,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_FourwindsBuff1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MengdeTag1",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+						},
+					],
+					"isUnique":true,
+					// "state":"AttackUp",//持续特效很烦，别用
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate",
+						"Actor_ElecAddHurtDelta":"%Rate",
+						"Actor_WaterAddHurtDelta":"%Rate",
+						"Actor_GrassAddHurtDelta":"%Rate",
+						"Actor_WindAddHurtDelta":"%Rate",
+						"Actor_IceAddHurtDelta":"%Rate",
+						"Actor_RockAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_FourwindsBuff2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MengdeTag2",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+						},
+					],
+					"isUnique":true,
+					// "state":"AttackUp",
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate*2",
+						"Actor_ElecAddHurtDelta":"%Rate*2",
+						"Actor_WaterAddHurtDelta":"%Rate*2",
+						"Actor_GrassAddHurtDelta":"%Rate*2",
+						"Actor_WindAddHurtDelta":"%Rate*2",
+						"Actor_IceAddHurtDelta":"%Rate*2",
+						"Actor_RockAddHurtDelta":"%Rate*2",
+					},
+				},
+				"UNIQUE_Catalyst_FourwindsBuff3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MengdeTag3",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+						},
+					],
+					"isUnique":true,
+					// "state":"AttackUp",
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate*3",
+						"Actor_ElecAddHurtDelta":"%Rate*3",
+						"Actor_WaterAddHurtDelta":"%Rate*3",
+						"Actor_GrassAddHurtDelta":"%Rate*3",
+						"Actor_WindAddHurtDelta":"%Rate*3",
+						"Actor_IceAddHurtDelta":"%Rate*3",
+						"Actor_RockAddHurtDelta":"%Rate*3",
+					},
+				},
+				"UNIQUE_Catalyst_FourwindsBuff4":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_MengdeTag4",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+						},
+					],
+					"isUnique":true,
+					// "state":"AttackUp",
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate*4",
+						"Actor_ElecAddHurtDelta":"%Rate*4",
+						"Actor_WaterAddHurtDelta":"%Rate*4",
+						"Actor_GrassAddHurtDelta":"%Rate*4",
+						"Actor_WindAddHurtDelta":"%Rate*4",
+						"Actor_IceAddHurtDelta":"%Rate*4",
+						"Actor_RockAddHurtDelta":"%Rate*4",
+					},
+				},
+				// "UNIQUE_Catalyst_FourwindsTriggerEffect": //发动一下特效。由于比较乱还是不用了。
+				// {
+				// 	"isUnique":true,
+				// 	"state":"AttackUp",
+				// 	"duration":1,
+				// },
+				"UNIQUE_Catalyst_Fourwinds_MoveSpeed":
+				{
+					"isUnique":true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_MoveSpeedRatio":"%Speed",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Catalyst_Fourwinds_AttackBuffLevel",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Speed":0,
+				"Rate":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14504 尘世之锁
+	//  基础数值：护盾强效+XX%
+	//  攻击命中敌人时，提升自身攻击力X%，持续10s，最多叠加5层
+	//  角色如果拥有护盾，则伤害提升效果翻倍
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Kunwu_DamageUpWithShield",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Catalyst_Kunwu_DamageUpWithShield_Handler",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Catalyst_Kunwu_BuffEffHandler",
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Catalyst_Kunwu_IsHasShield",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Catalyst_Kunwu_IsHasShield",
+					"valueSteps":[-0.5,0.5,1.5],
+					"modifierNameSteps":["UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff","UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff"],
+				},
+				{
+					"$type": "AttachModifierToPredicateMixin",
+					"type": "Current",
+					"modifierName": "UNIQUE_Weapon_Catalyst_Kunwu_CheckShield",
+					"predicates":
+					[
+						{
+							"$type": "ByHasShield",
+							"type": "All",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				//攻击命中叠层判定
+				"UNIQUE_Weapon_Catalyst_Kunwu_DamageUpWithShield_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Weapon_Catalyst_Kunwu_AddCount",
+									"target":"Self",
+								},
+							],
+						},
+					],
+				},
+				//实时检测自身是否有盾,并上个Tag
+				"UNIQUE_Weapon_Catalyst_Kunwu_CheckShield":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":1,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//Buff叠层计数器
+				"UNIQUE_Weapon_Catalyst_Kunwu_AddCount":
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+							"value":1,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Weapon_Catalyst_Kunwu_BuffTimer",
+						},
+					],
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_BuffTimer":
+				{
+					"isUnique":true,
+					"stacking":"Refresh",
+					"duration":"%Timer",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//无盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Blank",
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level01",
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level02",
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level03",
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level04",
+								"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*3",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_NoShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*5",
+					},
+				},
+				//有盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Blank",
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level01",
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level02",
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level03",
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level04",
+								"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*6",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*8",
+					},
+				},
+				"UNIQUE_Weapon_Catalyst_Kunwu_HasShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*10",
+					},
+				},
+				//实时检测自身Buff对应的特效层数
+				"UNIQUE_Weapon_Catalyst_Kunwu_BuffEffHandler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Catalyst_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"Weapon_Catalyst_Kunwu_Eff_Blank",
+								"Weapon_Catalyst_Kunwu_Eff_1",
+								"Weapon_Catalyst_Kunwu_Eff_2",
+								"Weapon_Catalyst_Kunwu_Eff_3",
+								"Weapon_Catalyst_Kunwu_Eff_4",
+								"Weapon_Catalyst_Kunwu_Eff_5",
+							],
+						},
+					],
+				},
+				"Weapon_Catalyst_Kunwu_Eff_Blank":
+				{},
+				"Weapon_Catalyst_Kunwu_Eff_1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_01",
+						},
+					],
+				},
+				"Weapon_Catalyst_Kunwu_Eff_2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_02",
+						},
+					],
+				},
+				"Weapon_Catalyst_Kunwu_Eff_3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_03",
+						},
+					],
+				},
+				"Weapon_Catalyst_Kunwu_Eff_4":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_04",
+						},
+					],
+				},
+				"Weapon_Catalyst_Kunwu_Eff_5":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_05",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Shield_Up": 0,
+				"Dmg_Rate":0,
+				"Timer":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14505 定土玉圭 Equip_Catalyst_Morax
+	//  角色最大生命值转化为攻击力
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Morax_HpToAtk",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Catalyst_Morax_Last_MaxHp",
+					"value": "%FIGHT_PROP_MAX_HP",
+					"doOffStage": true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Morax_Handler",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByEventMixin",
+					"type" : "Both",
+					"onEvent":"HP",   //血量变动时还会再做一次检测。
+					"actions" :
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Catalyst_Morax_Last_MaxHp",
+							"value": "%FIGHT_PROP_MAX_HP",
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Catalyst_Morax_HpToAtk_Buff",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Morax_HpToAtk_Buff",
+							"doOffStage": true,
+						},
+					],
+					"predicates":
+					[
+						{
+							"$type":"ByNot",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Morax_Handler":    //生命转换器
+				{
+					"isUnique": true,
+					"thinkInterval": 2.0,
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Morax_HpToAtk_Buff",
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Catalyst_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"doOffStage": true,
+								},
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Catalyst_Morax_HpToAtk_Buff",
+									"doOffStage": true,
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Catalyst_Morax_HpToAtk_Buff",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Morax_HpToAtk_Buff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackExtraDelta": "%FIGHT_PROP_MAX_HP*%HptoAtk_Factor",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Hp_Rate": 0,   //未使用
+				"HptoAtk_Factor": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  14506 不灭月华 Weapon_Catalyst_Kaleido
+	//  普攻附带1%最大生命伤害，释放元素爆发后10秒内，再附带2%最大生命伤害。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Kaleido",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "ModifyDamageMixin",
+					"attackTags": [
+						"NormalAttack_01",
+						"NormalAttack_02",
+						"NormalAttack_03",
+						"NormalAttack_04",
+						"NormalAttack_05",
+						"NormalAttack_06"
+					],
+					"damageExtra": "%FIGHT_PROP_MAX_HP*%HptoExtraDamage_Factor"
+				},
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Kaleido_BurstBuff",
+						},
+					]
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Catalyst_Kaleido_BurstBuff": {
+					"isUnique": true,
+					"duration": "%Dura",
+					"onAdded": [
+						{
+							"$type":"AttachEffect",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"effectPattern": "Eff_Weapon_Catalyst_Kaleido_Inner",
+						},
+						{
+							"$type": "AttachEffect",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"effectPattern": "Eff_Weapon_Catalyst_Kaleido_Outer",
+						},
+					],
+					"onAttackLanded": [
+						{
+							"$type":"Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06"
+									],
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Catalyst_Kaleido_ReviveEnergy",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Catalyst_Kaleido_ReviveEnergy": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded": [
+						{
+							"$type": "ReviveElemEnergy",
+							"value": "%Energy",
+						},
+					]
+				},
+			},
+			"abilitySpecials": {
+				"HptoExtraDamage_Factor":0,
+				"Dura":0,
+				"Energy":0,
+				"CDTime":0,
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  14414 白辰之环 Weapon_Catalyst_Bakufu
+	//  1、触发雷元素相关反应时，提升队伍中该反应对应元素角色xx%元素伤害加成，持续xx秒。
+	//  该效果不可叠加。
+	//  //由于武器有精炼不同，需要做成正常防叠方式，后者上去时，替换掉新者 //这样会频繁上下modifier建议加每种buff内置cd
+	//	//另外不太希望玩家在后场触发这个效果。   【3.0修正】：补充了激化、激化雷、蔓生雷
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Bakufu",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20, //这个就是默认值
+					"entityTypes":	["Monster"],
+					"reactionTypes":["Explode",], //雷相关
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_FireBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["Shock",],
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WaterBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["Superconductor"], //雷相关
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_IceBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["SwirlElectric"],
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WindBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["CrystallizeElectric"],//结晶雷
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_RockBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["Overdose"],//激化，草和雷
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_GrassBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["OverdoseElectric"],//雷激化
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_GrassBuff_Handler",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20,
+					"entityTypes":	["Monster"],
+					"reactionTypes":["OvergrowMushroomElectric"],//雷蔓生
+					"actions":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_GrassBuff_Handler",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff_Handler",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Catalyst_Bakufu_ElecBuff_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Electric",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_ElecBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Electric",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_FireBuff_Handler":
+				{
+
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_FireBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_FireBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_WaterBuff_Handler":
+				{
+
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WaterBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Water",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WaterBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Water",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_IceBuff_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_IceBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Ice",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_IceBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Ice",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_WindBuff_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WindBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Wind",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_WindBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Wind",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_RockBuff_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_RockBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Rock",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"target":"AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_RockBuff",
+							// "doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Rock",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_GrassBuff_Handler": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded": [
+						{
+							"$type": "RemoveUniqueModifier",
+							"target": "AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_GrassBuff",
+							// "doOffStage":true,
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Grass",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "AllPlayerAvatars",
+							"modifierName": "UNIQUE_Catalyst_Bakufu_GrassBuff",
+							// "doOffStage":true,
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Grass",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Bakufu_ElecBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_FireBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_WaterBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_WaterAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_IceBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_IceAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_WindBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_WindAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_RockBuff":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_RockAddHurtDelta": "%Rate",
+					},
+				},
+				"UNIQUE_Catalyst_Bakufu_GrassBuff": {
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_GrassAddHurtDelta": "%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"BuffTime": 0,
+				"CDTime":0,
+			},
+		},
+		//这个列表是所有元素反应["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce",还有所有结晶反应，还有草反应],
+	},
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14509 魔神法器 神乐之真意 Equip_Catalyst_Narukami
+	//  特定情况下强化属性。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Narukami", //特效可能需要状态机
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill": [//注意：要小心连续按，连续触发，如果有这个问题，可以加内置cd。
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Narukami_Buff_Timer",
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Catalyst_Narukami_BuffLevel",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 1,
+							"doOffStage": true,
+						},
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Catalyst_Narukami_BuffLevel",
+					"valueSteps": [
+						0.5,
+						1.5,
+						2.5,
+						10,
+					],
+					"modifierNameSteps": [
+						"UNIQUE_Catalyst_Narukami_Buff_1",
+						"UNIQUE_Catalyst_Narukami_Buff_2",
+						"UNIQUE_Catalyst_Narukami_Buff_3",
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Catalyst_Narukami_Buff_Timer":{//控制buff时长，也控制特效
+					"isUnique": true,
+					"duration": "%Dura",
+					"onAdded": [
+						{
+							"$type":"AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Catalyst_Narukami_BuffLevel",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+
+				},
+				"UNIQUE_Catalyst_Narukami_Buff_1": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Level",
+							"value": 1,
+							"type": "Int", //state转换时多个trigger可能会被丢掉一个。改用Int
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Change", //表明走any，不然会走从0开始播。
+							"type": "Trigger",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"Elemental_Art",
+								"Elemental_Art_Extra",
+								"Elemental_Art_Hold"
+							],
+							"damagePercentageRatio": "%DamageRatio",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Narukami_Buff_2": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Level",
+							"value": 2,
+							"type": "Int", //state转换时多个trigger可能会被丢掉一个。改用Int
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Change", //表明走any，不然会走从0开始播。
+							"type": "Trigger",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"Elemental_Art",
+								"Elemental_Art_Extra",
+								"Elemental_Art_Hold"
+							],
+							"damagePercentageRatio": "%DamageRatio*2",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Narukami_Buff_3": {//3层时还会加全元素伤
+					"isUnique": true,
+					"state": "AttackUp",//提示靠特效，如果不够，3层时给一个提示。
+					"onAdded": [
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Level",
+							"value": 3,
+							"type": "Int", //state转换时多个trigger可能会被丢掉一个。改用Int
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Weapon_Catalyst_Narukami",
+							"parameter": "Change", //表明走any，不然会走从0开始播。
+							"type": "Trigger",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"Elemental_Art",
+								"Elemental_Art_Extra",
+								"Elemental_Art_Hold"
+							],
+							"damagePercentageRatio": "%DamageRatio*3",
+						},
+					],
+					"properties":  {
+						"Actor_FireAddHurtDelta": "%Rate",
+						"Actor_ElecAddHurtDelta": "%Rate",
+						"Actor_WaterAddHurtDelta": "%Rate",
+						"Actor_GrassAddHurtDelta": "%Rate",
+						"Actor_WindAddHurtDelta": "%Rate",
+						"Actor_IceAddHurtDelta": "%Rate",
+						"Actor_RockAddHurtDelta": "%Rate",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"DamageRatio": 0,
+				"Dura": 0,
+				"Rate":0
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  14415 2.5活动法器 Equip_Catalyst_Jyanome
+	//  特定情况下强化角色基础属性。目前持续时间内再触发会全刷新。但要注意特效层数
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Jyanome",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Jyanome_ArtBuff",
+						},
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Catalyst_Jyanome_ArtBuff":
+				{
+					"isUnique": true,
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"properties": {
+						"Actor_ChargeEfficiencyDelta": "%ChargeEfficiency",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"ChargeEfficiency":0,
+				"Dura": 0,
+			}
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14417  3.0锻造法器 Weapon_Catalyst_Arakalari
+	//  触发元素反应减少5%攻击力增加20精通，可以叠5层，6s没触发掉一层
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Arakalari",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Arakalari_Handler",  //处理元素反应层数变化和根据层数变化更新数值buff
+					"doOffStage": true					
+				},
+			],
+			"onRemoved": 
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "Weapon_Catalyst_Arakalari_Count_Miner",
+					"doOffStage": true
+				}
+			],
+			"modifiers": 
+			{
+				"Blank":{},
+				"UNIQUE_Catalyst_Arakalari_Handler":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[			
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Catalyst_Arakalari_Count",
+							"value": 0,
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Catalyst_Arakalari_Count",
+							"value": 0,
+						}
+					],
+					"modifierMixins": 
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"entityTypes": ["Monster"],							
+							"reactionTypes": [
+								"Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce","CrystallizeFire","CrystallizeWater","CrystallizeElectric","CrystallizeIce","Overdose","OverdoseElectric","OverdoseGrass","Overgrow","OvergrowMushroomFire","OvergrowMushroomElectric"
+							],
+							"actions": 
+							[
+								{
+									"$type": "ApplyModifier",// CD时间后重置
+									"modifierName": "Weapon_Catalyst_Arakalari_CD",
+									"doOffStage": true
+								},
+							],
+						},
+						{
+							"$type": "AttachModifierToGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Catalyst_Arakalari_Count",
+							"valueSteps": [-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps": 
+							[
+								"Blank",
+								"UNIQUE_Catalyst_Arakalari_EFF_1",
+								"UNIQUE_Catalyst_Arakalari_EFF_2",
+								"UNIQUE_Catalyst_Arakalari_EFF_3",
+								"UNIQUE_Catalyst_Arakalari_EFF_4",
+								"UNIQUE_Catalyst_Arakalari_EFF_5"
+							]
+						}
+					],
+					
+				},
+				"Weapon_Catalyst_Arakalari_Count_Miner": //控制掉层，固定每6秒掉1层，如果触发了元素反应就重置计时
+				{
+					"duration": "%StackReduceTime",
+					"stacking": "Refresh",					
+					"onRemoved": 
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Catalyst_Arakalari_Count",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+							"doOffStage": true,							
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Weapon_Catalyst_Arakalari_Count_Miner_Clone",
+							"doOffStage": true,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "MoreThanAndEqual",
+									"key": "_ABILITY_Catalyst_Arakalari_Count",
+									"value": 1
+								},
+							]
+						}						
+					]
+				},
+				"Weapon_Catalyst_Arakalari_Count_Miner_Clone":
+				{
+					"duration": "%StackReduceTime",					
+					"stacking": "Refresh",
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Weapon_Catalyst_Arakalari_Miner_Clone_Mark",
+							"value": 1
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Catalyst_Arakalari_Count",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+							"doOffStage": true,							
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Weapon_Catalyst_Arakalari_Count_Miner",
+							"doOffStage": true,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "MoreThanAndEqual",
+									"key": "_ABILITY_Catalyst_Arakalari_Count",
+									"value": 1
+								}
+							]
+						},
+						{
+							"$type": "SetGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Weapon_Catalyst_Arakalari_Miner_Clone_Mark",
+							"value": 0,
+						}				
+					]
+				},
+
+				"Weapon_Catalyst_Arakalari_CD":
+				{
+					"stacking": "Unique",
+					"duration": "%TriggerCD",
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue", //层数在有效范围内+1
+							"key": "_ABILITY_Catalyst_Arakalari_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "ApplyModifier", //这里是重置每6s减一层的计时器
+							"modifierName": "Weapon_Catalyst_Arakalari_Count_Miner",
+							"doOffStage": true,	
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "NoneOrEqual",
+									"key": "_ABILITY_Weapon_Catalyst_Arakalari_Miner_Clone_Mark",
+									"value": 0
+								}
+							]						
+						},
+						{
+							"$type": "ApplyModifier", //这里是重置每6s减一层的计时器
+							"modifierName": "Weapon_Catalyst_Arakalari_Count_Miner_Clone",
+							"doOffStage": true,	
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "Equal",
+									"key": "_ABILITY_Weapon_Catalyst_Arakalari_Miner_Clone_Mark",
+									"value": 1
+								}
+							]						
+						}
+					],
+				},
+				"UNIQUE_Catalyst_Arakalari_EFF_1":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"target": "Self",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_Attack_Stack1_Arakalari"
+						},
+					],
+					"properties": 
+					{
+						"Actor_AttackRatio": "%Attack_Ratio_Per_Stack",
+						"Actor_ElemMasteryDelta":"%Mastery_Up_Per_Stack",
+					}
+				},
+				"UNIQUE_Catalyst_Arakalari_EFF_2":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"target": "Self",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_Attack_Stack2_Arakalari"
+						},
+					],
+					"properties": 
+					{
+						"Actor_AttackRatio": "%Attack_Ratio_Per_Stack*2",
+						"Actor_ElemMasteryDelta":"%Mastery_Up_Per_Stack*2",
+					}
+				},
+				"UNIQUE_Catalyst_Arakalari_EFF_3":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"target": "Self",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_Attack_Stack3_Arakalari"
+						},
+					],
+					"properties": 
+					{
+						"Actor_AttackRatio": "%Attack_Ratio_Per_Stack*3",
+						"Actor_ElemMasteryDelta":"%Mastery_Up_Per_Stack*3",
+					}
+				},
+				"UNIQUE_Catalyst_Arakalari_EFF_4":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"target": "Self",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_Attack_Stack4_Arakalari"
+						},
+					],
+					"properties": 
+					{
+						"Actor_AttackRatio": "%Attack_Ratio_Per_Stack*4",
+						"Actor_ElemMasteryDelta":"%Mastery_Up_Per_Stack*4",
+					}
+				},
+				"UNIQUE_Catalyst_Arakalari_EFF_5":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"target": "Self",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_Attack_Stack5_Arakalari"
+						},						
+					],
+					"properties": 
+					{
+						"Actor_AttackRatio": "%Attack_Ratio_Per_Stack*5",
+						"Actor_ElemMasteryDelta":"%Mastery_Up_Per_Stack*5",
+					}
+				},
+
+			},
+			"abilitySpecials": 
+			{
+				"Attack_Ratio_Per_Stack":0,
+				"Mastery_Up_Per_Stack":0,
+				"TriggerCD":0,
+				"StackReduceTime":0
+			}
+		}		
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  14416 教令院法器
+//  
+//  每X秒使自身攻击力提升，数值为元素精通的xx%，持续x秒
+//  附近的角色获得这个buffXX%的效果
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Pleroma",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Pleroma_Delay"
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Pleroma_Handler",	
+					"doOffStage": true				
+				},
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Catalyst_Pleroma_Delay":
+				{
+					"isUnique": true,
+					"duration": 1,
+					"onRemoved": 
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Weapon_Catalyst_Pleroma",
+							"doOffStage": true,
+						}
+					]
+				},
+				"UNIQUE_Catalyst_Pleroma_Handler":
+				{
+					"isUnique": true,
+					"onAdded": 
+					[
+						{
+							"$type": "SetOverrideMapValue",  //元素精通大于9就存缓存里，否则就用0的数值
+							"doOffStage": true,
+							"overrideMapKey": "MasteryCache",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+						},
+						{
+                            "$type": "SetOverrideMapValue",
+                            "doOffStage": true,
+                            "overrideMapKey": "MasteryCache",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+									"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+									"compareType": "MoreThanAndEqual"
+								}
+							]
+                        },
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Catalyst_Pleroma_Buff_Self",
+							"doOffStage": true,					
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Catalyst_Pleroma_Buff_Self",
+							"doOffStage": true,					
+						},						
+					],
+					"thinkInterval": "%Tick",
+					"onThinkInterval": 
+					[
+						{
+							"$type": "SetOverrideMapValue",  //元素精通大于9就存缓存里，否则就用0的数值
+							"doOffStage": true,
+							"overrideMapKey": "MasteryCache",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+						},
+						{
+                            "$type": "SetOverrideMapValue",
+                            "doOffStage": true,
+                            "overrideMapKey": "MasteryCache",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+									"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+									"compareType": "MoreThanAndEqual"
+								}
+							]
+                        },
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Catalyst_Pleroma_Buff_Self",
+							"doOffStage": true,					
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Catalyst_Pleroma_Buff_Self",
+							"doOffStage": true,				
+						},
+					]
+				},
+				"Catalyst_Pleroma_Buff_Self":
+				{
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_AttackExtraDelta":"%MasteryCache*%MasteryTransformRatio"
+					},
+					"onAdded": 
+					[					
+						{
+							"$type": "AttachModifier",
+							"target": "AllPlayerAvatars",
+							"doOffStage": true,
+							"modifierName": "Catalyst_Pleroma_Buff_Other",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetIsSelf","isSelf": false,
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},								
+							]
+						}
+					]
+				},
+				"Catalyst_Pleroma_Buff_Other":
+				{
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_AttackExtraDelta":"%MasteryCache*%MasteryTransformRatio*%TeamInheritRatio"
+					},
+				}
+			},
+			"abilitySpecials": 
+			{
+				"MasteryCache":0,
+				"MasteryTransformRatio":0,
+				"Tick":0,
+				"Duration":0,
+				"TeamInheritRatio":0
+			}
+		}
+	},
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  14511 草神法器 Equip_Catalyst_Ayus
+	//  技能未定，有常驻特效挂接在prefab上。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Ayus",
+			"isDynamicAbility": true,
+			"onAdded": [ //DoActionByTeamStatusMixin装备时可能就会跑一次，就不用初始化gv了。
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Ayus_Eff_Init",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Ayus_RefreshOtherBuff",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Ayus_Interval",
+				},
+				{ //上的时候预先检测一次属性。
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Electric",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Electric",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Fire",
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Fire",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Fire",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Wind"
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Wind",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Wind",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Ice"
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Ice",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Ice",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Water"
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Water",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Water",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Grass"
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Grass",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Grass",
+							"value": 0
+						},
+					],
+				},
+				{
+					"$type": "Predicated",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetElement",
+							"elementType": "Rock"
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Rock",
+							"value": 1
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetOverrideMapValue",
+							"overrideMapKey": "Rock",
+							"value": 0
+						},
+					],
+				},
+			],
+			"onAbilityStart": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Ayus_Eff_Handler_OnWeapon",
+					"otherTargets": {
+						"$type": "SelectTargetsByEquipParts",
+						"equipPartNames": [
+							"equip01",
+							"equip02",
+							"sheathPoint",
+						],
+					},
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				{ //一个检测发生了队伍变化的Mixin
+					"$type": "DoActionByTeamStatusMixin",
+					"waitTime": 20, //
+					"waitForBigteam": true, //联机会等其他人加载完，不只等20秒。
+					"runPostRecover": true, //用于退出联机时恢复处理一次mixin。
+					"actions": [
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": true,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Same_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": false,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Diff_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Same_Number",
+							"overrideMapKey": "SameNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Diff_Number",
+							"overrideMapKey": "DiffNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果超过上限，限制到上限
+							"overrideMapKey": "SameNumber",
+							"value": "%Max_Same_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Ayus_Same_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Same_Value"
+								},
+							]
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果超过上限，限制到上限
+							"overrideMapKey": "DiffNumber",
+							"value": "%Max_Diff_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Ayus_Diff_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Diff_Value"
+								},
+							]
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Electric",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Electric",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Fire",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Fire",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Wind"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Wind",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Wind",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Ice"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Ice",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Ice",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Water"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Water",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Water",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Grass"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Grass",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Grass",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Rock"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Rock",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Rock",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier", //更新自身buff
+							"modifierName": "UNIQUE_Catalyst_Ayus_SelfBuff",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Ayus_SelfBuff",
+							"doOffStage": true,
+						},
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Catalyst_Ayus_Eff_Init": { //初始的时候多次尝试上到武器上。之后就不用动。尽量等武器刷新好再上
+					"isUnique": true,
+					"duration": 15.5,
+					"thinkInterval": 1,
+					"onThinkInterval": [
+						{
+							"$type": "TriggerAbility", //如果用apply，会导致重连的时候杯子上的特效出现太快，然后特效位置不对。用attach后重连杯子上modifier会重置，就好些了。
+							"abilityName": "Weapon_Catalyst_Ayus",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayus_Interval":{//有那么个问题，主角转属性后不会视作team改变，得有一个经常刷新的，保证buff正确。
+					"isUnique": true,
+					"thinkInterval": 10,
+					"onThinkInterval": [
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": true,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Same_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": false,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Diff_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Same_Number",
+							"overrideMapKey": "SameNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Diff_Number",
+							"overrideMapKey": "DiffNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果超过上限，限制到上限
+							"overrideMapKey": "SameNumber",
+							"value": "%Max_Same_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Ayus_Same_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Same_Value"
+								},
+							]
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果超过上限，限制到上限
+							"overrideMapKey": "DiffNumber",
+							"value": "%Max_Diff_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Catalyst_Ayus_Diff_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Diff_Value"
+								},
+							]
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Electric",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Electric",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Fire",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Fire",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Wind"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Wind",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Wind",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Ice"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Ice",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Ice",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Water"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Water",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Water",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Grass"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Grass",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Grass",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByTargetElement",
+									"elementType": "Rock"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Rock",
+									"value": 1
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue",
+									"doOffStage": true,
+									"overrideMapKey": "Rock",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier", //更新自身buff
+							"modifierName": "UNIQUE_Catalyst_Ayus_SelfBuff",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Catalyst_Ayus_SelfBuff",
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Catalyst_Ayus_Eff_Handler_OnWeapon": { //只有让武器自己管理特效才能保证刷上，而且不会重复。
+					"isUnique": true,
+					"onAdded": [ //上成功就可以干掉初始化modfier
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Catalyst_Ayus_Eff_Init"
+						},
+					],
+					"modifierMixins": [
+						{ //处理灯上特效显示
+							"$type": "AttachModifierToGlobalValueMixin",
+							"globalValueTarget": "Caster",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Same_Number",
+							"valueSteps": [
+								0.5,
+								1.5,
+								2.5,
+								10,
+							],
+							"modifierNameSteps": [
+								"UNIQUE_Catalyst_Ayuse_SameBuff_1",
+								"UNIQUE_Catalyst_Ayuse_SameBuff_2",
+								"UNIQUE_Catalyst_Ayuse_SameBuff_3",
+							],
+						},
+						{
+							"$type": "AttachModifierToGlobalValueMixin",
+							"globalValueTarget": "Caster",
+							"globalValueKey": "_ABILITY_Catalyst_Ayus_Diff_Number",
+							"valueSteps": [
+								0.5,
+								1.5,
+								2.5,
+								10,
+							],
+							"modifierNameSteps": [
+								"UNIQUE_Catalyst_Ayuse_DiffBuff_1",
+								"UNIQUE_Catalyst_Ayuse_DiffBuff_2",
+								"UNIQUE_Catalyst_Ayuse_DiffBuff_3",
+							],
+						},
+					]
+				},
+				"UNIQUE_Catalyst_Ayus_RefreshOtherBuff": {
+					"isUnique": true,
+					"timeScale": "Level",
+					"thinkInterval": 2, //注：讨论决定描述是常驻，写法是刷新。
+					"onAdded": [
+						{
+							"$type": "AttachModifier", //数值是稳定的，只需要刷新自己发出的buff就行。不用卸下再上。
+							"target": "AllPlayerAvatars",
+							"modifierName": "Weapon_Catalyst_Ayus_TeamBuff",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetIsSelf", //排除装备者自己,
+									"isSelf": false,
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+					"onThinkInterval": [
+						{
+							"$type": "AttachModifier", //数值是稳定的，只需要刷新自己发出的buff就行。不用卸下再上。
+							"target": "AllPlayerAvatars",
+							"modifierName": "Weapon_Catalyst_Ayus_TeamBuff",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetIsSelf", //排除装备者自己,
+									"isSelf": false,
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayus_SelfBuff": {
+					"isUnique": true,
+					"stacking": "Refresh",
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_ElecAddHurtDelta": "%DamageRate*%DiffNumber*%Electric",
+						"Actor_FireAddHurtDelta": "%DamageRate*%DiffNumber*%Fire",
+						"Actor_WindAddHurtDelta": "%DamageRate*%DiffNumber*%Wind",
+						"Actor_IceAddHurtDelta": "%DamageRate*%DiffNumber*%Ice",
+						"Actor_WaterAddHurtDelta": "%DamageRate*%DiffNumber*%Water",
+						"Actor_GrassAddHurtDelta": "%DamageRate*%DiffNumber*%Grass",
+						"Actor_RockAddHurtDelta": "%DamageRate*%DiffNumber*%Rock",
+						// "Actor_AttackRatio": "%AttackRate*%SameNumber",
+						"Actor_ElemMasteryDelta": "%MasteryRate*%SameNumber",
+					},
+				},
+				"Weapon_Catalyst_Ayus_TeamBuff": { //暂先做成可叠加。
+					"stacking": "Refresh",
+					"duration": 4,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_ElemMasteryDelta": "%ElemMastery",
+					},
+				},
+				"UNIQUE_Catalyst_Ayuse_SameBuff_1": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_01",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint", //特效插件中的跟随RootNode功能有问题，会在跟随前先算了y轴差距。所以得手动让初始位置和RootNode对齐。
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayuse_SameBuff_2": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_01",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_02",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayuse_SameBuff_3": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_01",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_02",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Grass_03",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayuse_DiffBuff_1": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_01",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayuse_DiffBuff_2": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_01",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_02",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Ayuse_DiffBuff_3": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_01",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_02",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Catalyst_Ayus_Buff_Other_03",
+							"born": {
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials": {
+				"MasteryRate": 0,
+				"DamageRate": 0,
+				"ElemMastery": 0,
+				"Max_Same_Value": 3,
+				"Max_Diff_Value": 3,
+				"SameNumber": 0,
+				"DiffNumber": 0,
+				"Electric": 0,
+				"Fire": 0,
+				"Wind": 0,
+				"Ice": 0,
+				"Water": 0,
+				"Grass": 0,
+				"Rock": 0,
+			},
+		},
+	},	
+
+
+
+
+
+//Ability结尾
+]

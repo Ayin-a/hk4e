@@ -1,0 +1,6283 @@
+[
+//************************************************************************************************//
+///  全局索引：                                                                                   
+///  Cyno_ExtraAttack                                  开大前普攻重击逻辑                        
+///  Avatar_Cyno_ExtraAttack_CreateBullet              开大前重击触发（普通状态）                 
+///  Avatar_Cyno_ExtraAttack_Bullet                    开大前子弹伤害                 
+///  Cyno_ElementalArt_Click                           开大前元素战技                              
+///  Avatar_Cyno_ElementalArt_Bullet                   开大前元素战技子弹配置                             
+///  Avatar_Cyno_BurstMode_ElementalArt_Onstart        开大后的元素战技，刹车【施放时的效果，trigger时点为0】                                 
+///  Cyno_ElementalArt_Click_BurstMode                 元素战技，开大后【造成大范围砸地伤害】
+///  Avatar_Cyno_ElementalBurst                        大招的基本ability【触发时点0】                        
+///  Avatar_Cyno_ElementalBurst_ChangeVisible          大招状态下处理武器隐藏及模型特效逻辑                 
+///  Avatar_Cyno_ElementalBurst_JackalMode             大招的逻辑控制ability，表演结束后逻辑真正的开始              
+///  Avatar_Cyno_ElementalBurst_EndHanlder             大招状态处理出状态时                     
+///  Cyno_ElementalArt_Blade_Hit                       元素战技目押刀波效果            
+///  Cyno_Constellation_6_Blade                        命6刀波效果                                 
+///  Cyno_ElementalArt_Click_BurstMode                 元素战技，开大后【造成大范围砸地伤害】
+///  Avatar_Cyno_FallingAnthem                         空中攻击                                
+///  Avatar_Cyno_BurstMode_ExtraAttack_Bullet          开大后重击子弹伤害
+///  Avatar_Cyno_Attack_DamageHandler                  普攻伤害管理
+///  Avatar_Cyno_Constellation_1_AttackRatio           命座1 释放元素爆发后，攻速提升，触发目押后刷新时长。                             
+///  Avatar_Cyno_Constellation_2_BuffElecAddHurt       命座2 普通攻击命中敌人时，提高雷元素伤害加成。
+///  Avatar_Cyno_Constellation_4_ReviveEnergy          命座4 给队友充能
+///  Avatar_Cyno_Constellation_6                       命座6 开大后获得几层子弹，普攻命中后连携攻击 
+
+//************************************************************************************************//
+////////////////////////////////////////////////////////////////
+//
+//  普攻&重击：Cyno_ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ExtraAttack",
+		"abilityMixins":
+		[
+			{
+				"$type": "ButtonHoldChargeMixin",
+				"skillID": 10711,
+				"chargeTime": 0.12,
+				"secondChargeTime": 0.2,
+				"OnBeginUncharged":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "DoSkill",
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "SkillID",
+						"value": 99,
+						"predicates":
+						[
+							{
+								"$type": "ByAny",
+								"predicates":
+								[
+									{
+										"$type": "ByAnimatorInt",
+										"value": 0,
+										"parameter": "ComboCount",
+										"logic": "Equal",
+									},
+									{
+										"$type": "ByAnimatorInt",
+										"value": 4,
+										"parameter": "ComboCount",
+										"logic": "Equal",
+									},
+								],
+							},
+						],
+					},	
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "IsCharging",
+						"value": false,
+					},											
+				],
+				"OnReleaseUncharged":
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "SkillID",
+						"value": 1,
+					},
+				],					
+				"OnBeginCharged":
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "IsCharging",
+						"value": true,
+					},
+				],
+				"OnReleaseCharged":
+				[
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "IsCharging",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "SkillID",
+						"value": 1,
+					},
+				],       
+				"OnBeginSecondCharged":
+				[
+					{
+						"$type": "Predicated",
+						"target": "Caster",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions": 
+						[
+							//开大状态下的值
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "DoSkill",
+								"predicates":
+								[
+									{
+										"$type": "ByLocalAvatarStamina",
+										"stamina": "%ExtraAttack_BurstMode_Stamina_Cost+%Flexible_Stamina",
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "SkillID",
+								"value": 6,
+								"predicates":
+								[
+									{
+										"$type": "ByLocalAvatarStamina",
+										"stamina": "%ExtraAttack_BurstMode_Stamina_Cost+%Flexible_Stamina",
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+						],
+						"failActions": 
+						[
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "DoSkill",
+								"predicates":
+								[
+									{
+										"$type": "ByLocalAvatarStamina",
+										"stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "SkillID",
+								"value": 6,
+								"predicates":
+								[
+									{
+										"$type": "ByLocalAvatarStamina",
+										"stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+						],
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "IsCharging",
+						"value": false,
+					},
+				],         
+				"OnReleaseSecondCharged":
+				[
+
+				],
+				"chargeStateIDs": [ "Attack01","Attack02","Attack03","Attack04","Attack05","Run"],                                                           					
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["ExtraAttack"],
+				"modifierName": "ExtraAttack_StaminaCost",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ExtraAttack_BurstMode"],
+				"modifierName": "ExtraAttack_StaminaCost_BurstMode",
+			},
+			//重击跟随特效
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"ExtraAttack"
+				],
+				"modifierName": "ExtraAttack_AttachEffect",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"ExtraAttack_BS"
+				],
+				"modifierName": "ExtraAttack_BS_AttachEffect",
+			},
+			//关闭碰撞盒
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"ExtraAttack"
+				],
+				"modifierName": "ExtraAttack_CloseCollider",
+			},
+			//关闭碰撞盒
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"Cyno_ExtraAttack_BurstMode"
+				],
+				"modifierName": "ExtraAttack_CloseCollider",
+			},
+			//开大后普攻最后一击转向	
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack05",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.17,
+				"modifierName": "Avatar_Cyno_Attack05_TurndDirection",
+			},
+			//开大第三击在怪物位置播受击特效
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack03",
+			// 	"normalizeStart": 0,
+			// 	"normalizeEnd": 1,
+			// 	"modifierName": "Avatar_Cyno_Attack03_FireHitEffect_Handler",
+			// },
+		],
+		"modifiers":
+		{
+			"ExtraAttack_StaminaCost":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AvatarSkillStart",
+						"skillID": 10002,
+						"costStaminaRatio":"%ExtraAttack_Pole_Stamina_Cost",
+					},
+				],
+			},
+			"ExtraAttack_StaminaCost_BurstMode":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AvatarSkillStart",
+						"skillID": 10002,
+						"costStaminaRatio":"%ExtraAttack_BurstMode_Stamina_Cost",
+					},
+				],
+			},
+			"ExtraAttack_AttachEffect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ExtraAttack_Sprint",
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.3,
+								"z": 0.0,
+							},
+						},
+					},
+				]
+			},
+			"ExtraAttack_BS_AttachEffect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ExtraAttack",
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.3,
+								"z": 0.0,
+							},
+						},
+					},
+				]
+			},
+			"ExtraAttack_CloseCollider":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": true,
+						"doOffStage": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": false,
+						"hdMeshKey": "Default",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": false,
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": true,
+						"hdMeshKey": "Default",
+					},
+					{
+						"$type":"KillGadget",
+						"gadgetInfo":
+						{
+							"$type":"SelectTargetsByChildren",
+							"configID":41071003,
+							"sortType":"Default",
+						},
+						"doOffStage":true,
+					},
+				],
+			},
+			"Avatar_Cyno_Attack05_TurndDirection":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "AvatarSteerByCameraMixin",
+						"stateIDs": ["Katana_Attack05"],
+						"angularSpeed": 600,
+						"canReviveStamina": true,
+						"isCheckOnAttach": true,
+					},
+				],
+			},
+			"Avatar_Cyno_Attack03_FireHitEffect_Handler":
+			{
+				"onAttackLanded":
+				[
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "SetGlobalDir",
+								"target": "Target",
+								"key": "_Avatar_Cyno_Attack03_Hit",
+								"born":
+								{
+									"$type": "ConfigBornByHitPoint",
+								},
+								"setTarget": false,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Avatar_Cyno_Attack03_Hit_0",	//清除X轴干扰
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Avatar_Cyno_Attack03_Hit_1",	//清除Z轴干扰
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValueToOverrideMap",
+								"globalValueKey": "_Avatar_Cyno_Attack03_Hit_2",
+								"overrideMapKey": "Attack03_HitDir",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Avatar_Cyno_Attack03_Hit_2",	//清除Z轴干扰
+								"value": "-1*%Attack03_HitDir",
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_BurstMode_NormalAttack_03_Hit",
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"direction":
+									{
+										"$type": "ConfigDirectionByGlobalValue",
+										"directionKey": "_Avatar_Cyno_Attack03_Hit",
+									},
+								},
+							},							
+						],
+					},					
+				]
+			},
+		},
+		"abilitySpecials":
+		{
+			"ExtraAttack_Pole_Stamina_Cost": 0,
+			"ExtraAttack_BurstMode_Stamina_Cost": 0,
+			"Flexible_Stamina":-2,
+			"Attack03_HitDir": 0,
+		},
+	},
+},
+
+////////////////////////////////////////////////////////////////
+//
+//  重击：trigger跟随自身的子弹
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ExtraAttack_CreateBullet",
+		"onAbilityStart":
+		[
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 41071003,
+				"campID": 1001,
+				"campTargetType": "Enemy",
+
+			},
+		],
+	},
+}, 
+////////////////////////////////////////////////////////////////
+//
+//  重击子弹伤害配置
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ExtraAttack_Bullet",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["MonsterEquip"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "DamageByAttackValue",
+						"target": "Target",
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attenuationTag":"ExtraAttack",
+							"attenuationGroup":"Avatar_Pole_ExtraAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%ExtraAttack_Normal",
+								"strikeType": "Spear",
+								"elementDurability": 25,
+								"overrideByWeapon": true,
+								"attackType": "Melee",
+								"enBreak": 120,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV6",
+								// "hitLevel": "Air", //hitlevel = 5
+								// "hitImpulseX": 480, //hitlevel = 5
+								// "hitImpulseY": 600, //hitlevel = 5
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.36,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": -1,
+									"z": 0,
+								},
+							},
+						},
+					},
+				],
+				"failActions":
+				[
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 0.8,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "ExtraAttack",
+								"attenuationTag":"ExtraAttack",
+								"attenuationGroup":"Avatar_Pole_ExtraAttack",
+								"attackProperty":
+								{
+									"damagePercentage": "%ExtraAttack_Normal",
+									"strikeType": "Spear",
+									"elementDurability": 25,
+									"overrideByWeapon": true,
+									"attackType": "Melee",
+									"enBreak": 120,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV5",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": true,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": false,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.36,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0,
+									},
+								},
+							},
+						},
+					},
+				],
+			},
+		],
+		"abilitySpecials":
+		{
+			"ExtraAttack_Normal": 0,
+		},
+
+	},
+}, 
+
+///////////////////////////////////////////////////////////////
+//
+//  元素战技，开大前【造成路径子弹伤害】
+//
+///////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Cyno_ElementalArt_Click",
+		"onAdded":
+		[
+			//掉球检测
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Avatar_Cyno_ElementalArt_DropBallCheck",
+				"doOffStage": true,
+			},
+			//赛诺标志位，用于处理换人时清理ShaderLerp
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_AvartarInShaderChange_Special",
+				"value": 1,
+				"doOffStage": true,
+				"canBeHandledOnRecover": true
+			},
+		],							
+		"onAbilityStart":
+		[
+			{
+				"$type": "DebugLog",
+				"content": "++使用元素战技",
+			},
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10712,
+				"cdRatio": 1,
+				"predicates":
+				[
+					{
+						"$type":"BySkillReady",
+						"skillID":10712,
+					},
+				],
+			},
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10713,
+				"cdRatio": 1,
+				"predicates":
+				[
+					{
+						"$type":"BySkillReady",
+						"skillID":10713,
+					},
+				],
+			},	
+			//伤害改为子弹来打
+			//(往前挪挪，不然感觉像戳到了但没打到人？)
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 41071002,
+				"campID": 1001,
+				"campTargetType": "Enemy",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "RootNode",
+					"offset" :
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},					
+		],
+		"abilityMixins":
+		[
+			//BS阶段先看看是不是有目标
+			{
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"Cyno_ElementalArt_BS",
+				"normalizeStart":0.0,
+				"normalizeEnd":1,
+				"modifierName":"Cyno_ElementalArt_CheckTarget",
+			},
+			//rushmove阶段关闭碰撞
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "Cyno_ElementalArt_HasTarget",
+				"modifierName" : "Cyno_ElementalArt_Click_CloseCollider",
+				"target" : "Self",
+				"normalizeStart" : 0.3,
+				"normalizeEnd" : 1,
+			},
+			//防止连点可以无CD触发2次前窜
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "Cyno_ElementalArt_NoTarget",
+				"modifierName" : "Cyno_ElementalArt_ClearTrigger",
+				"target" : "Self",
+				"normalizeStart" : 0.472,
+				"normalizeEnd" : 0.9,
+			},
+			{
+				"$type" : "AttachToNormalizedTimeMixin",
+				"stateID" : "Cyno_ElementalArt_HasTarget",
+				"modifierName" : "Cyno_ElementalArt_ClearTrigger",
+				"target" : "Self",
+				"normalizeStart" : 0.472,
+				"normalizeEnd" : 0.9,
+			},
+			//点按元素战技之后的判断
+			{
+				"$type": "OnAvatarUseSkillMixin",
+				"clearSkillIdDelay": 0.2,
+				"onTriggerSkill":
+				[
+					{
+						"$type": "DebugLog",
+						"content": "使用元素战技",
+					},
+					{
+						"$type": "Predicated",
+						"target": "Self",
+						"targetPredicates": 
+						[
+							//判断是不是在窗口期用的元素战技
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_IsInWindow",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions": 
+						[
+							//目押成功
+							{
+								"$type":"SetGlobalValue",
+								"key":"_Cyno_BurstMode_Muya_Success", 
+								"value": 1, 
+								"target": "Self",
+							},
+							//给特效发状态机
+							{
+								"$type" : "SendDungeonFogEffectTrigger",
+								"parameter" : "Muya_Success",
+								"muteRemoteAction": true,
+								"cameraFogEffectName" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_WarningCamera",
+							},
+						],
+						"doOffStage": true,
+					},
+					//命1效果，元素战技目押后攻速提升
+					{
+						"$type": "Predicated",
+						"target": "Caster",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Avatar_Cyno_Constellation_1",
+							},
+						],
+						"successActions": 
+						[
+							//这次是不是目押效果
+							{
+								"$type": "Predicated",
+								"target": "Self",
+								"targetPredicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_Cyno_BurstMode_Muya_Success",
+										"value": 1,
+										"compareType": "Equal",
+									},
+								],
+								"successActions": 
+								[
+									{
+										"$type": "TriggerAbility",
+										"abilityName": "Avatar_Cyno_Constellation_1_AttackRatio",
+										"target":"Caster",
+									},
+								],
+								"doOffStage": true,
+							},				
+						],
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"Cyno_ElementalArt_CheckTarget":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"SetAnimatorBool",  //将bool设为0或1进入无目标和有目标2种动画效果。
+						"boolID":"SkillHasTarget",
+						"value":false,
+						"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByHasAttackTarget",
+									},
+								],
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"SkillHasTarget",
+						"value":true,
+						"predicates":
+						[
+							{
+								"$type":"ByHasAttackTarget",
+							},
+						],
+					},
+				],
+			},
+			"Cyno_ElementalArt_Click_CloseCollider":
+			{
+				"onAdded" :
+				[
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": true,
+						"doOffStage": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": false,
+						"hdMeshKey": "Default",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": false,
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": true,
+						"hdMeshKey": "Default",
+					},
+				],			
+			},
+			"Cyno_ElementalArt_ClearTrigger":
+			{
+				"onAdded":
+				[
+					{
+						"$type" : "ResetAnimatorTrigger",
+						"triggerID" : "DoSkill",
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalArt_DropBallCheck":
+			{
+				"onHittingOther":
+				[
+					{
+						"$type" : "Predicated",   //增添掉球检测
+						"target" : "Target",
+						"targetPredicates":
+						[
+							{
+								"$type" : "ByAttackTags",
+								"attackTags" : ["Elemental_Art","Elemental_Art_Extra"],
+							},
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ANIMAL_ENTITY_TYPE",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Avatar_Cyno_ElementalArt_DropBall",
+								"target": "Self",
+								"doOffStage": true,   //可以换到后台再打出伤害，需要加doOffStage
+							},
+
+						],
+					},
+				],				
+			},
+			"Avatar_Cyno_ElementalArt_DropBall":  //掉球Ball
+			{
+				"duration": 0.5,  //防止目押波触发这个效果
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "Predicated",
+						"target": "Caster",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						//开大前后掉球不一样
+						"successActions":
+						[
+							{
+								"$type": "Randomed",   
+								"chance": 0.333,
+								"successActions":
+								[
+									{
+										"$type": "GenerateElemBall",
+										"configID": 2020,
+										"baseEnergy": 3,
+										"ratio": 1,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"bornRandom":
+											{
+												"$type": "BornRandomFromCenter",
+												"minRandomRange": 0.4,
+												"maxRandomRange": 1.2,
+											},
+										},
+										"doOffStage": true,
+									},
+								],
+							},
+							{
+								"$type": "GenerateElemBall",
+								"configID": 2020,
+								"baseEnergy": 3,
+								"ratio": 1,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"bornRandom":
+									{
+										"$type": "BornRandomFromCenter",
+										"minRandomRange": 0.4,
+										"maxRandomRange": 1.2,
+									},
+								},
+								"doOffStage": true,
+							},
+						],
+						"failActions":
+						[
+							//开大前，产球多一点
+							{
+								"$type": "GenerateElemBall",
+								"configID": 2020,
+								"baseEnergy": 9,
+								"ratio": 1,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"bornRandom":
+									{
+										"$type": "BornRandomFromCenter",
+										"minRandomRange": 0.4,
+										"maxRandomRange": 1.2,
+									},
+								},
+								"doOffStage": true,
+							},
+						],
+						"doOffStage": true,
+					},	
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  开大前元素战技:子弹配置
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ElementalArt_Bullet",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["MonsterEquip"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "DamageByAttackValue",
+						"target": "Target",
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "Elemental_Art",
+							"attenuationTag":"Cyno_ElementalArt_Bullet", 
+							"attenuationGroup": "Cyno_ElementalArt_Bullet", //特殊衰减序列
+							"attackProperty":
+							{
+								  "damagePercentage": "%Elemental_Art_Bullet_Damage",
+								  "strikeType": "Slash",
+								  "elementType": "Electric",
+								  "elementDurability": 25,
+								  "attackType": "Melee",
+								  "enBreak" : 50,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+						},
+					},
+				],
+				"failActions":
+				[
+					{
+						"$type": "TriggerAttackEvent",
+						"target": "OriginOwner",
+						"targetType": "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"filterByFrame" : true,
+								"radius" : 1,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+									"offset" :
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0, //给点偏移不然看起来像戳到了没打到？
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "Elemental_Art",
+								"attenuationTag":"Cyno_ElementalArt_Bullet", 
+								"attenuationGroup": "Cyno_ElementalArt_Bullet", //特殊衰减序列
+								"attackProperty":
+								{
+									  "damagePercentage": "%Elemental_Art_Bullet_Damage",
+									  "strikeType": "Slash",
+									  "elementType": "Electric",
+									  "elementDurability": 25,
+									  "attackType": "Melee",
+									  "enBreak" : 50,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV3",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+							},
+						},
+					},
+				],
+			},		
+		],
+		"onAdded":
+		[
+		],
+		"modifiers":
+		{
+
+		},
+		"abilitySpecials":
+		{
+			"Elemental_Art_Bullet_Damage": 0,
+		},
+	},
+},
+///////////////////////////////////////////////////////////////
+//
+//  开大后的元素战技，刹车【施放时的效果，trigger时点为0】
+//
+///////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_BurstMode_ElementalArt_Onstart",
+		"onAdded":
+		[
+			{
+				"$type":"SetGlobalValue",
+				"key":"_Cyno_BurstMode_Muya_Success", 
+				"value":0, 
+			},	
+		],			
+		"abilityMixins":
+		[
+		],				
+		"onAbilityStart":
+		[
+			{
+				"$type" : "AddElementDurability",
+				"doOffStage": true,
+				"value" : 4,
+				"modifierName":"UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+				"useLimitRange": true,
+				"maxValue": 18,
+			},
+			//晚一点判断目押，为了时序
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Cyno_ElementalArt_Click_BurstMode_AddArtExtra_Handler",
+				"doOffStage":true,
+			},				
+		],
+		"modifiers":
+		{
+			"Cyno_ElementalArt_Click_BurstMode_AddArtExtra_Handler":
+			{
+				"duration":0.2,
+				"onRemoved":
+				[
+					//解锁突破天赋，如果触发目押，砸地那一下的伤害提升
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Cyno_ElementalArt_Click_BurstMode_AddArtExtra",
+						"doOffStage":true,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_Cyno_BurstMode_Muya_Success",
+								"value":1,
+								"compareType":"Equal",
+							},
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Cyno_PermanentSkill_1",
+							},					
+						],
+					},
+					//如果有命6的情况下加子弹
+					{
+						"$type" : "Predicated",
+						"target" : "Caster",
+						"targetPredicates":
+						[
+							{
+								"$type":"ByUnlockTalentParam",
+								"talentParam":"Avatar_Cyno_Constellation_6",
+							},
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_Cyno_BurstMode_Muya_Success",
+								"value":1,
+								"compareType":"Equal",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "AddGlobalValue",
+								"key": "_Cyno_Constellation_6_Layer",
+								"value": "%Cyno_Constellation_6_Layer",
+								"useLimitRange": true,
+								"minValue": 0,
+								"maxValue": "%Cyno_Constellation_6_LayerMax",
+								"doOffStage": true,
+							},
+							//刷新时长
+							{
+								"$type": "TriggerAbility",
+								"abilityName": "Avatar_Cyno_Constellation_6",
+								"target":"Caster",
+							},
+						],
+					},
+				]
+			},
+			"Cyno_ElementalArt_Click_BurstMode_AddArtExtra":
+			{
+				"duration":1,
+				"modifierMixins":
+				[
+					{
+						"$type": "ModifyDamageMixin", //砸地那一下伤害调整
+						"attackTags": ["Elemental_Art_Extra"],  
+						"damagePercentageRatio": "%ElementalArt_BurstMode_MuyaRatio", 
+					},					
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+			"ElementalArt_BurstMode_MuyaRatio": 0, //成功目押时增伤系数
+			"Cyno_Constellation_6_Layer": 0, //「豺祭」效果初始层数
+			"Cyno_Constellation_6_LayerMax": 0, //「豺祭」效果最大层数
+		},
+	},
+},
+///////////////////////////////////////////////////////////////
+//
+//  元素战技，开大后【造成大范围砸地伤害】
+//
+///////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Cyno_ElementalArt_Click_BurstMode",
+		"onAdded":
+		[
+				
+		],							
+		"onAbilityStart":
+		[
+			// //进入CD
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10712,
+				"cdRatio": 1,
+				"predicates":
+				[
+					{
+						"$type":"BySkillReady",
+						"skillID":10712,
+					},
+				],
+			},
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10713,
+				"cdRatio": 1,
+				"predicates":
+				[
+					{
+						"$type":"BySkillReady",
+						"skillID":10713,
+					},
+				],
+			},
+			//把目押是否成功的值写入
+			{
+				"$type": "SetGlobalValueToOverrideMap",
+				"globalValueKey": "_Cyno_BurstMode_Muya_Success",
+				"overrideMapKey": "Cyno_BurstMode_Muya_Success",
+				"doOffStage": true,
+			},
+			//开始砸地
+			{
+				"$type": "Predicated",
+				"target": "Caster",
+				"targetPredicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Cyno_PermanentSkill_1",
+					},
+					{
+						"$type":"ByTargetGlobalValue",
+						"key":"_Cyno_BurstMode_Muya_Success",
+						"value":1,
+						"compareType":"Equal",
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type" : "FireEffect",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalArt_BurstMode_Explode",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 1.5,
+							},
+							// "onGround":true,
+						},
+					},
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern": 
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"fanAngle": 360.0,
+								"radius": 6,
+								"height": 3.5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									// "onGround": true,
+									"offset":
+									{
+										"x": 0.0,
+										"y": -0.5,
+										"z": 1.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackTag": "Elemental_Art_Extra",
+								"attenuationTag":"Elemental_Art", 
+								"attenuationGroup": "Cyno_ElementalArt", //特殊衰减序列
+								"attackProperty":
+								{
+									"damagePercentage": "%ElementalArt_BurstMode_Damage",
+									"strikeType": "Blunt",
+									"attackType": "Melee",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"elementRank": 1.5,
+									"enBreak": 75,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV5",
+									"overrideHitImpulse":
+									{
+										"hitLevel": "Air",
+										"hitImpulseX": 0,
+										"hitImpulseY": 600,
+									},
+									"reboundRatio": 0,
+									"hitHaltTime": 0.03,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.48,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": 1,
+										"z": 0,
+									},
+								},
+							}
+						}
+					},	
+				],
+				"failActions":
+				[
+					{
+						"$type" : "FireEffect",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalArt_BurstMode_Explode_Fail",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 1.5,
+							},
+							// "onGround":true,
+						},
+					},
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern": 
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"fanAngle": 360.0,
+								"radius": 6,
+								"height": 3.5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									// "onGround": true,
+									"offset":
+									{
+										"x": 0.0,
+										"y": -0.5,
+										"z": 1.5,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackTag": "Elemental_Art",
+								"attenuationTag":"Elemental_Art", 
+								"attenuationGroup": "Cyno_ElementalArt", //特殊衰减序列
+								"attackProperty":
+								{
+									"damagePercentage": "%ElementalArt_BurstMode_Damage",
+									"strikeType": "Blunt",
+									"attackType": "Melee",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"elementRank": 1.5,
+									"enBreak": 75,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV5",
+									"overrideHitImpulse":
+									{
+										"hitLevel": "Air",
+										"hitImpulseX": 0,
+										"hitImpulseY": 600,
+									},
+									"reboundRatio": 0,
+									"hitHaltTime": 0.03,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+								"forceCameraShake": true,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.48,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": 1,
+										"z": 0,
+									},
+								},
+							}
+						}
+					},						
+				]				
+			},
+			//解锁突破天赋触发额外目押效果
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"Avatar_Cyno_ElementalArt_Muya_Success_Handler",
+				"predicates"://但如果提早销毁，仍然可以播放消散特效。
+				[
+					{
+						"$type":"ByTargetGlobalValue",
+						"key":"_Cyno_BurstMode_Muya_Success",
+						"value":1,
+						"compareType":"Equal",
+					},
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Cyno_PermanentSkill_1",
+					},					
+				],
+				"doOffStage": true,
+			},
+		],
+		"abilityMixins":
+		[
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin",
+			// 	"stateID": "Cyno_ElementalArt_BurstMode",
+			// 	"modifierName": "Avatar_Cyno_ElementalArt_BurstMode_TurndDirection",
+			// 	"normalizeStart": 0,
+			// 	"normalizeEnd": 0.5,
+			// },
+		],
+		"modifiers":
+		{
+			"Cyno_ElementalArt_Click_Invisible":
+			{
+				"onAdded" :
+				[
+					{
+						"$type": "TriggerSetVisible",		
+						"visible": false,
+					},
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": true,
+						"doOffStage": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": false,
+						"hdMeshKey": "Default",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true,
+						"doOffStage": true,
+					},
+					{
+						"$type": "TriggerSetPassThrough",
+						"passThrough": false,
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "EnableHDMesh",
+						"enable": true,
+						"hdMeshKey": "Default",
+					},
+				],			
+			},
+
+			"Avatar_Cyno_ElementalArt_Muya_Success_Handler":
+			{
+				"duration":0.5,
+				"onAdded":
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 41071001,
+						"campID": 1001,
+						"campTargetType": "Enemy",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.3,
+								"z": 0.3,
+							},
+						},
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 41071001,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0,
+								"y": 0.3,
+								"z": 0.3,
+							},
+							"direction":
+							{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffset":
+								{
+									"x": 0.0,
+									"y": 25.0,
+									"z": 0.0,
+								},
+							},
+						},
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 41071001,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0,
+								"y": 0.3,
+								"z": 0.3,
+							},
+							"direction":
+							{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffset":
+								{
+									"x": 0.0,
+									"y": -25.0,
+									"z": 0.0,
+								},
+							},
+						},
+					},
+					//一次窗口期内只能触发一次目押，成功后就关闭判定，等待下一次开启
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_IsInWindow",
+						"value": 0,
+						"doOffStage": true,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Muya_Success",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						]
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_BurstMode_Muya_Success", 
+						"value":0, 
+					},
+				],
+			},
+			// "Avatar_Cyno_ElementalArt_TurndDirection":
+			// {
+			// 	"modifierMixins":
+			// 	[
+			// 		{
+			// 			"$type": "AvatarSteerByCameraMixin",
+			// 			"stateIDs": ["Cyno_ElementalArt_BurstMode"],
+			// 			"angularSpeed": 200,
+			// 			"canReviveStamina": true,
+			// 			"isCheckOnAttach": true,
+			// 		},
+			// 	],
+			// },
+		},
+		"abilitySpecials":
+		{
+			"ElementalArt_BurstMode_Damage": 0,
+			"Cyno_BurstMode_Muya_Success": 0,
+		},
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  大招的基本ability【触发时点0】
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Avatar_Cyno_ElementalBurst",
+		"abilityMixins" :
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst"],
+				"modifierName": "Cyno_ElementalBurst_CameraShot",	//相机控制
+			},
+			//大招无敌状态
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst","Cyno_ElementalBurst_AS"],
+				"modifierName": "Avatar_Cyno_ElementalBurst_Invincible",
+			},
+			//需要重新打光，所以把光照关掉
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst",],
+				"modifierName": "Cyno_TriggerSetShadowRamp",
+			},
+			//退出镜头的时候搭配模糊效果
+			{
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"Cyno_ElementalBurst",
+				"modifierName":"Avatar_Cyno_ElementalBurst_CameraBlur_Handler",
+				"normalizeEnd": 0.894,
+			},
+			//表演阶段把盾的特效收一收
+			{
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"Cyno_ElementalBurst",
+				"modifierName":"Cyno_ElementalBurst_ChangeAlpha",
+				"normalizeStart":0.0,
+				"normalizeEnd":1.0,
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Cyno_BurstCamera_Mark",
+				"value": 0,
+				"doOffStage": true,
+			},
+		],
+		"onAbilityStart" :
+		[
+			{
+				"$type": "RemoveUniqueModifier",
+				"doOffStage": true,
+				"modifierName": "UNIQUE_Special_ShaderLerp",
+				"target": "Self"
+			},
+			//镜头表演管理
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Cyno_ElementalBurst_CameraStart",
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Cyno_ElementalBurst_CameraStart",
+			},
+			//绷带缠绕形成特效
+			{
+				"$type": "FireEffect",	
+				"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_RArm",
+			},
+			//氛围特效
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Atmosphere",
+			},
+			//狼头出现动画
+			{
+				"$type": "SetAnimatorTrigger",
+				"triggerID": "ElementalBurst_Appear",
+			},
+			//狼眼十字星特效
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Jackal_Eye",
+			},
+			//手臂特效
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Perform_AttachHand",
+			},
+			//刚开始推一下人
+			{
+				"$type": "TriggerAttackEvent",	
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"height": 4.0,
+						"fanAngle": 360.0,
+						"radius": 2.0,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -2.0,
+								"z": 0.0,
+							},
+							"direction":
+							{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							// "alongGround": true,
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 0,
+							"enBreak": 400,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "none",
+							"overrideHitImpulse":
+							{
+								"hitLevel": "Heavy",	//hitlevel = sp
+								"hitImpulseX": 600,	//hitlevel = sp
+								"hitImpulseY": 0,	//hitlevel = sp
+							},
+							"retreatType": "ByHitDirection",
+							"canBeDefenceHalt" : false,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.0,
+							"muteHitText" : false,
+						},
+						"forceCameraShake": false,
+					}
+				},
+			},	
+			//命1，获得攻速提升效果
+			{
+				"$type": "Predicated",
+				"target": "Caster",
+				"targetPredicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Avatar_Cyno_Constellation_1",
+					},
+					//要先解锁突破1
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Cyno_PermanentSkill_1",
+					},	
+				],
+				"successActions": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Avatar_Cyno_Constellation_1_AttackRatio",
+						"target":"Caster",
+					},
+				],
+			},
+			//进入命4状态
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Constellation_4",   
+				"value": 1,
+			},
+			//命6，获得子弹，普攻额外触发刀波
+			{
+				"$type": "Predicated",
+				"target": "Caster",
+				"targetPredicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Avatar_Cyno_Constellation_6",
+					},
+					//要先解锁突破1
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Cyno_PermanentSkill_1",
+					},
+				],
+				"successActions": 
+				[
+				    //每次开大进行一些初始化操作
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_Constellation_6_Layer",
+						"value": "%Cyno_Constellation_6_Layer",
+						"target": "Self",
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_CD", 
+						"value": 0, 
+					},
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Avatar_Cyno_Constellation_6",
+						"target":"Caster",
+					},			
+				],				
+			}			
+		],
+		"modifiers":
+		{
+			"Blank":{},
+			"Avatar_Cyno_ElementalBurst_Invincible":   //大招无敌保护
+			{
+				"duration": 2.0,    //加个限定时间，防止摆pose很久了还无敌
+				"state": "Invincible",
+				"onAdded":
+				[
+					{
+						"$type" : "AttachAbilityStateResistance",
+						"resistanceListID": 11002,
+					},
+				],
+			},
+			"Cyno_ElementalBurst_CameraShot":
+			{
+				"onRemoved":
+				[
+					{
+						"$type": "AvatarCameraParam",
+						"cameraParam":
+						{
+							"forceRadius": 6.0,
+							"forceRadiusDuration": 0,
+							"shouldKeepForceRadius": true,
+						},
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"doOffStage": true,
+					},
+					{
+						"$type": "AvatarExitCameraShot",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_BurstCamera_Mark",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+				"onAvatarOut":
+				[
+					{
+						"$type": "AvatarCameraParam",
+						"cameraParam":
+						{
+							"forceRadius": 6.0,
+							"forceRadiusDuration": 0,
+							"shouldKeepForceRadius": true,
+						},
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"doOffStage": true,
+					},
+					{
+						"$type": "AvatarExitCameraShot",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_BurstCamera_Mark",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+			},				
+			"Cyno_ElementalBurst_CameraStart":
+			{
+				"duration": 2.0,
+				"onAdded":
+				[
+					{
+						"$type": "Predicated",	//镜头能放出来吗？会被挡住吗？
+						"target": "Self",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByAttackNotHitScene",
+								"checkWaterLayer": true,
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 1.0,
+									"height": 2.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.5,
+											"z": 0.0,
+										},
+									},
+								},
+							},
+							{
+								"$type": "ByAvatarInWaterDepth",
+								"compareType": "LessAndEqual",
+								"depth": 0.5,
+							},
+						],
+						"successActions": 	//能放出来镜头
+						[
+							//播镜头轨迹
+							{
+								"$type": "AvatarEnterCameraShot",
+								"cameraMoveCfgPath": "Camera_Cyno_ElementalBurst",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",	//进相机标记
+								"value": 1,
+							},
+							//播一个后效
+							{
+								"$type": "ApplyModifier",	//后处理管理
+								"modifierName": "Cyno_ElementalBurst_PostEffect",
+							},
+							//镜头特效
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Cyno_ElementalBurst_CameraEffect_Handler",
+							},							
+						],
+						"failActions":
+						[
+							{
+								"$type": "SetGlobalValue",
+								"key": "_ABILITY_Cyno_BurstCamera_Mark",	//进相机标记
+								"value": 0,
+							},
+						],
+					},						
+				]
+			},
+			"Cyno_ElementalBurst_PostEffect":
+			{
+				"duration": 2.5,
+				"stacking": "Unique",
+				"modifierMixins":
+				[
+					{
+						"$type": "TriggerPostProcessEffectMixin",
+						"postEffectAssetName": "PostEffect_Avatar_Cyno_ElementalBurst",
+					},
+				],
+			},
+			"Cyno_ElementalBurst_CameraEffect_Handler":
+			{
+				"duration": 2.0,
+				"onAdded":
+				[
+					{
+						"$type": "DungeonFogEffects",
+						"enable": true,
+						"muteRemoteAction": true,
+						"cameraFogEffectName": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_CameraFog",
+						"localOffset":
+						{
+							"x":0,
+							"y":0,
+							"z":0,
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "DungeonFogEffects",
+						"cameraFogEffectName": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_CameraFog",
+						"enable": false,
+						"muteRemoteAction": true,
+						"doOffStage": true,
+					},
+				],
+				"onAvatarOut":
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Cyno_ElementalBurst_CameraEffect_Handler",
+						"doOffStage": true,
+					},
+				],
+			},
+			"UNIQUE_Cyno_ElementalBurst_Weather_Once":
+			{
+				"isUnique": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "TriggerWeatherMixin",
+						"type": "Skill",
+						"weatherPattern": "Weather_Cyno_ElementalBurst_Once",
+						"transDuration": 0.3,
+						"duration": 1.5,
+					},
+				],					
+			},
+			"Cyno_TriggerSetShadowRamp":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "TriggerSetShadowRamp",  //材质球阴影颜色变更,需要成对配置
+						"useShadowRamp": false,
+						"specialMats": ["Avatar_Boy_Pole_Cyno_Mat_Body", "Avatar_Boy_Pole_Cyno_Mat_Dress","Avatar_Boy_Pole_Cyno_Mat_Hair"],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerSetShadowRamp",
+						"useShadowRamp": true,
+						"doOffStage": true,
+						"specialMats": ["Avatar_Boy_Pole_Cyno_Mat_Body", "Avatar_Boy_Pole_Cyno_Mat_Dress","Avatar_Boy_Pole_Cyno_Mat_Hair"],
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_CameraBlur_Handler":
+			{
+				"duration": 1.4,
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",	
+						"modifierName": "Avatar_Cyno_ElementalBurst_CameraBlur_Effect",
+						"doOffStage": true,
+					},
+				]
+			},
+			"Avatar_Cyno_ElementalBurst_CameraBlur_Effect":     //拉远镜头瞬间的镜像模糊效果
+			{
+				"duration": 0.3,
+				"modifierMixins":
+				[
+					{
+						"$type": "CameraBlurMixin",
+						"cameraRadialBlur":
+						{
+							"power": 0.7,
+							"fadeTime": 0.15,
+						},
+					},
+				],
+			},
+			"Cyno_ElementalBurst_ChangeAlpha":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "EffectChangeAlphaMixin",
+						"target":"Team",
+						"startDuration":0.1,
+						"endDuration":0.2,
+					},
+				],
+			},		
+		},
+		"abilitySpecials":
+		{
+			"Cyno_Constellation_6_Layer": 0,
+		},
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  大招状态下处理武器隐藏及模型特效逻辑
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ElementalBurst_ChangeVisible",
+		"onAbilityStart": 
+		[
+		],
+		"onAdded":  //初始化GV
+		[
+			//初始化把壳子隐藏起来
+			// {
+			// 	"$type" : "TriggerSetRenderersEnable",
+			// 	"doOffStage" : true,
+			// 	"renderNames" : ["SkillObj_Cyno_Jackal_Aura_Model","SkillObj_Cyno_Jackal_BurstArmS_Model","SkillObj_Cyno_Jackal_BurstArmB_Model"],
+			// 	"setEnable" : false,
+			// 	"canBeHandledOnRecover": true,
+			// },
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Flag",   //标记大招状态 0：静默期  1：开大状态中
+				"value": 0,
+			},
+			//设置大招动画状态
+			{
+				"$type": "SetAnimatorFloat",
+				"floatID": "InSubWeapon",
+				"value": 0,
+				"doOffStage": true,
+				"persistent": false,
+				"canBeHandledOnRecover": true,
+			},
+			//武器显隐标志位
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Weapon_Flag",   //0：显示武器 1：隐藏武器
+				"value": 0,
+			},
+			//烟特效雾显隐标志位
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Fog_Flag",   //0：默认状态后 1：开大后冒特效粒子
+				"value": 0,
+			},
+			//天气特效转换标记位
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Weather_Flag",   //0：默认状态 1：大招表演阶段 2：大招持续阶段
+				"value": 0,
+			},
+			//闪避延长目押时间标志位
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Cyno_ElementalBurst_SprintAddMuya",
+				"value": 0,
+				"doOffStage": true
+			},
+		],
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst"],
+				"modifierName": "Avatar_Cyno_ElementalBurst_ResetInit",
+			},
+			//武器隐藏控制器，一进大招就要隐藏
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_Cyno_BurstMode_Weapon_Flag",
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps": ["Blank", "Avatar_Cyno_ElementalBurst_WeaponVisible_Handler"],
+			},
+			//烟雾特效控制器，镜头表演结束后再开始挂
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_Cyno_BurstMode_Fog_Flag",
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps": ["Blank", "Avatar_Cyno_ElementalBurst_Fog_Handler"],
+			},
+			//天气之子控制器
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_Cyno_BurstMode_Weather_Flag",
+				"valueSteps": [-0.5, 0.5, 1.5, 2.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps": ["Blank", "Avatar_Cyno_ElementalBurst_Weather_DisPlayHandler","Avatar_Cyno_ElementalBurst_Weather_LoopHandler"],
+			},
+			//通过GV切换天气
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst"],
+				"modifierName": "Avatar_Cyno_ElementalBurst_ChangeWeather",
+			},
+			// //开大后什么时候隐藏大手臂的处理
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack01",
+			// 	"normalizeStart": 0.487,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack02",
+			// 	"normalizeStart": 0.539,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack03",
+			// 	"normalizeStart": 0.613,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack04",
+			// 	"normalizeStart": 0.588,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Katana_Attack05",
+			// 	"normalizeStart": 0.693,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Cyno_ExtraAttack_BurstMode_AS",
+			// 	"normalizeStart": 0.144,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin", 
+			// 	"stateID": "Cyno_ElementalArt_BurstMode",
+			// 	"normalizeStart": 0.874,
+			// 	"normalizeEnd": 1.0,
+			// 	"modifierName": "Avatar_Cyno_BigArmDisAppear",
+			// },
+			// //以下是开大后攻击时trigger状态机的保底处理，为了解决后摇状态下大手消失后再攻击时需要从BigAppear开始播,并标记为主动拔刀
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack01",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.2,  //攻击时点之后，便于在atk01内接atk01再次触发
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack02",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.2,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack03",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.2,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack04",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.2,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Katana_Attack05",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.2,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Cyno_ElementalArt_BurstMode",
+				"normalizeStart": 0,
+				"normalizeEnd": 1,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin", 
+				"stateID": "Cyno_ExtraAttack_BurstMode_BS",
+				"normalizeStart": 0,
+				"normalizeEnd": 1.0,
+				"modifierName": "Avatar_Cyno_BigArmAppear",
+			},
+			//为了让大手自然消失的有过程一些，闪避等时候专门需要打断
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": 
+				[ 
+					"Katana_Attack01", 
+					"Katana_Attack02",
+					"Katana_Attack03",
+					"Katana_Attack04",
+					"Katana_Attack05",
+					"Cyno_ElementalArt_BurstMode",
+					"Cyno_ElementalArt_BurstMode_AS",
+					"Cyno_ExtraAttack_BurstMode_BS",
+					"Cyno_ExtraAttack_BurstMode",
+					"Cyno_ExtraAttack_BurstMode_AS",
+					"Cyno_ElementalBurst_AS"
+				],
+				"modifierName": "Avatar_Cyno_ArmBreak",
+			},
+			//大招表现后摇阶段要能被闪避跳跃等打断当前动画
+			// {
+			// 	"$type": "AttachToStateIDMixin",
+			// 	"stateIDs": ["Cyno_ElementalBurst_AS"],
+			// 	"modifierName": "Avatar_Cyno_ArmBreak",
+			// },
+			//------------------标记自己处于拔刀状态---------------//
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack01",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack02",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack03",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack04",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack05",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Cyno_ExtraAttack_BurstMode",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Cyno_ExtraAttack_BurstMode_AS",
+				"modifierName": "Avatar_Cyno_BurstMode_State_Badao",
+				"normalizeStart": 0.0,
+			},
+		],
+		"modifiers":
+		{
+			"Blank":{},
+			"Avatar_Cyno_ArmBreak":
+			{
+				"onRemoved":
+				[			
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BurstMode_ArmBreak",
+					},
+				]
+			},
+			"Avatar_Cyno_BigArmDisAppear":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Attack_DisAppear",
+					},
+				]
+			},
+			"Avatar_Cyno_BigArmAppear":
+			{
+				"duration": 0.3,
+				"stacking":"Multiple",
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Attack_Appear",
+					},
+				]
+			},
+			"Avatar_Cyno_BurstMode_State_Badao":    //单次State主动拔刀
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_ShowOrSheath",
+						"value": 1,
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					// {
+					// 	"$type": "RemoveModifier",
+					// 	"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_Buff_AddDurability",
+					// 	"doOffStage": true,
+					// 	"predicates":
+					// 	[
+					// 		{
+					// 			"$type": "ByTargetGlobalValue",
+					// 			"key": "_ABILITY_Cyno_ElementalBurst_PreSheath",
+					// 			"value": 1,
+					// 			"compareType": "Equal",
+					// 		},
+					// 	],
+					// },
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_PreSheath",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_ResetInit":  
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+						"value": 0,
+					},
+					//重复触发时先清除逻辑，先把眼睛特效干掉
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect",
+						"target":"Team",
+						"doOffStage": true,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+						"doOffStage": true,
+					},
+					//闪避延长目押时间标志位
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_SprintAddMuya",
+						"value": 0,
+					},
+					//开大时也清一下目押是否成功
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_BurstMode_Muya_Success", 
+						"value":0, 
+					},
+				],
+				"onRemoved":
+				[
+					//镜头表演结束后控制爪子隐藏动画
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ElementalBurst_DisAppear",
+					},
+				]
+				//一进大招状态就赋值，退出大招状态逻辑控制
+			},
+			"Avatar_Cyno_ElementalBurst_WeaponVisible_Handler":  //大招武器显隐控制器
+			{
+				"stacking": "Unique",
+				// "onAdded":
+				// [
+				// 	{
+				// 		"$type": "TriggerHideWeapon",
+				// 		"visible": false,
+				// 		"partNames": ["equip01","equip02","equip03","sheathPoint"],  //隐藏原武器
+				// 		"doOffStage": true,
+				// 	},
+				// ],
+				// "onReconnect":
+				// [
+				// 	{
+				// 		"$type": "TriggerHideWeapon",
+				// 		"visible": false,
+				// 		"partNames": ["equip01","equip02","equip03","sheathPoint"],  //重连时需再次将武器隐藏
+				// 		"doOffStage": true,
+				// 	},
+				// ],
+				// "onRemoved":
+				// [
+				// 	{
+				// 		"$type": "TriggerHideWeapon",
+				// 		"visible": true,
+				// 		"partNames": ["equip01","equip02","equip03","sheathPoint"],  //显示原武器
+				// 		"doOffStage": true,
+				// 	},					
+				// ],
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachActionToModifierMixin",
+						"onAdded": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": false,
+								"partNames": ["equip01","equip02","equip03","sheathPoint"],  //隐藏原武器
+								"doOffStage": true,
+								"canBeHandledOnRecover": true
+							},
+						],
+						"onRemoved": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": true,
+								"partNames": ["equip01","equip02","equip03","sheathPoint"],  //显示原武器
+								"doOffStage": true,
+								"canBeHandledOnRecover": true
+							},
+						]
+					}					
+				]
+			},
+			"Avatar_Cyno_ElementalBurst_Fog_Handler":  //大招特效粒子显隐控制器
+			{
+				"stacking": "Unique",
+				"onAdded":
+				[
+					//各种烟雾特效
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_BipHead",
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_Root_FollowY",
+					},
+				],
+				"onRemoved":
+				[				
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_Weather_DisPlayHandler":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "TriggerWeatherMixin",
+						"type": "Skill",
+						"weatherPattern": "Weather_Cyno_ElementalBurst_Once",
+						"transDuration": 0.3,
+						"duration": 1.4,
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_Weather_LoopHandler":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "TriggerWeatherMixin",
+						"type": "Skill",
+						"weatherPattern": "Weather_Cyno_ElementalBurst_BurstMode",	
+						"transDuration": 0.2,
+						"duration": 20,
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_ChangeWeather":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Weather_Flag",   //1：大招表演阶段 
+						"value": 1,
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Weather_Flag",   //2：大招持续阶段
+						"value": 2,
+						"doOffStage": true,
+					},
+				]
+			},
+			// "UNIQUE_Avatar_Cyno_ElementalBurst_Buff_AddDurability":
+			// {
+			// },//仅注册
+			"UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect":
+			{
+				"isUnique":true,
+			},//仅注册			
+		},
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  大招的逻辑控制ability，表演结束后逻辑真正的开始
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Avatar_Cyno_ElementalBurst_JackalMode",
+		"abilityMixins" :
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Cyno_ElementalBurst"],
+				"modifierName": "zzzCyno_ElementalBurst_RemoveEndMode",	//再次开大清掉尾刀处理
+			},
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_IsInWindow",
+				"value": 0,
+				"doOffStage": true,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Constellation_4",   
+				"value": 0,
+				"doOffStage": true,
+			},
+		],
+		"onAbilityStart" :
+		[
+			{
+				"$type" : "ApplyModifier",
+				"modifierName" : "UNIQUE_Cyno_BurstMode_MaxTimeHandler",
+			},
+			{
+				"$type":"ApplyModifier",
+				"modifierName":"Cyno_BurstMode_PreShow_Handler",
+				"doOffStage": true, //断线重连
+			},
+			//大招进CD
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10715,
+				"cdRatio":1.0,
+				"predicates":
+				[
+					{
+						"$type": "BySkillReady",
+						"skillID": 10715,
+					},
+				],
+			},
+			//换人死亡的时候取消状态、断线重连层级恢复
+			{
+				"$type" : "ApplyModifier",
+				"modifierName" : "Cyno_BurstMode_Leave",
+			},
+		],
+		"modifiers":
+		{
+			"Cyno_BurstMode_PreShow_Handler":
+			{
+				"duration":1.6,
+				"onAdded":
+				[
+				],
+				//等消散的动画播完了再把烟雾粒子显示出来
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Fog_Flag",   //0：默认状态后 1：开大后冒特效粒子
+						"value": 1,
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "BurstMode_Level",
+						"value": 1,
+						"persistent": false,
+						"doOffStage": true,
+					},
+				],
+			},
+			"Blank":{},
+			"Cyno_BurstMode_Leave":
+			{
+				"onAvatarOut":
+				[
+					//关闭目押特效
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect",
+						"target":"Team",
+						"doOffStage": true,
+					},
+					{
+						"$type" : "RemoveModifier",
+						"doOffStage" : true,
+						"modifierName" : "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+					},
+					// {
+					// 	"$type" : "RemoveModifier",
+					// 	"doOffStage" : true,
+					// 	"modifierName" : "UNIQUE_Cyno_BurstMode_MaxTimeHandler",
+					// },
+				],
+				"onKill":
+				[
+					{
+						"$type" : "RemoveModifier",
+						"doOffStage" : true,
+						"modifierName" : "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+					},
+					//关闭目押特效
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect",
+						"target":"Team",
+						"doOffStage": true,
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_Layer", 
+						"value": 0, 
+					},			
+					// {
+					// 	"$type" : "RemoveModifier",
+					// 	"doOffStage" : true,
+					// 	"modifierName" : "UNIQUE_Cyno_BurstMode_MaxTimeHandler",
+					// },
+				],					
+			},
+			"UNIQUE_Cyno_BurstMode_MaxTimeHandler":
+			{
+				"isUnique":true,
+				"duration":"%BurstMode_MaxDuration+1.8", //大招最长持续时间
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+					},		
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+						"doOffStage": true,
+					},
+				],
+			},
+			"Cyno_BurstMode_MuyaCameraHandler_Pre":
+			{
+				"duration": 1.4, //动画播到快到可移动时间点再开始走眼睛的计时器，保持跟之前效果一致
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_MuyaCameraHandler",
+						"doOffStage": true,						
+					}					
+				]
+			},
+			"UNIQUE_Cyno_BurstMode_MuyaCameraHandler":
+			{
+				"isUnique":true,
+				"duration":"%BurstMode_MaxDuration+0.4", //这里是保底
+				"thinkInterval": 4,
+				"onThinkIntervalIsFixedUpdate": true,
+				"onThinkInterval": 
+				[
+					//开启目押窗口期
+					{
+						"$type":"AttachModifier",
+						"modifierName":"UNIQUE_Avatar_Cyno_ElementalBurst_MuyaHandler",
+						"doOffStage": true,
+						//加判一下大招状态
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],						
+					},
+					//发现自己不在大招状态了就干掉自己
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_MuyaCameraHandler",
+						"doOffStage":true,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],						
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_MuyaHandler",
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetAnimatorFloat",
+						"triggerID": "BurstMode_Level",
+						"value": 0,
+						"persistent": true,
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+					},
+				]
+			},
+			"UNIQUE_Cyno_BurstMode_LifeTimeHandler":
+			{
+				"isUnique":true,
+				"duration": "%Burst_Duration+1.8", //包含了大招表演镜头的时间
+				"elementDurability": "%Burst_Duration+1.8", 
+				"isLimitedProperties": true,
+				"onAdded":
+				[
+					//进大招状态标识
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Flag",
+						"value": 1,
+					},
+					//更换武器标识
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "InSubWeapon",
+						"value": 1,
+						"doOffStage": true,
+						"persistent": false,
+						"canBeHandledOnRecover": true,
+					},
+					//颜色变化状态重置
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "BurstMode_Level",
+						"value": 0,
+						"persistent": false,
+						"doOffStage": true,
+					},
+					//武器隐藏是一开始就做的，壳子颜色变化和包围特效是镜头表演完毕后做的
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Weapon_Flag",   
+						"value": 1,
+					},
+					//每隔4秒出现一次目押时间窗，需要突破天赋1
+					{
+						"$type": "Predicated",
+						"doOffStage" : true,
+						"target": "Caster",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Cyno_PermanentSkill_1",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "AttachModifier",
+								"modifierName": "Cyno_BurstMode_MuyaCameraHandler_Pre",	
+								"doOffStage" : true,					
+							}	
+						]
+					},
+					//清一下韧性槽
+					{
+						"$type": "ClearEndura",
+						"target": "Self",
+					},
+					//攻击状态显示大手处理器
+					{
+						"$type" : "AttachModifier",
+						"doOffStage" : true,
+						"modifierName" : "Avatar_Cyno_ElementalBurst_Renderer_Handler",
+					},
+					//禁表演状态
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "CanSpecialPerform",
+						"value": false,
+					},
+				],
+				"onRemoved":
+				[
+					//先把输入源相关的东西掐断
+					//清理眼睛特效
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect",
+						"target":"Team",
+						"doOffStage": true,
+					},
+					//眼睛计时器你别走了
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_MuyaCameraHandler",
+						"doOffStage": true,
+					},
+					//重置普攻状态机
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "InSubWeapon",
+						"value": 0,
+						"persistent": false,
+						"doOffStage": true,
+					},
+					//如果未处于攻击状态，直接结束大招状态
+					{
+						"$type": "Predicated",
+						"doOffStage": true,
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+								"value": 0,
+								"compareType": "Equal",
+								"doOffStage": true,
+							},
+						],
+						"successActions":   //没有处于攻击状态，正常结束大招
+						[
+							//给赛诺状态机发消息
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "BurstMode_Fade",
+								"doOffStage": true,
+							},
+							//清除大招状态
+							{
+								"$type" : "SetGlobalValue",
+								"key" : "_Cyno_BurstMode_Flag",
+								"value" : 0,
+								"useLimitRange" : true,
+								"maxValue" : 1,
+								"minValue" : 0,
+								"doOffStage": true,
+							},
+							{
+								"$type" : "SetGlobalValue",
+								"key" : "_Cyno_BurstMode_Weapon_Flag",
+								"value" : 0,
+								"useLimitRange" : true,
+								"maxValue" : 1,
+								"minValue" : 0,
+								"doOffStage": true,
+							},
+							{
+								"$type" : "SetGlobalValue",
+								"key" : "_Cyno_BurstMode_Fog_Flag",
+								"value" : 0,
+								"useLimitRange" : true,
+								"maxValue" : 1,
+								"minValue" : 0,
+								"doOffStage": true,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Cyno_BurstMode_IsInWindow",
+								"value": 0,
+								"doOffStage": true,
+							},
+							{
+								"$type": "SetAnimatorFloat",
+								"triggerID": "BurstMode_Level",
+								"value": 0,
+								"persistent": false,
+								"doOffStage": true,
+							},
+							//我走了把我的老父亲也杀死
+							{
+								"$type": "RemoveUniqueModifier",
+								"modifierName": "UNIQUE_Cyno_BurstMode_MaxTimeHandler",
+								"doOffStage": true,
+							},
+							//移除天气					
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Cyno_BurstMode_Weather_Flag",   
+								"value": 0,
+								"doOffStage": true,
+							},
+							//播退出特效
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_BurstMode_Quit",
+							},
+							//命4效果卸载
+							{
+								"$type": "SetGlobalValue",
+								"key": "_Cyno_BurstMode_Constellation_4",   
+								"value": 0,
+								"doOffStage": true,
+							},
+							//重置命6层数
+							{
+								"$type" : "RemoveUniqueModifier",
+								"doOffStage" : true,
+								"modifierName" : "UNIQUE_Avatar_Cyno_Constellation_6_BulletHandler",
+							},
+							//恢复表演状态
+							{
+								"$type": "SetAnimatorBool",
+								"boolID": "CanSpecialPerform",
+								"value": true,
+							},
+						],
+						"failActions":    
+						[
+							//延迟销毁的东西包一个modifier
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Avatar_Cyno_ElementalBurst_EndMode",
+								"doOffStage": true,
+							},
+						],
+					},
+				],
+				//断线重连恢复&防BUG
+				"thinkInterval": 0.2,
+				"onThinkInterval":
+				[
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "InSubWeapon",
+						"value": 1,
+						"persistent": false,
+					},
+				],
+				//大招期间元素精通提升
+				"properties": 
+				{
+					"Actor_EndureDelta": 0.5, //一些抗霸体能力
+					"Actor_ElemMasteryDelta": "%Cyno_BurstMode_ElemMasteryDelta",
+				},
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin", //替换元素战技
+						"priority": "AvatarSpecial",
+						"skillIndex": 1,
+						"skillID": 10713,   
+					},
+					//免疫感电伤害
+					{
+						"$type" : "RejectAttackMixin",
+						"attackTag" : "ShockDamage",
+						"limitTime" : 0,
+						"type" : "RejectAll",
+					},
+				],
+			},
+			"Avatar_Cyno_ElementalBurst_EndMode":
+			{
+				"duration": 1, //最多可以延长1秒。多的不行了，结束尾刀会提前下掉这个
+				"thinkInterval": 0.2, //每隔一段时间判一下攻击状态，发现攻击结束后及时提早下掉
+				"onThinkInterval":
+				[
+					{
+						"$type": "Predicated",
+						"doOffStage": true,
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+								"value": 0,
+								"compareType": "Equal",
+								"doOffStage": true,
+							},
+						],
+						"successActions":   //没有处于攻击动画，结束！
+						[
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Avatar_Cyno_ElementalBurst_EndMode",
+								"doOffStage": true,
+							},
+						]
+					}					
+				],
+				"onRemoved":
+				[
+					//给赛诺状态机发消息
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BurstMode_Fade",
+						"doOffStage": true,
+					},
+					//清除大招状态
+					{
+						"$type" : "SetGlobalValue",
+						"key" : "_Cyno_BurstMode_Flag",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},
+					{
+						"$type" : "SetGlobalValue",
+						"key" : "_Cyno_BurstMode_Weapon_Flag",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},
+					{
+						"$type" : "SetGlobalValue",
+						"key" : "_Cyno_BurstMode_Fog_Flag",
+						"value" : 0,
+						"useLimitRange" : true,
+						"maxValue" : 1,
+						"minValue" : 0,
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_IsInWindow",
+						"value": 0,
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetAnimatorFloat",
+						"triggerID": "BurstMode_Level",
+						"value": 0,
+						"persistent": false,
+						"doOffStage": true,
+					},
+					//我走了把我的老父亲也杀死
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Cyno_BurstMode_MaxTimeHandler",
+						"doOffStage": true,
+					},
+					//移除天气					
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Weather_Flag",   
+						"value": 0,
+						"doOffStage": true,
+					},
+					//播退出特效
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_BurstMode_Quit",
+					},
+					//命4效果卸载
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Constellation_4",   
+						"value": 0,
+						"doOffStage": true,
+					},
+					//重置命6层数
+					{
+						"$type" : "RemoveUniqueModifier",
+						"doOffStage" : true,
+						"modifierName" : "UNIQUE_Avatar_Cyno_Constellation_6_BulletHandler",
+					},
+					//恢复表演状态
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "CanSpecialPerform",
+						"value": true,
+					},
+				],
+				//大招期间元素精通提升
+				"properties": 
+				{
+					"Actor_EndureDelta": 0.5, //一些抗霸体能力
+					"Actor_ElemMasteryDelta": "%Cyno_BurstMode_ElemMasteryDelta",
+				},
+				"modifierMixins": 
+				[
+					//免疫感电伤害
+					{
+						"$type" : "RejectAttackMixin",
+						"attackTag" : "ShockDamage",
+						"limitTime" : 0,
+						"type" : "RejectAll",
+					},
+				],
+			},
+			"Cyno_ElementalBurst_Weather_BurstMode":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "TriggerWeatherMixin",
+						"type": "Skill",
+						"weatherPattern": "Weather_Cyno_ElementalBurst_BurstMode",	
+						"transDuration": 0.2,
+						"duration": 20,
+					},
+				],					
+			},
+			"Avatar_Cyno_ElementalBurst_Renderer_Handler":
+			{
+				"modifierMixins":
+				[
+					//处于技能状态下把大手显示出来
+					{
+						"$type": "AttachToAnimatorStateIDMixin",
+						"stateIDs": 
+						[
+							"Katana_Attack01",
+							"Katana_Attack02",
+							"Katana_Attack03",
+							"Katana_Attack04",
+							"Katana_Attack05",
+							"Cyno_ElementalArt_BurstMode",
+							"Cyno_ElementalArt_BurstMode_AS",
+							"Cyno_ExtraAttack_BurstMode_BS",
+							"Cyno_ExtraAttack_BurstMode",
+							"Cyno_ExtraAttack_BurstMode_AS",
+							"Cyno_FallingAnthem_BS",
+							"Cyno_FallingAnthem_Loop",
+							"Cyno_FallingAnthem_AS_1",
+							"Cyno_FallingAnthem_AS_2",
+						],
+						"modifierName": "Avatar_Cyno_ElementalBurst_Renderer_AttackHandler",
+					},
+				]
+			},
+			"Avatar_Cyno_ElementalBurst_Renderer_AttackHandler":
+			{
+				"onAdded":
+				[
+					//完全退出指定动画时被动收刀
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+						"value": 1,
+					},					
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Attack_DisAppear",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_ShowOrSheath",
+						"value": 0,
+						"doOffStage": true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+						"value": 0,
+						"doOffStage": true,
+					},
+				],
+			},
+			"UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect":
+			{
+				"isUnique":true,
+				"duration": 1.5,
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachActionToModifierMixin",
+						"onAdded": 
+						[
+							{
+								"$type": "DungeonFogEffects",
+								"enable": true,
+								"muteRemoteAction": true,
+								"cameraFogEffectName": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_WarningCamera",
+								"canBeHandledOnRecover": true
+							},
+							{
+								"$type" : "SendDungeonFogEffectTrigger",
+								"parameter" : "Muya_Start",
+								"muteRemoteAction": true,
+								"cameraFogEffectName" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_WarningCamera",
+								"canBeHandledOnRecover": true
+							},
+						],
+						"onRemoved": 
+						[
+							{
+								"$type": "DungeonFogEffects",
+								"cameraFogEffectName": "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_WarningCamera",
+								"muteRemoteAction": true,
+								"canBeHandledOnRecover": true,
+								"enable": false,
+								"doOffStage": true,
+							},
+						]
+					}					
+				]
+			},
+			"UNIQUE_Avatar_Cyno_ElementalBurst_MuyaHandler":
+			{
+				"isUnique": true,
+				"duration": 1.4, //开启窗口期
+				"onAdded":
+				[
+					//播目押特效
+					{
+						"$type": "AttachModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_WarningCameraEffect",
+						"target":"Team",
+						"doOffStage": true,
+					},
+					//标记目前处于窗口判定期
+					{
+						"$type":"SetGlobalValue",
+						"target":"Self",
+						"key":"_Cyno_BurstMode_IsInWindow", 
+						"value": 1, 
+						"doOffStage": true,
+					},
+					//控制动画状态机开始闪红
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "BurstMode_Level",
+						"value": 2,
+						"persistent": false,
+						"doOffStage": true,
+					},					
+					{
+						"$type" : "SendEffectTrigger",
+						"parameter" : "state03",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_BipHead",
+					},
+					{
+						"$type" : "SendEffectTrigger",
+						"parameter" : "state03",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_Root_FollowY",
+					},	
+				],
+				"thinkInterval":1.1,
+				"onThinkIntervalIsFixedUpdate": true,
+				"onThinkInterval":
+				[
+					//如果这段时间都没有按元素战技则目押特效播放超时效果
+					{
+						"$type" : "SendDungeonFogEffectTrigger",
+						"parameter" : "Muya_End_TimeoOut",
+						"muteRemoteAction": true,
+						"cameraFogEffectName" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_WarningCamera",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"target":"Self",
+						"key":"_Cyno_BurstMode_IsInWindow", 
+						"value": 0, 
+						"doOffStage": true,
+					},
+					//控制动画状态机回到默认蓝色
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "BurstMode_Level",
+						"value": 1,
+						"persistent": false,
+						"doOffStage": true,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],					
+					},
+					{
+						"$type" : "SendEffectTrigger",
+						"parameter" : "state01",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_BipHead",
+					},
+					{
+						"$type" : "SendEffectTrigger",
+						"parameter" : "state01",
+						"effectPattern" : "Eff_Avatar_Boy_Pole_Cyno_ElementalBurst_Aura_Root_FollowY",
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachToStateIDMixin",
+						"stateIDs": ["SprintBS", "Sprint"],
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_MuyaAddTime",
+					},
+				],
+			},
+			"UNIQUE_Avatar_Cyno_ElementalBurst_MuyaAddTime":
+			{
+				"isUnique": true,
+				"duration": 1,
+				"onAdded":
+				[
+					{
+						"$type": "AddElementDurability",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_MuyaHandler",
+						"value": 20, //闪避延长窗口期，一次元素爆发内只能触发一次
+						"useLimitRange" : true,
+						"maxValue" : 120,
+						"minValue" : 0,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target":"Caster",
+								"key": "_ABILITY_Cyno_ElementalBurst_SprintAddMuya",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],						
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_SprintAddMuya",
+						"value": -1,
+					},
+				],
+			},
+			"UNIQUE_Avatar_Cyno_Constellation_6_BulletHandler":
+			{
+				"isUnique":true,//仅注册
+			},
+			"zzzCyno_ElementalBurst_RemoveEndMode":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Avatar_Cyno_ElementalBurst_EndMode",
+						"doOffStage": true,
+					},
+				]
+			}
+		},
+		"abilitySpecials":
+		{
+			"BurstMode_MaxDuration":18,
+			"Burst_Duration":10,
+			"Cyno_BurstMode_ElemMasteryDelta": 0,
+		},
+	},
+},
+
+//大招状态处理出状态时
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ElementalBurst_EndHanlder",
+		"onAbilityStart":  
+		[
+			{
+				"$type": "DebugLog",
+				"content": "出状态前判断要不要延长大招时间",
+				"doOffStage": true,
+			},
+			{
+				"$type": "Predicated",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",
+						"value": 0,
+						"compareType": "Equal",
+					},
+				],
+				"successActions":  //已经完全把刀收起来了，不用管等buff时间自然结束就行
+				[
+				],
+				"failActions":   //持刀状态需要等动作结束后再下掉Buff
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Cyno_ElementalBurst_PreSheath",
+						"value": 1,
+						"doOffStage": true,
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Avatar_Cyno_ElementalBurst_Buff_AddDurability",
+					},
+				],
+			},
+		],
+		"onAdded":  //初始化GV
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Cyno_ElementalBurst_ShowOrSheath",  //  0：收刀  1：拔刀
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Cyno_ElementalBurst_IsInBattleState",   //判断是否处于持刀动作状态中
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Cyno_ElementalBurst_PreSheath",   //大招Buff结束时如果处于持刀动作则进入预备收刀阶段
+				"value": 0,
+			},
+		],
+		"abilityMixins":
+		[
+
+		],
+		"modifiers":
+		{
+			"Blank":{},
+			"UNIQUE_Avatar_Cyno_ElementalBurst_Buff_AddDurability":  //Buff状态续1下
+			{
+				"isUnique":true,
+				"duration": 1.5,  //保护时间,最多续2次
+				"onAdded":
+				[
+					{
+						"$type": "AddElementDurability",
+						"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+						"value": 1,
+					},
+				],
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "AddElementDurability",
+						"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+						"value": 1,
+					},
+				],
+			},
+		},
+	},
+},
+
+
+//////////////////////////////////////////////////////////////
+//
+//  元素战技目押刀波效果
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Cyno_ElementalArt_Blade_Hit",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "LoopState",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "GetFightProperty",
+				"fightPropSourceTarget": "OriginOwner",
+				"fightProp": "FIGHT_PROP_ELEMENT_MASTERY",
+				"globalValueKey": "Cyno_Element_MasterY_Cache", //gv会设到自己身上，跟SourceTarget无关
+				"doOffStage": true,
+			},
+			//额外判一下精通有没有小于0，小于0不要damageextra部分
+			{
+				"$type": "DamageByAttackValue",
+				"target": "Target",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"offset": 
+					{
+						"x": 0,
+						"y": 0,
+						"z": 0,
+					}
+				},
+				"attackInfo":
+				{
+					"canBeModifiedBy": "OriginOwner",
+					"attackTag": "Elemental_Art_Hold",
+					"attenuationTag": "Elemental_Art",
+					"attenuationGroup":"Cyno_ElementalArt_Blade",						
+					"attackProperty":
+					{
+						"damagePercentage": "%Cyno_ElementalArt_Blade",
+						"damageExtra":"%Cyno_PermanentSkill_2_Ratio_ElementalArt_Blade*%Cyno_PermanentSkill_2_UnLock*%FIGHT_PROP_ELEMENT_MASTERY",
+						"strikeType": "Slash",
+						"elementType": "Electric",
+						"elementDurability": 25,
+						"attackType": "Melee",
+						"enBreak" : 25,
+					},
+					"hitPattern":
+					{
+						"onHitEffectName": "default",
+						"hitImpulseType": "LV2", //Light x200 y0			          	
+						"canBeDefenceHalt": false,
+						"hitHaltTime": 0,
+						"hitHaltTimeScale": 0,
+						"muteHitText": false
+					},
+					"forceCameraShake": false,
+				},
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target":"Caster",
+						"compareType": "MoreThan",
+						"key": "Cyno_Element_MasterY_Cache",
+						"value": 0,
+					},  	
+				],
+			},
+			{
+				"$type": "DamageByAttackValue",
+				"target": "Target",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"offset": 
+					{
+						"x": 0,
+						"y": 0,
+						"z": 0,
+					}
+				},
+				"attackInfo":
+				{
+					"canBeModifiedBy": "OriginOwner",
+					"attackTag": "Elemental_Art_Hold",
+					"attenuationTag": "Elemental_Art",
+					"attenuationGroup":"Cyno_ElementalArt_Blade",						
+					"attackProperty":
+					{
+						"damagePercentage": "%Cyno_ElementalArt_Blade",								
+						"strikeType": "Slash",
+						"elementType": "Electric",
+						"elementDurability": 25,
+						"attackType": "Melee",
+						"enBreak" : 25,
+					},
+					"hitPattern":
+					{
+						"onHitEffectName": "default",
+						"hitImpulseType": "LV2", //Light x200 y0			          	
+						"canBeDefenceHalt": false,
+						"hitHaltTime": 0,
+						"hitHaltTimeScale": 0,
+						"muteHitText": false
+					},
+					"forceCameraShake": false,
+				},
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target":"Caster",
+						"compareType": "LessAndEqual",
+						"key": "Cyno_Element_MasterY_Cache",
+						"value": 0,
+					},  	
+				],
+			},
+		],
+		"modifiers":
+		{
+			"LoopState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalArt_Blades",
+					},
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+			"Cyno_ElementalArt_Blade": 0,
+			"Cyno_PermanentSkill_2_Ratio_ElementalArt_Blade": 0,
+			"Cyno_PermanentSkill_2_UnLock": 0,
+		}
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  命6刀波效果
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Cyno_Constellation_6_Blade",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "LoopState",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "GetFightProperty",
+				"fightPropSourceTarget": "OriginOwner",
+				"fightProp": "FIGHT_PROP_ELEMENT_MASTERY",
+				"globalValueKey": "Cyno_Element_MasterY_Cache", //gv会设到自己身上，跟SourceTarget无关
+				"doOffStage": true,
+			},
+			{
+				"$type": "DamageByAttackValue",
+				"target": "Target",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"offset": 
+					{
+						"x": 0,
+						"y": 0,
+						"z": 0,
+					}
+				},
+				"attackInfo":
+				{
+					"canBeModifiedBy": "OriginOwner",
+					"attackTag": "Elemental_Art_Hold",
+					"attenuationTag": "Elemental_Art",
+					"attenuationGroup":"Cyno_Constellation_6",						
+					"attackProperty":
+					{
+						"damagePercentage": "%Cyno_ElementalArt_Blade",
+						"damageExtra":"%Cyno_PermanentSkill_2_Ratio_ElementalArt_Blade*%Cyno_PermanentSkill_2_UnLock*%FIGHT_PROP_ELEMENT_MASTERY",
+						"strikeType": "Slash",
+						"elementType": "Electric",
+						"elementDurability": 25,
+						"attackType": "Melee",
+						"enBreak" : 25,
+					},
+					"hitPattern":
+					{
+						"onHitEffectName": "default",
+						"hitImpulseType": "LV2", //Light x200 y0			          	
+						"canBeDefenceHalt": false,
+						"hitHaltTime": 0,
+						"hitHaltTimeScale": 0,
+						"muteHitText": false
+					},
+					"forceCameraShake": false,
+				},
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target":"Caster",
+						"compareType": "MoreThan",
+						"key": "Cyno_Element_MasterY_Cache",
+						"value": 0,
+					},  	
+				],
+			},
+			{
+				"$type": "DamageByAttackValue",
+				"target": "Target",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"offset": 
+					{
+						"x": 0,
+						"y": 0,
+						"z": 0,
+					}
+				},
+				"attackInfo":
+				{
+					"canBeModifiedBy": "OriginOwner",
+					"attackTag": "Elemental_Art_Hold",
+					"attenuationTag": "Elemental_Art",
+					"attenuationGroup":"Cyno_Constellation_6",						
+					"attackProperty":
+					{
+						"damagePercentage": "%Cyno_ElementalArt_Blade",									
+						"strikeType": "Slash",
+						"elementType": "Electric",
+						"elementDurability": 25,
+						"attackType": "Melee",
+						"enBreak" : 25,
+					},
+					"hitPattern":
+					{
+						"onHitEffectName": "default",
+						"hitImpulseType": "LV2", //Light x200 y0			          	
+						"canBeDefenceHalt": false,
+						"hitHaltTime": 0,
+						"hitHaltTimeScale": 0,
+						"muteHitText": false
+					},
+					"forceCameraShake": false,
+				},
+				"predicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target":"Caster",
+						"compareType": "LessAndEqual",
+						"key": "Cyno_Element_MasterY_Cache",
+						"value": 0,
+					},  	
+				],
+			},
+		],
+		"modifiers":
+		{
+			"LoopState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_ElementalArt_Blades",
+					},
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+			"Cyno_ElementalArt_Blade": 0,
+			"Cyno_PermanentSkill_2_Ratio_ElementalArt_Blade": 0,
+			"Cyno_PermanentSkill_2_UnLock": 0,
+		}
+	},
+},
+
+
+////////////////////////////////////////////////////////////////////
+///
+///  空中攻击
+///
+////////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_FallingAnthem",
+		"abilityMixins":
+		[
+			{
+				"$type": "AvatarChangeSkillMixin",
+				"priority":"AvatarCommon",
+				"jumpSkillID": 5071010,
+				"flySkillID": 5071010,
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS"
+				],
+				"modifierName": "FallingAnthem_BS_Material",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": 
+				[
+					"FallingAnthem_Loop"
+				],
+				"modifierName": "FallingAnthem_Loop_Normal",
+			},
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS_2",
+					"FallingAnthem_Loop",
+					"FallingAnthem_Loop_Low",
+				],
+				"modifierName": "FallingAnthem_LoopDamage",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS"
+				],
+				"modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS",
+					"FallingAnthem_Loop",
+					"FallingAnthem_AS_1",
+					"FallingAnthem_AS_2"
+				],
+				"modifierName": "FallingAnthem_Height_Detect",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS",
+					"FallingAnthem_Loop",
+					"FallingAnthem_AS_1",
+					"FallingAnthem_AS_2"
+				],
+				"modifierName": "FallingAnthem_FallingDamageImmune_01",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS",
+					"FallingAnthem_Loop"
+				],
+				"modifierName": "Inertia",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS",
+					"FallingAnthem_Loop",
+					"FallingAnthem_AS_1",
+					"FallingAnthem_AS_2"
+				],
+				"modifierName": "FallingAnthem_OverHead_Camera",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS"
+				],
+				"modifierName": "FallingAnthem_ClearVelocityForce",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs":
+				[
+					"FallingAnthem_BS",
+					"FallingAnthem_Loop",
+				],
+				"modifierName": "FallingAnthem_AttachSelfEffect",
+			},
+		],
+		"onAdded":
+		[
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_Cyno_BurstMode_Flag",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+				"successActions": //处于开大状态
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_FallingAnthem_UseCamera",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":  //低空攻击
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_FallAnthem_Strike_01",
+							},
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"scale": 1.0,
+										"height": 2.0,
+										"centerYOffset": 0.0,
+										"offsetZ": 0.0,
+										"fanAngle": 360.0,
+										"radius": 4.0,
+										"followRootNodeY": false,
+										"followTransformY": false,
+										"offsetAngle": 0.0,
+										"born":
+										{
+											"$type": "ConfigBornByTarget",
+											"offset":
+											{
+												"x": 0.0,
+												"y": -0.5,
+												"z": 1.0,
+											},
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Rank_1_BurstMode_Damage",
+											"overrideByWeapon": false,
+											"strikeType": "Blunt",
+											"attackType": "Melee",
+											"elementType": "Electric",
+											"elementDurability": 25,
+											"elementRank": 1.0,
+											"enBreak": 100,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "none",
+											"hitImpulseType":"LV4",
+											"retreatType": "ByAttacker",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.1,
+											"muteHitText": false
+										},
+										"forceCameraShake": true,
+										"cameraShake":
+										{
+											"shakeType": "CustomVector",
+											"shakeRange": 0.24,
+											"shakeTime": 0.12,
+											"shakeDistance": 30,
+											"shakeDir":
+											{
+												"x": 0,
+												"y": 1,
+												"z": 0,
+											},
+											"extension":
+											{
+												"baseCycle": 0.24,
+												"cycleDamping": 0,
+												"rangeAttenuation": 0.3,
+											},
+										},
+									},
+								},
+							},
+						],
+						"failActions":  //高空攻击
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Boy_Pole_Cyno_FallAnthem_Strike_02",
+							},
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"scale": 1.0,
+										"height": 2.0,
+										"centerYOffset": 0.0,
+										"offsetZ": 0.0,
+										"fanAngle": 360.0,
+										"radius": 6.0,
+										"followRootNodeY": false,
+										"followTransformY": false,
+										"offsetAngle": 0.0,
+										"born":
+										{
+											"$type": "ConfigBornByTarget",
+											"offset":
+											{
+												"x": 0.0,
+												"y": -0.5,
+												"z": 1.0,
+											},
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Rank_2_BurstMode_Damage",
+											"strikeType": "Blunt",
+											"overrideByWeapon": false,   
+											"attackType": "Melee",
+											"elementType": "Electric",
+											"elementDurability": 25,
+											"enBreak": 150,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "none",
+											"hitImpulseType":"LV7",
+											"retreatType": "ByAttacker",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.1,
+											"muteHitText": false
+										},
+										"forceCameraShake": true,
+										"cameraShake":
+										{
+											"shakeType": "CustomVector",
+											"shakeRange": 0.5,
+											"shakeTime": 0.2,
+											"shakeDistance": 30,
+											"shakeDir":
+											{
+												"x": 0,
+												"y": 1,
+												"z": 1,
+											},
+											"extension":
+											{
+												"baseCycle": 0.4,
+												"cycleDamping": 0,
+												"rangeAttenuation": 0.3,
+											},
+										},
+									},
+								},
+							},
+						],
+					},
+				],
+				"failActions":  //普通状态
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_FallingAnthem_UseCamera",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":  //低空攻击
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_01_Normal",
+							},
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"scale": 1.0,
+										"height": 2.0,
+										"centerYOffset": 0.0,
+										"offsetZ": 0.0,
+										"fanAngle": 360.0,
+										"radius": 3.0,
+										"followRootNodeY": false,
+										"followTransformY": false,
+										"offsetAngle": 0.0,
+										"born":
+										{
+											"$type": "ConfigBornByTarget",
+											"offset":
+											{
+												"x": 0.0,
+												"y": -0.5,
+												"z": 1.0,
+											},
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+											"strikeType": "Blunt",
+											"overrideByWeapon": true,
+											"attackType": "Melee",
+											"elementType": "None",
+											"elementDurability": 25,
+											"enBreak": 100,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "none",
+											"hitImpulseType":"LV4",
+											"retreatType": "ByAttacker",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.1,
+											"muteHitText": false
+										},
+										"forceCameraShake": true,
+										"cameraShake":
+										{
+											"shakeType": "CustomVector",
+											"shakeRange": 0.24,
+											"shakeTime": 0.12,
+											"shakeDistance": 30,
+											"shakeDir":
+											{
+												"x": 0,
+												"y": 1,
+												"z": 0,
+											},
+											"extension":
+											{
+												"baseCycle": 0.24,
+												"cycleDamping": 0,
+												"rangeAttenuation": 0.3,
+											},
+										},
+									},
+								},
+							},
+						],
+						"failActions":  //高空攻击
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_02_Normal",
+							},
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"scale": 1.0,
+										"height": 2.0,
+										"centerYOffset": 0.0,
+										"offsetZ": 0.0,
+										"fanAngle": 360.0,
+										"radius": 5.0,
+										"followRootNodeY": false,
+										"followTransformY": false,
+										"offsetAngle": 0.0,
+										"born":
+										{
+											"$type": "ConfigBornByTarget",
+											"offset":
+											{
+												"x": 0.0,
+												"y": -0.5,
+												"z": 1.0,
+											},
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+											"strikeType": "Blunt",
+											"overrideByWeapon": true,
+											"attackType": "Melee",
+											"elementType": "None",
+											"elementDurability": 25,
+											"enBreak": 150,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "none",
+											"hitImpulseType":"LV7",
+											"retreatType": "ByAttacker",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.1,
+											"muteHitText": false
+										},
+										"forceCameraShake": true,
+										"cameraShake":
+										{
+											"shakeType": "CustomVector",
+											"shakeRange": 0.5,
+											"shakeTime": 0.2,
+											"shakeDistance": 30,
+											"shakeDir":
+											{
+												"x": 0,
+												"y": 1,
+												"z": 1,
+											},
+											"extension":
+											{
+												"baseCycle": 0.4,
+												"cycleDamping": 0,
+												"rangeAttenuation": 0.3,
+											},
+										},
+									},
+								},
+							},
+						],
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"FallingAnthem_AttachSelfEffect":
+			{
+				"onAdded":
+				[
+
+				],
+			},
+			"FallingAnthem_BS_Material":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Avatar_Pole_FallingAnthem_BS_Normal",
+					},
+				],
+			},
+			"FallingAnthem_BS_VelocityForce_Initialize":
+			{
+				"properties":
+				{
+					"Actor_AddGravityScale": -2,
+				},
+				"onAdded":
+				[
+					{
+						"$type": "RemoveVelocityForce",
+						"forces":
+						[
+							"RushMoveType"
+						],
+					},
+				],
+			},
+			"FallingAnthem_LoopDamage":
+			{
+				"thinkInterval": 0.3,
+				"onThinkInterval":
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":  //开大状态下伤害
+						[
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackSphere",
+										"triggerType": "TriggerNoRepeat",
+										"radius": 1.0,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 1
+											}
+										}
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Loop_BurstMode_Damage",
+											"strikeType": "Slash",
+											"overrideByWeapon": false, //开大状态下不能被附魔
+											"attackType": "Melee",
+											"elementType": "Electric",
+											"elementDurability": 0,
+											"enBreak": 25,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "default",
+											"hitImpulseType":"LV2",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.02,
+											"muteHitText": false
+										},
+									},
+								},
+							},
+						],
+						"failActions":  //普通状态
+						[
+							{
+								"$type": "TriggerAttackEvent",
+								"targetType": "Enemy",
+								"attackEvent":
+								{
+									"attackPattern":
+									{
+										"$type": "ConfigAttackSphere",
+										"triggerType": "TriggerNoRepeat",
+										"radius": 1.0,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 1
+											}
+										}
+									},
+									"attackInfo":
+									{
+										"attackTag": "FallingAttack",
+										"attackProperty":
+										{
+											"damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+											"strikeType": "Slash",
+											"overrideByWeapon": true,
+											"attackType": "Melee",
+											"elementType": "None",
+											"elementDurability": 0,
+											"enBreak": 25,
+										},
+										"hitPattern":
+										{
+											"onHitEffectName": "default",
+											"hitImpulseType":"LV2",
+											"reboundRatio": 0,
+											"canBeDefenceHalt": false,
+											"hitHaltTime": 0,
+											"hitHaltTimeScale": 0.02,
+											"muteHitText": false
+										},
+									},
+								},
+							},
+						],
+					},
+				],
+			},
+			"FallingAnthem_FallingDamageImmune_01":
+			{
+				"onAdded":[
+					{
+					  "$type": "ClearGlobalValue",
+					  "key": "_ABILITY_FallingAttack_Altitude",
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAttack_Altitude",
+						"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+						"useLimitRange": true,
+						"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+						"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv0",
+								"logic": "LesserOrEqual",
+							},
+						],
+					},//==================================================================================
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAttack_Altitude",
+						"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+						"useLimitRange": true,
+						"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+						"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv1",
+								"logic": "LesserOrEqual",
+							},
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv0",
+								"logic": "Greater",
+							},
+						],
+					},//==================================================================================
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAttack_Altitude",
+						"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+						"useLimitRange": true,
+						"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+						"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv2",
+								"logic": "LesserOrEqual",
+							},
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv1",
+								"logic": "Greater",
+							},
+						],
+					},//==================================================================================
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAttack_Altitude",
+						"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+						"useLimitRange": true,
+						"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+						"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv3",
+								"logic": "LesserOrEqual",
+							},
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv2",
+								"logic": "Greater",
+							},
+						],
+					},//==================================================================================
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAttack_Altitude",
+						"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+						"useLimitRange": true,
+						"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+						"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": "%FallingAnthem_Altitude_Lv3",
+								"logic": "Greater",
+							},
+						],
+					},//==================================================================================
+
+					{
+						"$type": "AttachModifier",
+						"modifierName": "FallingAnthem_FallingDamageImmune_02",
+					},
+				],
+			},
+			"FallingAnthem_FallingDamageImmune_02":
+			{
+				"onAdded":[
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+						"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "FallingAnthem_FallingDamageImmune_03",
+					},
+				],
+			},
+			"FallingAnthem_FallingDamageImmune_03":
+			{
+
+				"properties":
+				{
+					"Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+				},
+			},
+			"FallingAnthem_Loop_Normal":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+						"valueSteps":
+						[
+							-1,
+							0.5,
+							1.5
+						],
+						"removeAppliedModifier": true,
+						"modifierNameSteps":
+						[
+							"FallingAnthem_Loop_Normal_Rank_1",
+							"FallingAnthem_Loop_Normal_Rank_2"
+						],
+					},
+				],
+			},
+			"FallingAnthem_Loop_Normal_Rank_1":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":  //开大状态下伤害
+						[
+							{
+								"$type":"AttachEffect",
+								"effectPattern":"Eff_Avatar_Boy_Pole_Cyno_FallAnthem_Self_01",
+							},
+						],
+						"failActions":  //普通状态
+						[
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Avatar_Pole_FallingAnthem_Loop_01_Normal",
+							},
+						],
+					},
+				],
+			},
+			"FallingAnthem_Loop_Normal_Rank_2":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "Predicated",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":  //开大状态下伤害
+						[
+							{
+								"$type":"AttachEffect",
+								"effectPattern":"Eff_Avatar_Boy_Pole_Cyno_FallAnthem_Self_01",
+							},
+						],
+						"failActions":  //普通状态
+						[
+							{
+								"$type":"AttachEffect",
+								"effectPattern":"Eff_Avatar_Pole_FallingAnthem_Loop_02_Normal",
+							},
+						],
+					},
+				],
+			},
+			//水平惯性继承
+			"Inertia":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "ApplyInertiaVelocityMixin",
+						"damping": 0,
+						"useXZ": false,
+						"useY": false,
+					},
+				],
+			},
+			"FallingAnthem_Height_Detect":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAnthem_UseCamera",
+						"value": 0,
+						"useLimitRange": true,
+						"maxValue": 0,
+						"minValue": 0,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": 2.4,
+								"logic": "LesserOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAnthem_UseCamera",
+						"value": 5,
+						"useLimitRange": true,
+						"maxValue": 1,
+						"minValue": 0,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": 2.4,
+								"logic": "Greater",
+							},
+						],
+					},
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "FallingAnthem_UseCamera",
+						"value": 0,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": 2.4,
+								"logic": "LesserOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "FallingAnthem_UseCamera",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByTargetAltitude",
+								"value": 2.4,
+								"logic": "Greater",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetAnimatorFloat",
+						"floatID": "FallingAnthem_UseCamera",
+						"value": 0,
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_FallingAnthem_UseCamera",
+						"value": 0,
+						"useLimitRange": true,
+						"maxValue": 0,
+						"minValue": 0,
+					},
+				],
+			},
+			"FallingAnthem_OverHead_Camera":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AvatarCameraParam",
+						"lockParam": false,
+						"cameraParam":
+						{
+							"forceRadius": 4.5,
+							"forceRadiusDuration": 0.2,
+							"shouldKeepForceRadius": true,
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByAnimatorFloat",
+								"parameter": "FallingAnthem_UseCamera",
+								"value": 1,
+								"logic": "Equal",
+							},
+						],
+					},
+				],
+			},
+			"FallingAnthem_OverHead_Camera_Remover":
+			{
+				"onAdded":
+				[
+					{
+						"doOffStage": true,
+						"$type": "AvatarExitCameraShot",
+					},
+				],
+			},
+			"FallingAnthem_Landed_Camera":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AvatarCameraParam",
+						"lockParam": false,
+						"cameraParam":
+						{
+							"forceRadius": 6.0,
+							"forceRadiusDuration": 0.1,
+							"shouldKeepForceRadius": true,
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByAnimatorFloat",
+								"parameter": "FallingAnthem_UseCamera",
+								"value": 1,
+								"logic": "Equal",
+							},
+						],
+					},
+				],
+			},
+			"FallingAnthem_ClearVelocityForce":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "RemoveVelocityForce",
+						"forces":
+						[
+							"RushMoveType",
+							"InertiaType"
+						],
+					},
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+			"FallingAnthem_Normal_Loop_Damage": 0,
+			"FallingAnthem_Normal_Rank_1_Damage": 0,
+			"FallingAnthem_Normal_Rank_2_Damage": 0,
+			"FallingAnthem_Normal_Loop_BurstMode_Damage":0,
+			"FallingAnthem_Normal_Rank_1_BurstMode_Damage": 0,
+			"FallingAnthem_Normal_Rank_2_BurstMode_Damage": 0,
+
+			"FallingAnthem_Altitude_Lv0": 20,
+			"FallingAnthem_Altitude_Lv1": 40,
+			"FallingAnthem_Altitude_Lv2": 60,
+			"FallingAnthem_Altitude_Lv3": 100,
+			"FallingAnthem_Altitude_Lv4": 200,
+
+			"FallingAnthem_FallingDamageRatio_Lv0": -1,
+			"FallingAnthem_FallingDamageRatio_Lv1": -1,
+			"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+			"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+			"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+			"FallingAnthem_FallingDamageRatio": 0,
+		},
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  Show相关表现
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_Show",
+		"onAdded":
+		[
+		],
+		"abilityMixins":
+		[
+			//大招状态下断线重连需要恢复手臂头盔
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_Cyno_BurstMode_Flag",
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps": ["Blank", "Avatar_Cyno_ElementalBurst_onReconnectHandler"],
+			},
+			//show01表现
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["StandbyShow_01"],
+				"modifierName": "Avatar_Cyno_Show01_Handler",
+			},			
+		],
+		"onAbilityStart":
+		[
+
+		],
+		"modifiers":
+		{
+			"Blank":{},
+			"Avatar_Cyno_ElementalBurst_onReconnectHandler":
+			{
+				"onAdded":
+				[
+					//进cutscene等状态时也要恢复状态机的
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "BurstMode_Loop",
+						"value": 1,
+						"doOffStage": true,
+						"persistent": true,
+						"canBeHandledOnRecover": true,
+					},					
+				],
+				"onReconnect":
+				[
+					//如果还在大招状态就恢复
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "BurstMode_Loop",
+						"value": 1,
+						"doOffStage": true,
+						"persistent": true,//防止参数丢失
+						"canBeHandledOnRecover": true,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Weather_Flag",   //在表演过程中断线重连天气恢复
+						"value": 2,
+						"doOffStage": true,
+						//加判一下大招状态
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],	
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "BurstMode_Loop",
+						"value": 0,
+						"doOffStage": true,
+						"persistent": true,
+						"canBeHandledOnRecover": true,
+					},
+				],
+				"modifierMixins":
+				[
+					//为了断网期能够跑到
+					{
+						"$type": "AttachActionToModifierMixin",
+						"onRemoved": 
+						[
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "BurstMode_Loop",
+								"value": 0,
+								"doOffStage": true,
+								"persistent": true,
+								"canBeHandledOnRecover": true,
+							},
+						]
+					}					
+				]				
+			},
+			"Avatar_Cyno_Show01_Handler":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "DoShow01",
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ExitShow01",
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+					},
+				]	
+			},
+			"Avatar_Cyno_Show02_WeaponHandler":  
+			{
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"visible": false,
+						"partNames": ["equip01","equip02","equip03","sheathPoint"],  //隐藏原武器
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"visible": true,
+						"partNames": ["equip01","equip02","equip03","sheathPoint"],  //显示原武器
+						"doOffStage": true,
+					},					
+				],
+			},
+			"Avatar_Cyno_Show01_WeaponHandler": 
+			{
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"visible": false,
+						"partNames": ["equip01","equip02","equip03","sheathPoint"],  //隐藏原武器
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "TriggerHideWeapon",
+						"visible": true,
+						"partNames": ["equip01","equip02","equip03","sheathPoint"],  //显示原武器
+						"doOffStage": true,
+					},					
+				],
+			},
+		},
+
+	},
+},
+//////////////////////////////////////////////////////////////
+//
+//  大小手头套消失专用处理器
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_BigArm_DisAppear",
+		"onAbilityStart":
+		[
+			{
+				"$type" : "ResetAnimatorTrigger",
+				"triggerID" : "Attack_Appear",
+			},
+			{
+				"$type": "SetAnimatorTrigger",
+				"triggerID": "Attack_DisAppear",
+			},
+		],
+	},
+},
+
+//////////////////////////////////////////////////////////////
+//
+//  开大后重击伤害
+//
+/////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_ExtraAttack_BurstMode_Damage",
+		"onAdded":
+		[
+
+		],
+		"onAbilityStart":
+		[
+			//trigger子弹伤害
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 41071004,
+				"campID": 1001,
+				"campTargetType": "Enemy",
+
+			},
+		],
+	},
+},
+
+////////////////////////////////////////////////////////////////
+//
+//  开大后重击子弹伤害配置
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_BurstMode_ExtraAttack_Bullet",
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates":
+				[
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["MonsterEquip"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "DamageByAttackValue",
+						"target": "Target",
+						"attackInfo":
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attenuationTag":"ExtraAttack",
+							"attenuationGroup":"Avatar_Pole_ExtraAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%Cyno_BurstMode_ExtraAttack_Damage",
+								"strikeType": "Spear",
+								"elementType": "Electric",
+								"elementDurability": 25,
+								"overrideByWeapon": false,
+								"attackType": "Melee",
+								"enBreak": 120,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV6",
+								// "hitLevel": "Air", //hitlevel = 5
+								// "hitImpulseX": 480, //hitlevel = 5
+								// "hitImpulseY": 600, //hitlevel = 5
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.36,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": -1,
+									"z": 0,
+								},
+							},
+						},
+					},
+				],
+				"failActions":
+				[
+					{
+						"$type": "TriggerAttackEvent",
+						"targetType": "Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 0.8,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "ExtraAttack",
+								"attenuationTag":"ExtraAttack",
+								"attenuationGroup":"Avatar_Pole_ExtraAttack",
+								"attackProperty":
+								{
+									"damagePercentage": "%Cyno_BurstMode_ExtraAttack_Damage",
+									"strikeType": "Spear",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"overrideByWeapon": false,
+									"attackType": "Melee",
+									"enBreak": 120,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV5",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": true,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+								},
+								"forceCameraShake": false,
+								"cameraShake":
+								{
+									"shakeType": "CustomVector",
+									"shakeRange": 0.36,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x": 0,
+										"y": -1,
+										"z": 0,
+									},
+								},
+							},
+						},
+					},
+				],
+			},
+		],
+		"abilitySpecials":
+		{
+			"Cyno_BurstMode_ExtraAttack_Damage": 0,
+		},
+
+	},
+}, 
+
+///////////////////////////////////////////////////////////////
+//
+//  普攻攻击伤害管理
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default":
+    {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Cyno_Attack_DamageHandler",
+        "abilityMixins":
+        [
+            //开大前这套普攻
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK01"],
+                "damagePercentage": "%Attack_01_Normal",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK02"],
+                "damagePercentage": "%Attack_02_Normal",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK03A"],
+                "damagePercentage": "%Attack_03A_Normal",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK03B"],
+                "damagePercentage": "%Attack_03B_Normal",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK04"],
+                "damagePercentage": "%Attack_04_Normal",
+            },
+            //开大后这套普攻
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK01_BurstMode"],
+                "damagePercentage": "%Attack_01_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK01_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK02_BurstMode"],
+                "damagePercentage": "%Attack_02_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK02_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK03_BurstMode"],
+                "damagePercentage": "%Attack_03_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK03_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK04A_BurstMode"],
+                "damagePercentage": "%Attack_04A_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK04A_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK04B_BurstMode"],
+                "damagePercentage": "%Attack_04B_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK04B_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK05_BurstMode"],
+                "damagePercentage": "%Attack_05_BurstMode",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": ["ATK05_BurstMode"],
+                "damageExtra":"%Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack*%FIGHT_PROP_ELEMENT_MASTERY*%Cyno_PermanentSkill_2_UnLock",
+                "predicates": 
+                [
+                    {
+                        "$type": "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key": "Cyno_Element_Mastery_Lower_Limit",
+                        "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                        "compareType": "LessAndEqual"
+                    } //要是精通 < 0，就不计算damageextra部分了
+                ]
+            },
+        ],
+        "onAdded":
+        [
+            {
+                "$type": "SetGlobalValue",
+                "key": "Cyno_Element_Mastery_Lower_Limit",
+                "value": 0,
+                "doOffStage": true
+            },
+            {
+                "$type": "SetGlobalValue",
+                "key": "Cyno_Element_MasterY_Cache",
+                "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                "doOffStage": true
+            },
+            {
+                "$type": "AttachModifier",
+                "modifierName": "Cyno_MasteryTick_Handler",
+                "target": "Self",
+                "doOffStage": true
+            },
+            {
+                "$type": "AttachModifier",
+                "modifierName": "Cyno_BurstMode_Recover_TickHandler",
+                "target": "Self",
+                "doOffStage": true
+            },
+        ],
+        "modifiers":
+        {
+            "Cyno_MasteryTick_Handler":
+            {
+                "onAdded": 
+                [
+                    {
+                        "$type": "SetGlobalValueToOverrideMap",
+                        "doOffStage": true,
+                        "globalValueKey": "Cyno_Element_MasterY_Cache",
+                        "overrideMapKey": "Cyno_Element_MasterY_Cache",
+                    }
+                ],
+                "thinkInterval": 5,
+                "onThinkInterval": 
+                [
+                    //每5秒判一次，有变化就更新一下
+                    {
+                        "$type": "Predicated",
+                        "target": "Self",
+                        "targetPredicates": 
+                        [
+                            {
+                                "$type": "ByNot",
+                                "predicates": 
+                                [
+                                    {
+                                        "$type": "ByTargetGlobalValue",
+                                        "key": "Cyno_Element_MasterY_Cache",
+                                        "value": "%FIGHT_PROP_ELEMENT_MASTERY"
+                                    }
+                                ]
+                            }
+                        ],
+                        "successActions": 
+                        [
+                            {
+                                "$type": "SetGlobalValue",
+                                "key": "Cyno_Element_MasterY_Cache",
+                                "value": "%FIGHT_PROP_ELEMENT_MASTERY",
+                                "doOffStage": true
+                            },
+                            {
+                                "$type": "SetGlobalValueToOverrideMap",
+                                "doOffStage": true,
+                                "globalValueKey": "Cyno_Element_MasterY_Cache",
+                                "overrideMapKey": "Cyno_Element_MasterY_Cache",
+                            }
+                        ]
+                    },
+                ]
+            },
+			"Cyno_BurstMode_Recover_TickHandler":
+			{
+                "thinkInterval": 2,
+                "onThinkInterval": 
+                [
+					//检测一下自己在不在大招状态，不在的话就下掉大招,开大秒接断线重连保底
+					{
+						"$type": "Predicated",
+						"target":"Self",
+						"doOffStage": true,
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_Cyno_BurstMode_Flag",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],
+						"successActions": //不处于开大状态
+						[
+							{
+								"$type": "RemoveUniqueModifier",
+								"modifierName": "UNIQUE_Cyno_BurstMode_LifeTimeHandler",
+								"doOffStage": true,
+							},
+							{
+								"$type" : "SetGlobalValue",
+								"key" : "_Cyno_BurstMode_Weather_Flag",
+								"value" : 0,
+								"doOffStage": true,
+							},
+							{
+								"$type" : "SetGlobalValue",
+								"key" : "_Cyno_BurstMode_Weapon_Flag",
+								"value" : 0,
+								"doOffStage": true,
+							},
+						]
+					},
+                ]
+			}
+        },
+        "abilitySpecials":
+        {
+            //
+            "Attack_01_Normal": 0,   //普攻第一段
+            "Attack_02_Normal": 0,   //普攻第二段  
+            "Attack_03A_Normal": 0,   //普攻第三段-第一下
+            "Attack_03B_Normal": 0,   //普攻第三段-第二下
+            "Attack_04_Normal": 0,   //普攻第四段
+            /////////////////////////
+            "Attack_01_BurstMode": 0,
+            "Attack_02_BurstMode": 0,
+            "Attack_03_BurstMode": 0,
+            "Attack_04A_BurstMode": 0,
+            "Attack_04B_BurstMode": 0,
+            "Attack_05_BurstMode": 0,
+
+            "Cyno_PermanentSkill_2_UnLock": 0,
+            "Cyno_PermanentSkill_2_Ratio_BurstModeNormalAttack" : 0,
+
+            "Cyno_Element_MasterY_Cache":0,
+        },
+    },
+},
+
+
+///////////////////////////////////////////////////////////////
+//
+//  天赋命座相关
+//
+////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////
+//
+//  命座1  释放元素爆发后，攻速提升，触发目押后刷新时长。
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_Constellation_1_AttackRatio",
+		"isDynamicAbility": true,
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Avatar_Cyno_Constellation_1_Buff",
+				"target": "Caster",
+				"doOffStage": true,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Avatar_Cyno_Constellation_1_Buff":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"duration":"%Cyno_Constellation_1_Duration",
+				"isLimitedProperties": true,
+				"properties": 
+				{
+					"Animator_AttackSpeedRatio": "%Cyno_Constellation_1_AtkRatio",
+				},
+			},
+		},
+		"abilitySpecials":
+		{
+			"Cyno_Constellation_1_Duration": 0,
+			"Cyno_Constellation_1_AtkRatio": 0,
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////////
+//
+//  命座2  普通攻击命中敌人时，提高雷元素伤害加成，持续x秒，最多叠加次。每0.1秒最多触发一次。
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_Constellation_2_BuffElecAddHurt",
+		"isDynamicAbility": true,
+		"abilityMixins":
+		[
+
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Cyno_Constellation_2_BuffElecAddHurt_Handler",
+			  },
+		],
+		"modifiers":
+		{
+			"Avatar_Cyno_Constellation_2_BuffElecAddHurt_Handler":
+			{
+				"onAttackLanded": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Other",
+						"doOffStage":true,
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": 
+								[
+									"Monster"
+								],
+							},
+							{
+								"$type": "ByAttackTags",
+								"attackTags": [ "NormalAttack_01", "NormalAttack_02", "NormalAttack_03", "NormalAttack_04", "NormalAttack_05", "NormalAttack_06" ],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_Cyno_Constellation_2_CD",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": 
+						[
+							{
+								"$type": "AttachModifier",
+								"modifierName": "Avatar_Cyno_Constellation_2_BuffElecAddHurt_Effect",
+								"target": "Self",
+								"doOffStage":true,
+							},
+							//0.1秒CD
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Avatar_Cyno_Constellation_2_BuffElecAddHurt_CD",
+								"target": "Self",
+								"doOffStage":true,
+							},
+						],
+					},
+				],
+			},
+			"Avatar_Cyno_Constellation_2_BuffElecAddHurt_Effect":
+			{
+				"duration":"%Cyno_Constellation_2_BuffTime",
+				"stacking":"MultipleAllRefresh",
+				"state": "AttackUp",
+				"isLimitedProperties": true,
+				"stackingOption":
+				{
+					"maxModifierNumForMultipleType":"%Cyno_Constellation_2_MaxLevel",
+				},
+				"properties":
+				{
+					"Actor_ElecAddHurtDelta": "%Cyno_Constellation_2_ElecAddHurtDelta",
+				},
+			},
+			"Avatar_Cyno_Constellation_2_BuffElecAddHurt_CD": 
+			{
+			  "duration": "%Cyno_Constellation_2_CD",
+			  "stacking": "Unique",
+			  "onAdded": 
+			  [
+				{
+				  "$type": "SetGlobalValue",
+				  "key": "_Cyno_Constellation_2_CD", 
+				  "value": -1,
+				  "doOffStage": true,
+				},
+			  ],
+			  "onRemoved": 
+			  [
+				{
+				  "$type": "SetGlobalValue",
+				  "key": "_Cyno_Constellation_2_CD", 
+				  "value": 0,
+				  "doOffStage": true,
+				},
+			  ],
+			},
+		},
+		"abilitySpecials":
+		{
+			"Cyno_Constellation_2_BuffTime": 0,
+			"Cyno_Constellation_2_MaxLevel": 0,
+			"Cyno_Constellation_2_ElecAddHurtDelta": 0,
+/*			"Cyno_Constellation_2_BonusCritical": 0,
+			"Cyno_Constellation_2_BonusCriticalHurt": 0,*/
+			"Cyno_Constellation_2_CD": 0,
+
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////////
+//
+//  命座4  元素爆发期间，触发雷元素相关反应时，队伍中所有角色（除了赛诺自己）恢复x点能量。这个效果每次元素爆发只能触发x次。
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_Constellation_4_ReviveEnergy",
+		"isDynamicAbility": true,
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_Cyno_BurstMode_Constellation_4",
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"removeAppliedModifier": true,
+				"modifierNameSteps": ["Blank", "Avatar_Cyno_Constellation_4_ReviveEnergy_UnLock"],
+			},			
+		],
+		"onAdded":
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Constellation_4_Count",  
+				"value": 1,
+				"doOffStage": true,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_Cyno_BurstMode_Constellation_4",  
+				"value": 0,
+				"doOffStage": true,
+			},
+		],
+		"onAbilityStart":
+		[
+
+		],
+		"modifiers":
+		{
+			"Blank":{},
+			"Avatar_Cyno_Constellation_4_ReviveEnergy_UnLock":
+			{
+				"onAdded":
+				[
+					//次数限制记录初始化
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Constellation_4_Count",  
+						"value": 1,
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Avatar_Cyno_Constellation_4_ReviveEnergy_Handler",
+						"target": "Self",
+					},					
+				],
+				"onRemoved":
+				[
+					//重置计数次数
+					{
+						"$type": "SetGlobalValue",
+						"key": "_Cyno_BurstMode_Constellation_4_Count",  
+						"value": 1,
+						"doOffStage": true,
+					},
+				]
+			},
+			"Avatar_Cyno_Constellation_4_ReviveEnergy_Handler":
+			{
+				"modifierMixins":
+				[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20, //这个就是默认值
+							"entityTypes":	["Monster"],
+							"reactionTypes":
+							[
+								"Explode",
+								"Shock",
+								"Overdose",
+								"OverdoseElectric",
+								"OvergrowMushroomElectric",
+								"Superconductor",
+								"SwirlElectric"
+							], //雷相关
+							"actions":
+							[
+								{
+									"$type": "Predicated",
+									"target": "Caster",
+									"targetPredicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Caster",
+											"key": "_Cyno_BurstMode_Constellation_4_Count",
+											"value": "%Cyno_Constellation_4_MaxCount",
+											"compareType": "LessAndEqual",
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type": "ApplyModifier",
+											"modifierName": "Avatar_Cyno_Constellation_4_ReviveEnergy_AddGV",				
+											"target":"Caster",	
+											"doOffStage":true,						
+										},
+										{
+											"$type": "AttachModifier",
+											"modifierName": "Avatar_Cyno_Constellation_4_ReviveEnergy",
+											"target":"AllPlayerAvatars",
+											"predicates":
+											[
+												{
+													"$type": "ByNot", //刨除掉自己
+													"predicates": 
+													[
+														{
+															"$type": "ByTargetType",
+															"targetType": "Caster", //实际这个type只有4个生效Self/Caster/Owner/OriginOwner
+														},
+													]
+												},		
+												{
+													"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+													"compareType": "XZ",
+													"value": 40,
+													"logic": "LesserOrEqual",
+												},
+											],
+										},
+									],
+								},
+							],
+						},
+				],
+			},
+			"Avatar_Cyno_Constellation_4_ReviveEnergy":
+			{
+				"duration":0.1,
+				"stacking":"Multiple",
+				"onAdded":
+				[
+				  	{
+						"$type": "DebugLog", 
+						"content": "##恢复能量",
+				  	},
+				  	{
+						"$type":"ReviveElemEnergy", 
+						"value": "%Cyno_Constellation_4_ReviveElemEnergyValue",
+						"doOffStage":true,
+				  	},
+				],
+			},
+			"Avatar_Cyno_Constellation_4_ReviveEnergy_AddGV":
+			{
+				"stacking":"Multiple",
+				"duration": 0.1,
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_Cyno_BurstMode_Constellation_4_Count",
+						"target":"Self",
+						"value": 1,
+						"doOffStage": true,
+					},
+				]
+			}
+		},
+		"abilitySpecials":
+		{
+			"Cyno_Constellation_4_ReviveElemEnergyValue": 0,
+			"Cyno_Constellation_4_CD": 0,
+			"Cyno_Constellation_4_MaxCount": 0,
+		},
+	},
+},
+
+///////////////////////////////////////////////////////////////
+//
+//  命座6  开大后获得几层子弹，普攻命中后连携攻击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Cyno_Constellation_6",
+		"isDynamicAbility": true,
+		"onAbilityStart":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Avatar_Cyno_Constellation_6_BulletHandler",				
+			}
+		],
+		"onAdded":
+		[
+			//尊贵的满命标记
+			{
+				"$type":"SetGlobalValue",
+				"key":"_Cyno_Constellation_6", 
+				"value": 1, 
+				"doOffStage": true,
+			},
+			//命6层数初始化
+			{
+				"$type":"SetGlobalValue",
+				"key":"_Cyno_Constellation_6_Layer", 
+				"value": 0, 
+				"doOffStage": true,
+			},
+			{
+				"$type":"SetGlobalValue",
+				"key":"_Cyno_Constellation_6_CD", 
+				"value": 0, 
+				"doOffStage": true,
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Avatar_Cyno_Constellation_6_BulletHandler":
+			{
+				"isUnique":true,
+				"stacking":"Refresh",
+				"duration":"%Cyno_Constellation_6_Duration",
+				"onAdded":
+				[
+
+				],
+				"onAttackLanded":
+				[
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05",], //普攻命中
+							},
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Caster",
+								"key": "_Cyno_Constellation_6_Layer",
+								"value": 0,
+								"compareType": "MoreThan",
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Caster",
+								"key": "_Cyno_Constellation_6_CD",
+								"value": 0,
+								"compareType": "Equal",
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "TriggerBullet",
+								"bulletID": 41071005,
+								"campID": 1001,
+								"campTargetType": "Enemy",
+								"flushAbilityPacket":true,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.3,
+										"z": 0.3,
+									},
+								},
+							},
+							{
+								"$type": "AddGlobalValue",
+								"key": "_Cyno_Constellation_6_Layer",
+								"value": -1,
+								"useLimitRange": true,
+								"minValue": 0,
+								"maxValue": "%Cyno_Constellation_6_LayerMax",
+								"doOffStage": true,
+							},
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Avatar_Cyno_Constellation_6_BulletCdHandler",
+							}
+						],
+					},					
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_Layer", 
+						"value": 0, 
+						"doOffStage": true,
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_CD", 
+						"value": 0, 
+						"doOffStage": true,
+					},
+				]
+			},
+			"Avatar_Cyno_Constellation_6_BulletCdHandler":
+			{
+				"duration":"%Cyno_Constellation_6_Layer_CD",
+				"onAdded":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_CD", 
+						"value": -1, 
+						"doOffStage": true,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_Cyno_Constellation_6_CD", 
+						"value": 0, 
+						"doOffStage": true,
+					},
+				]
+			}
+		},
+		"abilitySpecials":
+		{
+			"Cyno_Constellation_6_Duration": 0, //「豺祭」效果持续时间
+			"Cyno_Constellation_6_Layer": 0, //「豺祭」效果初始层数
+			"Cyno_Constellation_6_LayerMax": 0, //「豺祭」效果最大层数
+			"Cyno_Constellation_6_Layer_CD": 0,  //「豺祭」子弹消耗CD
+		}
+	},
+},
+]

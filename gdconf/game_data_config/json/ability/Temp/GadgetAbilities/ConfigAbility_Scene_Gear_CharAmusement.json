@@ -1,0 +1,4722 @@
+[
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_01",
+			"abilityMixins":
+			[
+                {//记分用
+                    "$type":"DoActionOnGlobalValueChangeMixin",
+                    "globalValueKey":"GV_BrickWall_Counter",
+                    "actions":
+                    [	
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "BrickWall_DelaySLC",//DoActionOnGlobalValueChangeMixin同帧时GV还没变所以要晚一点SetGlobalValueToOverrideMap
+						}
+                    ],
+                }, 
+				{//埋点用 结束时 关卡设置这个SGV通知砖墙上报每种砖块计数
+					"$type":"DoActionOnGlobalValueChangeMixin",
+					"globalValueKey":"SGV_BrickWall_Report",
+					"actions":
+					[	
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "BrickWall_ReportSLC",
+						}
+					],
+				}, 
+				{
+					"$type": "DisableCineMachineMixin",//关闭重击拉近
+				}
+			],
+			"abilitySpecials": 
+			{
+				"BirckWall_StaminaRecover": 300,//回体砖块恢复量
+				"BrickWall_Counter": 0,//当前总分
+				"BrickWall_BuffTime": 10,//staminaBuff Duration
+
+				"BrickWall_HP_Normal": 130,//默认血量
+				"BrickWall_HP_Stamina": 200,
+				"BrickWall_HP_Line": 500,
+				"BrickWall_HP_All": 1200,
+
+				"BrickWall_Counter_Normal": 0,//埋点计数
+				"BrickWall_Counter_Stamina": 0,
+				"BrickWall_Counter_Line": 0,
+				"BrickWall_Counter_All": 0,
+			},
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "SGV_BrickWall_HP_Normal",
+					"overrideMapKey": "BrickWall_HP_Normal",
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "SGV_BrickWall_HP_Normal",
+							"value": 0,
+							"compareType": "MoreThan",
+						}
+					]
+				},
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "SGV_BrickWall_HP_Stamina",
+					"overrideMapKey": "BrickWall_HP_Stamina",
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "SGV_BrickWall_HP_Stamina",
+							"value": 0,
+							"compareType": "MoreThan",
+						}
+					]
+				},
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "SGV_BrickWall_HP_Line",
+					"overrideMapKey": "BrickWall_HP_Line",
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "SGV_BrickWall_HP_Line",
+							"value": 0,
+							"compareType": "MoreThan",
+						}
+					]
+				},
+				{
+					"$type": "SetGlobalValueToOverrideMap",
+					"globalValueKey": "SGV_BrickWall_HP_All",
+					"overrideMapKey": "BrickWall_HP_All",
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "SGV_BrickWall_HP_All",
+							"value": 0,
+							"compareType": "MoreThan",
+						}
+					]
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_EraseBrick",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_CreateLocalGadget",
+				},
+			],
+			"modifiers": 
+			{
+				"BrickWall_ReportSLC":
+				{
+					"duration": 1,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "GV_BrickWall_Counter_Normal",
+							"overrideMapKey": "BrickWall_Counter_Normal",
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "GV_BrickWall_Counter_Stamina",
+							"overrideMapKey": "BrickWall_Counter_Stamina",
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "GV_BrickWall_Counter_Line",
+							"overrideMapKey": "BrickWall_Counter_Line",
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "GV_BrickWall_Counter_All",
+							"overrideMapKey": "BrickWall_Counter_All",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmusePillar_Report_UnNormal",
+							"paramNum": 3,//最多3个参数 4种砖块分成俩SLC
+							"param1": "%BrickWall_Counter_Stamina",//回体
+							"param2": "%BrickWall_Counter_Line",//横向
+							"param3": "%BrickWall_Counter_All",//全消
+							"luaCallType": "FromGroup",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmusePillar_Report_Normal",
+							"paramNum": 1,
+							"param1": "%BrickWall_Counter_Normal",//普通
+							"luaCallType": "FromGroup",
+						},
+					]
+				},
+				"BrickWall_DelaySLC"://DoActionOnGlobalValueChangeMixin同帧时GV还没变所以要晚一点SetGlobalValueToOverrideMap
+				{
+					"stacking": "Multiple",
+					"duration": 0.1,
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "GV_BrickWall_Counter",
+							"overrideMapKey": "BrickWall_Counter",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmusePillar_BrickCount",
+							"paramNum": 1,
+							"param1": "%BrickWall_Counter",
+							"luaCallType": "FromGroup",
+						},
+					]
+				},
+				"BrickWall_CreateLocalGadget":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320029,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320030,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 3.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320031,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 6.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320032,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 9.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320033,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 12.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 70320034,
+							"byServer": true,
+							"sightGroupWithOwner": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 15.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					]
+				},
+				"BirckWall_StaminaRecover":
+				{
+					"duration": 0.1,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "ReviveStamina",
+							"value": "%BirckWall_StaminaRecover",
+							"target": "CurLocalAvatar"
+						},
+					],
+				},
+				"BirckWall_StaminaBuffEffect":
+				{
+					"duration": "%BrickWall_BuffTime",
+					"stacking": "Refresh",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_DIK_BUFFC_01_Buff",
+							"target": "CurLocalAvatar"
+						}
+					],
+				},
+				"BrickWall_EraseBrick": // 消消乐实现
+				{
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivityMixin",
+							"hpMap"://元素含量
+							{
+								"Normal": "%BrickWall_HP_Normal",
+								"Normal_Reverse": "%BrickWall_HP_Normal",
+								"Stamina": "%BrickWall_HP_Stamina",
+								"Line": "%BrickWall_HP_Line",
+								"All": "%BrickWall_HP_All",
+							},
+							"scoreMap"://每种砖块对应的分数
+							{
+								"Normal": 1,
+								"Normal_Reverse": 1,
+								"Stamina": 3,
+								"Line": 3,
+								"All": 3,
+							},
+							"explodeDelay": 0.65,
+							"onStaminaBroken"://stamina类型的砖块被打爆时执行的action
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "BirckWall_StaminaRecover",
+									"target": "AllTeams",
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "BirckWall_StaminaBuffEffect",
+									"target": "AllTeams",
+								},
+							],
+							"staminaBuffDuration": "%BrickWall_BuffTime", // staminaBuff持续时间
+							"staminaBuffRatio": 3, // staminaBuff额外倍率
+							"rule":
+							[
+								/*
+								1、横向爆炸岩块：
+								场上不足2个横向岩块时，接下来会创生1个横向岩块；
+								场上已有2个横向岩块时，不继续创建横向岩块
+
+								2、体力岩块：
+								场上不足1个体力岩块时，接下来会创生1个体力岩块；
+
+								同时满足刷体力岩块和横向岩块的条件时，优先刷体力岩块；
+								体力岩块和横向岩块刷新条件都不满足时，刷普通岩块
+
+								3、全屏爆炸岩块特殊：
+								场上有1个全屏岩块时，接下来不会创生全屏岩块；
+								全屏岩块清场后下一波，刷出初始岩块排列组合
+								*/
+								{
+									"$type": "EraseBrickActivity_CreateBrick",
+									"predicates":
+									[
+										{
+											"$type": "EraseBrickActivity_Predicate",
+											"brickType": "Stamina",
+											"op": "Less",
+											"value": 1,
+										},
+									],
+									"brickType": "Stamina",
+								},
+								{
+									"$type": "EraseBrickActivity_CreateBrick",
+									"predicates":
+									[
+										{
+											"$type": "EraseBrickActivity_Predicate",
+											"brickType": "Line",
+											"op": "Less",
+											"value": 2,
+										},
+									],
+									"brickType": "Line",
+								},
+								{
+									"$type": "EraseBrickActivity_CreateBrick",
+									"predicates":
+									[
+										{
+											"$type": "EraseBrickActivity_Predicate",
+											"brickType": "All",
+											"op": "Less",
+											"value": 1,
+										},
+									],
+									"brickType": "All",
+								},
+							],
+
+							// 单人规则
+							"ruleSteps":
+							[
+								{
+									"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+									"index": 10,
+									"rule":
+									[
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Stamina",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "Stamina",
+										},
+									],
+								},
+								{
+									"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+									"index": 25,
+									"rule":
+									[
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Stamina",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "Stamina",
+										},
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Line",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "Line",
+										},
+									],
+								},
+								{
+									"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+									"index": 60,
+									"rule":
+									[
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Stamina",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "Stamina",
+										},
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Line",
+													"op": "Less",
+													"value": 2,
+												},
+											],
+											"brickType": "Line",
+										},
+									],
+								},
+								{
+									"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+									"index": 120,
+									"rule":
+									[
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Stamina",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "Stamina",
+										},
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "Line",
+													"op": "Less",
+													"value": 2,
+												},
+											],
+											"brickType": "Line",
+										},
+										{
+											"$type": "EraseBrickActivity_CreateBrick",
+											"predicates":
+											[
+												{
+													"$type": "EraseBrickActivity_Predicate",
+													"brickType": "All",
+													"op": "Less",
+													"value": 1,
+												},
+											],
+											"brickType": "All",
+										},
+									],
+								},
+							],
+
+							"ruleStepGvKey": "SGV_BrickWall_Mode",
+							// 多人规则
+							"otherRuleSteps":
+							{
+								"1":
+								[
+									{
+										"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+										"index": 20,
+										"rule":
+										[
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Stamina",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "Stamina",
+											},
+										],
+									},
+									{
+										"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+										"index": 45,
+										"rule":
+										[
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Stamina",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "Stamina",
+											},
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Line",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "Line",
+											},
+										],
+									},
+									{
+										"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+										"index": 100,
+										"rule":
+										[
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Stamina",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "Stamina",
+											},
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Line",
+														"op": "Less",
+														"value": 2,
+													},
+												],
+												"brickType": "Line",
+											},
+										],
+									},
+									{
+										"$type": "EraseBrickActivity_CreateBrickRuleListItem",
+										"index": 240,
+										"rule":
+										[
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Stamina",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "Stamina",
+											},
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "Line",
+														"op": "Less",
+														"value": 2,
+													},
+												],
+												"brickType": "Line",
+											},
+											{
+												"$type": "EraseBrickActivity_CreateBrick",
+												"predicates":
+												[
+													{
+														"$type": "EraseBrickActivity_Predicate",
+														"brickType": "All",
+														"op": "Less",
+														"value": 1,
+													},
+												],
+												"brickType": "All",
+											},
+										],
+									},
+								],
+							},
+
+							"stateSwitchActions": //切换状态时执行的action（做一些播放特效之类的工作）
+							[
+								// 普通砖块爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Normal", "Normal_Reverse"],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+
+								// 横向砖块爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								// 清屏砖块爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack", "Explode" ],
+								},
+								
+								// 体力砖块爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle" ],
+									"toStates": [ "Falling" ],
+									"fromTypes": [ "Stamina" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "Attack" ],
+								},	
+								// 横向砖块延迟爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode"],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode"],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "Line" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode"],
+								},
+								// 清屏砖块延迟爆炸特效
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 1 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 2 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 3 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 4 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 5 ],
+									"fromStates": [ "Idle"],
+									"toStates": [ "ToExplode" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+								{//全消后淡入
+									"$type": "EraseBrickActivity_SwitchStateAction",
+									"index": [ 0, 1, 2, 3, 4, 5 ],
+									"fromStates": [ "Idle", "ToExplode" ],
+									"toStates": [ "Cleared" ],
+									"fromTypes": [ "All" ],
+									"toTypes": [ "Normal", "Normal_Reverse", "Stamina", "Line", "All" ],
+									"reasons": [ "None", "Attack", "Explode", "Cleared" ],
+								},
+							],
+
+							"stateSwitchActionArray": //切换状态时执行的action（做一些播放特效之类的工作）
+							[
+								[
+									// 第0列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第0列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第1列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第0列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第2列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第2列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第3列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第3列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第4列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第4列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第5列普通砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_01_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": -3.5,
+											},
+										}
+									},
+									// 第5列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第0列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第0列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第1列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第1列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第2列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第2列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第3列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第3列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第4列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第4列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第5列横向砖块爆炸特效action 
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_04_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.1,
+											},
+										}
+									},
+									// 第5列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第0列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第0列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第1列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第1列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第2列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第2列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第3列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第3列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第4列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第4列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第5列清屏砖块爆炸特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_03_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第5列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第0列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第0列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第1列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第1列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第2列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第2列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第3列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第3列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第4列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第4列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第5列体力砖块爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_05_Blast",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									},
+									// 第5列砖块落下特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_SceneObj_RockWall_DownSmoke",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										}
+									}
+								],
+								[
+									// 第0列横向砖延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第1列横向砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第2列横向砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第3列横向砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第4列横向砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第5列横向砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.2,
+											},
+										}
+									}
+								],
+								[
+									// 第0列清屏砖延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 第1列清屏砖延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 3.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 第2列清屏砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 6.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 第3列清屏砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 9.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 第4列清屏砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 12.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 第5列清屏砖块延迟爆炸时的特效action
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Sceneobj_RockWall_RedWarning",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 15.0,
+												"y": 0.0,
+												"z": 0.15,
+											},
+										}
+									}
+								],
+								[
+									// 全消后action
+									{
+										"$type": "ApplyModifier",
+										"modifierName": "BrickWall_Disappear",
+									}
+								],
+							],
+
+							"stateParaName": "BrickState", // 状态对应的动画状态机参数名
+							"stateParaValues": // 状态对应的动画状态机参数值
+							[
+								// normal
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal",
+									"state": "Idle",
+									"paraValue": 10,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal",
+									"state": "ToExplode",
+									"paraValue": 10,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal",
+									"state": "Falling",
+									"paraValue": 11,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal",
+									"state": "Cleared",
+									"paraValue": 12,
+								},
+
+								// normal_reverse，暂时先用normal顶替
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal_Reverse",
+									"state": "Idle",
+									"paraValue": 50,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal_Reverse",
+									"state": "ToExplode",
+									"paraValue": 50,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal_Reverse",
+									"state": "Falling",
+									"paraValue": 51,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Normal_Reverse",
+									"state": "Cleared",
+									"paraValue": 52,
+								},
+
+								// stamina
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Stamina",
+									"state": "Idle",
+									"paraValue": 20,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Stamina",
+									"state": "ToExplode",
+									"paraValue": 20,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Stamina",
+									"state": "Falling",
+									"paraValue": 21,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Stamina",
+									"state": "Cleared",
+									"paraValue": 22,
+								},
+
+								// line
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Line",
+									"state": "Idle",
+									"paraValue": 30,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Line",
+									"state": "ToExplode",
+									"paraValue": 33,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Line",
+									"state": "Falling",
+									"paraValue": 31,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "Line",
+									"state": "Cleared",
+									"paraValue": 32,
+								},
+
+								// all
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "All",
+									"state": "Idle",
+									"paraValue": 40,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "All",
+									"state": "ToExplode",
+									"paraValue": 43,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "All",
+									"state": "Falling",
+									"paraValue": 41,
+								},
+								{
+									"$type": "EraseBrickActivity_StatePara",
+									"brickType": "All",
+									"state": "Cleared",
+									"paraValue": 42,
+								},
+							], 
+							"hpParaName": "BrickHP", // hp对应的动画状态机参数名
+							"countParaName": "GV_BrickWall_Counter", // 消除的总砖块计数gv名
+							"typeCountParaName": // 消除的每种砖块计数gv名
+							{
+								"Normal": "GV_BrickWall_Counter_Normal",
+								"Normal_Reverse": "GV_BrickWall_Counter_Normal",
+								"Stamina": "GV_BrickWall_Counter_Stamina",
+								"Line": "GV_BrickWall_Counter_Line",
+								"All": "GV_BrickWall_Counter_All",	
+							},
+							"durabilityChangedGVList": 
+							[
+								"GV_BrickWall_Durability_01",
+								"GV_BrickWall_Durability_02",
+								"GV_BrickWall_Durability_03",
+								"GV_BrickWall_Durability_04",
+								"GV_BrickWall_Durability_05",
+								"GV_BrickWall_Durability_06"
+							], // durability改变时修改的gv
+							"initRule":
+							{
+								"2": [ "Stamina" ], // 第一排一个体力
+								//"1": [ "Line" ], // 第二排一个横向
+							},
+							"clearRule":
+							{
+								"0": [ "Stamina" ], // 第一排一个体力一个横向
+								"1": [ "Line" ], // 第二排一个横向
+								"2": [ "All", "Line" ], // 第三排一个全屏
+							},
+						},
+					],
+				},
+				"BrickWall_FadeIn" :
+				{
+					"duration": 0.4,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EntityDitherMixin",
+							"ditherValue": 0,
+							"cutInTime": 0,
+							"cutOutTime": 0.5,
+						},
+					],
+				},
+				"BrickWall_Disappear" :
+				{
+					"duration": 0.1,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EntityDitherMixin",
+							"ditherValue": 0,
+							"cutInTime": 0,
+							"cutOutTime": 0,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "BrickWall_FadeIn",
+						}
+					]
+				}
+			}
+		},
+	},
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件1
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_02",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_01",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_01",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+		///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件2
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_03",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_02",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_02",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+		///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件3
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_04",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_03",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_03",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+		///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件4
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_05",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_04",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_04",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+		///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件5
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_06",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_05",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_05",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+		///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 消消乐 砖墙 受击子物件6
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BrickWall_07",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "BrickWall_RockDurability",
+				},
+				// 这两个gv实际上是放在brickwall_01上，但是不想在EraseBrickActivityMixin里面添加新的string2hash所以在这里强行初始化一下两个key的hash，这两个action没有其他实际作用
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Durability_06",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Normal",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Stamina",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_Line",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_BrickWall_Counter_All",
+					"value": 0,
+				},
+			],
+			"modifiers":
+			{
+				"BrickWall_RockDurability":
+				{					
+					"elementType": "Rock",
+					"elementDurability": 9999,
+					"modifierMixins": 
+					[
+						{
+							"$type": "EraseBrickActivitySubMixin",
+							"durabilityChangedGV": "GV_BrickWall_Durability_06",
+							"actions":
+							[
+								{
+									"$type": "AddElementDurability",
+									"modifierName": "BrickWall_RockDurability",
+									"value": 9999,
+									"useLimitRange": true,
+									"maxValue": 9999,
+									"minValue": 0,
+								},
+							],
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RockWall_Attack",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+			},
+		},
+	},
+	///////////////////////////////////////////////////////////////
+    //
+    // 奇趣秘园 金币
+    //
+    ///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SceneObj_Area_Common_Property_Prop_CharAmusementCoin_01",
+            "onAdded":
+            [
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "CharAmusement_Coin_Type",
+                    "value": 1,
+                },
+            ],
+        },
+    },
+	///////////////////////////////////////////////////////////////
+    //
+    // 奇趣秘园 金币大
+    //
+    ///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SceneObj_Area_Common_Property_Prop_CharAmusementCoin_02",
+            "onAdded":
+            [
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "CharAmusement_Coin_Type",
+                    "value": 2,
+                },
+				{
+                    "$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_GlideChampCoin_Appear_Super",
+                },
+            ],
+        },
+    },
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 下落攻击桩
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_FallAttackPillar_01",
+			"onAdded" : 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "FallAttackPillar_Counter",//剩余血量
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "FallAttackPillar_State",//外观
+					"value": 3,
+				},
+			],
+			"abilitySpecials": 
+			{
+				"FallAttackPillar_MaxHP": 2,
+				"FallAttackPillar_HitCount": 0,
+			},
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "FallAttackPillar_Counter",
+					"valueSteps": [ -0.5, 0.5, 99],
+					"modifierNameSteps": 
+					[
+						"FallAttackPillar_Off",//落下
+						"FallAttackPillar_On"
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "FallAttackPillar_State",
+					"valueSteps": [ -1.5, -0.5, 1.5, 2.5, 3.5],
+					"modifierNameSteps": 
+					[
+						"Blank",
+						"FallAttackPillar_HP1",
+						"FallAttackPillar_HP2",
+						"FallAttackPillar_HP3",
+					],
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,//升起 变成可打的普通桩
+					"modifierName": "FallAttackPillar_TurnOn_1"
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,//升起 变成可打的金色桩
+					"modifierName": "FallAttackPillar_TurnOn_2"
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,//落下 不可打
+					"modifierName": "FallAttackPillar_TurnOff"
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["KeepRiseGold"],
+					"modifierName": "FallAttackPillar_ActiveEffect_2",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["KeepRiseNormal"],
+					"modifierName": "FallAttackPillar_ActiveEffect_1",
+				},
+			],
+			"modifiers":
+			{
+				"Blank":
+				{
+
+				},
+				"FallAttackPillar_HP3":
+				{
+					"onAdded": 
+					[
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_3"],
+							"setEnable":true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_2","HP_1"],
+							"setEnable":false,
+						},
+					],
+				},
+				"FallAttackPillar_HP2":
+				{
+					"onAdded": 
+					[
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_2"],
+							"setEnable":true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_3","HP_1"],
+							"setEnable":false,
+						},
+					],
+				},
+				"FallAttackPillar_HP1":
+				{
+					"onAdded": 
+					[
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_1"],
+							"setEnable":true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_2","HP_3"],
+							"setEnable":false,
+						},
+					],
+				},
+				"FallAttackPillar_TurnOn_1":
+				{
+					"onAdded": 
+					[
+						/*{
+							"$type": "AttachModifier",
+							"modifierName": "FallAttackPillar_ActiveEffect_1",
+						},*/
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_State",//外观
+							"value": 3,
+						},					
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "SGV_FallAttackPillar_MaxHP",
+							"overrideMapKey": "FallAttackPillar_MaxHP",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SGV_FallAttackPillar_MaxHP",
+									"value": 0,
+									"compareType": "MoreThan",
+								}
+							]
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_Counter",
+							"value": "%FallAttackPillar_MaxHP",
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Normal_1","Normal_2","Normal_3"],
+							"setEnable":true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Gold_1","Gold_2","Gold_3"],
+							"setEnable":false,
+						},
+					],
+				},
+				"FallAttackPillar_TurnOn_2":
+				{
+					"onAdded": 
+					[
+						/*{
+							"$type": "AttachModifier",
+							"modifierName": "FallAttackPillar_ActiveEffect_2",
+						},*/
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_State",//外观
+							"value": 3,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "SGV_FallAttackPillar_MaxHP",
+							"overrideMapKey": "FallAttackPillar_MaxHP",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SGV_FallAttackPillar_MaxHP",
+									"value": 0,
+									"compareType": "MoreThan",
+								}
+							]
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_Counter",
+							"value": "%FallAttackPillar_MaxHP",
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Normal_1","Normal_2","Normal_3"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Gold_1","Gold_2","Gold_3"],
+							"setEnable":true,
+						},
+					],
+				},
+				"FallAttackPillar_TurnOff":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_Counter",
+							"value": 0,
+						},
+					],
+				},
+				"FallAttackPillar_MuteHit": 
+				{
+					"duration": 0.1,
+					"stacking": "Refresh",
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_MuteHit",
+							"value": 1,
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_MuteHit",
+							"value": 0,
+						}
+					],
+				},
+				"FallAttackPillar_Off":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 0,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RisingFloor_Down",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["HP_1","HP_2","HP_3"],
+							"setEnable":false,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "FallAttackPillar_State",
+							"value": -1,
+						}
+					],
+				},
+				"FallAttackPillar_ActiveEffect_1":
+				{
+					"duration": 1,
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RisingFloor_Light_01",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+					]
+				},
+				"FallAttackPillar_ActiveEffect_2":
+				{
+					"duration": 1,
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RisingFloor_Light_02",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+					]
+				},
+				"FallAttackPillar_On":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_RisingFloor_Up",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["FallingAttack"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "FallAttackPillar_MuteHit",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								}
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_SceneObj_RisingFloor_Hit_01",
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName": "EffectNode"
+									}
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "FallAttackPillar_MuteHit",
+								},
+								{//后期受击切换外观1
+									"$type": "SetGlobalValue",
+									"key": "FallAttackPillar_State",
+									"value": 1,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "FallAttackPillar_Counter",
+											"value": 3,
+											"compareType": "LessAndEqual",
+										},
+										{
+											"$type": "ByNot",
+											"predicates": 
+											[
+												{
+													"$type": "ByTargetGlobalValue",
+													"target": "Self",
+													"key": "FallAttackPillar_State",
+													"value": 3,
+													"compareType": "MoreThanAndEqual",
+												},
+											]
+										}
+									],
+								},
+								{//首次受击切换外观2
+									"$type": "SetGlobalValue",
+									"key": "FallAttackPillar_State",
+									"value": 2,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "FallAttackPillar_State",
+											"value": 3,
+											"compareType": "MoreThanAndEqual",
+										},
+									],
+								},
+								{
+									"$type": "ServerLuaCall",
+									"target": "Self",
+									"funcName": "SLC_CharAmusePillar_TryCreatReward",
+									"luaCallType": "FromGroup",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "FallAttackPillar_Counter",
+											"value": 1,
+											"compareType": "LessAndEqual"
+										}
+									],
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "FallAttackPillar_Counter",
+									"value": -1,
+									"maxValue": 99,
+									"minValue": 0,
+									"useLimitRange": true,
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 镜头物件1
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_CharAmusementCam_01",
+			"onAdded": 
+			[
+				{
+					"$type":"EnableGadgetSpecialCamera",
+					"canBeHandledOnRecover": true,
+					"enable": true,
+				},
+			],
+		},
+	},
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 镜头物件2 关闭拉近
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_CharAmusementCam_02",
+			"abilityMixins": 
+			[
+				{
+					"$type": "DisableCineMachineMixin",//关闭重击拉近
+				}
+			],
+			"onAdded": 
+			[
+				{
+					"$type":"EnableGadgetSpecialCamera",
+					"canBeHandledOnRecover": true,
+					"enable": true,
+				},
+			],
+		},
+	},
+	///////////////////////////////////////////////////
+	//
+	// 	奇趣秘园 史莱姆球门1
+	//
+	///////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_SlimeGate_01",
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,//落地
+					"modifierName": "SlimeGate_Eff_1",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,//高
+					"modifierName": "SlimeGate_Eff_2",
+				},
+			],
+			"onFieldEnter": 
+			[
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates": 
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Monster"],
+						},
+						{
+							"$type": "ByNot",
+							"predicates": 
+							[
+								{
+									"$type": "ByHasModifier",
+									"modifierName": "UNIQUE_SlimeGate_MonsterKillSelf",
+								},
+							],
+						},
+					],
+					"successActions": 
+					[
+						{//这个保留 是用于让史莱姆不等server提前播死亡效果的，如果kill发回来慢，这个modifier的表现做兜底
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_SlimeGate_MonsterKillSelf",
+							"target": "Target",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Goal_Post_01_Active",
+							"target": "Self",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "SlimeGate_AttachEff_State",
+									"value": 1,
+									"compareType": "Equal",
+								}
+							]
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Goal_Post_02_Active",
+							"target": "Self",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "SlimeGate_AttachEff_State",
+									"value": 2,
+									"compareType": "Equal",
+								}
+							]
+						}
+					],
+				},
+			],
+			"modifiers":
+			{
+				"SlimeGate_Eff_1":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Goal_Post_01_Idle",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "SlimeGate_AttachEff_State",
+							"value": 1,
+						},
+					],
+				},
+				"SlimeGate_Eff_2":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Goal_Post_02_Idle",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "SlimeGate_AttachEff_State",
+							"value": 2,
+						},
+					],
+				},
+				"UNIQUE_SlimeGate_MonsterKillSelf":
+				{
+					"stacking": "RefreshUniqueDurability",
+					"isUnique": true,
+					"stackingOption": 
+					{
+						"enableMixedUnique": true,
+					},
+					"modifierMixins": 
+					[
+						{
+							"$type": "DiePatternSwitchMixin",
+							"hasAnimatorDie": false,
+							"dieDisappearEffectDelay": 0.0,
+							"dieEndTime" : 0,
+							"startDieEndAtOnce": true,
+							"ignoreElementDie": true,
+							"dieForceDisappearTime" : 2,
+							"dieModelFadeDelay": 0.0,
+							"ragDollDieEndTimeDelay": 0.0,
+						},
+						{
+							"$type": "ReplaceEventPatternMixin",
+							"oldPatterns": ["Monster_Slime_Electric_02_Die", "Monster_Slime_Electric_03_Die", "Monster_Slime_Fire_Die_02", "Monster_Slime_Fire_Die_03"],
+							"newPatterns": ["Monster_Slime_Fire_Die_03_WithFire", "Monster_Slime_Fire_Die_03_WithFire", "Monster_Slime_Fire_Die_03_WithFire", "Monster_Slime_Fire_Die_03_WithFire"],
+						},
+					],
+					"onAdded": 
+					[
+						{
+							"$type": "KillSelf",
+						},
+						/*{//通知服务器kill （没必要 还是KillSelf用AnyMonsterDie吧死过的configID不会计两次）
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmuse_KillSlime",
+							"luaCallType": "CurGalleryControlGroup",
+						},*/
+						{
+							"$type": "HideUIBillBoard",
+							"hide": true,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Slime_Fire_Die",
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByHasElement",
+											"element": "Electric",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Slime_Electric_Die",
+							"predicates": 
+							[
+								{
+									"$type": "ByHasElement",
+									"element": "Electric",
+								},
+							],
+						},
+						{
+							"$type": "TriggerSetRenderersEnable",
+							"renderNames": ["Body", "Eye_L", "Eye_R", "Horn"],
+							"setEnable": false,
+						},
+					],
+				},
+			},
+		},
+	},
+	//////////////////////////////////////////////////////////////////
+	//
+	// 奇趣秘园 反弹球
+	//
+	//////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_SpiningBall_01",
+			"abilityMixins": 
+			[
+				{
+                    "$type": "ServerUpdateGlobalValueMixin",
+                    "key": "GV_SpiningBall_Action",
+                },
+			],
+			"onKill": 
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "SpiningBall_Trail",
+					"doAfterDie": true,
+					"doOffStage": true
+				},
+				{
+					"$type": "SetAnimatorInt",
+					"intID": "IsDie",
+					"value": 1,
+					"doAfterDie": true,
+					"doOffStage": true
+				}
+			],
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "GV_SpiningBall_Action",
+					"value": 0,
+				},
+				/*{
+					"$type": "AttachModifier",
+					"modifierName": "SpiningBall_Action",
+				},*/
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_Bouncing_Ball_Create",
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_Bouncing_Ball_Warnig",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"useRotation": true,
+						"direction":
+						{
+							"$type": "ConfigDirectionByDefault",
+							"angleOffsetCorrect":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+						},
+					}
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "SpiningBall_Trail",
+				},
+			],	
+			"modifiers": 
+			{
+				"SpiningBall_Trail":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Bouncing_Ball_Moving",
+						},
+					]
+				},
+				"SpiningBall_Action":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionOnGlobalValueChangeMixin",
+							"globalValueKey": "GV_SpiningBall_Action",
+							"actions":
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "OnAction",
+								}
+							],
+						},
+					]
+				},
+			},	
+			"onAbilityStart":
+			[
+				{
+					"$type": "SetAnimatorTrigger",
+					"triggerID": "OnAction",
+				},
+				{//取朝向
+					"$type": "SetGlobalDir",
+					"target": "Target",
+					"key": "HitRotation",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByLookAtEntity",
+							"angleOffset": 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+					},
+					"setTarget": false,
+				},
+				{//特效
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_Bouncing_Ball_Bounce",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type": "ConfigDirectionByGlobalValue",
+							"directionKey": "HitRotation",
+						},											
+					},
+				},
+				{
+					"$type" : "Predicated",
+					"target" : "Target",
+					"targetPredicates" :
+					[
+						{
+							"$type": "ByEntityTypes",
+							"target": "Target",
+							"entityTypes": ["Avatar"],
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type" : "DamageByAttackValue",
+							"target": "Target",
+							"attackInfo":
+							{
+								"attackProperty":   
+								{
+									"damagePercentage": 0,
+									"elementType" : "None",
+									"elementDurability" : 0,
+									"strikeType": "Default",
+									"enBreak": 800,
+									"ignoreLevelDiff": true,
+								},
+								"hitPattern": 
+								{
+									"onHitEffectName": "none",			          		
+									"hitImpulseType":"LV8",
+									//"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": true,
+								},	
+							},
+						},
+						/*{
+							"$type": "LoseHP",
+							"target": "Target",
+							"amountByTargetMaxHPRatio": 0.334,//扣血百分比
+							"enableInvincible": true,//无敌可以抵挡这个扣血行为
+							"enableLockHP": true,//锁血可以抵挡这个扣血行为							
+							"lethal": true,//致死性
+							"disableWhenLoading":true,
+						},*/
+					],
+				},
+			],
+		},
+	},
+	///////////////////////////////////////////////////
+	// 
+	// 奇趣秘园 棒球 发球机 白盒
+	//
+	///////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_BaseballShooter_01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Shoot_Normal",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "Shoot_Fast",
+				},
+			],
+			"onAdded":
+			[
+
+			],
+			"modifiers":
+			{
+				"Shoot_Fast":
+				{
+					"thinkInterval": 3,
+					"onThinkInterval": 
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 70320013,
+							"lifeByOwnerIsAlive": true,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+							},
+						},	
+					]
+				},
+				"Shoot_Normal":
+				{
+					"thinkInterval": 3,
+					"onThinkInterval": 
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 70320012,
+							"lifeByOwnerIsAlive": true,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+							},
+						},	
+					]
+				},
+			},
+		},
+	},
+	///////////////////////////////////////////////////
+	// 
+	// 奇趣秘园 棒球 普通球
+	//
+	///////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_Baseball_01",
+			"abilitySpecials": 
+			{
+				"lifeTime": 5.05,
+			},
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_BaseBall_State",
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps": ["BaseBall_Normal", "BaseBall_Active"]
+				}
+			],
+			"onAdded":
+			[
+				{
+                    "$type": "AttachModifier",
+                    "modifierName": "Baseball_Effect",
+                },
+				{
+					"$type": "SetGlobalValue",
+					"key": "Baseball_Type",
+					"value": 1,
+				},
+			],
+			"modifiers":
+			{
+				"BaseBall_Active":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"canBeHandledOnRecover": true,
+							"matName": "BaseBall",
+							"patternName": "_EmissionStrength",
+							"value": 15
+						}
+					]
+				},
+				"BaseBall_Normal":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"canBeHandledOnRecover": true,
+							"matName": "BaseBall",
+							"patternName": "_EmissionStrength",
+							"value": 0
+						}
+					]
+				},
+				"Baseball_Effect":
+				{
+					"duration": "%lifeTime",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Baseball_02_Trail",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmusement_BaseBallDie",
+							"luaCallType": "FromGroup",
+						},
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName": "BaseBall",
+							"patternName": "_DissolveValue",
+							"value": 1,
+							"lerpTime": 0.75,
+						}
+					]
+				},
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////
+	//
+	// 脏脏果 最长持续时间（不可移动）
+	//
+	////////////////////////////////////////////////////////////	
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Gear_Platform_GlideDirtyBalloon_02",
+			"onFieldEnter": 
+			[
+				{
+					"$type": "ApplyModifier",
+					"target": "Target",
+					"modifierName": "DirtyBalloon",
+				},
+				{
+					"$type": "KillSelf",
+				},
+			],
+			"modifiers": 
+			{
+				"DirtyBalloon":
+				{
+					"duration": 0.2,
+					"onAdded":
+					[
+						{
+			            	"$type": "RemoveUniqueModifier",
+			            	"modifierName": "UNIQUE_DirtyBalloon_Long_Eff",
+			            },
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_DirtyBalloon_Long_Eff",
+						},
+					],
+				},
+				"UNIQUE_DirtyBalloon_Long_Eff":
+				{
+					// "isDebuff": true,
+					"isUnique": true,
+					"stacking": "Refresh",
+					"duration": 5,
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerPostProcessEffectMixin",
+							"postEffectAssetName":"PostEffect_Scene_Mud",
+							"duration":5,
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": true,
+							"muteRemoteAction": true,
+							"cameraFogEffectName": "Eff_SceneObj_GlideChampBalloon_03_02",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": false,
+						},
+					],
+				},
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////
+	//
+	// 脏脏果 常规持续时间（不可移动）
+	//
+	////////////////////////////////////////////////////////////	
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Gear_Platform_GlideDirtyBalloon_03",
+			"onFieldEnter": 
+			[
+				{
+					"$type": "ApplyModifier",
+					"target": "Target",
+					"modifierName": "DirtyBalloon",
+				},
+				{
+					"$type": "KillSelf",
+				},
+			],
+			"modifiers": 
+			{
+				"DirtyBalloon":
+				{
+					"duration": 0.2,
+					"onAdded":
+					[
+						{
+			            	"$type": "RemoveUniqueModifier",
+			            	"modifierName": "UNIQUE_DirtyBalloon_Common_Eff",
+			            },
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_DirtyBalloon_Common_Eff",
+						},
+					],
+				},
+				"UNIQUE_DirtyBalloon_Common_Eff":
+				{
+					// "isDebuff": true,
+					"isUnique": true,
+					"stacking": "Refresh",
+					"duration": 1.5,
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerPostProcessEffectMixin",
+							"postEffectAssetName":"PostEffect_Scene_Mud",
+							"duration": 1.5,
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": true,
+							"muteRemoteAction": true,
+							"cameraFogEffectName": "Eff_SceneObj_GlideChampBalloon_03_02",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "DungeonFogEffects",
+							"enable": false,
+						},
+					],
+				},
+			},
+		},
+	},
+	///////////////////////////////////////////////////
+	// 
+	// 奇趣秘园 棒球 快速球
+	//
+	///////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_Baseball_02",
+			"abilitySpecials": 
+			{
+				"lifeTime": 3.53,
+			},
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "SGV_BaseBall_State",
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps": ["BaseBall_Normal", "BaseBall_Active"]
+				}
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Baseball_Effect",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Baseball_Type",
+					"value": 2,
+				},
+			],
+			"modifiers":
+			{
+				"BaseBall_Active":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"canBeHandledOnRecover": true,
+							"matName": "BaseBall",
+							"patternName": "_EmissionStrength",
+							"value": 7.5
+						}
+					]
+				},
+				"BaseBall_Normal":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"canBeHandledOnRecover": true,
+							"matName": "BaseBall",
+							"patternName": "_EmissionStrength",
+							"value": 4
+						}
+					]
+				},
+				"Baseball_Effect":
+				{
+					"duration": "%lifeTime",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Baseball_01_Trail",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_CharAmusement_BaseBallDie",
+							"luaCallType": "FromGroup",
+						},
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName": "BaseBall",
+							"patternName": "_DissolveValue",
+							"value": 2,
+							"lerpTime": 0.75,
+						}
+					]
+				},
+			},
+		},
+	},
+	//////////////////////////////////////////////////////
+    //
+    //	奇趣秘园 无限刷体力球
+    //
+    //////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "SceneObj_Gear_Common_Property_Prop_CharAmusementStamina_01", 
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "CharAmusement_Stamina",
+					"value": 1,
+				},
+			],
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "CharAmusement_Stamina",
+					"valueSteps": [ -1.5, 0.5, 1.5,],
+					"modifierNameSteps": 
+					[
+						"CharAmusementStamina_Off",
+						"CharAmusementStamina_On",
+					],
+				}
+			],
+			"modifiers": 
+			{
+				"CharAmusementStamina_On":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_FleurStamina_Float",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_FleurStamina_Smash",
+						},
+					]
+				},
+				"CharAmusementStamina_Off":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "CharAmusementStamina_Recover",
+						}
+					]
+				},
+				"CharAmusementStamina_Recover":
+				{
+					"duration": 1.5,
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "CharAmusement_Stamina",
+							"value": 1,
+						},
+					]
+				}
+			},
+		},	
+	},
+	/////////////////////////////////////////////////////////
+	//
+	// 可扩散不灭火盆
+	//
+	/////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_Undying_Torch_01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "Undying_Torch_Off",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Undying_Torch_On",
+				},
+			],
+			"modifiers": 
+			{
+				"Undying_Torch_Off":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Undying_Torch_Timer",
+						}
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 201,
+							"predicates":
+							[
+								{
+									"$type": "ByHitElement",
+									"element": "Fire",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHasElement",
+											"element": "Water",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Undying_Torch_Timer":
+				{
+					"duration": 1,
+					"onRemoved": 
+					[
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 201,
+						}
+					]
+				},
+				"Undying_Torch_ElementHolder":
+				{
+					"stacking": "Refresh",
+					"elementType": "Fire",
+					"elementDurability": 25,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern": "Eff_SceneObj_ImmortalFire_01_Fire",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "attachPoint",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 0.24,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+				},
+				"Undying_Torch_On":
+				{
+					"thinkInterval": 0.2,
+					/*"modifierMixins":
+					[
+						{
+							"$type": "TileComplexMixin",
+							"attackID": "TileAttack_FireSource",
+							"attachPointName": "attachPoint",
+							"shape": 
+							{
+								"$type": "SphereTileShapeInfo",
+								"radius": 0.4,
+							},
+						},
+					],*/
+					"onThinkInterval": 
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Undying_Torch_ElementHolder",
+						},
+					],
+				},
+			},
+		},
+	},
+	//////////////////////////////////////////////////////////////////
+	//
+	// 奇趣秘园 史莱姆足球 移动墙
+	//
+	//////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_SlimeMovingWall_01",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "SlimeMovingWall_Attacking"
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_Moving_Wall_01_Born",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "EffectNode"
+					}
+				},
+				{
+					"$type":"SetMaterialParamFloatByTransform",
+					"matName":"Dither",
+					"patternName":"_DitherAlpha",
+					"value": 0,
+				},
+				{
+					"$type":"SetMaterialParamFloatByTransform",
+					"matName":"Dither",
+					"patternName":"_DitherAlpha",
+					"value": 1,
+					"lerpCurveIndex": 0,
+					"useCurve": true,
+					"lerpTime": 0.75,
+				},
+			],
+			"onKill": 
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "SlimeMovingWall_Attacking",
+					"doAfterDie": true,
+					"doOffStage": true,
+				},
+				{
+					"$type":"SetMaterialParamFloatByTransform",
+					"matName":"Dither",
+					"patternName":"_DitherAlpha",
+					"value": 0,
+					"lerpCurveIndex": 0,
+					"useCurve": true,
+					"lerpTime": 0.75,
+					"doAfterDie": true,
+					"doOffStage": true,
+				},
+			],
+			"modifiers": 
+			{
+				"SlimeMovingWall_Attacking":
+				{
+					"thinkInterval": 0.2,
+					"onThinkInterval": 
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type" : "ConfigAttackBox",
+									"triggerType" : "TriggerNoRepeat",
+									"born" :
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" : 
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": -0.55,
+										},
+									},
+									"size" : 
+									{
+										"x" : 2.5,
+										"y" : 2.5,
+										"z" : 1.3,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":   
+									{
+										"damagePercentage": 0,
+										"elementType" : "None",
+										"elementDurability" : 0,
+										"strikeType": "Default",
+										"enBreak": 800,
+										"ignoreLevelDiff": true,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "none",			          		
+										//"hitImpulseType":"LV5",//迭代 需要比5小但要有Y和挑飞
+										"overrideHitImpulse":
+										{
+											"hitImpulseX": 320,//LV5：480
+											"hitImpulseY": 200,//LV5：600
+											"hitLevel": "Air",
+										},
+										//"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": true,
+									},	
+								},
+							},									
+						},
+					],
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Moving_Wall_01_Trail",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectNode"
+							}
+						},
+					]
+				}
+			},
+		},
+	},
+	///////////////////////////////////////////////////////////////
+    //
+    // 奇趣秘园 金币拾取BUFF球
+    //
+    ///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SceneObj_Gear_Common_Property_Prop_CharAmusementExpandAccess_01",
+            "onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "CharAmusement_ExpandAccess",
+					"value": 1,
+				}
+			],
+            "abilityMixins": 
+            [
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "CharAmusement_ExpandAccess",
+					"valueSteps": [ -1.5, 0.5, 1.5,],
+					"modifierNameSteps": 
+					[
+						"Mute",
+						"Interactable",
+					],
+				}
+            ],
+            "onFieldEnter": 
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates": 
+                    [
+                       /* {
+                            "$type": "ByAvatarIsHost",
+                            "target": "Target",
+                            "isHost": true,
+                        },*/
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Self",
+							"key": "CharAmusement_ExpandAccess",
+							"value": 1
+						}
+                    ],
+                    "successActions": 
+                    [
+                        // 上BUFF
+                        {
+                            "$type": "ApplyModifier",
+                            "target": "TargetTeam",
+                            "modifierName": "UNIQUE_CharAmusement_PickRangeBuff",
+                        },
+                        // 切换为不可交互状态
+						{
+							"$type": "SetGlobalValue",
+							"key": "CharAmusement_ExpandAccess",
+							"value": 0,
+						},
+                    ]
+                }
+            ],
+            "modifiers": 
+            {
+                // 给TEAM上的BUFF
+                "UNIQUE_CharAmusement_PickRangeBuff":
+                {
+                    "stacking": "RefreshUniqueDurability",
+                    "isUnique": true,
+                    "duration": 20,
+                    "enableMixedUnique": true,
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Team",
+                            "key": "GV_CoinRangeLevel",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                        }
+                    ],
+                    "onRemoved": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Team",
+                            "key": "GV_CoinRangeLevel",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                        }
+                    ]
+                },
+                "Interactable":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_ExpandAccessCoin_01",
+                        },
+                    ],
+                    "onRemoved": 
+                    [
+                        // 消失特效
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_SceneObj_ExpandAccessCoin_01_Dis",//"Eff_SceneObj_BoatRaceCrate_02_Smash", 
+                        },
+                    ]
+                },
+                "Mute":
+                {
+                    // 1s后重生
+                    "duration": 1,
+                    "onRemoved": 
+                    [
+						{
+							"$type": "SetGlobalValue",
+							"key": "CharAmusement_ExpandAccess",
+							"value": 1,
+						},
+                    ],
+                },
+            }
+        }
+    },
+	///////////////////////////////////////////////////////////////
+    //
+    // 奇趣秘园 大跳球
+    //
+    ///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SceneObj_Gear_Common_Property_Prop_JumpUp_02",
+            "onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "CharAmusement_JumpUp",
+					"value": 1,
+				}
+			],
+            "abilityMixins": 
+            [
+				{
+					"$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey": "CharAmusement_JumpUp",
+					"valueSteps": [ -1.5, 0.5, 1.5,],
+					"modifierNameSteps": 
+					[
+						"Mute",
+						"Interactable",
+					],
+				}
+            ],
+            "onFieldEnter": 
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates": 
+                    [
+                        /*{
+                            "$type": "ByAvatarIsHost",
+                            "target": "Target",
+                            "isHost": true,
+                        },*/
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Self",
+							"key": "CharAmusement_JumpUp",
+							"value": 1
+						}
+                    ],
+                    "successActions": 
+                    [
+                        // 上BUFF
+                        {
+                            "$type": "ApplyModifier",
+                            "target": "TargetTeam",
+                            "modifierName": "UNIQUE_JumpUpuff",
+                        },
+                        // 切换为不可交互状态
+						{
+							"$type": "SetGlobalValue",
+							"key": "CharAmusement_JumpUp",
+							"value": 0,
+						},
+                    ]
+                }
+            ],
+            "modifiers": 
+            {
+                // 给TEAM上的BUFF
+                "UNIQUE_JumpUpuff":
+                {
+                    "stacking": "RefreshUniqueDurability",
+                    "isUnique": true,
+                    "duration": 10,
+                    "enableMixedUnique": true,
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Team",
+                            "key": "GV_JumpUpBuff",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                        }
+                    ],
+                    "onRemoved": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Team",
+                            "key": "GV_JumpUpBuff",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                        }
+                    ]
+                },
+                "Interactable":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_SceneObj_JumpUp_01",
+                        },
+                    ],
+                    "onRemoved": 
+                    [
+                        // 消失特效
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_SceneObj_JumpUp_01_Dis",
+                        },
+                    ]
+                },
+                "Mute":
+                {
+                    // 1s后重生
+                    "duration": 1,
+                    "onRemoved": 
+                    [
+						{
+							"$type": "SetGlobalValue",
+							"key": "CharAmusement_JumpUp",
+							"value": 1,
+						},
+                    ],
+                },
+            }
+        }
+    },
+]

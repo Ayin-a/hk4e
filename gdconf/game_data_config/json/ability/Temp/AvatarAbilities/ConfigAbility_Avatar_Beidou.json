@@ -1,0 +1,4076 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  重击 ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10241,
+					"chargeTime": 0.25,
+					"secondChargeTime":"%Max_Dura",
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+						{
+							"$type":"ResetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"SetTrigger",
+						},
+					],
+					"OnReleaseUncharged":
+					[
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger", //制造一个持续0.5秒的modifier，remove的时候都add一下trigger并移除trigger
+						},
+						{
+							"$type":"ApplyModifier",  //因为在第二击进入时可能已经松开按键了，导致EndHoldTrigger被干掉。所以设置了一个modifier保持这个trigger1秒，transation一般都小于一秒，就没问题了。
+							"modifierName":"SetTrigger",
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+					],
+					"chargeStateIDs": ["Attack01_BS","Attack01","Attack02","Attack03","Attack04","ExtraAttack_BS","ExtraAttack","ExtraAttack1"],
+				},
+				{
+					"$type":"AvatarSteerByCameraMixin",
+					"stateIDs": ["ExtraAttack1"],
+					"angularSpeed" : 360,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+         			"stateIDs": [ "ExtraAttack", "ExtraAttack1", "ExtraAttack2", "ExtraAttack3" ],
+					"modifierName":"Camera"
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ExtraAttack1",],
+					"modifierName":"Cost"
+				}
+			],
+			"modifiers":
+			{
+				"SetTrigger":
+				{
+					"duration":1,
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"EndHoldTrigger",
+						},
+					],
+				},
+				"Camera":
+				{
+					"onRemoved":
+					[
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+					],
+				},
+				"Cost":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "CostStaminaMixin",
+							"costStaminaDelta": "%ExtraAttack_Claymore_Stamina_Cost",
+							"onStaminaEmpty":
+							[
+								{
+									"$type" : "SetAnimatorTrigger",
+									"triggerID" : "EndHoldTrigger",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Claymore_Stamina_Cost":0,
+				"Max_Dura":0
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  北斗小技负责控制动画，蓄力期间吸收伤害，松开释放反击，依据吸收伤害附加伤害
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ThunderCounter_Handler",
+			"onAdded":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_ThunderCounter_CounterStage",
+					"value":1,
+					"useLimitRange":true,
+					"maxValue":1,
+					"minValue":1,
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"GenerateElemBall_ThunderCounter_Strike", //掉球常驻
+				},
+			],
+			"abilityMixins":
+			[
+				/*{
+					"$type": "ButtonHoldChargeMixin",//有这个mixin的ability不能trigger，会出错。而是在技能excel中配置触发的ability?
+					"skillID": 10242,
+					"chargeTime": 3,//这个其实没在使用
+					"secondChargeTime":4,
+					"OnBeginUncharged":
+					[
+						{//由于在chargeStateIDs外也会积累charge，导致触发releaseCharge里的EndholdTrigger，所以蓄力时先初始化一下?
+							"$type":"ResetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 2,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+						{
+							"$type":"AvatarSkillStart",
+							"doOffStage":true,
+							"skillID":10242,
+							"cdRatio":1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndHoldTrigger",
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						// {
+						// 	"$type": "SetAnimatorTrigger",
+						// 	"triggerID": "EndHoldTrigger",
+						// },
+					],
+					"OnReleaseSecondCharged":
+					[
+						// {
+						// 	"$type": "SetAnimatorTrigger",
+						// 	"triggerID": "EndHoldTrigger",
+						// },
+					],
+					"chargeStateIDs": ["Beidou_ThunderCounter_BS","Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3",],//"Beidou_ThunderCounter_Cast1","Beidou_ThunderCounter_Cast2","Beidou_ThunderCounter_Cast3"
+				},*/
+
+                {
+                    "$type": "SkillButtonHoldChargeMixin",
+                    "skillID": 10242,
+                    "beforeStateIDs": ["Beidou_ThunderCounter_BS"],//如果发生了退出beforeState，那么被看做退出蓄力，endHoldtrigger和NextLoopTrigger都会失效。
+                                                                  //但是这个state不写mixin又不干活。只能创造一个state了。
+					// "beforeHoldDuration" : 0,  //按住超过这个时长时才会出现NextLoopTrigger（生效1次）,如果达不到，endhold和nextloop都不会出现。
+												 //有时候其实根本没有配置BS，这个就需要是0，保证触发endhold。
+                    "chargeLoopStateIDs":["Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3"],  //逻辑state。
+
+					"chargeLoopDurations" : [ 2.8,2.8,2.8 ],  //这个duration必须在chargeloop的stateID中才会开始计时，并发送NextLoopTrigger和endHoldTrigger事件(这个两个事件和松开的endHoldTrigger不同，只生效1次）。
+											     //数组和loopState需要一一对应。1、2、3号loopState内呆的时间达到数值后会发送nextLoopTrigger事件，最后一号对应的loopState呆的时间到对应数值之后，会发送endHoldTrigger。（如果不对称，按照最小的数量发送end）
+												//不过这里有一个问题，这个state计时其实并不需要在对应的stateID内，只需要在ChargeLoop列表中的任何一个state即可,所以时间是叠加的，后面的数字必然比前面大。
+                    "nextLoopTriggerID": "NextLoopTrigger",
+												//NextLoopTrigger只出现一次，在进入beforeState后按住时长超过beforeHoldDuration的的那一次,用于beforeState的循环，或者进入loopState用。
+												//在beforeState出去前（需要不放手）是不会消失的。
+                    "endHoldTrigger": "EndHoldTrigger",
+												//这个trigger不知道为什么不会因为被使用一次而消失。在BeforeState和ChrageLoop出来前这个trigger永远存在。退出loop的第一次仍然存在。
+                },
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_BS","Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3","Beidou_ThunderCounter_Cast1","Beidou_ThunderCounter_Cast2","Beidou_ThunderCounter_Cast3"], //是逻辑state，另一个normalized才是动画state
+					"modifierName":"Skill_Shield",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_BS","Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3","Beidou_ThunderCounter_Cast1","Beidou_ThunderCounter_Cast2","Beidou_ThunderCounter_Cast3"], //机制必须要和盾分离了。盾被干掉的时候会回收modifier。
+					"modifierName":"Skill_HitCount",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_Loop1"], //
+					"modifierName":"ChargeLoop1",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_Loop2"], //
+					"modifierName":"ChargeLoop2",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_Loop3"], //
+					"modifierName":"ChargeLoop3",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3"], //
+					"modifierName":"ChargeLoop",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderCounter_BS","Beidou_ThunderCounter_Loop1","Beidou_ThunderCounter_Loop2","Beidou_ThunderCounter_Loop3"], //
+					"modifierName":"Beidou_ElementalArt_CD_Handler",
+				},
+				// {
+				// 	"$type":"AttachToStateIDMixin",
+				// 	"stateIDs":["Beidou_ThunderCounter_Cast1","Beidou_ThunderCounter_Cast2","Beidou_ThunderCounter_Cast3"], //
+				// 	"modifierName":"GenerateElemBall_ThunderCounter_Strike",
+				// },
+			],
+			"modifiers":
+			{
+				"Skill_Shield": //仅负责吸收盾
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EliteShieldMixin", //这个盾击毁瞬间好像不会执行onbeinghit，考虑受击和盾进行分离
+							"shieldType": "Avatar_Electric",
+							"shieldAngle":360,
+							"shieldHPRatio" : "%BlockHP*%TalentRate",
+							"shieldHP":"%BlockConst*%TalentRate",
+							"showDamageText" : "INFO_ELITE_DEFENCE",
+							"onShieldBroken":
+							[
+								{
+									"$type":"SetAnimatorTrigger",  //这个trigger是可能被counterstage变化盖掉的。（也就是先走了另一条线导致trigger丢失），为了保证有用，应该避免破盾和进姿态在同一时间。
+									"triggerID":"EndHoldTrigger",  //后来的处理选择是将controller中的退出的优先级提高。
+								},
+							],
+						},
+					],
+				},
+				"Skill_HitCount"://负责所有受击逻辑和霸体。
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ClearEndura",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_ThunderCounter_CounterStage",
+							"value":0,
+							"useLimitRange":true,
+							"minValue":1,
+							"maxValue":1,
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_ThunderCounter_CounterStage",
+							"overrideMapKey":"CounterStage",
+						},
+						{
+							"$type":"SetAnimatorInt",
+							"intID":"CounterStage",
+							"value":1,
+						},
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"SkinSet"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Shield",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"ExactCounter",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"ExactCounter",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Skill_Shield_ElectricBuff",
+							"target": "Self",
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"AddGlobal",
+							"target":"Self",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"target":"Self",
+									"key":"_ABILITY_ThunderCounter_CounterStage",
+									"value":2.5,
+									"compareType":"LessAndEqual"
+								},
+								{
+									"$type": "ByHitEnBreak",
+									"enBreak": 0,
+									"logic": "Greater",
+								},
+							],
+						},
+						{
+							"$type":"ActCameraShake", //主要是在高于3的时候提供受击震屏。2、3期间可以通过loop2和loop3播放完成蓄力震屏。
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+				        	"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"target":"Self",
+									"key":"_ABILITY_ThunderCounter_CounterStage",
+									"value":2.5,
+									"compareType":"MoreThanAndEqual"
+								},
+								{
+									"$type": "ByHitEnBreak",
+									"enBreak": 0,
+									"logic": "Greater",
+								},
+							],
+						},
+						/*{
+							"$type":"ApplyModifier",
+							"modifierName":"ThunderCounter_WeaponEmission",
+						},*/
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalDir",
+									"target": "Target",
+									"key": "_ABILITY_ThunderCounter_Shield_Hit",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"direction":
+										{
+											"$type": "ConfigDirectionByLookAtEntity",
+										},
+									},
+									"setTarget": false,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "SetGlobalDir",
+									"target": "TargetOriginOwner",
+									"key": "_ABILITY_ThunderCounter_Shield_Hit",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"direction":
+										{
+											"$type": "ConfigDirectionByLookAtEntity",
+										},
+									},
+									"setTarget": false,
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Shield_Hited",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGlobalValue",
+									"directionKey": "_ABILITY_ThunderCounter_Shield_Hit",
+								},
+							},
+						},
+						// {
+						// 	"$type":"SetSelfAttackTarget",
+						// 	"target":"Target",
+						// },
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"SkinReset"
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta": 0,
+					},
+				},
+				"AddGlobal":
+				{
+					"duration":1,
+					// "stacking":"Unique",
+					"stacking": "Multiple", //改为无cd，不过这样可能有延迟。
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 2,
+					},
+					"onAdded":
+					[
+						/*{
+							"$type":"ActCameraShake",
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+				        },*/
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_ThunderCounter_CounterStage",
+							"value":1,
+							"useLimitRange":true,
+							"minValue":1,
+							"maxValue":3,
+						},
+						//无论用float还是INT都显得我的代码有点sb……GlobalValue居然没法直接设置
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_ThunderCounter_CounterStage",
+							"overrideMapKey":"CounterStage",
+						},
+						{
+							"$type":"SetAnimatorInt",
+							"intID":"CounterStage",
+							"value":"%CounterStage",
+						},
+					],
+				},
+				"ChargeLoop":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0,
+								"y": 0,
+								"z": -3.5,
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							},
+							"cameraFastFocusMode": false,
+							// "dragButtonName": "Skill2",
+							"canMove": false,
+							"showCrosshair":false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+
+					],
+				},
+				"Beidou_ElementalArt_CD_Handler":
+				{
+					"onRemoved":
+					[
+						{
+							"$type":"AvatarSkillStart", //用于防止跳跃或者什么打断后不进入cd计时的问题。 由于重置cd问题，不能写0.5
+							"doOffStage":true,
+							"skillID":10242,
+							"cdRatio":1,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10242,
+								},
+							],
+						},//在退出的时候计算cd，不过这里没有包括bs，导致exact格挡时有可能跳过cd流程。
+					],
+				},
+				/*"Taunted_FX":
+				{
+					"duration":3,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Ambor_Dummy_Taunted",
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Taunted_FX",
+						}
+					],
+				},*/
+				"ThunderCounter_WeaponEmission_01":
+				{
+					// "duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"SetEmissionScaler",//调整武器发光。配置文件为EquipElementStyle。可以参考神之眼AvatarElementStyle的配置进行配置
+							"materialType":"Weapon",
+							"useDefaultColor" :false,
+							"value":3,
+							"duration" : 0.1,          //渐入渐出时间，这个需要配置在PlusSkillEmission里。
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetEmissionScaler",
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.1,
+						},
+					],
+				},
+				"ThunderCounter_WeaponEmission_02":
+				{
+					// "duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"SetEmissionScaler",//调整武器发光。配置文件为EquipElementStyle。可以参考神之眼AvatarElementStyle的配置进行配置
+							"materialType":"Weapon",
+							"useDefaultColor" :false,
+							"value":6,
+							"duration" : 0.1,          //渐入渐出时间，这个需要配置在PlusSkillEmission里。
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetEmissionScaler",
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.1,
+						},
+					],
+				},
+				"ThunderCounter_WeaponEmission_03":
+				{
+					// "duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"SetEmissionScaler",//调整武器发光。配置文件为EquipElementStyle。可以参考神之眼AvatarElementStyle的配置进行配置
+							"materialType":"Weapon",
+							"useDefaultColor" :false,
+							"value":8,
+							"duration" : 0.1,          //渐入渐出时间，这个需要配置在PlusSkillEmission里。
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetEmissionScaler",
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.1,
+						},
+					],
+				},
+				"ChargeLoop1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Loop",
+						},
+						{
+							"$type":"AttachModifier",         //改为了每个loop单独算特效（之前是不断叠加的）
+							"modifierName" : "ChargeBlade1",
+							"otherTargets" :
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01",],
+							},
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"ThunderCounter_WeaponEmission_01",
+						},
+					],
+				},
+				"ChargeLoop2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Loop1",
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName" : "ChargeBlade2",
+							"otherTargets" :
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01",],
+							},
+						},
+						{
+							"$type":"ActCameraShake",
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"ThunderCounter_WeaponEmission_02",
+						},
+					],
+				},
+				"ChargeLoop3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ActCameraShake",
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.32,
+								"shakeTime": 0.16,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+						{//屏幕模糊
+							"$type" : "ActCameraRadialBlur",
+							"cameraRadialBlur" :
+							{
+								"power": 1,
+								"blurTime": 0.3,
+								"fadeTime": 0.15,
+							},
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Loop2",
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName" : "ChargeBlade3",
+							"otherTargets" :
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01",],
+							},
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"ThunderCounter_WeaponEmission_03",
+						},
+					],
+				},
+				"ChargeBlade1":
+				{
+					"duration":5,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Weapon",
+						},
+					],
+				},
+				"ChargeBlade2":
+				{
+					"duration":5,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Weapon1",
+						},
+					],
+				},
+				"ChargeBlade3":
+				{
+					"duration":5,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Weapon2",
+						},
+					],
+				},
+				"ExactCounter":
+				{
+					"duration":0.3,//为了便于展示写成0.3.实际体验中建?2，可以成为高手门槛?
+					"onBeingHit":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"ExactCounter_Handler",
+							"target": "Self",
+							"predicates":
+							[
+								{
+									"$type": "ByHitEnBreak",
+									"enBreak": 0,
+									"logic": "Greater",
+								},
+							],
+						},
+					],
+				},
+				"ExactCounter_Handler":
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_ExactCounter",
+						},
+						{
+							"$type":"ActCameraShake",
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.32,
+								"shakeTime": 0.16,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_ThunderCounter_CounterStage",
+							"value":1,
+							"useLimitRange":true,
+							"minValue":1,
+							"maxValue":3,
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_ThunderCounter_CounterStage",
+							"overrideMapKey":"CounterStage",
+						},
+						{
+							"$type":"SetAnimatorInt",
+							"target":"Self",
+							"intID":"CounterStage",
+							"value":"%CounterStage",
+						},
+					],
+				},
+				"GenerateElemBall_ThunderCounter_Strike":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Ball",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"Ball":
+				{
+					"duration": 0.4,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type" : "Randomed",
+							"chance" : 1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 6,
+									"ratio": "%GetElementRatio",//CounterStage 1 2 3
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+						//每多1层反击层数多掉1个球。
+						{
+							"$type" : "Randomed",
+							"chance" : 1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 3,
+									"ratio": "%GetElementRatio",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"value":2,
+									"key":"_ABILITY_ThunderCounter_CounterStage",
+									"compareType":"MoreThanAndEqual",
+								},
+							],
+						},
+						//每多1层反击层数多掉1个球。
+						{
+							"$type" : "Randomed",
+							"chance" : 1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 3,
+									"ratio": "%GetElementRatio",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"value":3,
+									"key":"_ABILITY_ThunderCounter_CounterStage",
+									"compareType":"MoreThanAndEqual",
+								},
+							],
+						},
+					],
+				},
+				"Skill_Shield_ElectricBuff":
+				{
+					"duration": 2.0,
+					"stacking": "Refresh",
+					"state": "ElementElectric",
+					"elementType": "Electric",
+					"elementDurability": 25,
+				},
+			},
+			"abilitySpecials":
+			{
+				"BlockHP":0,
+				"BlockConst":0,
+				"CounterStage":1,
+		  		"GetElementRatio":1,
+		  		"TalentRate":1,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  北斗小技?负责计算反击伤害，天赋可以通过调整Globalvalue来影响阶段?/
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ThunderCounter_Strike",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderCounter_Cast_Stage1",
+					"modifierName":"StrikeEffect",
+					"normalizeStart":0.27,
+					"normalizeEnd":1,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderCounter_Cast_Stage2",
+					"modifierName":"StrikeEffect1",
+					"normalizeStart":0.27,
+					"normalizeEnd":1,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderCounter_Cast_Stage3",
+					"modifierName":"StrikeEffect2",
+					"normalizeStart":0.27,
+					"normalizeEnd":1,
+				},
+				/*{
+					// "$type":"AttachToStateIDMixin",
+					// "stateIDs":["Beidou_ThunderCounter_Cast3"], //由于精准格挡出现在bs和cast1的0.2~0.3秒内，所以实际上不可能再进入cast3了。要用很多方法控制。
+					//
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderCounter_Cast_Stage3", //用blend也可以这样做。
+					"modifierName":"Weather",
+					"normalizeStart":0.27,
+					"normalizeEnd":1,
+			       	// "predicates":
+			       	// [
+			       	// 	{
+			       	// 		"$type":"ByTargetGlobalValue",
+			       	// 		"key":"_ABILITY_ThunderCounter_CounterStage",
+			       	// 		"value":3,
+			       	// 		"compareType":"Equal",
+			       	// 	},
+			       	// ],
+				},*/
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"AvatarSkillStart",
+					"doOffStage":true,
+					"skillID":10242,
+					"cdRatio":1,
+					"predicates":
+					[
+						{
+							"$type":"BySkillReady",
+							"skillID":10242,
+						},
+					],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+			        	"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+			          		"height":1.5,
+			          		"fanAngle": 360.0,
+			          		"radius": 6,//3.5,
+			          		"radiusRatio": 0.0,
+			          		"detectDirection": "Clockwise",
+			          		"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+			        	},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+				        	"attackProperty":
+							{
+				          		"damagePercentage": "%Damage_Stage1",
+						  		"strikeType": "Blunt",
+						  		"elementType":"Electric",
+						  		"elementDurability": 50,
+						  		"enBreak" : 100,
+				          		"attackType": "Melee",
+				        	},
+				        	"hitPattern":
+							{
+				          		"onHitEffectName": "default",
+								"hitImpulseType":"LV4",
+				          		// "hitLevel": "Heavy",	//hitlevel = 3
+				          		// "hitImpulseX": 650,	//hitlevel = 3
+				          		// "hitImpulseY": 600,	//hitlevel = 3
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+				          		"hitHaltTime": 0.09,
+				          		"hitHaltTimeScale": 0.01,
+				          		"muteHitText": false
+				        	},
+				        	"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.21,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":-0.2,
+									"z":0,
+								},
+				        	},
+				        },
+			        },
+			       	"predicates":
+			       	[
+			       		{
+			       			"$type":"ByTargetGlobalValue",
+			       			"key":"_ABILITY_ThunderCounter_CounterStage",
+			       			"value":1,
+			       			"compareType":"NoneOrEqual",
+			       		},
+			       	],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+			        	"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+			          		"height":1.5,
+			          		"fanAngle": 360.0,
+			          		"radius": 7,//5,
+			          		"radiusRatio": 0.0,
+			          		"detectDirection": "Clockwise",
+			          		"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+			        	},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+				        	"attackProperty":
+							{
+				          		"damagePercentage": "%Damage_Stage1+%Damage_PerStage",
+						  		"strikeType": "Blunt",
+						  		"elementType":"Electric",
+						  		"elementDurability": 50,
+						  		"enBreak" : 200,
+				          		"attackType": "Melee",
+				        	},
+				        	"hitPattern":
+							{
+				          		"onHitEffectName": "default",
+								"hitImpulseType":"LV4",
+				          		// "hitLevel": "Heavy",	//hitlevel = 6
+				          		// "hitImpulseX": 800,	//hitlevel = 6
+				          		// "hitImpulseY": 600,	//hitlevel = 6
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+				          		"hitHaltTime": 0.09,
+				          		"hitHaltTimeScale": 0.01,
+				          		"muteHitText": false
+				        	},
+				        	"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.24,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":-0.2,
+									"z":0,
+								},
+				        	},
+				        },
+				    },
+			       	"predicates":
+			       	[
+			       		{
+			       			"$type":"ByTargetGlobalValue",
+			       			"key":"_ABILITY_ThunderCounter_CounterStage",
+			       			"value":2,
+			       			"compareType":"Equal",
+			       		},
+			       	],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+			        	"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+			          		"height":1.5,
+			          		"fanAngle": 360.0,
+			          		"radius": 8,//5,
+			          		"radiusRatio": 0.0,
+			          		"detectDirection": "Clockwise",
+			          		"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.0,
+								},
+							},
+			        	},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+				        	"attackProperty":
+							{
+				          		"damagePercentage": "%Damage_PerStage*2+%Damage_Stage1",
+						  		"strikeType": "Blunt",
+						  		"elementType":"Electric",
+						  		"elementDurability": 50,
+						  		"enBreak" : 300,
+				          		"attackType": "Melee",
+				        	},
+				        	"hitPattern":
+							{
+				          		"onHitEffectName": "default",
+								"hitImpulseType":"LV6",
+				          		// "hitLevel": "Air",	//hitlevel = 6
+				          		// "hitImpulseX": 655,	//hitlevel = 6
+				          		// "hitImpulseY": 800,	//hitlevel = 6
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+				          		"hitHaltTime": 0.15,
+				          		"hitHaltTimeScale": 0.01,
+				          		"muteHitText": false
+				        	},
+				        	"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.36,
+								"shakeTime": 0.3,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":-0.2,
+									"z":0,
+								},
+				        	},
+				        },
+				    },
+			       	"predicates":
+			       	[
+			       		{
+			       			"$type":"ByTargetGlobalValue",
+			       			"key":"_ABILITY_ThunderCounter_CounterStage",
+			       			"value":3,
+			       			"compareType":"Equal",
+			       		},
+			       	],
+				},
+			],
+			"modifiers":
+			{
+				"StrikeEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Weather",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter2",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter1",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":2,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":1,
+					       			"compareType":"NoneOrEqual",
+					       		},
+					       	],
+						},
+					],
+				},
+				"StrikeEffect1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Weather",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter2",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter1",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":2,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":1,
+					       			"compareType":"NoneOrEqual",
+					       		},
+					       	],
+						},
+					],
+				},
+				"StrikeEffect2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Weather",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter2",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":3,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter1",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":2,
+					       			"compareType":"Equal",
+					       		},
+					       	],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter",
+							"predicates":
+					       	[
+					       		{
+					       			"$type":"ByTargetGlobalValue",
+					       			"key":"_ABILITY_ThunderCounter_CounterStage",
+					       			"value":1,
+					       			"compareType":"NoneOrEqual",
+					       		},
+					       	],
+						},
+					],
+				},
+				"Weather":
+				{
+					"duration":1.5,
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWeatherMixin",
+							"weatherPattern":"Weather_Beidou_ThunderCounter",
+							"type":"Skill",
+							"transDuration":0.3,//这个同时是渐入时长和渐出时长?
+							"duration":1,//释放时变亮的参数
+							// "duration":1.4,//释放时仍然暗的参???变亮时间增长了?
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Damage_Stage1":0,
+				"Damage_PerStage":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  北斗充能技 镜头演出及攻击盒相关效果
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ThunderShield_CameraHandler",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderShield","Beidou_ThunderShield_AS"],
+					"modifierName":"ThunderShield_CameraHandler",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderShield",],
+					"modifierName":"ThunderShield_Protection_Ghost",//借用一下用来触发killgadget，因为abilitystart慢一帧。这个速度更快。
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Beidou_ThunderShield",],
+					"modifierName":"ThunderShield_Protection_Invincible",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderShield",
+					"modifierName":"ThunderShield_WeaponEmission",
+					"normalizeStart":0,
+					"normalizeEnd":0.634,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ThunderShield",
+					"modifierName":"ThunderShield_WeatherHandler",
+					"normalizeStart":0.1,
+					"normalizeEnd":1,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",//为了错开kill子弹和上子弹时间，新增效果，动画帧数45帧
+					"stateID":"ThunderShield",  
+					"modifierName":"ThunderShield_TriggerBullet",
+					"normalizeStart":0.08,
+					"normalizeEnd":0.2,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10245,
+				},
+			],
+			// "onKill":
+			// [
+			// 	{//由于现在要求角色死亡时回收盾，所以死亡时回收gadget即可。
+			// 		"$type":"KillGadget",
+			// 		"gadgetInfo":
+			// 		{
+			// 			"$type": "SelectTargetsByChildren",//但是kill的时候可以触发onkill，想办法回收。
+			// 			"configID": 41024001,
+			// 			"sortType": "Default",
+			// 		},
+			// 	},
+			// ],
+			"modifiers":
+			{
+				"ThunderShield_TriggerBullet":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_BS",
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 41024001,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "RootNode",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+								},
+							},
+							"lifeByOwnerIsAlive":true,//现在要求角色死亡时回收盾,加这个配置好像能解决。
+						},
+					],
+				},
+				"ThunderShield_Protection_Ghost":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"KillGadget", //killgadget有个巨大巨大的问题。即使gadget被干掉也会残留5秒才回收ability。但是好像modifier会立刻回收。
+							"gadgetInfo":
+							{
+								"$type": "SelectTargetsByChildren",//但是kill的时候可以触发onkill，想办法回收。
+								"configID": 41024001,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarCameraParam",//可能需要提早回归镜头。所以放在了这里。
+							"cameraParam":
+							{
+								"forceRadius": 4,
+								"forceRadiusDuration": 0.6,
+								"shouldKeepForceRadius":true,
+							},
+						},
+					],
+				},
+				"ThunderShield_Protection_Invincible":
+				{
+					"state": "Invincible",
+				},
+				"ThunderShield_WeaponEmission":  //配置北斗剑发光modifier
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetEmissionScaler",//调整武器发光。配置文件为EquipElementStyle。可以参考神之眼AvatarElementStyle的配置进行配置
+							"materialType":"Weapon",
+							"useDefaultColor" :false,
+							"value":12,
+							"duration" : 0.3,          //渐入渐出时间，这个需要配置在PlusSkillEmission里。
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"ThunderShield_WeaponEndEmission",
+						},
+					],
+				},
+				"ThunderShield_WeatherHandler": //配置环境变色modifier，由于state时长不够，所以武器和环境都重新触发了一个固定时间modifier
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"ThunderShield_Weather",
+						},
+					],
+				},
+				"ThunderShield_Weather":
+				{
+					"duration":2,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Beidou_ThunderShield",
+							"transDuration" : 0.4,//原值0.2
+							"duration" : 1,//原值0.3，
+						},
+					],
+				},
+				"ThunderShield_WeaponEndEmission":
+				{
+					"duration":0.3,
+					"onRemoved":
+					[
+						{
+							"$type":"SetEmissionScaler",
+							"doOffStage":true,
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.3,
+						},
+					],
+				},
+				"ThunderShield_CameraHandler": //进入的播放镜头放到eventpattern?
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+						},
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 4,
+								"forceRadiusDuration": 0.3,
+								"shouldKeepForceRadius":true,
+							},
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 4,
+								"forceRadiusDuration": 0.3,
+								"shouldKeepForceRadius":true,
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  北斗充能技  实际盾效果 包括减伤，霸体和闪电链效果。跟随的gadget?010002
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ThunderShield_Gadget",//可以考虑开大招额外获得一条体力（用于蓄力攻击）和小技能恢???使用次数（类雷泽），天赋可以强化大招的闪电链概率和数量?
+			"onAdded":
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern": "Eff_Avatar_Lady_Claymore_Beidou_ThunderShield",//单次出现特效
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Gadget_Mixin",
+				},
+				// {//曾经试过给全员添加avatarIn和Out，在进来的时机加上盾buff。后来发现如果4人全换，就没有人有这个check的modifier了。那GG。
+				// 	"$type":"AttachModifier",
+				// 	"target":"CurTeamAvatars",
+				// 	"modifierName":"Team_Check",
+				// },
+				{
+					"$type":"AddGlobalValue",
+					"target":"Self", //这里的self是子弹？
+					"key":"_ABILITY_ThunderChain_COUNT",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 1,
+				},
+				{
+					"$type":"AttachModifier",
+					"target":"Self",
+					"modifierName":"Beidou_ThunderShield_EffectControl",//控制特效，顺便控制霸体盾。
+				},
+				{
+					"$type":"Predicated",
+					"target":"Caster",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",//这个判定当当前角色是其他人时永远过不去,只能用predicated
+							// "target":"Caster",
+							"talentParam":"AddShield"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"AttachModifier",
+							"target":"Team",
+							"modifierName":"UNIQUE_Beidou_TalentShield_TeamHandler",
+						},
+					],
+				},
+			],
+			"onKill":
+			[
+				// {
+				// 	"$type":"SendEffectTrigger",
+				// 	"doOffStage":true,
+				// 	"parameter":"Disappear",
+				// 	"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield",
+				// },
+				{
+					"$type": "RemoveUniqueModifier",
+					"doOffStage":true,
+					"target":"Team",
+					"modifierName": "UNIQUE_Beidou_TalentShield_TeamHandler",//强行移除team上的。另外子弹上modifer反而没问题，不用移。
+				},
+				{
+					"$type": "RemoveModifier",
+					"doOffStage":true,
+					"modifierName": "Gadget_Mixin", //这个也得移除。。
+				},
+				{
+					"$type": "RemoveModifier",
+					"doOffStage":true,
+					"modifierName": "Beidou_ThunderShield_EffectControl", //比较奇怪的是测试发现这个可以不移除的。不过先移除了比较稳。
+				},
+			],
+			"modifiers":
+			{
+				"Gadget_Mixin":
+				{
+					"duration":"%Duration+2",
+					"modifierMixins":
+					[
+						{
+							"$type":"CurLocalAvatarMixin", //监视角色，下场就加。这个mixin不会加目前场上角色，所以需要先apply一次。
+							"modifierName":"UNIQUE_Beidou_ThunderShield",
+						},
+					],
+				},
+				"UNIQUE_Beidou_ThunderShield":
+				{
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_EndureDelta": 0.5,
+						"Actor_SubHurtDelta": "%DamageReduce",
+					},
+					"onAdded":
+					[
+						{
+							"$type":"ClearEndura",//清理endura状态
+						},
+					],
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Other",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XYZ",
+									"value":15,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type":"ByTargetGlobalValue",
+									"target":"Caster",
+									"key": "_ABILITY_ThunderChain_COUNT",
+									"value": 0.5,
+									"forceByCaster":true,
+									"compareType": "MoreThan",
+								},
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+									"target":"Other",
+									"modifierName":"Beidou_Lightining0",
+									"predicates":
+									[
+										{
+											"$type":"ByUnlockTalentParam",
+											"target":"Caster",
+											"talentParam":"Beidou_ExtraChain"
+										},
+									],
+								},
+								{
+									"$type" : "ApplyModifier",
+									"target": "Other",
+									"modifierName":"Beidou_Lightining2",
+									"predicates":
+									[
+										{
+											"$type":"ByNot",
+											"predicates":
+											[
+												{
+													"$type":"ByUnlockTalentParam",
+													"target":"Caster",
+													"talentParam":"Beidou_ExtraChain"
+												},
+											],
+										},
+									],
+								},
+								{
+									"$type" : "ApplyModifier",
+									"target":"Caster",//这个Caster是子?
+									"modifierName":"Beidou_LightiningCD",
+								},
+								{
+									"$type":"AddGlobalValue",
+									"target":"Caster",
+									"key":"_ABILITY_ThunderChain_COUNT",
+									"value" : -1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 0,
+								},
+							],
+						},
+					],
+				},
+				"Beidou_ThunderShield_EffectControl": //特效是gadget控制的。时长保证特效先结束，gadget时长不影响特效时长。
+				{
+					"duration":"%Duration+2",
+					"thinkInterval":"%Duration",
+					"onAdded":
+					[
+						{
+							"$type":"SendEffectTrigger",
+							"parameter":"Trigger",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield",
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"Beidou_Talent_ElectricDown_Gadget",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"target":"Caster",
+									"talentParam":"Beidou_ElectricDown"
+								},
+							],
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Beidou_Talent_ElectricDown_Gadget",
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByUnlockTalentParam",
+											"target":"Caster",
+											"talentParam":"Beidou_ElectricDown"
+										},
+									],
+								},
+							],
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type":"SendEffectTrigger",
+							"parameter":"Disappear",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Dissipate",
+						},
+					],
+				},
+				"UNIQUE_Beidou_TalentShield_TeamHandler"://在Team身上管理talent盾，
+				{
+					"isUnique":true,
+					"duration":"%Duration+2",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect", //特效设计本身是给gadget播放的，不是给team播放的。只能选到gadget再放了。
+							// "otherTargets":
+							// {
+							// 	"$type": "SelectTargetsByChildren",
+							// 	"configID": 41024001,
+							// 	"sortType": "Default",
+							// },
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Talent",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalMainShieldMixin",
+							"shieldType": "Avatar_Electric",
+							"shieldHPRatio" : "%ShieldHP",
+							// "targetMuteHitEffect": true,
+							"showDamageText": "INFO_ELITE_DEFENCE",
+							"childShieldModifierName": "UNIQUE_Beidou_TalentShield_Child",
+							"onShieldBroken":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Talent_Destroy"
+								},
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_Beidou_TalentShield_TeamHandler"
+								},
+							],
+						},
+					],
+					"thinkInterval":"%Duration+1.45",//
+					"onThinkInterval":
+					[
+						{
+							"$type":"FireEffect",//特效设计本身是给gadget播放的，不是给team播放的。只能选到gadget再放了。然而选不到gadget
+							// "otherTargets":
+							// {
+							// 	"$type": "SelectTargetsByChildren",
+							// 	"configID": 41024001,
+							// 	"sortType": "Default",
+							// },
+							// "born":
+							// {
+							// 	"$type":"ConfigBornByTarget",
+							// },
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Talent_AS",
+						},
+					],
+				},
+				"UNIQUE_Beidou_TalentShield_Child": //角色身上的实际盾效果。
+				{
+					"isUnique":true,
+					// "duration":"%Duration+2", 子盾可以没有时间
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalSubShieldMixin", //告诉主盾这个是副盾
+							"mainShieldModifierName": "UNIQUE_Beidou_TalentShield_TeamHandler",
+						},
+					],
+					"onBeingHit":
+					[
+						// {
+						// 	"$type":"FireEffect",
+						// 	"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Talent_Hit",
+						// },
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalDir",
+									"target": "Target",
+									"key": "_ABILITY_ThunderShield_Talent_Hit",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"direction":
+										{
+											"$type": "ConfigDirectionByLookAtEntity",
+										},
+									},
+									"setTarget": false,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "SetGlobalDir",
+									"target": "TargetOriginOwner",
+									"key": "_ABILITY_ThunderShield_Talent_Hit",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"direction":
+										{
+											"$type": "ConfigDirectionByLookAtEntity",
+										},
+									},
+									"setTarget": false,
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Shield_Hited",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"direction":
+								{
+									"$type": "ConfigDirectionByGlobalValue",
+									"directionKey": "_ABILITY_ThunderShield_Talent_Hit",
+								},
+							},
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta": 0, //
+					},
+				},
+				"Beidou_LightiningCD":
+				{
+					"duration":1.0,
+					"stacking":"Unique",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_ThunderChain_COUNT",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+				},
+				"Beidou_Lightining0":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning",
+							"born" :
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"RootNode",
+								"attachPointTargetType":"Applier",//可以连applier
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning_Hit",
+						},
+						{//电击
+							"$type" : "DamageByAttackValue",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy" : "OriginOwner",
+								"attackTag" : "Elemental_Burst",
+								"attenuationTag": "Elemental_Burst",
+								"attackProperty":
+								{
+									"damagePercentage": "%ChainDamage",
+					  				"strikeType": "None",
+					  				"elementType":"Electric",
+					  				"elementDurability": 25,
+		          					"enBreak" : 50,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									// "hitLevel": "Shake",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"retreatType":"ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"duration":0.15,
+					// "thinkInterval":0.15, //不能用thinkinterval，因为计时非常不准确。
+					// "tickThinkIntervalAfterDie":true,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Beidou_Lightining1",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8", //和这个法术场一样大
+								"centerBasedOn": "Self", //以法术场中心为原?
+								"campTargetType": "Enemy", //
+								"campBasedOn": "Caster",
+								"topLimit":1,
+								"doAfterDie":true,
+                				// "sortType": "Nearest", //从近开始选
+                				"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+						},
+					],
+				},
+				"Beidou_Lightining1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning",
+							"target":"Self",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"RootNode",
+								"attachPointTargetType":"Applier",//无法选择modifier的上家，也无法选择下家。只好选择自己/caster，功能需要再做?
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning_Hit",
+						},
+						{//电击
+							"$type" : "DamageByAttackValue",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy" : "OriginOwner",
+								"attackTag" : "Elemental_Burst",
+								"attenuationTag": "Elemental_Burst",
+								"attackProperty":
+								{
+									"damagePercentage": "%ChainDamage",
+					  				"strikeType": "None",
+					  				"elementType":"Electric",
+					  				"elementDurability": 25,
+		          					"enBreak" : 50,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									// "hitLevel": "Shake",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"retreatType":"ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"duration":0.15,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Beidou_Lightining2",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8", //和这个法术场一样大
+								"centerBasedOn": "Self", //以法术场中心为原?
+								"campTargetType": "Enemy", //
+								"campBasedOn": "Caster",
+								"topLimit":1,
+								"doAfterDie":true,
+                				// "sortType": "Nearest", //从近开始选
+                				"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+						},
+					],
+				},
+				"Beidou_Lightining2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning",
+							"target":"Self",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"RootNode",
+								"attachPointTargetType":"Applier",//无法选择modifier的上家，也无法选择下家。只好选择自己/caster，功能需要再做?
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning_Hit",
+						},
+						{//电击
+							"$type" : "DamageByAttackValue",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy" : "OriginOwner",
+								"attackTag" : "Elemental_Burst",
+								"attenuationTag": "Elemental_Burst",
+								"attackProperty":
+								{
+									"damagePercentage": "%ChainDamage",
+					  				"strikeType": "None",
+					  				"elementType":"Electric",
+					  				"elementDurability": 25,
+		          					"enBreak" : 50,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									// "hitLevel": "Shake",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"retreatType":"ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"duration":0.15,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Beidou_Lightining3",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8", //和这个法术场一样大
+								"centerBasedOn": "Self", //以法术场中心为原?
+								"campTargetType": "Enemy", //
+								"campBasedOn": "Caster",
+								"topLimit":1,
+								"doAfterDie":true,
+                				// "sortType": "Nearest", //从近开始选
+                				"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+						},
+					],
+				},
+				"Beidou_Lightining3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning",
+							"target":"Self",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"RootNode",
+								"attachPointTargetType":"Applier",//无法选择modifier的上家，也无法选择下家。只好选择自己/caster，功能需要再做?
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning_Hit",
+						},
+						{//电击
+							"$type" : "DamageByAttackValue",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy" : "OriginOwner",
+								"attackTag" : "Elemental_Burst",
+								"attenuationTag": "Elemental_Burst",
+								"attackProperty":
+								{
+									"damagePercentage": "%ChainDamage",
+					  				"strikeType": "None",
+					  				"elementType":"Electric",
+					  				"elementDurability": 25,
+		          					"enBreak" : 50,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									// "hitLevel": "Shake",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"retreatType":"ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"duration":0.15,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Beidou_Lightining4",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR8", //和这个法术场一样大
+								"centerBasedOn": "Self", //以法术场中心为原?
+								"campTargetType": "Enemy", //
+								"campBasedOn": "Caster",
+								"topLimit":1,
+								"doAfterDie":true,
+                				// "sortType": "Nearest", //从近开始选
+                				"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+								    "$type": "ByTargetType",
+								    "targetType":"Self",
+								    "isTarget":false,
+								},
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+						},
+					],
+				},
+				"Beidou_Lightining4":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning",
+							"target":"Self",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"RootNode",
+								"attachPointTargetType":"Applier",//
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderShield_Lightning_Hit",
+						},
+						{//电击
+							"$type" : "DamageByAttackValue",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy" : "OriginOwner",
+								"attackTag" : "Elemental_Burst",
+								"attenuationTag": "Elemental_Burst",
+								"attackProperty":
+								{
+									"damagePercentage": "%ChainDamage",
+					  				"strikeType": "None",
+					  				"elementType":"Electric",
+					  				"elementDurability": 25,
+		          					"enBreak" : 50,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType":"LV1",
+									// "hitLevel": "Shake",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"retreatType":"ByHitDirection",
+									"reboundRatio": 0,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"duration":0.2,
+				},
+				"Beidou_Talent_ElectricDown_Gadget":
+				{
+					"thinkInterval":0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR5", //和这个法术场一样大
+								"centerBasedOn": "Self", //以法术场中心为原?
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster",],
+								},
+							],
+							"modifierName":"UNIQUE_Beidou_Talent_ElectricDown_Monster"
+						},
+					],
+				},
+				"UNIQUE_Beidou_Talent_ElectricDown_Monster": //重复释放大招的情况下会有短暂时间怪身上叠2层。不会有问题。
+				{
+					"duration":1.5,
+					"isUnique":true,
+					"state":"DefenseDown",
+                    "isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElecSubHurtDelta":"%ElectricDown",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElectricDown":0,
+				"ShieldHP":0,
+				"ChainDamage":0,
+				"Duration":-1.6,//实际持续时间会+1.6秒，因为dynamic不支持减一操作。 但目前有个问题就是gagdget时长其实不受excel控制。只能写一个超过excel时长的值。
+				"DamageReduce":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  北斗充能技  ThunderShield 打击效果相关ability
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ThunderShield",//可以考虑开大招额外获得一条体力（用于蓄力攻击）和小技能恢???使用次数（类雷泽）
+			"abilityMixins":
+			[
+
+			],
+			"onAbilityStart":
+			[
+				{//屏幕模糊
+					"$type" : "ActCameraRadialBlur",
+					"cameraRadialBlur" :
+					{
+						"power": 1.5,
+						"blurTime": 0.3,
+						"fadeTime": 0.2,
+					},
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackCircle",
+							"triggerType" : "TriggerNoRepeat",
+							"height":2,
+							"fanAngle":360,
+							"radius":4,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.2,
+									"z" : 0.0,
+								},
+							},
+							// "ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%BurstDamage",
+								"strikeType":"Default",//用blunt会导致破岩非常强。这部分就应该用Default
+				  				"elementType":"Electric",
+				  				"elementDurability":100,
+				  				"enBreak":400,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV4",
+								// "hitLevel": "Heavy",	//hitlevel = 3
+								// "hitImpulseX": 600,	//hitlevel = 3
+								// "hitImpulseY": 0,	//hitlevel = 3
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.1,
+								"canBeDefenceHalt": false,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+				        	/*"cameraShake":
+				        	{
+				        		"shakeType": "Center",
+								"shakeRange": 0.4,
+								"shakeTime": 0.18,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},*/
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.25,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"BurstDamage":0,
+			},
+		},
+	},
+//以下为天赋解锁新增技?
+////////////////////////////////////////////////////////////////
+//
+//  固有技：普通攻击伤害变化/
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_NormalAttackDamage",
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["NormalAttack_01"],
+					"damagePercentage":"%Attack01",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["NormalAttack_02"],
+					"damagePercentage":"%Attack02",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["NormalAttack_03"],
+					"damagePercentage":"%Attack03",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["NormalAttack_04"],
+					"damagePercentage":"%Attack04",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["NormalAttack_05"],
+					"damagePercentage":"%Attack05",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack1"],
+					"damagePercentage":"%ExtraAttack1",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack2"],
+					"damagePercentage":"%ExtraAttack2",
+				},
+			],
+			"abilitySpecials":
+			{
+				"Attack01":0,
+				"Attack02":0,
+				"Attack03":0,
+				"Attack04":0,
+				"Attack05":0,
+				"ExtraAttack1":0,
+				"ExtraAttack2":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  命之座：受击附带雷伤害 （反正小技能会受击，所以能保证覆盖率
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_Talent_ElectricAdd",
+			"isDynamicAbility":true,
+			"onAbilityStart"://这段只是测试用
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Beidou_Talent_ElectricAdd_Check",
+				}
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Beidou_Talent_ElectricAdd",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["Beidou_Talent_ElectricAdd_CheckCD","Beidou_Talent_ElectricAdd_Check",],
+				},
+			],
+			"modifiers":
+			{
+				"Beidou_Talent_ElectricAdd_Check":
+				{
+					"onBeingHit":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Beidou_Talent_ElectricAdd",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Beidou_Talent_ElectricAdd",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+				},
+				"Beidou_Talent_ElectricAdd_CheckCD":
+				{
+					"duration":"%CDTime",//考虑到效率，这段直接屏蔽效率好得多
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Beidou_Talent_ElectricAdd",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"Beidou_Talent_ElectricAdd":
+				{
+					"duration":"%Time",
+					"onAdded":
+					[
+						{
+							"$type":"AttachModifier",//每次都对武器modifier进行刷新，保证换上新武器也会有这个buff和特效。（如果只给角色刷，角色的modifier刷新是不会再走onAdded，那换了武器就无法重新上特效了）
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"modifierName":"Beidou_Talent_ElectricAdd_WeaponEffect",
+						},
+					],
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AttachModifier",//每次都对武器modifier进行刷新，保证换上新武器也会有这个buff和特效。（如果只给角色刷，角色的modifier刷新是不会再走onAdded，那换了武器就无法重新上特效了）
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"modifierName":"Beidou_Talent_ElectricAdd_WeaponEffect",
+						},
+					],
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"DamageByAttackValue",  //这个效果格挡后伤害仍然会给出，但是打元素盾后伤害不会出现，因为元素盾主人是锁血状态。
+									"target":"Target",
+									"born":
+									{
+										// "$type":"ConfigBornByTarget",
+										"$type":"ConfigBornByHitPoint",
+										"offset"://不加offset这个damagebyvalue总是位置不对。
+										{
+											"x":0,
+											"y":0.7,
+											"z":0,
+										},
+									},
+									"attackInfo":
+									{
+										"attenuationTag": "Elemental_Burst",//这个效果和闪电链一同进行衰减计算。
+										"attackProperty":
+										{
+											"damagePercentage": "%Rate",
+											"elementType":"Electric",
+											"elementDurability": 25,
+											"strikeType":"Default",
+											// "enBreak" : 50,
+										},
+										"hitPattern" :
+										{
+											"onHitEffectName" : "default",
+											"hitImpulseType":"LV0",
+											// "hitLevel" : "Mute",
+											// "hitImpulseX" : 0,
+											// "hitImpulseY" : 0,
+											"reboundRatio" : 0,
+											"hitHaltTime" : 0.0,
+											"hitHaltTimeScale" : 0.01,
+											"muteHitText" : false,
+										},
+										"forceCameraShake": false,
+									},
+								},
+							],
+						},
+					],
+				},
+				"Beidou_Talent_ElectricAdd_WeaponEffect":
+				{
+					"duration":"%Time",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Claymore_Beidou_ThunderCounter_Weapon",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Time":0,
+				"CDTime":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Beidou_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5024010,
+                    "flySkillID": 5024010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["FallingAnthem_Loop"],
+					"modifierName": "FallingAnthem_Loop_Normal",
+				},
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                    ],
+                    "modifierName": "FallingAnthem_AttachSelfEffect",
+                },
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "strikeType": "Blunt",
+                                "overrideByWeapon": true,
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            /*				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": 1,
+									"z": 0,
+								},
+				        	},*/
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "strikeType": "Blunt",
+                                "overrideByWeapon": true,
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 200,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachSelfEffect":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Claymore_FallAnthem_Self_02",
+						},
+                    ],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Claymore_FallAnthem_Self",
+						},
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                    	"elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 35,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Claymore_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Set True!",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 3.0,
+									"logic": "Greater",
+								},
+							],
+						},*/
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Reset!",
+						},*/
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                    /*					"onRemoved":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces": ["RushMoveType"],
+						},
+					],*/
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//  突破天赋2： 霹雳连霄
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Beidou_ProudSkill_FlashSlash",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs": ["Beidou_ThunderCounter_Cast3"],
+					"modifierName": "ProudSkill_FlashSlash",
+				},
+			],
+			"modifiers":
+			{
+				"ProudSkill_FlashSlash":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"target": "Self",
+							"modifierName": "ProudSkill_FlashSlash_Handler",
+						},
+					],
+				},
+				"ProudSkill_FlashSlash_Handler":
+				{
+					"duration": "%ProudSkill_FlashSlash_Duration",
+					"stacking": "Refresh",
+					"state": "AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachToStateIDMixin",
+							"stateIDs": ["ExtraAttack1","ExtraAttack2","ExtraAttack3"],
+							"modifierName":"ProudSkill_FlashSlash_Enhancement",
+						},
+						{
+							"$type":"AttachToStateIDMixin",
+							"stateIDs": ["ExtraAttack"],
+							"modifierName":"ProudSkill_FlashSlash_Pre_Accelerator",
+						},
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["NormalAttack_01","NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","ExtraAttack"],
+							"damagePercentageRatio":"%ProudSkill_FlashSlash_AttackUpRatio",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_AttackSpeedRatio": "%ProudSkill_FlashSlash_AttackSpeedRatio",
+					},
+				},
+				"ProudSkill_FlashSlash_Enhancement":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_OverallSpeedRatio": "%ProudSkill_FlashSlash_AttackSpeedRatio",
+					},
+				},
+				"ProudSkill_FlashSlash_Pre_Accelerator":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Animator_OverallSpeedRatio": "%ProudSkill_FlashSlash_ChargeSpeedRatio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ProudSkill_FlashSlash_Duration": 10,
+				"ProudSkill_FlashSlash_AttackUpRatio": 0,
+				"ProudSkill_FlashSlash_AttackSpeedRatio": 0,
+				"ProudSkill_FlashSlash_ChargeSpeedRatio": 0.5,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 队伍游泳体力消耗降低 ver1.0.1(on team)
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Beidou_SwimStamina_Reduction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"target":"CurTeamAvatars",
+					"modifierName": "UNIQUE_SwimStaminaReduction",
+					"doOffStage":true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Beidou_SwimStaminaReduction_Handler",
+					"doOffStage":true,
+				},				
+			],
+			"modifiers":
+			{
+				"Beidou_SwimStaminaReduction_Handler":
+				{
+					"thinkInterval":5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",  
+							"target":"CurTeamAvatars",
+							"modifierName": "UNIQUE_SwimStaminaReduction",
+							"doOffStage":true,
+						},
+					],
+				},				
+				"UNIQUE_SwimStaminaReduction":
+				{
+					"isUnique" : true,
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Swim"],
+							"modifierName": "SwimStamina_Reduction",
+						},
+					],
+				},
+				"SwimStamina_Reduction":
+				{
+					"properties":
+					{
+						"Actor_CostStaminaRatio":-0.2,
+					}
+				},
+			},
+		}
+	},
+
+]

@@ -1,0 +1,3809 @@
+[
+///******************************************************************
+///  全局索引：
+/// Avatar_Ayato_ExtraAttack                    重击相关配置，两种形态都会正常进重击
+/// Avatar_Ayato_ExtraAttack_CreateBullet       重击子弹版本以及隐身控制
+/// Avatar_Ayato_ExtraAttack_Bullet             重击子弹的ability
+/// Avatar_Ayato_KendoPose                      拔刀姿态时长和控制
+/// Avatar_Ayato_KendoPose_Buff                 诸刃buff特效和效果控制
+/// Avatar_Ayato_KendoPose_Click                小技能期间长按和点按效果
+/// Avatar_Ayato_ElementalArt                   小技能效果，位移，招gadget
+/// Avatar_Ayato_ElementalArt_Gadget            小技能gadget
+/// Avatar_Ayato_ElementalBurst                 大招效果，镜头，招gadget
+/// Avatar_Ayato_ElementalBurst_Gadget          大招gadget效果
+/// Avatar_Ayato_NormalAttack_DamageHandler     伤害数值替换ability
+/// Avatar_Ayato_FallingAnthem                  空中攻击
+///
+///******************************************************************
+
+
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Ayato_ExtraAttack",
+            "abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10661,
+					"chargeTime": 0.12,
+					"secondChargeTime": 0.2,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByAnimatorInt",
+											"value": 0,
+											"parameter": "ComboCount",
+											"logic": "Equal",
+										},
+										{
+											"$type": "ByAnimatorInt",
+											"value": 5,
+											"parameter": "ComboCount",
+											"logic": "Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+
+					],
+					"OnReleaseSecondCharged":
+					[
+
+					],
+					"chargeStateIDs": [ "Attack01","Attack02","Attack03","Attack04","Run"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					// "duration": 0.2,
+					"onAdded":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10001,
+							"costStaminaRatio":"%ExtraAttack_Sword_Stamina_Cost",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{//故意少判了一点点体力，为了顾及一部分网络延迟
+				"ExtraAttack_Sword_Stamina_Cost": 0,
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  重击  子弹版本以及隐身控制   测试中还可以切换小技能后普攻形式。
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ExtraAttack_CreateBullet",
+            "onAbilityStart": [ 
+                {
+                    "$type": "TriggerBullet",
+                    "bulletID": 41066004,
+                },
+            ],
+            "abilityMixins": 
+            [
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ExtraAttack", //临时给重击用
+                    "modifierName": "Ayato_ExtraAttack_CloseCollider",
+                    "normalizeStart": 0.4,// (开太晚会很奇怪)
+                    "normalizeEnd": 0.65,//0.6比较极限，可以稍微多一点。
+                },
+            ],
+            "modifiers": {
+                "Ayato_ExtraAttack_CloseCollider": {
+                    "onAdded": [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                        {
+                            "$type": "KillGadget",
+                            "gadgetInfo": {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41066004,
+                                "sortType": "Default",
+                            },
+                            "doOffStage": true,
+                        },
+                    ],
+                }
+            }
+        },
+    },
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ExtraAttack_Bullet",
+            "onAbilityStart": [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates": [
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": [
+                                "MonsterEquip"
+                            ],
+                        },
+                    ],
+                    "successActions": [
+                        {
+                            "$type": "DamageByAttackValue",
+                            "target": "Target",
+                            "attackInfo": {
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackTag": "ExtraAttack",
+                                "attenuationTag": "ExtraAttack",
+                                "attenuationGroup": "Avatar_Pole_ExtraAttack", //可以复用
+                                "attackProperty": {
+                                    "damagePercentage": 0,
+                                    "strikeType": "Slash",
+                                    "elementDurability": 25,
+                                    "overrideByWeapon": true,
+                                    "attackType": "Melee",
+                                    "enBreak": 120,
+                                },
+                                "hitPattern": {
+                                    "onHitEffectName": "default",
+                                    "hitImpulseType": "LV7",
+                                    "canBeDefenceHalt": false,
+                                    "hitHaltTime": 0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false
+                                },
+                                "forceCameraShake": false,
+                                "cameraShake": {
+                                    "shakeType": "CustomVector",
+                                    "shakeRange": 0.36,
+                                    "shakeTime": 0.12,
+                                    "shakeDistance": 30,
+                                    "shakeDir": {
+                                        "x": -1,
+                                        "y": 0,
+                                        "z": 0,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "failActions": [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent": {
+                                "attackPattern": {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "filterByFrame": true,
+                                    "radius": 0.8,
+                                    "born": {
+                                        "$type": "ConfigBornByCollisionPoint",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                },
+                                "attackInfo": {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "ExtraAttack",
+                                    "attenuationTag": "ExtraAttack",
+                                    "attenuationGroup": "Avatar_Pole_ExtraAttack", //可以复用
+                                    "attackProperty": {
+                                        "damagePercentage": 0,
+                                        "strikeType": "Slash",
+                                        "elementDurability": 25,
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "enBreak": 120,
+                                    },
+                                    "hitPattern": {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType": "LV7",
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.01,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                    "cameraShake": {
+                                        "shakeType": "CustomVector",
+                                        "shakeRange": 0.36,
+                                        "shakeTime": 0.12,
+                                        "shakeDistance": 30,
+                                        "shakeDir": {
+                                            "x": -1,
+                                            "y": 0,
+                                            "z": 0,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ]
+        },
+    },
+
+
+////////////////////////////////////////////////////////////////
+//
+//	小技能，小位移+留下残像
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ElementalArt", //小技能可以考虑允许镜头驾驶，调整下位移方向。
+            "abilityMixins": [
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt",
+                    "modifierName": "Ayato_ElementalArt_Hide",
+                    "normalizeStart": 0.0,
+                    "normalizeEnd": 0.3125,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_Retreat",
+                    "modifierName": "Ayato_ElementalArt_Hide", //同名感觉可以，不用分开2个
+                    "normalizeStart": 0.0,
+                    "normalizeEnd": 0.3125,
+                },
+                // {//可以试试，手感比固定距离位移好，但会导致站姿和动作预期不符，不采用。
+                //     "$type": "AvatarSteerByCameraMixin",//Review:测试用，方向键微调位移方向。
+                //     "stateIDs": [
+                //         "ElementalArt","lementalArt_Retreat",
+                //     ],
+                //     "angularSpeed": 240,
+                // },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalArt","ElementalArt_Retreat","ElementalArt_AS","ElementalArt_Retreat_AS",
+                    ],
+                    "modifierName": "Ayato_ElementalArt_SkinSet",
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack01",
+                    "modifierName": "Ayato_ElementalArt_AttackHide",
+                    "normalizeStart": 0.00,
+                    "normalizeEnd": 0.03, //平砍消失时间，之前是0.038
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack02",
+                    "modifierName": "Ayato_ElementalArt_AttackHide",
+                    "normalizeStart": 0.00,
+                    "normalizeEnd": 0.03,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack03",
+                    "modifierName": "Ayato_ElementalArt_AttackHide",
+                    "normalizeStart": 0.00,
+                    "normalizeEnd": 0.03,
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type":"AvatarSkillStart",
+                    "skillID": 10662,
+                    "cdRatio": 1.0, 
+                },
+                {
+                    "$type": "SetGlobalValue",//现在延迟清除buff了，所以可能清不干净，初始化时清0
+                    "key": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                    "value": 0,
+                    "doOffStage": true,
+                },
+                {
+                    "$type":"TriggerAbility", //虽然大招不刷buff了，但这里还是留一个入口让buff在一个独立ability中管理。
+                    "abilityName": "Avatar_Ayato_KendoPose",
+                },
+                {
+                    "$type": "CreateGadget",
+                    "gadgetID": 41066001,
+                    "campID": 1001,
+                    "campTargetType": "Enemy",
+                },
+            ],
+            "modifiers": {
+                "Ayato_ElementalArt_SkinSet":{
+                    "onAdded": [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "SkinSet",
+                        },
+                    ],
+                    // "onRemoved": [//Fresnel动画播放时长到了也会回到默认state，就不做onRemoved了
+                    //     {
+                    //         "$type": "SetAnimatorTrigger",
+                    //         "triggerID": "SkinReset",
+                    //         "doOffStage": true,
+                    //     },
+                    // ]
+                },
+                "Ayato_ElementalArt_Hide":
+                {
+                    "onAdded": [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_HideSpark",
+                        },
+                        {
+                            "$type": "ActCameraRadialBlur", //测试下动态模糊效果
+                            "cameraRadialBlur": {
+                                "power": 0.5,
+                                "blurTime": 0.15,
+                                "fadeTime": 0.15,
+                            },
+                        },
+                        {
+                            "$type": "TriggerSetVisible",
+                            "visible": false,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_ShowSpark",
+                        },
+                        {
+                            "$type": "TriggerSetVisible",
+                            "visible": true,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                        {
+                            "$type": "TriggerHideWeapon", //因为角色出现的时候会自动显示武器，所以这类地方都需要手动再隐藏一次。
+                            "visible": false,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "equip03",
+                                "sheathPoint"
+                            ],
+                            "predicates": [//由于这个时候肯定在技能内，估计不用加这个判断。
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                                    "value": 0,
+                                    "compareType": "MoreThan",
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Ayato_ElementalArt_AttackHide": {
+                    "onAdded": [
+                        {
+                            "$type": "TriggerSetVisible",
+                            "visible": false,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerSetVisible",
+                            "visible": true,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerHideWeapon", //因为角色出现的时候会自动显示武器，所以手动再隐藏一次。
+                            "visible": false,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "equip03",
+                                "sheathPoint"
+                            ],
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                                    "value": 0,
+                                    "compareType": "MoreThan",
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+        },
+    },
+
+
+////////////////////////////////////////////////////////////////
+//
+//	剑道姿态 由于大招也要刷这个状态，所以必须有单独ability控制。
+//
+////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+//
+//	命6 有一个buff，在拔刀攻击时触发一个特殊伤害和天黑
+//  实现逻辑：由于拔刀攻击有专门时长modifier，tag不足以判定。必须在拔刀攻击中生效。
+//  所以触发判定得在拔刀状态下。不单独列一个ability
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_KendoPose",
+            "onAdded": [
+                {
+                    "$type": "SetGlobalValue", //宵宫bug教训，GV需要先声明。
+                    "key": "_ABILITY_Avatar_Ayato_KendoPose",
+                    "value": 0,
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "SetGlobalValue",//但记忆中有个机制，ability的onAdded在短距离传送时会再载入一次，所以初始化可能需要避免在onAdded，要Modifier包一下。
+                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                    "value": 0,
+                    "doOffStage": true,
+                },
+            ],
+            "onAbilityStart": [
+                {
+                    "$type":"RemoveModifier",//需要能被刷新，祭礼、大招等。先移除再添加。
+                    "modifierName": "UNIQUE_Avatar_Ayato_KendoPose_State",
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Avatar_Ayato_KendoPose_State",
+                },
+                {
+                    "$type": "SetGlobalValue",//配置命6
+                    "key": "_ABILITY_Avatar_Ayato_Talent6_IsCharged", 
+                    "value": 1,
+                    "predicates": [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "TalentParam_Ayato_Talent6"
+                        },
+                    ]
+                },
+            ],
+            "onKill": [ //考虑到类宵宫GV残留的bug，那时modifier也不存在。不如在ability上做保护。毕竟这个保护是大局上的，不和modifier绑定。
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "_ABILITY_Avatar_Ayato_KendoPose",
+                    "value": 0,
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "SetAnimatorInt",
+                    "intID": "SpecialAttack",
+                    "value": 0,
+                    "doOffStage": true,
+                },
+            ],
+            "onAvatarOut": [
+                {
+                    "$type": "RemoveModifier",
+                    "modifierName": "UNIQUE_Avatar_Ayato_KendoPose_State",
+                    "doOffStage": true,
+                },
+            ],
+            "abilityMixins": 
+            [
+                ////////////////////////太刀特效整体管理//////////////////////
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Ayato_Katana_FXMark",
+                    "valueSteps": [
+                        0.5,
+                        1.5,
+                    ], //0无武器，1有武器
+                    "removeAppliedModifier": true,
+                    "defaultGlobalValueOnCreate": 0,
+                    "modifierNameSteps": [
+                        // "Blank",
+                        "Ayato_Katana_FXHandler",
+                    ],
+                },
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Ayato_SheatheCircle_FXMark",
+                    "valueSteps": [
+                        0.5,
+                        1.5,
+                    ], //0无纳刀圈，1有纳刀圈+球
+                    "removeAppliedModifier": true,
+                    "defaultGlobalValueOnCreate": 0,
+                    "modifierNameSteps": [
+                        // "Blank",
+                        "Ayato_Katana_FXSheathe",
+                    ],
+                },
+                //////////////////武器特效和纳刀圈-出现消失管理////////////////// Review：可以再看看雷神优化。
+                {
+                    "$type": "AttachToNormalizedTimeMixin",//由于特效武器衔接比较容易，每段单独处理就行，不将state合并（不然会导致逻辑复杂）。
+                    "stateID": "ElementalArt",
+                    "modifierName": "Ayato_Weapon_Eff_On",
+                    "normalizeStart": 0.0,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_Retreat",
+                    "modifierName": "Ayato_Weapon_Eff_On",
+                    "normalizeStart": 0.0,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack01",
+                    "modifierName": "Ayato_Weapon_Eff_On", 
+                    "normalizeStart": 0, //
+                    "normalizeEnd": 0.05, //防止01进01无法触发
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack02",
+                    "modifierName": "Ayato_Weapon_Eff_On",
+                    "normalizeStart": 0,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack03",
+                    "modifierName": "Ayato_Weapon_Eff_On",
+                    "normalizeStart": 0,
+                },
+                //////////////////武器特效-消失和消散管理//////////////////
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_AS",
+                    "modifierName": "Ayato_Weapon_Eff_Off",//只做off，不做onoff一起的。
+                    "normalizeStart": 0.5,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_Retreat_AS",
+                    "modifierName": "Ayato_Weapon_Eff_Off",
+                    "normalizeStart": 0.5,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack01",
+                    "modifierName": "Ayato_Weapon_Eff_Off",
+                    "normalizeStart": 0.355, 
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack02",
+                    "modifierName": "Ayato_Weapon_Eff_Off",
+                    "normalizeStart": 0.355,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack03",
+                    "modifierName": "Ayato_Weapon_Eff_Off",
+                    "normalizeStart": 0.355,
+                },
+                // //////////////////纳刀圈特效-消散播放//////////////////
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_AS",
+                    "modifierName": "Ayato_Weapon_Eff_CircleOff",
+                    "normalizeStart": 0.5,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalArt_Retreat_AS",
+                    "modifierName": "Ayato_Weapon_Eff_CircleOff",
+                    "normalizeStart": 0.5,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack01",
+                    "modifierName": "Ayato_Weapon_Eff_CircleOff",
+                    "normalizeStart": 0.137, //
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack02",
+                    "modifierName": "Ayato_Weapon_Eff_CircleOff",
+                    "normalizeStart": 0.137,
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Katana_Attack03",
+                    "modifierName": "Ayato_Weapon_Eff_CircleOff",
+                    "normalizeStart": 0.137,
+                },
+                //整体武器保障
+                {
+                    "$type": "AttachToStateIDMixin",//这个保障武器特效退出、换人的时候可以干掉武器特效。
+                    "stateIDs": [
+                        "ElementalArt",
+                        "ElementalArt_AS",
+                        "ElementalArt_Retreat",
+                        "ElementalArt_Retreat_AS",
+                        "Katana_Attack01",
+                        "Katana_Attack02",
+                        "Katana_Attack03",
+                    ],
+                    "modifierName": "Ayato_Weapon_Eff_OnExit"
+                },
+                /////////////////隐藏武器-退出保护//////////////////
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalArt",
+                        "ElementalArt_AS",
+                        "ElementalArt_Retreat",
+                        "ElementalArt_Retreat_AS",
+                        "Katana_Attack01",
+                        "Katana_Attack02",
+                        "Katana_Attack03",
+                    ],
+                    "modifierName": "Ayato_ForceHideKatana_OnExit",
+                },
+            ],
+            "modifiers":
+            {
+                "Ayato_ForceHideKatana_OnExit"://退出技能模式的保护，如果还在动作中，不会恢复武器。
+                {
+                    "stacking": "Unique",//同将军配置，原因不明。
+                    "onAdded": [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Ayato_ShowWeaponMark",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 5,
+                            "minValue": 0,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Ayato_ShowWeaponMark",
+                            "value": -1,
+                            "useLimitRange": true,
+                            "maxValue": 5,
+                            "minValue": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "equip03",
+                                "sheathPoint"
+                            ],
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Ayato_Weapon_Eff_On"://特效武器
+                {
+                    "stacking": "Unique",//非unque有可能触发很多次。
+                    "onAdded": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_Katana_FXMark",
+                            "value": 1,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_SheatheCircle_FXMark",
+                            "value": 1,
+                        },
+                    ],
+                },
+                "Ayato_Weapon_Eff_CircleOff": //纳刀圈和球消散时点，在消散的时候还会播放Ball特效维持住纳刀球。
+                {
+                    "stacking": "Unique",
+                    "onAdded": [                        
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_SheatheCircle_FXMark",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Ayato_Weapon_Eff_Off"://特效武器  只做on和off的modifier，不做onoff一起的，会导致modifier上下逻辑出错。
+                {
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_Katana_FXMark",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Ayato_Weapon_Eff_OnExit": 
+                {
+                    "stacking": "Unique",
+                    "onRemoved": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_Katana_FXMark",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_SheatheCircle_FXMark",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Ayato_Katana_FXHandler":{
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_Weapon",
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_Weapon_Disappear",
+                        },
+                    ]
+                },
+                "Ayato_Katana_FXSheathe":{
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_SpecialAttack_SheatheKeep",
+                        },
+                    ],
+                },
+                "UNIQUE_Avatar_Ayato_KendoPose_State": {
+                    "properties": {
+                        "Actor_EndureDelta": 0.5, //会清空endure，然后还0.5霸体。
+                    },
+                    "isUnique": true,
+                    "stacking": "Refresh",
+                    "duration": "%Dura",
+                    "modifierMixins": [
+                        {
+                            "$type": "SwitchSkillIDMixin", //替换成10米索敌的普攻，buff结束移除。
+                            "priority": "AvatarCommon",//用AvatarSpeical的话飞行的时候会不显示下落攻击按键。Common的话同公子，优先级可能有风险，以及doskill很难屏蔽。即点击后，等buff结束会进入下落攻击。要清理doskill
+                            "skillIndex": 0,
+                            "skillID": 10663,   
+                        },
+                    ],
+                    "onAdded": [
+                        {
+                            "$type": "SetAnimatorBool", //保护，防止长按的bool残留。
+                            "boolID": "Ayato_Hold_SpecialAttack",
+                            "value": false,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerHideWeapon", //和state保护形成双重保护，如果在时间内，就算进跑了也不应该显示。
+                            "visible": false,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "sheathPoint"
+                            ],
+                            "doOffStage": true,
+                        },
+                        {//技能期间也不应该武器显示出来。也就是state和buff时长双保险，必须2个都出去才会显示武器。
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Ayato_ShowWeaponMark",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 5,
+                            "minValue": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "ClearEndura",
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "Ayato_ElementalArt_DropBall", 
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Ayato_KendoPose",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetAnimatorInt",//普攻进入新的序列，并屏蔽掉重击，下落攻击。//后来普攻用mixin替换了skill，就不限制普攻了，貌似也可以去掉。2022.1.26
+                            "intID": "SpecialAttack",
+                            "value": 1,
+                            // "persistent": true,//安全起见不用persistent，防止回不来问题更大
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onReconnect": //重连后状态机中的int会重置而丢失，需要再设一次。
+                    [
+                        {
+                            "$type": "SetAnimatorInt", 
+                            "intID": "SpecialAttack",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetAnimatorBool", //保护，防止长按的bool残留。
+                            "boolID": "Ayato_Hold_SpecialAttack",
+                            "value": false,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "SetAnimatorBool",//保护，防止长按的bool残留。
+                            "boolID": "Ayato_Hold_SpecialAttack",
+                            "value": false,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type":"ResetAnimatorTrigger",
+                            "triggerID": "DoSkill",//防止技能结束的时候触发之前被禁止的普攻、下落攻击这些。 //如果飞行时直接禁止的话就没这个问题了，但需要保留攻击图标。
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName": "Avatar_Ayato_KendoPose_Buff_Level_Remove",//buff结束时，玩家可能还砍出了最后一刀，需要保持buff持续到最后一刀生效完。
+                            "doOffStage": true,
+                        },
+                        // {
+                        //     "$type": "SetGlobalValue",
+                        //     "key": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                        //     "value": 0,
+                        //     "doOffStage": true,
+                        // },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Ayato_KendoPose",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SpecialAttack",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Ayato_ShowWeaponMark",
+                            "value": -1,
+                            "useLimitRange": true,
+                            "maxValue": 5,
+                            "minValue": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "equip03",
+                                "sheathPoint"
+                            ],
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onAttackLanded": [
+                        {
+                            "$type": "Predicated",
+                            "target":"Target",
+                            "targetPredicates": [
+                                {
+                                    "$type":"ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": [
+                                        "NormalAttack_01","NormalAttack_02","NormalAttack_03" //Review点：由于没有aniEvents的predicate，这里用buff期间+tag来判定。
+                                    ],
+                                },
+                                //不要求伤害>0,不然无法破盾
+                            ],
+                            "successActions": [
+                                {
+                                    "$type":"ApplyModifier",
+                                    // "target": "Self",
+                                    "modifierName": "Avatar_Ayato_KendoPose_BuffAdd",
+                                },
+                                {
+                                    "$type":"Predicated",
+                                    // "target": "Self", //不写也应该是self
+                                    "targetPredicates": [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "TalentParam_Ayato_Talent6"
+                                        },
+                                        {
+                                            "$type":"ByTargetGlobalValue",
+                                            "key":"_ABILITY_Avatar_Ayato_Talent6_IsCharged",
+                                            "compareType": "MoreThanAndEqual",
+                                            "value": 1,
+                                        },
+                                    ],
+                                    "successActions": [
+                                        {
+                                            "$type": "SetGlobalValue",
+                                            "key": "_ABILITY_Avatar_Ayato_Talent6_IsCharged",
+                                            "value": 0,
+                                        },
+                                        {
+                                            "$type":"CreateGadget", //生成攻击用gadget（为保证角色死了仍然触发）
+                                            "gadgetID": 41066005,
+                                            "campID": 1001,
+                                            "campTargetType": "Enemy",
+                                        },
+                                        { //Review注意：为了打击感增加了震屏，需要看效果如何。补充：还不错。
+                                            "$type": "ActCameraShake",
+                                            "cameraShake": {
+                                                "shakeType": "Center",
+                                                "shakeRange": 0.25,
+                                                "shakeTime": 0.3,
+                                                "shakeDistance": 10,
+                                                "extension": {
+                                                    "baseOnCamera": true,
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            ]
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_Buff_Level_Remove"://延迟移除诸刃增伤buff
+                {
+                    "duration": 0.2,
+                    "onRemoved":[
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                            "value": 0,
+                            "doOffStage": true,
+                            "predicates": [ //“不在小技能状态才移除”，保证不会超出预期。不然重复小技能时，先移除后添加，就导致这个modifier把新buff干掉了。
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key": "_ABILITY_Avatar_Ayato_KendoPose",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual"
+                                },
+                            ]
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_BuffAdd":
+                {
+                    "stacking": "Unique",
+                    "duration": 0.05,//
+                    "onAdded": [
+                        {
+                            "$type":"TriggerAbility", //会有1帧延迟
+                            "abilityName":"Avatar_Ayato_KendoPose_Buff",
+                            "abilitySpecials": {
+                                "AddLevel":1,
+                            },
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Ayato_ElementalArt_DropBall": {
+                    "onAttackLanded": [
+                        {
+                            "$type": "Predicated",
+                            "target": "Target",
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": [
+                                        "NormalAttack_01","NormalAttack_02" ,"NormalAttack_03" //应该写成SP_ATK01这样的events名,但没有这个predicate……
+                                    ],
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "Ball",
+                                    "target": "Self",
+                                },
+                            ],
+                        },
+                    ]
+                },
+                "Ball": {//1球，50%概率2球
+                    "stacking": "Unique",
+                    "duration": 1.9,
+                    "onAdded": [
+                        {
+                            "$type": "GenerateElemBall",
+                            "configID": 2018,
+                            "baseEnergy": 3,
+                            "ratio": 1,
+                            "born": {
+                                "$type": "ConfigBornBySelf",
+                                "offset": {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        {
+                            "$type":"Randomed",
+                            "chance": 0.5,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "configID": 2018,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials": {
+                "Dura":0, //拔刀姿态持续时间，数值为3.5秒时可以砍6刀。
+                          //考虑到希望砍9~12刀，技能还占了时间，所以时间长一点。5.3秒
+            }
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//	小技能期间长按持续普攻配置
+//
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_KendoPose_Click",
+            "abilityMixins":[
+                {
+                    "$type": "ButtonHoldChargeMixin",
+                    "skillID": 10663,
+                    "chargeTime": 0.15,
+                    // "secondChargeTime": 0.2,
+                    "OnBeginUncharged": [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 3,
+                        },
+                    ],
+                    "OnReleaseUncharged": [
+                    ],
+                    "OnBeginCharged": //真正的蓄力进入判定点 chargeTime
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Avatar_Ayato_Hold_SpecialAttack",
+                        },
+                    ],
+                    "OnReleaseCharged": [
+                        {
+                            "$type": "RemoveUniqueModifier",
+                            "modifierName": "UNIQUE_Avatar_Ayato_Hold_SpecialAttack",
+                            "doOffStage": true,
+                        },
+                    ],
+                    "OnBeginSecondCharged": //真正的蓄力进入判定点 chargeTime
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Avatar_Ayato_Hold_SpecialAttack",
+                        },
+                    ],
+                    "OnReleaseSecondCharged": [
+                        {
+                            "$type": "RemoveUniqueModifier",
+                            "modifierName": "UNIQUE_Avatar_Ayato_Hold_SpecialAttack",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            ],
+            "modifiers":{
+                "UNIQUE_Avatar_Ayato_Hold_SpecialAttack": //长按持续普攻机制，保持bool值。
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "Ayato_Hold_SpecialAttack",
+                            "value": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "Ayato_Hold_SpecialAttack",
+                            "value": false,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+        },
+    },
+
+
+////////////////////////////////////////////////////////////////
+//
+//	诸刃效果 由于小技能和大招都要刷这个状态，持续时长也需要刷新（需要刷新同一个modifier），所以得有单独ability控制。
+//  另外单个ability过长，可读性大幅下降，也建议之后代码习惯写成拆分功能单一。
+//
+//  目前代码不是很理想，感觉可以再写简洁一些。 -htc
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_KendoPose_Buff",//buff必须由另一个ability控制，因为很多地方会修改这个buff层数。
+            "abilityMixins": [
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                    "defaultGlobalValueOnCreate": 0,
+                    "valueSteps": [
+                        -0.5,
+                        0.5,
+                        1.5,
+                        2.5,
+                        3.5,
+                        4.5,
+                        10
+                    ],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps": [
+                        "Avatar_Ayato_KendoPose_Buff0",
+                        "Avatar_Ayato_KendoPose_Buff1",
+                        "Avatar_Ayato_KendoPose_Buff2",
+                        "Avatar_Ayato_KendoPose_Buff3",
+                        "Avatar_Ayato_KendoPose_Buff4",
+                        "Avatar_Ayato_KendoPose_Buff5",
+                    ],
+                    "actionQueues": [
+                        [
+                            //置0是buff用来控制buff特效的重要方式，所以0必须做事。
+                            {
+                                "$type": "RemoveModifier",
+                                "modifierName": "Avatar_Ayato_KendoPose_BuffTimer", //离开时清零
+                                "doOffStage": true,
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "SendEffectTrigger", //review：优化成int吧。不然重新载入后又归零了。
+                                "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                                "parameter": "L1",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "SendEffectTrigger",
+                                "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                                "parameter": "L2",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "SendEffectTrigger",
+                                "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                                "parameter": "L3",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "SendEffectTrigger",
+                                "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                                "parameter": "L4",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "SendEffectTrigger",
+                                "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                                "parameter": "L5",
+                            },
+                        ],
+                    ],
+                },
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                    "valueSteps": [
+                        2.5,
+                        10
+                    ],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps": [
+                        "Avatar_Ayato_KendoPose_HPBuff",
+                    ],
+                },
+            ],
+            "onAvatarOut": [
+                {
+                    "$type": "RemoveModifier",
+                    "modifierName": "Avatar_Ayato_KendoPose_BuffTimer", //离开时清零
+                    "doOffStage": true,
+                },
+            ],
+            "onAbilityStart": [//虽然会晚一帧，但应该没问题。
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Avatar_Ayato_KendoPose_BuffTimer", //刷新下时间，防止减少了系数
+                },
+                {
+                    "$type": "RemoveModifier",
+                    "modifierName": "Avatar_Ayato_KendoPose_BuffEffect_Delay", //如果存在delay，需要先干掉delay
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Avatar_Ayato_KendoPose_BuffEffect",//触发后最少会有1层，所以特效不做0层没关系。
+                },
+                {
+                    "$type": "AddGlobalValue",
+                    "key": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                    "value": "%AddLevel",
+                    "maxValue": "%MaxKendoBuffLevel",
+                    "minValue": 0,
+                    "useLimitRange": true,
+                },
+            ],
+            "modifiers":
+            {
+                "Avatar_Ayato_KendoPose_BuffEffect":{
+                    "stacking": "Refresh",
+                    "duration": "%Buff_Dura+0.5",//需要给时间播放消散特效
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff", //由于过程中绫人会隐藏，为防止频繁重置特效。这个特效被设置成不会隐藏。可能需要再讨论。
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_BuffTimer": { //还是改成了叠层比较舒服。不然掉层老在催我。
+                    "stacking": "Refresh",
+                    "duration": "%Buff_Dura", //保证技能期间不掉就行了
+                    "onRemoved": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Ayato_KendoPose_Buff_Level",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_AttackBuff",
+                            "parameter": "Die",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName": "Avatar_Ayato_KendoPose_BuffEffect_Delay",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_BuffEffect_Delay":{
+                    "duration": 0.5,
+                    "onRemoved": [
+                        {
+                            "$type":"RemoveModifier",
+                            "modifierName": "Avatar_Ayato_KendoPose_BuffEffect",
+                            "doOffStage": true,
+                            // "predicates": [
+                            //     {
+                            //         "$type": "ByTargetGlobalValue",
+                            //         "key": "_ABILITY_Avatar_Ayato_KendoPose",//表明已经退出姿态了，所以可以干掉特效。不然连续施放可能特效错误干掉。
+                            //         "value": 0,
+                            //         "compareType": "NoneOrEqual"
+                            //     },
+                            // ]
+                        },
+                    ]
+                },
+                "Avatar_Ayato_KendoPose_Buff0": { //暂时没内容，如果确定没有可以删掉（同时删掉step）
+
+                },
+                "Avatar_Ayato_KendoPose_Buff1": {
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "animEventNames": [
+                                "SP_ATK01",
+                                "SP_ATK02",
+                                "SP_ATK03",//对命6不做增益了。
+                            ], 
+                            "damageExtra": "%FIGHT_PROP_MAX_HP*%PropToDamageExtraRatio",
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_Buff2": {
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "animEventNames": [
+                                "SP_ATK01",
+                                "SP_ATK02",
+                                "SP_ATK03",
+                            ], 
+                            "damageExtra": "%FIGHT_PROP_MAX_HP*%PropToDamageExtraRatio*2",
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_Buff3": {
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "animEventNames": [
+                                "SP_ATK01",
+                                "SP_ATK02",
+                                "SP_ATK03",
+                            ], 
+                            "damageExtra": "%FIGHT_PROP_MAX_HP*%PropToDamageExtraRatio*3",
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_Buff4": {
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "animEventNames": [
+                                "SP_ATK01",
+                                "SP_ATK02",
+                                "SP_ATK03",
+                            ], 
+                            "damageExtra": "%FIGHT_PROP_MAX_HP*%PropToDamageExtraRatio*4",
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_Buff5": {
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "animEventNames": [
+                                "SP_ATK01",
+                                "SP_ATK02",
+                                "SP_ATK03",
+                            ], 
+                            "damageExtra": "%FIGHT_PROP_MAX_HP*%PropToDamageExtraRatio*5",
+                        },
+                    ],
+                },
+                "Avatar_Ayato_KendoPose_HPBuff":{//如果和上面写在一起，会出现血量跳变，因为buff同帧下又同帧上了。
+                    "properties": {
+                        "Actor_MaxHPRatio": "%Tlant2_MaxHPRatio",
+                    }
+                },
+            },
+            "abilitySpecials": {
+                "Buff_Dura": 6,//角色离场时会清除，目前写成和小技能一样长。
+                "MaxKendoBuffLevel": 4, //命座会+1
+                "Tlant2_MaxHPRatio":0,
+                "PropToDamageExtraRatio": 0.0,
+                "AddLevel": 1, //默认是1，特殊使用的时候会增加效果,记得每次trigger都要修改一次，不然上次被改就回不去了。
+            }
+        },
+    },
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//	元素战技，相关gadget，被命中会爆炸，然后kill掉自己。
+//
+////////////////////////////////////////////////////////////////
+
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ElementalArt_Gadget",//注意：由于怪物攻击RootNode，Gadget需要配置一定高度的RootNode（这里是1.2米），不然怪物射击地面会无法命中gadget。
+            "onAdded":
+            [
+                {
+                    "$type":"AttachEffect",
+                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_Gadget",
+                },
+                {
+                    "$type": "TriggerAbility",
+                    "target": "OriginOwner",
+                    "abilityName": "Avatar_Ayato_KendoPose_Buff",
+                    "abilitySpecials": {
+                        "AddLevel": "%AddLevel_Create",
+                    },
+                    "predicates": [//如果不判，进行一次0层叠加也会导致特效出现。
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "TalentParam_Ayato_PermanentSkill_1",
+                        },
+                    ]
+                },
+            ],
+            "onAbilityStart": [
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_Gadget_Break",
+                },
+                {
+                    "$type": "TriggerAttackEvent", //自爆和时间到都会造成伤害
+                    "target": "Caster",
+                    "targetType": "Enemy",
+                    "attackEvent": {
+                        "attackPattern": {
+                            "$type": "ConfigAttackSphere",
+                            "triggerType": "TriggerNoRepeat",
+                            "radius": 3.5,
+                        },
+                        "attackInfo": {
+                            "canBeModifiedBy": "OriginOwner",
+                            "attackTag": "Elemental_Art",
+                            "attenuationTag": "Elemental_Art",
+                            "attackProperty": {
+                                "damagePercentage": "%ArtGadget_Damage",
+                                "strikeType": "Default",
+                                "elementDurability": 25,
+                                "elementType": "Water",
+                                "overrideByWeapon": false,
+                                "attackType": "Melee",
+                                "enBreak": 100,
+                            },
+                            "hitPattern": {
+                                "onHitEffectName": "default",
+                                "hitImpulseType": "LV3",
+                                "retreatType": "ByHitDirection",
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0.00,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": false,
+                        },
+                    },
+                },
+                {
+                    "$type": "Predicated",
+                    "targetPredicates": [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "TalentParam_Ayato_PermanentSkill_1",
+                        },
+                        {
+                            "$type":"ByTargetGlobalValue",
+                            "target": "OriginOwner",
+                            "key": "_ABILITY_Avatar_Ayato_KendoPose",//在小技能期间再加，防止退出姿态却有buff。
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                    "successActions": [
+                        {
+                            "$type": "TriggerAbility",
+                            "target": "OriginOwner",
+                            "abilityName": "Avatar_Ayato_KendoPose_Buff",
+                            "abilitySpecials": {
+                                "AddLevel": "%AddLevel_Break",
+                            },
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "target": "OriginOwner",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalArt_Constellation1_Avatar", //角色强播一个特效及音效提醒下。
+                        },
+                    ],
+                },
+                {
+                    "$type":"KillSelf",
+                },
+            ],
+            "modifiers": {
+            },
+            "abilitySpecials": {
+                "Gadget_Dura":0,
+                "AddLevel_Create":0,//创建时需要add的level
+                "AddLevel_Break": 0, //击毁时需要add的level,直接写满，不读取
+                "ArtGadget_Damage":0,
+            }
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//	元素爆发,生成一个gagdet。 控制镜头、无敌、表情
+//
+////////////////////////////////////////////////////////////////
+
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ElementalBurst",
+            "onAbilityStart"://进cd，进镜头。但是技能实际生效点在动作完成后。
+            [
+                {
+                    "$type": "AvatarSkillStart",
+                    "skillID": 10665,
+                },
+            ],
+            "abilityMixins": [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                    ],
+                    "modifierName": "ElementalBurst_Protection", 
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                        "ElementalBurst_AS"
+                    ],
+                    "modifierName": "Camera_Handler",//可以通过控制镜头长度来提早回到战斗镜头。
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                        "ElementalBurst_AS"
+                    ],
+                    "modifierName": "ElementalBurst_WeatherAndHideWeapon",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                    ],
+                    "modifierName": "ElementalBurst_TriggerAction",//但是由于播放镜头等等操作必须连续大招时不出错，需要将单词执行的操作放到只attach到burst的modifier里。
+                },
+                { //控制清除gadget时点，和重新召唤gadget时点。
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalBurst",
+                    "modifierName": "Ayato_ElementalBurst_Attack",
+                    "normalizeStart": 0.0,//原0.9，有反馈gadget清理重叠了，提早。
+                    "normalizeEnd": 1,
+                },
+                { //特效武器持续
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                        "ElementalBurst_AS"
+                    ],
+                    "modifierName": "Ayato_ElementalBurst_Weapon",
+                },
+                { //武器消散
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalBurst_AS",
+                    "modifierName": "Ayato_ElementalBurst_WeaponDisappear",
+                    "normalizeStart": 0, 
+                    "normalizeEnd": 0.634375,
+                },
+            ],
+            "modifiers": {
+                "Ayato_ElementalBurst_Weapon":{//大招state内重复释放可能有特效问题，要注意下。
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_WeaponDither",
+                        },
+                    ]
+                },
+                "Ayato_ElementalBurst_WeaponDisappear":{
+                    "onRemoved": [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Ayato_ElementalBurst_Weapon",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_WeaponDither_Disappear",
+                        },
+                    ]
+                },
+                "ElementalBurst_Protection": {//无敌和推人配置
+                    "state": "Invincible",
+                    "duration": 3, //加个限定时间，防止摆pose很久了还无敌
+                    "onAdded": [
+                        {
+                            "$type": "AttachAbilityStateResistance",
+                            "resistanceListID": 11002,
+                        },
+                    ],
+                    "modifierMixins": [
+                        {
+                            "$type": "WindZoneMixin",
+                            "shapeName": "CircleR3",//R2太近了，试下R3、R4
+                            "strength": -3,
+                            "attenuation": 2,
+                            "born": {
+                                "$type": "ConfigBornByTarget",
+                                "offset": {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                            },
+                            "targetType": "Enemy",
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Grass"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetWeight", //WindZoneLevel = 2
+                                    "logic": "LesserOrEqual", //WindZoneLevel = 2
+                                    "weight": 250.0, //WindZoneLevel = 2
+                                },
+                            ],
+                        },
+                    ]
+                },
+                "ElementalBurst_TriggerAction": {
+                    "onAdded": [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "BurstSkinSet", //皮肤变色
+                        },
+                        {
+                            "$type": "Predicated", //判断镜头可否放出。连续放可能不进镜头。所以换个地方，不再挂到as里。
+                            "target": "Self",
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByAttackNotHitScene",
+                                    "checkWaterLayer": true,
+                                    "attackPattern": {
+                                        "$type": "ConfigAttackCircle",
+                                        "triggerType": "TriggerNoRepeat",
+                                        "fanAngle": 360.0,
+                                        "radius": 1.0,
+                                        "height": 2.0,
+                                        "born": {
+                                            "$type": "ConfigBornBySelf",
+                                            "offset": {
+                                                "x": 0.0,
+                                                "y": 0.5,
+                                                "z": 0.0,
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    "$type": "ByAvatarInWaterDepth",
+                                    "compareType": "LessAndEqual",
+                                    "depth": 0.5,
+                                },
+                            ],
+                            "successActions": //能放出来镜头
+                            [
+                                {
+                                    "$type": "AvatarEnterCameraShot",
+                                    "cameraMoveCfgPath": "Camera_Ayato_ElementalBurst",
+                                },
+                                {
+                                    "$type": "DungeonFogEffects",
+                                    "enable": true,
+                                    "muteRemoteAction": true,
+                                    "cameraFogEffectName": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_BeforeCamera",
+                                    "localOffset": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "z": 0,
+                                    },
+                                },
+                            ],
+                            "failActions": [
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_NoCamera",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "cameraParam": {
+                                "forceRadius": 6,
+                                "forceRadiusDuration": 0.6,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Camera_Handler":{
+                    "onAdded": [
+                        {
+                            "$type": "ControlEmotion",
+                            "toggleBlink": false,
+                            "toggleEmoSync": false,
+                            "toggleEyeKey": false,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": false,
+                            "blend": false,
+                        },
+                    ],
+                    "modifierMixins": [
+                        {
+                            "$type": "TriggerWeatherMixin",
+                            "type": "Skill",
+                            "weatherPattern": "Weather_Ayato_ElementalBurst_Start",
+                            "transDuration": 0.05,
+                            "duration": 3,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "DungeonFogEffects",
+                            "enable": false,
+                            "cameraFogEffectName": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_BeforeCamera",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "AvatarExitCameraShot",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "ControlEmotion",
+                            "toggleBlink": true,
+                            "toggleEmoSync": true,
+                            "toggleEyeKey": true,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "ElementalBurst_WeatherAndHideWeapon":{
+                    "onAdded": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": false,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "sheathPoint"
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "sheathPoint"
+                            ],
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ShowWeaponMark",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Ayato_ElementalBurst_Attack":{//施放点：攻击和法阵实际生效点，talent实际生效点。
+                    "onAdded": [
+                        {
+                            "$type": "KillGadget", //试下来和create太近的话部分逻辑会错。例如天黑。所以要错开。
+                            "gadgetInfo": {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41066002,
+                                "sortType": "Default",
+                            },
+                        },
+                    ],
+                    "onRemoved":[
+                        {
+                            "$type": "CreateGadget",
+                            "gadgetID": 41066002,
+                            "campID": 1001,
+                            "campTargetType": "Enemy",
+                            "doOffStage": true,
+                        },
+                        {//在生成法阵的同节点触发命4，（Ability原本是为了attach做的，现在改回apply了）
+                            "$type":"TriggerAbility",
+                            "abilityName": "Avatar_Ayato_Talent4",
+                            "doOffStage": true,
+                            "predicates": [
+                                {
+                                    "$type":"ByUnlockTalentParam",
+                                    "talentParam": "TalentParam_Ayato_Talent4"
+                                },
+                            ]
+                        },
+                    ]
+                },
+            },
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//	元素爆发领域的gadget
+//
+////////////////////////////////////////////////////////////////
+
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_ElementalBurst_Gadget", //目前都是gagdet干活，快照
+            "onAdded": [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Avatar_Ayato_ElementalBurst_Gadget_Select",
+                },
+                {
+                    "$type": "AttachEffect",
+                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Circle",
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Ayato_ElementalBurst_Gadget_Weather",
+                },
+            ],
+            "modifiers":
+            {
+                "Avatar_Ayato_ElementalBurst_Gadget_Select"://注意，现在的建立法是”快照“，如果不想，要设下GV让caster去生成。
+                {
+                    "duration": "%Field_Dura-0.2", // onadded有一次，所以干掉最后一次
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "thinkInterval": 0.5,//甘雨是0.3，但绫人的比较花，调慢一点看下画面表现（加到了0.5）。
+                    "onAdded": [ //初始这下根据节奏，我觉得可以加一下。
+                        {
+                            "$type": "SetGlobalPos",
+                            "target": "Self",
+                            "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos1",
+                            "born": {
+                                "$type": "ConfigBornBySelf",
+                                "bornRandom": {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange": 1.5,
+                                    "maxRandomRange": 9.5,
+                                },
+                                "onGround": true,
+                            },
+                        },
+                        {
+                            "$type": "Predicated",
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit": 1,
+                                "sortType": "Random",
+                            },
+                            "targetPredicates": [], //写在此处的话则已经根据toplimit=1找过怪了，如果没判过就会导致找不到。
+                            "predicates": [ //只有predicates可以配置selectByShape，先筛选target。
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Ayato_ElementalBurstMark",
+                                    "value": 0, //不找重复的怪
+                                    "compareType": "NoneOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "Ayato_ElementalBurst_Mark", //标记自己不可再次被选
+                                    "target": "Target",
+                                },
+                                {
+                                    "$type": "SetGlobalPos",
+                                    "target": "Target",
+                                    "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos1", //获取目标位置
+                                    // "born": { //不写默认transform
+                                    //     "$type": "ConfigBornByAttachPoint",
+                                    //     "attachPointName": "Fx_ChestNode",
+                                    //     "attachPointTargetType": "Target",
+                                    // },
+                                    "setTarget": false, //存在Caster身上
+                                },
+                            ],
+                            "failActions": [//注意：target找不到的时候直接不执行了，不会进fail流程
+                            ]
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "Ayato_ElementalBurst_Gadget_Timer1",
+                        },
+                        {
+                            "$type":"AttachModifier", //
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "modifierName": "UNIQUE_Avatar_Ayato_ElementalBurst_NormalAttackUp",
+                            "predicates": [
+                                {
+                                    "$type":"ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                            ]
+                        },
+                    ],
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "SetOverrideMapValue",
+                            "overrideMapKey": "Tag",
+                            "value": "%Tag*%Minus", //Tag会在1和-1之间来回变化。
+                        },
+                        {
+                            "$type":"Predicated",
+                            "targetPredicates": [
+                                {
+                                    "$type":"ByTargetOverrideMapValue",
+                                    "targetKey": "Tag", //根据tag1和-1执行不同行为，1是默认状态，onAdded时候执行的pos1分支
+                                    "targetAbilityName": "Avatar_Ayato_ElementalBurst_Gadget",
+                                    "targetValue": 0,
+                                    "logic": "Greater",
+                                },
+                            ],
+                            "successActions": [//大于0时执行pos1
+                                {
+                                    "$type": "SetGlobalPos",
+                                    "target": "Self",
+                                    "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos1",
+                                    "born": {
+                                        "$type": "ConfigBornBySelf",
+                                        "bornRandom": {
+                                            "$type": "BornRandomFromCenter",
+                                            "minRandomRange": 1.5,
+                                            "maxRandomRange": 9.5,
+                                        },
+                                        "onGround": true,
+                                    },
+                                },
+                                {
+                                    "$type": "Predicated",
+                                    "otherTargets": {
+                                        "$type": "SelectTargetsByShape",
+                                        "shapeName": "CircleR10H10",
+                                        "centerBasedOn": "Self",
+                                        "campTargetType": "Enemy",
+                                        "campBasedOn": "Self",
+                                        "topLimit": 1,
+                                        "sortType": "Random",
+                                    },
+                                    "targetPredicates": [], //写在此处的话则已经根据toplimit=1找过怪了，如果没判过就会导致找不到。
+                                    "predicates": [ //只有predicates可以配置selectByShape，先筛选target。
+                                        {
+                                            "$type": "ByEntityTypes",
+                                            "entityTypes": [
+                                                "Monster"
+                                            ],
+                                        },
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "_ABILITY_Ayato_ElementalBurstMark",
+                                            "value": 0, //不找重复的怪
+                                            "compareType": "NoneOrEqual",
+                                        },
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "_ANIMAL_ENTITY_TYPE",
+                                            "value": 0,
+                                            "compareType": "NoneOrEqual",
+                                        },
+                                    ],
+                                    "successActions": [
+                                        {
+                                            "$type": "ApplyModifier",
+                                            "modifierName": "Ayato_ElementalBurst_Mark", //标记自己不可再次被选
+                                            "target": "Target",
+                                        },
+                                        {
+                                            "$type": "SetGlobalPos",
+                                            "target": "Target",
+                                            "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos1", //获取目标位置
+                                            // "born": { //不写默认transform
+                                            //     "$type": "ConfigBornByAttachPoint",
+                                            //     "attachPointName": "Fx_ChestNode",
+                                            //     "attachPointTargetType": "Target",
+                                            // },
+                                            "setTarget": false, //存在Caster身上
+                                        },
+                                    ],
+                                    "failActions": [ //注意：target找不到的时候直接不执行了，不会进fail流程
+                                    ]
+                                },
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "Ayato_ElementalBurst_Gadget_Timer1",
+                                },
+                            ],
+                            "failActions": [//小于0时执行pos2
+                                {
+                                    "$type": "SetGlobalPos",
+                                    "target": "Self",
+                                    "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos2",
+                                    "born": {
+                                        "$type": "ConfigBornBySelf",
+                                        "bornRandom": {
+                                            "$type": "BornRandomFromCenter",
+                                            "minRandomRange": 1.5,
+                                            "maxRandomRange": 9.5,
+                                        },
+                                        "onGround": true,
+                                    },
+                                },
+                                {
+                                    "$type": "Predicated",
+                                    "otherTargets": {
+                                        "$type": "SelectTargetsByShape",
+                                        "shapeName": "CircleR10H10",
+                                        "centerBasedOn": "Self",
+                                        "campTargetType": "Enemy",
+                                        "campBasedOn": "Self",
+                                        "topLimit": 1,
+                                        "sortType": "Random",
+                                    },
+                                    "targetPredicates": [], //写在此处的话则已经根据toplimit=1找过怪了，如果没判过就会导致找不到。
+                                    "predicates": [ //只有predicates可以配置selectByShape，先筛选target。
+                                        {
+                                            "$type": "ByEntityTypes",
+                                            "entityTypes": [
+                                                "Monster"
+                                            ],
+                                        },
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "_ABILITY_Ayato_ElementalBurstMark",
+                                            "value": 0, //不找重复的怪
+                                            "compareType": "NoneOrEqual",
+                                        },
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "_ANIMAL_ENTITY_TYPE",
+                                            "value": 0,
+                                            "compareType": "NoneOrEqual",
+                                        },
+                                    ],
+                                    "successActions": [
+                                        {
+                                            "$type": "ApplyModifier",
+                                            "modifierName": "Ayato_ElementalBurst_Mark", //标记目标不可再次被选
+                                            "target": "Target",
+                                        },
+                                        {
+                                            "$type": "SetGlobalPos",
+                                            "target": "Target",
+                                            "key": "_ABILITY_Ayato_ElementalBurst_TriggerPos2", //获取目标位置
+                                            // "born": { //不写默认transform吧
+                                            //     "$type": "ConfigBornByAttachPoint",
+                                            //     "attachPointName": "Fx_ChestNode",
+                                            //     "attachPointTargetType": "Target",
+                                            // },
+                                            "setTarget": false, //存在Caster身上
+                                        },
+                                    ],
+                                    "failActions": [ //注意：target找不到的时候直接不执行了，不会进fail流程
+                                    ]
+                                },
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "Ayato_ElementalBurst_Gadget_Timer2",
+                                },
+                            ]
+                        },
+                        {
+                            "$type":"AttachModifier", //
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "modifierName": "UNIQUE_Avatar_Ayato_ElementalBurst_NormalAttackUp",
+                            "predicates": [
+                                {
+                                    "$type":"ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                            ]
+                        },
+                    ]
+                },
+                "Ayato_ElementalBurst_Gadget_Timer1"://由于0.6秒的特效时长长于0.5秒间隔，至少需要错开2个modifier才能记录位置。
+                {
+                    "stacking":"Unique",
+                    "duration":0.75,
+                    "onAdded":[
+                        {
+                            "$type": "Randomed", //2个特效随机。
+                            "chance": 0.5,
+                            "successActions": [
+                                {
+                                    "$type": "FireSubEmitterEffect",
+                                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Image_02",
+                                    "born":{
+                                        "$type":"ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos1"
+                                    }
+                                },
+                            ],
+                            "failActions": [
+                                {
+                                    "$type": "FireSubEmitterEffect",
+                                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Image_03",
+                                    "born": {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos1"
+                                    }
+                                },
+                            ]
+                        },
+                    ],
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "thinkInterval": 0.6, //延迟一点触发攻击，让特效能播到斩击。
+                    "onThinkInterval": [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            // "target": "OriginOwner", //目前是快照，可以再讨论
+                            "targetType": "Enemy",
+                            "attackEvent": {
+                                "attackPattern": {
+                                    "$type": "ConfigAttackCircle", //配合特效，需要圆柱
+                                    "height": 3.5,
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 2.5,
+                                    "born": {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos1",
+                                        "offset": {
+                                            "x": 0,
+                                            "y": -1,
+                                            "z": 0,
+                                        }
+                                    },
+                                    "massiveAttackRatio": 0.6,
+                                },
+                                "attackInfo": {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "Elemental_Burst",
+                                    "attenuationTag": "Elemental_Burst",
+                                    "attackProperty": {
+                                        "damagePercentage": "%Damage",
+                                        "elementType": "Water",
+                                        "attackType": "Range",
+                                        "strikeType": "Default",
+                                        "elementDurability": 25,
+                                        "enBreak": 50,
+                                    },
+                                    "hitPattern": {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType": "LV2",
+                                        "retreatType": "ByHitDirection",
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0.00,
+                                        "hitHaltTimeScale": 0.0,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                },
+                            },
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Ayato_ElementalBurst_Gadget_Timer1",
+                        },
+                    ],
+                },
+                "Ayato_ElementalBurst_Gadget_Timer2": {
+                    "stacking": "Unique",
+                    "duration": 0.75,
+                    "onAdded": [
+                        {
+                            "$type": "Randomed", //2个特效随机。
+                            "chance": 0.5,
+                            "successActions": [
+                                {
+                                    "$type": "FireSubEmitterEffect",
+                                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Image_02",
+                                    "born": {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos2"
+                                    }
+                                },
+                            ],
+                            "failActions": [
+                                {
+                                    "$type": "FireSubEmitterEffect",
+                                    "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Image_03",
+                                    "born": {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos2"
+                                    }
+                                },
+                            ]
+                        },
+                    ],
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "thinkInterval": 0.6, //延迟一点触发攻击，让特效能播到斩击。
+                    "onThinkInterval": [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            // "target": "OriginOwner", //目前是快照，可以再讨论
+                            "targetType": "Enemy",
+                            "attackEvent": {
+                                "attackPattern": {
+                                    "$type": "ConfigAttackCircle", //配合特效，需要圆柱
+                                    "height": 3.5,
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 2.5,
+                                    "born": {
+                                        "$type": "ConfigBornByGlobalValue",
+                                        "positionKey": "_ABILITY_Ayato_ElementalBurst_TriggerPos2",                                        
+                                        "offset": {
+                                            "x": 0,
+                                            "y": -1,
+                                            "z": 0,
+                                        }
+                                    },
+                                    "massiveAttackRatio": 0.6,
+                                },
+                                "attackInfo": {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "Elemental_Burst",
+                                    "attenuationTag": "Elemental_Burst",
+                                    "attackProperty": {
+                                        "damagePercentage": "%Damage",
+                                        "elementType": "Water",
+                                        "attackType": "Range",
+                                        "strikeType": "Default",
+                                        "elementDurability": 25,
+                                        "enBreak": 50,
+                                    },
+                                    "hitPattern": {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType": "LV2",
+                                        "retreatType": "ByHitDirection",
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0.00,
+                                        "hitHaltTimeScale": 0.0,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                },
+                            },
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Ayato_ElementalBurst_Gadget_Timer2",
+                        },
+                    ],
+                },
+                "UNIQUE_Avatar_Ayato_ElementalBurst_NormalAttackUp":{
+                    "isUnique": true,//防止多个绫人叠加
+                    "duration": 1.5,
+                    "isLimitedProperties": true,
+                    "onAdded": [
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_ElementalBurst_Buff",
+                        },
+                    ],
+                    "modifierMixins": [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "attackTags": [
+                                "NormalAttack_01",
+                                "NormalAttack_02",
+                                "NormalAttack_03",
+                                "NormalAttack_04",
+                                "NormalAttack_05",
+                                "NormalAttack_06" //可能会加成到公子某些“视作普攻”的内容，正常。
+                            ],
+                            "damagePercentageRatio": "%NormalAttackUp",
+                        },
+                    ],
+                },
+                "Ayato_ElementalBurst_Mark"://在怪身上。加unique保险（不过由于检查标记也不会重叠上去的）
+                {
+                    "duration": 1.45,
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "SetGlobalValue", //标记怪物自己不可再次被选
+                            "key": "_ABILITY_Ayato_ElementalBurstMark",
+                            "value": 1,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Ayato_ElementalBurstMark",
+                            "value": 0,
+                        },
+                    ],
+                },
+                "Ayato_ElementalBurst_Gadget_Weather": { //天黑效果，应特效需求加长到整个持续时间。
+                    "modifierMixins": [
+                        {
+                            "$type": "TriggerWeatherMixin",
+                            "type": "Skill",
+                            "weatherPattern": "Weather_Ayato_ElementalBurst_Keep", //Review:用的甘雨效果记得换成独有
+                            "transDuration": 1,
+                            "duration": 18,//时间长一些保证2次释放的时候衔接。
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials": {
+                "NormalAttackUp": 0,
+                "Field_Dura":0,
+                "Tag":1,
+                "Minus":-1,
+                "Damage": 0,
+            }
+        },
+    },
+
+///////////////////////////////////////////////////////////////
+//
+//	突破2 角色在后场且能量低时，恢复能量。
+//
+////////////////////////////////////////////////////////////////
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Ayato_PermanentSkill_2_ReviveEnergy",
+        "isDynamicAbility": true,
+        "abilityMixins": [
+            {
+                "$type": "AttachModifierToSelfGlobalValueMixin", //根据GV控制后台判定
+                "globalValueKey": "_ABILITY_Avatar_Ayato_IsOffStage",
+                "valueSteps": [
+                    0.5,
+                    1.5
+                ],
+                "removeAppliedModifier": true,
+                // "defaultGlobalValueOnCreate": 0，
+                "modifierNameSteps": [
+                    "Avatar_Ayato_OffStage"
+                ],
+            },
+        ],
+        "onAdded": [
+            {
+                "$type": "Predicated", //初始化
+                "targetPredicates": [
+                    {
+                        "$type": "ByIsLocalAvatar",
+                        "target": "Self",
+                    },
+                ],
+                "successActions": [
+                    {
+                        "$type": "SetGlobalValue", //onAdded自带offstage
+                        "key": "_ABILITY_Avatar_Ayato_IsOffStage",
+                        "value": 0,
+                    },
+                ],
+                "failActions": [
+                    {
+                        "$type": "SetGlobalValue",
+                        "key": "_ABILITY_Avatar_Ayato_IsOffStage",
+                        "value": 1,
+                    },
+                ]
+            },
+        ],
+        "onAvatarIn": [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_ABILITY_Avatar_Ayato_IsOffStage",
+                "value": 0,
+                "doOffStage": true,
+            },
+        ],
+        "onAvatarOut": [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_ABILITY_Avatar_Ayato_IsOffStage",
+                "value": 1,
+                "doOffStage": true,
+            },
+        ],
+        "modifiers": {
+            "Avatar_Ayato_OffStage"://离场时存在的modifier
+            {
+                "modifierMixins": [
+                    {
+                        "$type":"AttachModifierToPredicateMixin",
+                        "modifierName": "Avatar_Ayato_ReviveEnergy_OffStage",
+                        "predicates": [
+                            {
+                                "$type": "ByEnergyRatio",
+                                "ratio": "%TriggerRatio",
+                                "logic": "Lesser",
+                            },
+                        ]
+                    },
+                ],
+            },
+            "Avatar_Ayato_ReviveEnergy_OffStage"://离场且能量低时的modifier
+            {
+                "thinkInterval": "%Interval",
+                "onThinkIntervalIsFixedUpdate":true,//长时间是正确即可，单次可以略不准
+                "onThinkInterval": [
+                    {
+                        "$type": "ReviveElemEnergy",
+                        "value": "%Energy",
+                        "doOffStage": true,
+                        // "predicates": [//无需predicate，但保险用
+                        //     {
+                        //         "$type": "ByEnergyRatio",
+                        //         "ratio": "%TriggerRatio",
+                        //         "logic": "Lesser",
+                        //     },
+                        // ]
+                    },
+                ],
+            },
+        },
+        "abilitySpecials": {
+            "TriggerRatio": 0,
+            "Interval":0,
+            "Energy":0,
+        }
+    },
+},
+///////////////////////////////////////////////////////////////
+//
+//	命1 对低血量增伤  2021.11.05 测试有效
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName":"Avatar_Ayato_Talent1_DamageUp",
+            "isDynamicAbility": true,
+            "abilityMixins": [
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK01",
+                        "SP_ATK02",
+                        "SP_ATK03",
+                        "SP_ATK04",
+                        "SP_ATK05",
+                    ],
+                    "damagePercentageRatio": "%DamageUp",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetHPRatio",
+                            "target": "Target",
+                            "HPRatio": "%HPRatio",
+                            "logic": "LesserOrEqual",
+                        },
+                    ]
+                },
+            ],
+            "abilitySpecials": {
+                "DamageUp": 0,
+                "HPRatio":0,
+            },
+        },
+    },
+///////////////////////////////////////////////////////////////
+//
+//	命4 大招施放后给队友增加普攻伤害
+//
+////////////////////////////////////////////////////////////////
+
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_Talent4",
+            "isDynamicAbility": true,
+            "onAbilityStart": [
+                //命4效果。
+                {
+                    "$type": "RemoveUniqueModifier", //先干掉旧modifier，再加上新的。
+                    "modifierName": "UNIQUE_Ayato_ElementalBurst_Talent4Buff",
+                    "target": "AllPlayerAvatars",
+                    "predicates": [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                },
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_Ayato_ElementalBurst_Talent4Buff",
+                    "target": "AllPlayerAvatars",
+                    "predicates": [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                },
+            ],
+            "modifiers": {
+                "UNIQUE_Ayato_ElementalBurst_Talent4Buff": {
+                    "isUnique": true,
+                    "duration": "%Talent4_Time",
+                    "state": "AttackUp",
+                    "properties": {
+                        "Animator_AttackSpeedRatio": "%AttackSpeed",
+                    }
+                },
+            },
+            "abilitySpecials": {
+                "AttackSpeed":0,
+                "Talent4_Time": 0,
+            }
+        },
+    },
+///////////////////////////////////////////////////////////////
+//
+//	命6额外攻击的配置 正式配置需要留一个gadget，然后gadget动画控制攻击盒。目前先用替代的。
+//  目前是视作Normal_Attack_04和Normal_Attack——05，25元素，独立附着，有一定enbeak
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_Talent6",
+            "isDynamicAbility": true,
+            "abilityMixins": [
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin", //根据GV控制后台判定,由于触发条件为满层，不再增加命6提示。
+                    "globalValueKey": "_ABILITY_Avatar_Ayato_Talent6_IsCharged",
+                    "valueSteps": [
+                        // -0.5,
+                        0.5,
+                        1.5
+                    ],
+                    "removeAppliedModifier": true,
+                    "defaultGlobalValueOnCreate": 0,
+                    "modifierNameSteps": [
+                        // "Avatar_Ayato_Talent6_CD",
+                        "Avatar_Ayato_Talent6_Ready"
+                    ],
+                },
+            ],
+            "modifiers": {
+                "Avatar_Ayato_Talent6_Ready":{
+                    "onAdded": [
+						{
+                            "$type": "AttachModifier",
+                            "target": "Self",
+                            "modifierName": "Ayato_Constellation_6_Fx",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_Constellation_6_Watch",
+                        },
+                    ],
+                    "thinkInterval": 0.8, //从绫华那边来的效果，之后要判断下为什么要持续加。
+                    "onThinkInterval": [
+                        {
+                            "$type": "AttachModifier",
+                            "target": "Self",
+                            "modifierName": "Ayato_Constellation_6_Fx",
+                            "doOffStage": false,
+                        },
+                    ],
+                    //角色下场后移除这个特效，入场后重新加回来，否则拖尾表现会异常
+                    "onAvatarOut": [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Ayato_Constellation_6_Fx",
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onAvatarIn": [
+                        {
+                            "$type": "AttachModifier",
+                            "target": "Self",
+                            "modifierName": "Ayato_Constellation_6_Fx",
+                        },
+                    ],
+                },
+                "Ayato_Constellation_6_Fx":
+                {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Sword_Ayato_Constellation_6_WatchTrail",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+        },
+    },
+
+    ///////////////////命6Gadget的配置//////////////目前是播放了一个天气，但会冲突。改成镜前效果
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_Talent6_Gadget",
+            "isDynamicAbility": true,
+            "onAdded": [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Avatar_Ayato_Talent6_BeforeCamera", 
+                },
+            ],
+            "modifiers": {
+                "Avatar_Ayato_Talent6_BeforeCamera":
+                {
+                    "duration": 1.5,
+                    "modifierMixins": [
+                        {
+                            "$type": "TriggerPostProcessEffectMixin",
+                            "postEffectAssetName": "PostEffect_Avatar_Ayato_Talent6_ScreenEffect",
+                            "duration": 1.0,
+                        },
+                    ],
+                },
+            }
+        },
+    },
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Ayato_NormalAttack_DamageHandler
+//
+////////////////////////////////////////////////////////////////
+    {
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Ayato_NormalAttack_DamageHandler",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK01"],
+					"damagePercentage": "%Attack01",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK02"],
+					"damagePercentage": "%Attack02",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK03"],
+					"damagePercentage": "%Attack03",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK04"],
+					"damagePercentage": "%Attack04",
+				},
+				{
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK04_01"],
+                    "damagePercentage": "%Attack04",
+                },
+				{
+					"$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK05"],
+					"damagePercentage": "%Attack05",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"attackTags": ["ExtraAttack"],
+					"damagePercentage": "%ExtraAttack",
+				},
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK01"
+                    ],
+                    "damagePercentage": "%SPAttack01",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK02"
+                    ],
+                    "damagePercentage": "%SPAttack02",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK03"
+                    ],
+                    "damagePercentage": "%SPAttack03",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK04"  //命6的2次攻击
+                    ],
+                    "damagePercentage": "%SPAttack04",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": [
+                        "SP_ATK05"  //命6的2次攻击
+                    ],
+                    "damagePercentage": "%SPAttack05",
+                },
+			],
+            "abilitySpecials":
+            {
+                "Attack01": 0,
+                "Attack02": 0,
+                "Attack03": 0,
+                "Attack04": 0,
+                "Attack05": 0,
+                "ExtraAttack":0,
+                "SPAttack01":0,
+                "SPAttack02":0,
+                "SPAttack03":0,
+                "SPAttack04":0,
+                "SPAttack05":0,
+            },
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  空中攻击
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Ayato_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5066010,
+                    "flySkillID": 5066010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce_AS",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_AttachWeaponEffect",
+                },
+    			{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachWeaponEffect":
+                {
+                    "onAdded":
+                    [
+	                    {
+	                    	"$type":"AttachEffect",
+	                    	"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+	                    },
+                    ],
+                },
+                "FallingAnthem_CameraRadialBlur":
+                {
+					"duration":0.23,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                               			"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce_AS":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+]

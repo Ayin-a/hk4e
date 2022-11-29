@@ -1,0 +1,308 @@
+[
+	// 蕈兽BVB活动 - 飞行草    yiming.liao
+	//
+	// //
+	// d8888b. db    db db      db      d88888b d888888b
+	// 88  `8D 88    88 88      88      88'     `~~88~~'
+	// 88oooY' 88    88 88      88      88ooooo    88
+	// 88~~~b. 88    88 88      88      88~~~~~    88
+	// 88   8D 88b  d88 88booo. 88booo. 88.        88
+	// Y8888P' ~Y8888P' Y88888P Y88888P Y88888P    YP
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 普攻 触发子弹
+			"abilityName": "Fungus_Un_BVB_Dendro_Bullet_Trigger",
+			"abilityMixins": [
+				// 发射前的蓄力效果
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Shoot_Loop"],
+					"modifierName": "DendroBullet_VFX_Display"
+				},
+				// 瞄准旋转
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["NormalAttack"],
+					"angularSpeed": 180
+				}
+			],
+			"onAbilityStart": [
+				// 发射草抛物线子弹
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42609021,
+					"trackTarget": "SelfAttackTarget",
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "BulletSource",
+						"attachPointTargetType": "Self"
+					},
+					"lifeByOwnerV2": true
+				},
+				// 发射特效
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_ShootDecayed_Attack"
+				}
+			],
+			"modifiers": {
+				"DendroBullet_VFX_Display": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_ShootDecayed_Loop"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 普攻子弹逻辑
+			"abilityName": "Fungus_Un_BVB_Dendro_Bullet",
+			"onAbilityStart": [
+				// 爆炸特效
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_HitDecayed",
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "RootNode"
+					}
+				},
+				// 伤害处理
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 1.6,
+							"born": {
+								"$type": "ConfigBornByCollisionPoint"
+							}
+						},
+						"attackInfo": {
+							"canBeModifiedBy": "Owner",
+							"attackProperty": {
+								"damagePercentage": 1.1,
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak": 30.0
+							},
+							"attenuationTag": "Dendro_Bullet",
+							"attenuationGroup": "FungusFight_General",
+							"hitPattern": {
+								"hitImpulseType": "LV2"
+							}
+						}
+					}
+				}
+			],
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "DendroBullet_Display",
+					"target": "Self"
+				}
+			],
+			"modifiers": {
+				"DendroBullet_Display": {
+					"elementType": "Grass",
+					"elementDurability": 100,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_BulletDecayed"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_BulletDecayed_Trail"
+						}
+					]
+				}
+			}
+		}
+	},
+	// //
+	// db      d88888b  .d8b.  d88888b      d8888b. db      d88888b .d8888. .d8888. d888888b d8b   db  d888b
+	// 88      88'     d8' `8b 88'          88  `8D 88      88'     88'  YP 88'  YP   `88'   888o  88 88' Y8b
+	// 88      88ooooo 88ooo88 88ooo        88oooY' 88      88ooooo `8bo.   `8bo.      88    88V8o 88 88
+	// 88      88~~~~~ 88~~~88 88~~~        88~~~b. 88      88~~~~~   `Y8b.   `Y8b.    88    88 V8o88 88  ooo
+	// 88booo. 88.     88   88 88           88   8D 88booo. 88.     db   8D db   8D   .88.   88  V888 88. ~8~
+	// Y88888P Y88888P YP   YP YP           Y8888P' Y88888P Y88888P `8888Y' `8888Y' Y888888P VP   V8P  Y888P
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 草种子Gadget逻辑
+			"abilityName": "Fungus_Un_BVB_Dendro_LeafBlessing",
+			"onAbilityStart": [
+				// 治疗效果 - 选血最低的
+				{
+					"$type": "ApplyModifier",
+					"otherTargets": {
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR30H5", // 易用性考虑，全队生效
+						"campBasedOn": "Self",
+						"campTargetType": "SelfCamp",
+						"centerBasedOn": "Self",
+						"sortType": "LowHpRatio",
+						"topLimit": 1
+					},
+					"modifierName": "LeafBlessing_HealEffect",
+					"predicates": [
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Monster", "Partner"]
+						}
+					]
+				}
+			],
+			"modifiers": {
+				"LeafBlessing_HealEffect": {
+					"duration": 0.4,
+					"onAdded": [
+						// 命中特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Grass_LeafBlessing"
+						}
+					],
+					"onRemoved": [
+						// 治疗效果
+						{
+							"$type": "HealHP",
+							"amountByTargetMaxHPRatio": 0.36
+						}
+					]
+				}
+			}
+		}
+	},
+	// //
+	// db    db d8b   db d888888b  .d88b.  d8b   db      d8888b. db    db d8888b. .d8888. d888888b
+	// 88    88 888o  88   `88'   .8P  Y8. 888o  88      88  `8D 88    88 88  `8D 88'  YP `~~88~~'
+	// 88    88 88V8o 88    88    88    88 88V8o 88      88oooY' 88    88 88oobY' `8bo.      88
+	// 88    88 88 V8o88    88    88    88 88 V8o88      88~~~b. 88    88 88`8b     `Y8b.    88
+	// 88b  d88 88  V888   .88.   `8b  d8' 88  V888      88   8D 88b  d88 88 `88. db   8D    88
+	// ~Y8888P' VP   V8P Y888888P  `Y88P'  VP   V8P      Y8888P' ~Y8888P' 88   YD `8888Y'    YP
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 普攻 触发子弹
+			"abilityName": "Fungus_Un_BVB_Dendro_Bullet_UnionBurstTrigger",
+			"abilityMixins": [
+				// 发射前的蓄力效果
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Burst_BS", "Burst_Loop"],
+					"modifierName": "Burst_VFX_Display"
+				},
+				// 瞄准旋转
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["UnionBurst"],
+					"angularSpeed": 180
+				}
+			],
+			"onAbilityStart": [
+				// 发射草抛物线子弹  特效由EventPattern管理
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42609026,
+					"trackTarget": "SelfAttackTarget",
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "BulletSource",
+						"attachPointTargetType": "Self"
+					},
+					"lifeByOwnerV2": true
+				}
+			],
+			"modifiers": {
+				"Burst_VFX_Display": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Grass_UnionBurst_Loop"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 大招子弹逻辑
+			"abilityName": "Fungus_Un_BVB_Dendro_Bullet_UB",
+			"onAbilityStart": [
+				// 爆炸特效
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_HitDecayed",
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "RootNode"
+					}
+				},
+				// 伤害处理
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 1.6,
+							"born": {
+								"$type": "ConfigBornByCollisionPoint"
+							}
+						},
+						"attackInfo": {
+							"canBeModifiedBy": "Owner",
+							"attackProperty": {
+								"damagePercentage": 1.92,
+								"elementType": "Grass",
+								"elementDurability": 25,
+								"enBreak": 20.0
+							},
+							"attenuationGroup": "FungusFight_General",
+							"attenuationTag": "Dendro_Bullet",
+							"hitPattern": {
+								"hitImpulseType": "LV2"
+							}
+						}
+					}
+				}
+			],
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "DendroBullet_Display",
+					"target": "Self"
+				}
+			],
+			"modifiers": {
+				"DendroBullet_Display": {
+					"elementType": "Grass",
+					"elementDurability": 100,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_BulletDecayed"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Un_Delta_Grass_Shoot_BulletDecayed_Trail"
+						}
+					]
+				}
+			}
+		}
+	}
+]

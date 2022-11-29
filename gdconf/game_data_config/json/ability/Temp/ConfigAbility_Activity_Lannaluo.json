@@ -1,0 +1,845 @@
+[
+
+//////////////////////////////////////////////////////////////
+///
+///   Ver3.0 兰那罗三态小道具
+///
+//////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_Lannaluo_Handler",
+			"isDynamicAbility": true,
+			"onAbilityStart":  //小技能Z键触发Trigger
+			[
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Lannaluo_IsInState",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+					"successActions":  //如果在状态中则中断Focus
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndChannelTrigger",
+						},
+					],
+					"failActions":    //如果非状态中则进入Focus
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StartChannelTrigger",
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AvatarCombatMixin",
+					"onEnterCombat":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "EndChannelTrigger",
+						},
+					],
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type": "SetAnimatorTrigger",
+					"triggerID": "EndChannelTrigger",
+					"doOffStage": true,
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_Lannaluo_Shoot",
+			"isDynamicAbility": true,
+			"onAbilityStart":  //发射子弹
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_Lannaluo_TriggerShoot",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_Lannaluo_Skill_CD",
+				},
+			],
+			"abilityMixins":  //跟着动作走
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Channel_BS", "Channel_Loop"],
+					"modifierName": "ActivityAbility_Lannaluo_ChangePlayMode",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Channel_BS", "Channel_Loop"],
+					"modifierName": "ActivityAbility_Lannaluo_Focus",
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_Lannaluo_ChangePlayMode":  //替换操控面板
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"toPlayMode": "LannaluoState",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_IsInState",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ChangePlayMode",
+							"muteRemoteAction": true,
+							"toPlayMode": "Normal",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_IsInState",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "WidgetLightUpControlMixin",
+							"targetWidgetMaterialId": 220053,
+						},
+						{
+							"$type": "WidgetLightUpControlMixin",
+							"targetWidgetMaterialId": 220071,
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Focus":  //点按小道具进入瞄准镜头
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.6,
+								"y": 0.2,
+								"z": -1.8,
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.6,
+								"y": -0.1,
+								"z": -1.8,
+							},
+							"canMove": false,
+							"dragButtonName": "Skill2",
+							"showCrosshair": false,
+							"disableAnim": true,
+							"assistance":
+                            {
+								"ps4": { "useGyro": true, },
+								"ps5": { "useGyro": true, },
+								"other": { "useGyro": true, },
+							},
+							"vcam_fov": 30,
+							"cameraFollowMaxDegree": 40,
+							"cameraFollowMinDegree": -40,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "LockMotionFlagExitChannel",  //需要保证Focus阶段不能移动
+							"value": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Common_IsChannelState",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+                    [
+                    	{
+                    		"$type": "AvatarExitFocus",
+                    		"keepRotation": true,
+                    		"doOffStage": true,
+                    	},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "LockMotionFlagExitChannel",
+							"value": false,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Common_IsChannelState",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_TriggerShoot":  //根据技能类型发射子弹
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Lannaluo_SkillState",
+							"overrideMapKey": "Skill_State",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_Skill_InTime",   //记录该次释放时的skillstate，防止延迟导致的值不对
+							"value": "%Skill_State",
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 420000017,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+							},
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 20330,
+							"cdRatio": 1,
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Skill_CD":  //释放完一次技能后的CD，用于处理自身特效显示
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_CD",
+							"value": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_CD",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"onKill":  //加个死亡恢复保护
+			[
+				{
+					"$type": "ChangePlayMode",
+					"muteRemoteAction": true,
+					"toPlayMode": "Normal",
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Skill_State": 0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_Lannaluo_Skill",
+			"isDynamicAbility": true,
+			"onAbilityStart":  //切换技能
+			[
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Lannaluo_SkillState",
+							"value": 3,
+							"compareType": "Equal",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Lannaluo_SkillState",
+							"value": 1,
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Lannaluo_SkillState",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 1,
+							"maxValue": 3,
+						},
+					],
+				},
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 20331,
+					"cdRatio": 0.5,
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Lannaluo_SkillState",  //若想记忆上次使用过的技能，则可以在这进行赋值SGV
+					"value": 1,  
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ActivityAbility_Lannaluo_Skill_Add",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Channel_BS", "Channel_Loop"],
+					"modifierName": "ActivityAbility_Lannaluo_SwitchSkill",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Channel_BS", "Channel_Loop"],
+					"modifierName": "ActivityAbility_Lannaluo_Skill_Handler_01",
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_Lannaluo_Skill_Add":   //动态上下技能组
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddAvatarSkillInfo",
+							"skillID": 20330,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AddAvatarSkillInfo",
+							"skillID": 20331,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+                    [
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"skillID": 20330,
+							"refreshAfterRemove": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveAvatarSkillInfo",
+							"skillID": 20331,
+							"refreshAfterRemove": true,
+							"doOffStage": true,
+						},
+					],
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddAvatarSkillInfo",
+							"skillID": 20330,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AddAvatarSkillInfo",
+							"skillID": 20331,
+							"doOffStage": true,
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_SwitchSkill":  //替换技能信息
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 0,
+							"skillID": 20330,
+						},
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority": "Playmode",
+							"skillIndex": 1,
+							"skillID": 20331,
+						},
+						{
+							"$type": "AttachModifierToGlobalValueMixin",
+							"globalValueTarget": "Team",
+							"globalValueKey": "SGV_LanlaluoCommander",
+							"valueSteps": [0.5, 1.5, 2.5, 3.5, 4.5],
+							"modifierNameSteps": 
+							[
+								"ActivityAbility_Lannaluo_Switch_Forbid", 
+								"ActivityAbility_Lannaluo_Switch_Forbid", 
+								"ActivityAbility_Lannaluo_Switch_Forbid",
+								"Blank",
+							],
+							"actionQueues":
+							[
+								[
+									{
+										"$type": "SetGlobalValue",
+										"key": "_ABILITY_Lannaluo_SkillState",
+										"value": 1,
+									},
+								],
+								[
+									{
+										"$type": "SetGlobalValue",
+										"key": "_ABILITY_Lannaluo_SkillState",
+										"value": 2,
+									},
+								],
+								[
+									{
+										"$type": "SetGlobalValue",
+										"key": "_ABILITY_Lannaluo_SkillState",
+										"value": 3,
+									},
+								],
+								[
+									{
+										"$type": "SetGlobalValue",
+										"key": "_ABILITY_Lannaluo_SkillState",  //若第一次使用会初次赋值，否则会自动记忆上一次使用的状态
+										"value": 1,
+										"predicates":
+										[
+											{
+												"$type": "ByTargetGlobalValue",
+												"key": "_ABILITY_Lannaluo_SkillState",
+												"value": 0,
+												"compareType": "NoneOrEqual",
+											},
+										],
+									},
+								],
+							],
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Switch_Forbid":  //禁止转换技能槽，系统默认不给切换兰那罗道具状态
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "HideActionSlotMixin",  //禁止小技能按钮
+							"slotType": "Slot2",
+						},
+					],
+				},
+
+				"ActivityAbility_Lannaluo_Skill_Handler_01":  //兰那罗三态技能转化器
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Lannaluo_CD",
+							"valueSteps": [-0.5, 0.5, 1.5],
+							"modifierNameSteps":
+							[
+								"ActivityAbility_Lannaluo_Skill_Handler_02",
+								"Blank",
+							],
+						},
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Lannaluo_SkillState",
+							"valueSteps": [0.5, 1.5, 2.5, 3.5],
+							"modifierNameSteps":
+							[
+								"ActivityAbility_Lannaluo_Eff_01",
+								"ActivityAbility_Lannaluo_Eff_02",
+								"ActivityAbility_Lannaluo_Eff_03",
+							],
+						},
+					],
+				},
+				"Blank":{},
+				"ActivityAbility_Lannaluo_Skill_Handler_02":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Lannaluo_SkillState",
+							"valueSteps": [0.5, 1.5, 2.5, 3.5],
+							"modifierNameSteps":
+							[
+								"ActivityAbility_Lannaluo_Skill_01",
+								"ActivityAbility_Lannaluo_Skill_02",
+								"ActivityAbility_Lannaluo_Skill_03",
+							],
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Skill_01":  //1号状态管理
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetGlobalValue",
+							"key" : "_FURIOUSMONOLITH_THROW_RANGE",
+							"value" : 15,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Line_01",
+						},
+						
+					],
+				},
+				"ActivityAbility_Lannaluo_Skill_02":  //2号状态管理
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetGlobalValue",
+							"key" : "_FURIOUSMONOLITH_THROW_RANGE",
+							"value" : 15,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Line_02",
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Skill_03":  //3号状态管理
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetGlobalValue",
+							"key" : "_FURIOUSMONOLITH_THROW_RANGE",
+							"value" : 15,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Line_03",
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Eff_01":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Charge_01",
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Eff_02":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Charge_02",
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Eff_03":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_Aim_Charge_03",
+						},
+					],
+				},
+			},
+		},
+	},
+
+	//Gadget_420000017  发射器
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_Lannaluo_Shooter",
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 420000018,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0,
+							"y": 0.5,
+							"z": 0,
+						},
+					},
+				},
+			],
+		},
+	},
+
+	//Gadget_420000018  创生物，延迟执行具体转变逻辑
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "ActivityAbility_Lannaluo_Gadget",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_Lannaluo_Trigger_Skill01",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Lannaluo_Skill_InTime",
+							"value": 1,
+							"compareType": "Equal",
+							"target": "OriginOwner",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_Lannaluo_Trigger_Skill02",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Lannaluo_Skill_InTime",
+							"value": 2,
+							"compareType": "Equal",
+							"target": "OriginOwner",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ActivityAbility_Lannaluo_Trigger_Skill03",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Lannaluo_Skill_InTime",
+							"value": 3,
+							"compareType": "Equal",
+							"target": "OriginOwner",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"ActivityAbility_Lannaluo_Trigger_Skill01":
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_SkillBurst_01",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Self",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 3.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Activity_Lannaluo_Type_01",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+										"strikeType": "Default",
+										"elementType": "AntiFire",
+										"elementDurability": 0,
+										"enBreak" : 0,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0,
+										"muteHitText": true,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Trigger_Skill02":
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_SkillBurst_02",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Self",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 3.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Activity_Lannaluo_Type_02",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+										"strikeType": "Default",
+										"elementType": "AntiFire",
+										"elementDurability": 0,
+										"enBreak" : 0,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0,
+										"muteHitText": true,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"ActivityAbility_Lannaluo_Trigger_Skill03":
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Lannaluo_SkillBurst_03",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Self",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 3.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Activity_Lannaluo_Type_03",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+										"strikeType": "Default",
+										"elementType": "AntiFire",
+										"elementDurability": 0,
+										"enBreak" : 0,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.0,
+										"muteHitText": true,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+
+
+]

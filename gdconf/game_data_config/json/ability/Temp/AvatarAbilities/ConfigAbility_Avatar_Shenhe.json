@@ -1,0 +1,3839 @@
+[
+    ////////////////////////////////////////////////////////////////////
+    ///
+    ///  Ability索引
+    ///
+    ////////////////////////////////////////////////////////////////////
+
+    // 普攻重击下落攻击：
+
+    // Avatar_Shenhe_NormalAttack_DamageHandler：普攻伤害逻辑
+    // Avatar_Shenhe_ExtraAttack：普攻/重击的操作逻辑和核心逻辑
+    // Avatar_Shenhe_CreateBullet：重击/小技能子弹管理
+    // Avatar_Shenhe_ExtraAttack_Bullet：重击的伤害
+    // Avatar_Shenhe_FallingAnthem：空中攻击
+
+    // 元素战技：
+
+    // Avatar_Shenhe_ElementalArt_FX：元素战技的操作和特效
+    // Avatar_Shenhe_ElementalArt_Bullet：元素战技的子弹
+    // Avatar_Shenhe_ElementalArt_Attack_L:元素战技的点按逻辑及buff管理
+    // Avatar_Shenhe_ElementalArt_Attack_H:元素战技的长按逻辑及buff管理
+
+    //元素爆发：
+
+    // SkillObj_Shenhe_Shadow：元灵体和领域效果管理
+    // SkillObj_Shenhe_Shadow_Attack：灵体攻击
+    // Avatar_Shenhe_ElementalBurst：元素爆发逻辑
+    // Avatar_Shenhe_ElementalBurst_Damage：元素爆发伤害
+
+    //其他
+
+    // Avatar_Shenhe_HideWeaponControl：元素战技/爆发武器隐藏消失管理
+    // Avatar_Shenhe_Constellation_4：命4管理
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  重击：Shenhe
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ExtraAttack",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_FX",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack_BS"
+                    ],
+                    "modifierName": "ExtraAttack_BS_FX",
+                },
+                /*{
+                    "$type":"AttachToStateIDMixin",
+                    "stateIDs":["ExtraAttack_BS","ExtraAttack"],
+                    "modifierName":"Cost"
+                },*/
+                {
+                    "$type": "ButtonHoldChargeMixin",
+                    "skillID": 10631,
+                    "chargeTime": 0.12,
+                    "secondChargeTime": 0.2,
+                    "OnBeginUncharged":
+                    [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 99,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 0,
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 5,
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseUncharged":
+                    [
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": true,
+                        },
+                    ],
+                    "OnReleaseCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginSecondCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 6,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseSecondCharged":
+                    [
+
+                    ],
+                    "chargeStateIDs":
+                    [
+                        "Attack01",
+                        "Attack02",
+                        "Attack03",
+                        "Attack04",
+                        "Run"
+                    ],
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_StaminaCost",
+                },
+            ],
+            "modifiers":
+            {
+                "ExtraAttack_StaminaCost":
+                {
+                    // "duration": 0.2,
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarSkillStart",
+                            "skillID": 10002,
+                            "costStaminaRatio":"%ExtraAttack_Pole_Stamina_Cost",
+                        },
+                    ],
+                },
+                "ExtraAttack_FX":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ExtraAttack_Sprint",
+                        },
+                    ]
+                },
+                "ExtraAttack_BS_FX":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ExtraAttack",
+                        },
+                    ]
+                },
+            },
+            "abilitySpecials":
+            {
+                //故意少判了一点点体力，为了顾及一部分网络延迟
+                "ExtraAttack_Pole_Stamina_Cost": 0,
+                "Flexible_Stamina":-2,
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //  Avatar_Shenhe_CreateBullet
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_CreateBullet",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["ExtraAttack"],
+                    "modifierName": "Shenhe_ExtraAttack_CreateBullet",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalArt_L"],
+                    "modifierName": "Shenhe_ElementalArt_CreateBullet",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["ExtraAttack"],
+                    "modifierName": "ExtraAttack_CloseCollider",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalArt_L",],
+                    "modifierName": "Shenhe_ElementalArt_L_CloseCollider",
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_ExtraAttack_CreateBullet":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerBullet",
+                            "bulletID": 41063001,
+                            "campID": 1001,
+                            "campTargetType": "Enemy",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"KillGadget",
+                            "gadgetInfo":
+                            {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41063001,
+                                "sortType": "Default",
+                            },
+                            "doOffStage":true,
+                        },
+                    ],
+                },
+                "Shenhe_ElementalArt_CreateBullet":
+                {
+                    "onAdded":
+                    [
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"KillGadget",
+                            "gadgetInfo":
+                            {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41063002,
+                                "sortType": "Default",
+                            },
+                            "doOffStage":true,
+                        },
+                    ],
+                },
+                "ExtraAttack_CloseCollider":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHDMesh",
+                            "enable": false,
+                            "hdMeshKey": "Default",
+                        }, 
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                        {
+                            "$type": "EnableHDMesh",
+                            "enable": true,
+                            "hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+                        }, 
+                    ],
+                },
+                "Shenhe_ElementalArt_L_CloseCollider":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                    ],
+                },
+            },
+        },
+    }, 
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ExtraAttack_Bullet",
+            "onAbilityStart":
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates":
+                    [
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": ["MonsterEquip"],
+                        },
+                    ],
+                    "successActions":
+                    [
+                        {
+                            "$type": "DamageByAttackValue",
+                            "target": "Target",
+                            "attackInfo":
+                            {
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackTag": "ExtraAttack",
+                                "attenuationTag":"ExtraAttack",
+                                "attenuationGroup":"Avatar_Pole_ExtraAttack",
+                                "attackProperty":
+                                {
+                                    "damagePercentage": "%ExtraAttack",
+                                    "strikeType": "Spear",
+                                    "elementDurability": 25,
+                                    "overrideByWeapon": true,
+                                    "attackType": "Melee",
+                                    "enBreak": 120,
+                                },
+                                "hitPattern":
+                                {
+                                    "onHitEffectName": "default",
+                                    "hitImpulseType":"LV5",
+                                    "reboundRatio": 0,
+                                    "canBeDefenceHalt": true,
+                                    "hitHaltTime": 0.0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false
+                                },
+                                "forceCameraShake": false,
+                                "cameraShake":
+                                {
+                                    "shakeType": "CustomVector",
+                                    "shakeRange": 0.36,
+                                    "shakeTime": 0.12,
+                                    "shakeDistance": 30,
+                                    "shakeDir":
+                                    {
+                                        "x": 0,
+                                        "y": -1,
+                                        "z": 0,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "failActions":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 0.8,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornByCollisionPoint",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                },
+                                "attackInfo":
+                                {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "ExtraAttack",
+                                    "attenuationTag":"ExtraAttack",
+                                    "attenuationGroup":"Avatar_Pole_ExtraAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%ExtraAttack",
+                                        "strikeType": "Spear",
+                                        "elementDurability": 25,
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "enBreak": 120,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV5",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": true,
+                                        "hitHaltTime": 0.0,
+                                        "hitHaltTimeScale": 0.01,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                    "cameraShake":
+                                    {
+                                        "shakeType": "CustomVector",
+                                        "shakeRange": 0.36,
+                                        "shakeTime": 0.12,
+                                        "shakeDistance": 30,
+                                        "shakeDir":
+                                        {
+                                            "x": 0,
+                                            "y": -1,
+                                            "z": 0,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+            "abilitySpecials":
+            {
+                "ExtraAttack": 0,
+            },
+
+        },
+    },
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ElementalArt_Bullet",
+            "onAdded":
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Caster",
+                    "targetPredicates":
+                    [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Shenhe_Constellation_4",
+                        },
+                    ],
+                    "successActions":
+                    [
+                        {
+                            "$type": "CopyGlobalValue",
+                            "srcTarget": "OriginOwner",
+                            "dstTarget": "Self",
+                            "srcKey": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "dstKey": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                        },
+                        {
+                            "$type": "SetGlobalValueToOverrideMap",
+                            "globalValueKey": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "overrideMapKey": "Buff_Talent_ExtraDMG_Ratio",
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_Level",
+                            "target": "OriginOwner",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "target": "OriginOwner",
+                            "value": 0,
+                        },
+                    ],
+                },
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "Shenhe_ElementalArt_Bullet_ElemBall_Handler",
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates":
+                    [
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": ["MonsterEquip"],
+                        },
+                    ],
+                    "successActions":
+                    [
+                        {
+                            "$type": "DamageByAttackValue",
+                            "target": "Target",
+                            "attackInfo":
+                            {
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackTag": "Elemental_Art",
+                                "attenuationTag":"Elemental_Art",
+                                "attenuationGroup":"Shenhe_ElementalArt_L_Bullet",
+                                "attackProperty":
+                                {
+                                    "damagePercentage": "%Elemental_Art_L_Damage",
+                                    "damagePercentageRatio": "%Buff_Talent_ExtraDMG_Ratio",
+                                    "strikeType": "Spear",
+                                    "elementType": "Ice",
+                                    "elementDurability": 25,
+                                    "attackType": "Melee",
+                                    "enBreak": 100,
+                                },
+                                "hitPattern":
+                                {
+                                    "onHitEffectName": "default",
+                                    "hitImpulseType":"LV3",
+                                    "reboundRatio": 0,
+                                    "canBeDefenceHalt": true,
+                                    "hitHaltTime": 0.0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false
+                                },
+                                "forceCameraShake": false,
+                                "cameraShake":
+                                {
+                                    "shakeType": "CustomVector",
+                                    "shakeRange": 0.36,
+                                    "shakeTime": 0.12,
+                                    "shakeDistance": 30,
+                                    "shakeDir":
+                                    {
+                                        "x": 0,
+                                        "y": -1,
+                                        "z": 0,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "failActions":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 0.8,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornByCollisionPoint",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                },
+                                "attackInfo":
+                                {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "Elemental_Art",
+                                    "attenuationTag":"Elemental_Art",
+                                    "attenuationGroup":"Shenhe_ElementalArt_L_Bullet",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%Elemental_Art_L_Damage",
+                                        "damagePercentageRatio": "%Buff_Talent_ExtraDMG_Ratio",
+                                        "strikeType": "Spear",
+                                        "elementType": "Ice",
+                                        "elementDurability": 25,
+                                        "attackType": "Melee",
+                                        "enBreak": 100,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV3",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": true,
+                                        "hitHaltTime": 0.0,
+                                        "hitHaltTimeScale": 0.01,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                    "cameraShake":
+                                    {
+                                        "shakeType": "CustomVector",
+                                        "shakeRange": 0.36,
+                                        "shakeTime": 0.12,
+                                        "shakeDistance": 30,
+                                        "shakeDir":
+                                        {
+                                            "x": 0,
+                                            "y": -1,
+                                            "z": 0,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_ElementalArt_Bullet_ElemBall_Handler":
+                {
+                    "stacking": "Unique",
+                    "onHittingOther": 
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Other",
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": ["Elemental_Art"],
+                                },
+                                {
+                                    "$type": "ByAttackType",
+                                    "attackType": "Melee",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": 
+                            [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "ElementalArt_Bullet_ElemBall",
+                                    "target": "Self",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "ElementalArt_Bullet_ElemBall":
+                {
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "GenerateElemBall",
+                            "configID": 2022,
+                            "baseEnergy": 9,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                                "bornRandom":
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange": 0.5,
+                                    "maxRandomRange": 1.5,
+                                },
+                            },
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "Elemental_Art_L_Damage": 0,
+                "Buff_Talent_ExtraDMG_Ratio": 0,
+            },
+
+        },
+    }, 
+    ////////////////////////////////////////////////////////////////
+    //
+    //  Avatar_Shenhe_ElementalArt
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ElementalArt_FX",
+            "abilityMixins":
+            [
+                {
+                    "$type": "SkillButtonHoldChargeMixin",  //长短按二择
+                    "skillID": 10632,
+                    "beforeStateIDs": ["Shenhe_ElementalArt_BS"],
+                    "chargeLoopStateIDs": ["Shenhe_ElementalArt_H"],
+                    "chargeLoopDurations": [ 3 ],
+                    "nextLoopTriggerID": "NextLoopTrigger",
+                    "endHoldTrigger": "EndHoldTrigger",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalArt_L","Shenhe_ElementalArt_L_AS"],
+                    "modifierName": "Shenhe_ElementalArt_L_Shadow",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalArt_L","Shenhe_ElementalArt_L_AS"],
+                    "modifierName": "Shenhe_ElementalArt_L_AttackFX",
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Rune_Charge",
+                },
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Shadow_Charge",
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_ElementalArt_L_Shadow":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Rune_Charge",
+                            "parameter": "Attack_L",
+                        },
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Shadow_Charge",
+                            "parameter": "Die",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Shadow_L",
+                        },
+                    ],
+                },
+                "Shenhe_ElementalArt_L_AttackFX":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_L",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_L_Trail",
+                        },
+                    ],
+                },
+            },
+        },
+    },
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ElementalArt_Attack_L",
+            "onAbilityStart":
+            [
+                {
+                    "$type": "AvatarSkillStart",
+                    "skillID": 10632,
+                    "cdRatio": 1,
+                },
+                {
+                    "$type": "RemoveUniqueModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "RemoveUniqueModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                        {
+                            "$type": "ByEntityIsAlive",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Extra_Buff",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Shenhe_PermanentSkill_2",
+                        },
+                        {
+                            "$type": "ByEntityIsAlive",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "TriggerBullet",
+                    "bulletID": 41063002,
+                    "campID": 1001,
+                    "campTargetType": "Enemy",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Shenhe_ElementalArt_L_Buff_Handler":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "duration": "%ElementalArt_L_Buff_Time",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_FX",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "Predicated",
+                            "target": "Caster",
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_Constellation_6",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Talent_Buff",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Self",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type": "ByTargetPositionToSelfPosition",
+                                    "compareType": "XYZ",
+                                    "value": 50,
+                                    "logic": "LesserOrEqual",
+                                    "target": "Caster",
+                                },
+                            ],
+                            "successActions":
+                            [
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_Handler",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_L_Buff_FX":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Buff_Loop",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_L_Buff":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageCountMixin",
+                            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                            "damageExtra": "%FIGHT_PROP_CUR_ATTACK*%Attack2ExtraRatio",
+                            "maxModifyCount": "%ElementalArt_L_Buff_Count",
+                            "successActions":
+                            [
+                                {
+                                    "$type": "TriggerAbility",
+                                    "abilityName": "Avatar_Shenhe_Constellation_4",
+                                    "target": "Caster",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "Shenhe_Constellation_4",
+                                        },
+                                    ],
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "maxCountActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_FX",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHitElement",
+                                    "element": "Ice",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_L_Talent_Buff":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageCountMixin",
+                            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                            "damageExtra": "%FIGHT_PROP_CUR_ATTACK*%Attack2ExtraRatio",
+                            "maxModifyCount": "%ElementalArt_L_Buff_Count",
+                            "countPredicates":
+                            [
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": ["FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "TriggerAbility",
+                                    "abilityName": "Avatar_Shenhe_Constellation_4",
+                                    "target": "Caster",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "Shenhe_Constellation_4",
+                                        },
+                                    ],
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "maxCountActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_FX",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHitElement",
+                                    "element": "Ice",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_L_Extra_Buff":
+                {
+                    "isUnique": true,
+                    "duration": "%ElementalArt_L_Extra_Buff_Time",
+                    "stacking": "RefreshUniqueDurability",
+                    "state": "AttackUp",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                            "damagePercentageRatio": "%ElementalArt_L_Extra_Buff_Ratio",
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "ElementalArt_L_Buff_Time": 0,
+                "ElementalArt_L_Buff_Count": 0,
+                "Attack2ExtraRatio": 0,
+                "ElementalArt_L_Extra_Buff_Time": 0,
+                "ElementalArt_L_Extra_Buff_Ratio": 0,
+            },
+        },
+    },
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ElementalArt_Attack_H",
+            "onAdded":
+            [
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "Shenhe_ElementalArt_ElemBall_Handler",
+                },
+            ],
+            "abilityMixins":
+            [
+                // {
+                //     "$type": "AttachToStateIDMixin",
+                //     "stateIDs": ["Shenhe_ElementalArt_H","Shenhe_ElementalArt_H_AS"],
+                //     "modifierName": "Shenhe_ElementalArt_H_Buff_GrandHandler",
+                // },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type": "AvatarSkillStart",
+                    "skillID": 10632,
+                    "cdRatio": 1.5,
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Caster",
+                    "targetPredicates":
+                    [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Shenhe_Constellation_4",
+                        },
+                    ],
+                    "successActions":
+                    [
+                        {
+                            "$type": "SetGlobalValueToOverrideMap",
+                            "globalValueKey": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "overrideMapKey": "Buff_Talent_ExtraDMG_Ratio",
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_Level",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "value": 0,
+                        },
+                    ],
+                },
+                {
+                    "$type": "SendEffectTrigger",
+                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Rune_Charge",
+                    "parameter": "Attack_H",
+                },
+                {
+                    "$type": "RemoveUniqueModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_L_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "RemoveUniqueModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_Handler",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                        {
+                            "$type": "ByEntityIsAlive",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Extra_Buff",
+                    "target": "AllPlayerAvatars",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetPositionToSelfPosition",
+                            "compareType": "XZ",
+                            "value": 40,
+                            "logic": "LesserOrEqual",
+                        },
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Shenhe_PermanentSkill_2",
+                        },
+                        {
+                            "$type": "ByEntityIsAlive",
+                        },
+                    ],
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_H_Attack",
+                    "born":
+                    {
+                        "$type": "ConfigBornBySelf",
+                        "offset":
+                        {
+                            "x": 0.0,
+                            "y": 0.0,
+                            "z": 1.5,
+                        },
+                    },
+                },
+                {
+                    "$type": "TriggerAttackEvent", 
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackSphere",
+                            "triggerType": "TriggerNoRepeat",
+                            "detectDirection": "CenterToSide",
+                            "radius": "%ElementalArt_H_Radius",
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0.8,
+                                    "z": 1.5,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "Elemental_Art",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%Elemental_Art_H_Damage",
+                                "damagePercentageRatio": "%Buff_Talent_ExtraDMG_Ratio",
+                                "elementType": "Ice",
+                                "elementDurability": 50,
+                                "strikeType": "Slash",
+                                "attackType": "Default",
+                                "enBreak": 200,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "default",
+                                "hitImpulseType": "LV2",
+                                "retreatType": "ByHitDirection",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "muteHitText": false,
+                            },
+                        },
+                    },
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_ElementalArt_ElemBall_Handler":
+                {
+                    "stacking": "Unique",
+                    "onHittingOther": 
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Other",
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": ["Elemental_Art"],
+                                },
+                                {
+                                    "$type": "ByAttackType",
+                                    "attackType": "Default",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": 
+                            [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "ElementalArt_ElemBall",
+                                    "target": "Self",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "ElementalArt_ElemBall":
+                {
+                    "duration": 0.5,
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "GenerateElemBall",
+                            "configID": 2022,
+                            "baseEnergy": 12,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                                "bornRandom":
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange": 0.5,
+                                    "maxRandomRange": 1.5,
+                                },
+                            },
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_H_Buff_Handler":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "duration": "%ElementalArt_H_Buff_Time",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_FX",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "Predicated",
+                            "target": "Caster",
+                            "targetPredicates": 
+                            [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_Constellation_6",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Talent_Buff",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "AttachModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Self",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type": "ByTargetPositionToSelfPosition",
+                                    "compareType": "XYZ",
+                                    "value": 50,
+                                    "logic": "LesserOrEqual",
+                                    "target": "Caster",
+                                },
+                            ],
+                            "successActions":
+                            [
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_Handler",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_H_Buff_FX":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalArt_Buff_Loop",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_H_Buff":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageCountMixin",
+                            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                            "damageExtra": "%FIGHT_PROP_CUR_ATTACK*%Attack2ExtraRatio",
+                            "maxModifyCount": "%ElementalArt_H_Buff_Count",
+                            "successActions":
+                            [
+                                {
+                                    "$type": "TriggerAbility",
+                                    "abilityName": "Avatar_Shenhe_Constellation_4",
+                                    "target": "Caster",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "Shenhe_Constellation_4",
+                                        },
+                                    ],
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "maxCountActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_FX",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHitElement",
+                                    "element": "Ice",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_H_Talent_Buff":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageCountMixin",
+                            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                            "damageExtra": "%FIGHT_PROP_CUR_ATTACK*%Attack2ExtraRatio",
+                            "maxModifyCount": "%ElementalArt_H_Buff_Count",
+                            "countPredicates":
+                            [
+                                {
+                                    "$type": "ByAttackTags",
+                                    "attackTags": ["FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "TriggerAbility",
+                                    "abilityName": "Avatar_Shenhe_Constellation_4",
+                                    "target": "Caster",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "Shenhe_Constellation_4",
+                                        },
+                                    ],
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "maxCountActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Shenhe_ElementalArt_H_Buff_FX",
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHitElement",
+                                    "element": "Ice",
+                                },
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalArt_H_Extra_Buff":
+                {
+                    "isUnique": true,
+                    "duration": "%ElementalArt_H_Extra_Buff_Time",
+                    "stacking": "RefreshUniqueDurability",
+                    "state": "AttackUp",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack"],
+                            "damagePercentageRatio": "%ElementalArt_H_Extra_Buff_Ratio",
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "ElementalArt_H_Radius": 4,
+                "Elemental_Art_H_Damage": 0,
+                "ElementalArt_H_Buff_Time": 0,
+                "ElementalArt_H_Buff_Count": 0,
+                "Attack2ExtraRatio": 0,
+                "ElementalArt_H_Extra_Buff_Time": 0,
+                "ElementalArt_H_Extra_Buff_Ratio": 0,
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //  Avatar_Shenhe_Constellation_4
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_Constellation_4",
+            "isDynamicAbility": true,
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type": "AddGlobalValue",
+                    "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_Level",
+                    "value": 1,
+                    "useLimitRange": true,
+                    "maxValue": "%Buff_Talent_Max_Level",
+                    "minValue": 0,
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "SetGlobalValueToOverrideMap",
+                    "globalValueKey": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_Level",
+                    "overrideMapKey": "Buff_Talent_Level",
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "SetGlobalValue",
+                    "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                    "value": "%Buff_Talent_Level*%Buff_Talent_Level_Ratio",
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_Shenhe_ElementalArt_BuffCount_Clear",
+                    "doOffStage": true,
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Shenhe_ElementalArt_BuffCount_Clear":
+                {
+                    "duration": 60,
+                    "elementType": "None",
+                    "elementDurability": 60,
+                    "isUnique": true,
+                    "stacking": "Refresh",
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_Level",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_ElementalArt_Buff_Talent_ExtraDMG_Ratio",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "Buff_Talent_Max_Level": 0,
+                "Buff_Talent_Level": 0,
+                "Buff_Talent_Level_Ratio": 0,
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //  SkillObj_Shenhe_Shadow
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SkillObj_Shenhe_Shadow",
+            "onAdded":
+            [
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_SkillObj_Shenhe_Shadow_LifeTime",
+                },
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "Shenhe_Shadow_FieldHandler",
+                },
+                {
+                    "$type": "AttachEffect",
+                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Alert",
+                },
+            ],
+            "onAbilityStart":
+            [
+            ],
+            "modifiers":
+            {
+                "UNIQUE_SkillObj_Shenhe_Shadow_LifeTime":
+                {
+                    "isUnique": true,
+                    "duration": "%Shenhe_Shadow_LifeTime",
+                    "stacking": "Unique",
+                    "thinkInterval": "%Shenhe_Shadow_LifeTime-1",
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Alert",
+                            "parameter": "Die",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "KillSelf",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_FieldHandler":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_DefenseDown",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_CritHurtUp",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_Constellation_2",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_IceAddHurtUp",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_PermanentSkill_1",
+                                },
+                            ],
+                        },
+                    ],
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_DefenseDown",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_CritHurtUp",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_Constellation_2",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Shenhe_Shadow_IceAddHurtUp",
+                            "otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance",
+                                "campBasedOn": "Self",
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Avatar"],
+                                },
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Shenhe_PermanentSkill_1",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_Shadow_DefenseDown":
+                {
+                    "isUnique": true,
+                    "duration": 0.6,
+                    "elementDurability": 0.6,
+                    "elementType": "None",
+                    "stacking": "Refresh",
+                    "state": "DefenseDown",
+                    "isLimitedProperties": true,
+                    "properties":
+                    {
+                        "Actor_PhysicalSubHurtDelta": "0-%Shenhe_Shadow_DefenseDown",
+                        "Actor_IceSubHurtDelta": "0-%Shenhe_Shadow_DefenseDown",
+                    },
+                },
+                "UNIQUE_Shenhe_Shadow_CritHurtUp":
+                {
+                    "isUnique": true,
+                    "duration": 0.6,
+                    "elementDurability": 0.6,
+                    "elementType": "None",
+                    "stacking": "RefreshUniqueDurability",
+                    "state": "AttackUp",
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "bonusCriticalHurt": 0.15,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                                {
+                                    "$type": "ByHitElement",
+                                    "element": "Ice",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_Shadow_IceAddHurtUp":
+                {
+                    "isUnique": true,
+                    "duration": 0.6,
+                    "elementDurability": 0.6,
+                    "elementType": "None",
+                    "stacking": "RefreshUniqueDurability",
+                    "state": "AttackUp",
+                    "isLimitedProperties": true,
+                    "properties":
+                    {
+                        "Actor_IceAddHurtDelta": "%Shenhe_Shadow_IceAddHurtUp",
+                    },
+                },
+            },
+            "abilitySpecials":
+            {
+                "Shenhe_Shadow_LifeTime": 0.5,
+                "Shenhe_Shadow_DefenseDown": 0,
+                "Shenhe_Shadow_IceAddHurtUp": 0,
+            },
+        },
+    },
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "SkillObj_Shenhe_Shadow_Attack",
+            "onAdded":
+            [
+                {
+                    "$type": "ApplyModifier",
+                    "modifierName": "Shenhe_Shadow_StartDelay",
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_Shadow_StartDelay":
+                {
+                    "stacking": "Unique",
+                    "duration": 1.2,
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Loop",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Loop":
+                {
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_00",
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                    ],
+                    "thinkInterval": 2,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_01",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_02",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                                    "value": 1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_03",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                                    "value": 2,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_04",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                                    "value": 3,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Shenhe_Shadow_Attack_Count",
+                                    "value": 4,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_00":
+                {
+                    "duration": 0.1,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_00",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_00_Trail",
+                        },
+                    ],
+                    "timeScale": "Level",
+                    "thinkInterval": 0.1,
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_00",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ShadowAttack_00",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_Delay",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_01":
+                {
+                    "duration": 0.1,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_01",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_01_Trail",
+                        },
+                    ],
+                    "timeScale": "Level",
+                    "thinkInterval": 0.1,
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_01",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ShadowAttack_01",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_Delay",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_02":
+                {
+                    "duration": 0.1,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_02",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_02_Trail",
+                        },
+                    ],
+                    "timeScale": "Level",
+                    "thinkInterval": 0.1,
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_02",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ShadowAttack_02",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_Delay",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_03":
+                {
+                    "duration": 0.1,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_03",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_03_Trail",
+                        },
+                    ],
+                    "timeScale": "Level",
+                    "thinkInterval": 0.1,
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_03",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ShadowAttack_03",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_Delay",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_04":
+                {
+                    "duration": 0.1,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_04",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_Shadow_Appear_04_Trail",
+                        },
+                    ],
+                    "timeScale": "Level",
+                    "thinkInterval": 0.1,
+                    "onThinkIntervalIsFixedUpdate": true,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_04",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ShadowAttack_04",
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_Shadow_Attack_Delay",
+                        },
+                    ],
+                },
+                "Shenhe_Shadow_Attack_Delay":
+                {
+                    "duration": 0.5,
+                    "stacking": "Multiple",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackCircle",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "height": 6,
+                                    "radius":7,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": -3.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                    "massiveAttackRatio":0.6
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "Elemental_Burst",
+                                    "attenuationTag": "Elemental_Burst",
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%Burst_ShadowDamage",
+                                        "elementType": "Ice",
+                                        "elementDurability": 25,
+                                        "enBreak": 50,
+                                        "strikeType": "Default",
+                                        "attackType":"Default",
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "hitHaltTime": 0.0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackCircle",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "height": 6,
+                                    "radius":7,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": -3.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                    "massiveAttackRatio":0.6
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "Elemental_Burst",
+                                    "attenuationTag": "Elemental_Burst",
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%Burst_ShadowDamage",
+                                        "elementType": "Ice",
+                                        "elementDurability": 25,
+                                        "enBreak": 50,
+                                        "strikeType": "Default",
+                                        "attackType":"Default",
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "hitHaltTime": 0.0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "Burst_ShadowDamage": 0,
+            },
+        },
+    },
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Shenhe_ElementalBurst
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_ElementalBurst",
+            "onAbilityStart":
+            [
+                {
+                    "$type": "AvatarSkillStart",
+                    "skillID": 10635,
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Shenhe_ElementalBurst_Start",
+                },
+            ],
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalBurst"],
+                    "modifierName": "Shenhe_ElementalBurst_CameraShot",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalBurst"],
+                    "modifierName": "Shenhe_ElementalBurst_End",
+                },
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "Shenhe_ElementalBurst",
+                    "modifierName": "Shenhe_ElementalBurst_ShadowHandler",
+                    "normalizeEnd": 0.6,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalBurst","Shenhe_ElementalBurst_AS"],
+                    "modifierName": "UNIQUE_Shenhe_ElementalBurst_Weather",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["Shenhe_ElementalBurst"],
+                    "modifierName": "Shenhe_ElementalBurst_State",
+                },
+            ],
+            "modifiers":
+            {
+                "Shenhe_ElementalBurst_Start":
+                {
+                    "duration": 1.0,
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "WindZoneMixin",
+                            "shapeName": "CircleR3",
+                            "strength" : -3,
+                            "attenuation" : 2,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                            },
+                            "targetType": "Enemy",
+                            "predicates":
+                            [
+                                {
+                                    "$type" : "ByEntityTypes",
+                                    "entityTypes" : ["Monster","Grass"],
+                                },
+                                {
+                                    "$type" : "ByTargetWeight", //WindZoneLevel = 2
+                                    "logic" : "LesserOrEqual",  //WindZoneLevel = 2
+                                    "weight" : 250.0,   //WindZoneLevel = 2
+                                },
+                            ],
+                        },
+                    ],
+                    "onAdded":
+                    [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "SkinOn",
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_Shadow_Cine",
+                        },
+                        {
+                            "$type": "Predicated",
+                            "target": "Self",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type": "ByAttackNotHitScene",
+                                    "checkWaterLayer": true,
+                                    "attackPattern":
+                                    {
+                                        "$type": "ConfigAttackCircle",
+                                        "triggerType": "TriggerNoRepeat",
+                                        "fanAngle": 360.0,
+                                        "radius": 1.0,
+                                        "height": 2.0,
+                                        "born":
+                                        {
+                                            "$type": "ConfigBornBySelf",
+                                            "offset":
+                                            {
+                                                "x": 0.0,
+                                                "y": 0.5,
+                                                "z": 0.0,
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    "$type": "ByAvatarInWaterDepth",
+                                    "compareType": "LessAndEqual",
+                                    "depth": 0.5,
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_00",
+                                },
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_02",
+                                },
+                                {
+                                    "$type": "RemoveModifier",
+                                    "modifierName": "Shenhe_ElementalBurst_FogFX",
+                                },
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "Shenhe_ElementalBurst_FogFX",
+                                },
+                                {
+                                    "$type": "AvatarEnterCameraShot",
+                                    "cameraMoveCfgPath": "Camera_Shenhe_ElementalBurst",
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_04",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": false,
+                            "blend" : false,
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_CameraShot":
+                {
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0,
+                                "shouldKeepForceRadius": true,
+                            },
+                        },
+                        {
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_End":
+                {
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_Attack",
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0.2,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackCircle",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "height": 5.4,
+                                    "fanAngle": 120.0,
+                                    "radius": 8.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset": 
+                                        {
+                                            "x": 0.0,
+                                            "y": -2.7,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                },
+                                "attackInfo":
+                                {
+                                    "canBeModifiedBy" : "OriginOwner",
+                                    "attackTag" : "Elemental_Burst",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%OpeningDamage",
+                                        "elementType": "Ice",
+                                        "attackType": "Melee",
+                                        "strikeType": "Blunt",
+                                        "elementDurability": 25,
+                                        "elementRank":1.5,
+                                        "enBreak": 250,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV3",
+                                        "retreatType": "ByHitDirection",
+                                        "canBeDefenceHalt" : false,
+                                        "hitHaltTime" : 0.0,
+                                        "hitHaltTimeScale" : 0.0,
+                                        "muteHitText" : false,
+                                    },
+                                }
+                            },
+                        },
+                        {
+                            "$type": "ActCameraRadialBlur",
+                            "cameraRadialBlur":
+                            {
+                                "power": 1,
+                                "blurTime": 0.4,
+                                "fadeTime": 0.2,
+                            },
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Shenhe_ElementalBurst_CameraEffect",
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_ShadowHandler":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type":"KillGadget",
+                            "gadgetInfo":
+                            {
+                                "$type":"SelectTargetsByChildren",
+                                "configID":41063003,
+                                "sortType":"Default",
+                            },
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "CreateGadget",
+                            "gadgetID": 41063003,
+                            "campID": 1001,
+                            "campTargetType": "Enemy",
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 2.0,
+                                },
+                                "onGround": true,
+                                // "alongGround": false,
+                                "onGroundIgnoreWater": true,
+                                "onGroundRaycastUpDist": 2,
+                            },
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_CameraEffect":
+                {
+                    "stacking": "Unique",
+                    "duration": 1,
+                    "modifierMixins":
+                    [
+                        {
+                            "$type":"TriggerPostProcessEffectMixin",
+                            "postEffectAssetName":"PostEffect_Avatar_Shenhe_ElementalBurst_ScreenEffect",
+                            "duration":1,
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_FogFX":
+                {
+                    "duration": 3.0,
+                    "onAdded":
+                    [
+                        {
+                            "$type": "DungeonFogEffects",
+                            "enable": true,
+                            "muteRemoteAction": true,
+                            "cameraFogEffectName": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_03",
+                            "localOffset":
+                            {
+                                "x":0,
+                                "y":0,
+                                "z":0,
+                            },
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "DungeonFogEffects",
+                            "cameraFogEffectName": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_03",
+                            "enable": false,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onAvatarOut":
+                    [
+                        {
+                            "$type": "DungeonFogEffects",
+                            "cameraFogEffectName": "Eff_Avatar_Lady_Pole_Shenhe_ElementalBurst_03",
+                            "enable": false,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Shenhe_ElementalBurst_Weather":
+                {
+                    "isUnique": true,
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "TriggerWeatherMixin",
+                            "type":"Skill",
+                            "weatherPattern": "Weather_Shenhe_ElementalBurst",
+                            "transDuration": 0.3,
+                            "duration": 1.55,
+                        },
+                    ],
+                },
+                "Shenhe_ElementalBurst_State":
+                {
+                    "state": "Invincible",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachAbilityStateResistance",
+                            "resistanceListID": 11002,
+                        },
+                        {
+                            "$type" : "ControlEmotion",
+                            "toggleBlink" : false,
+                            "toggleEmoSync" : false,
+                            "toggleEyeKey" : false,
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type" : "ControlEmotion",
+                            "doOffStage": true,
+                            "toggleBlink" : true,
+                            "toggleEmoSync" : true,
+                            "toggleEyeKey" : true,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Blank": {},
+            },
+            "abilitySpecials":
+            {
+                "OpeningDamage": 0,
+            },
+        },
+    },
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Ganyu_HideWeaponControl 控制武器的隐藏和出现
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_HideWeaponControl",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [   
+                        "Shenhe_ElementalArt_BS",
+                        "Shenhe_ElementalArt_L","Shenhe_ElementalArt_L_AS",
+                        "Shenhe_ElementalArt_H","Shenhe_ElementalArt_H_AS",
+                        "Shenhe_ElementalBurst","Shenhe_ElementalBurst_AS"
+                    ],
+                    "modifierName": "HideWeapon",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [   
+                        "Attack01",
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "ShowWeapon_Temp",
+                },
+            ],
+            "modifiers":
+            {
+                "HideWeapon":
+                {
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": false,
+                            "partNames": ["equip01", "equip02", "sheathPoint"],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": ["equip01", "equip02", "sheathPoint"],
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "DebugLog",
+                            "content": "!!!!!!!!!!!TriggerHideWeapon true!!!!!!!!!!",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "ShowWeapon_Temp":
+                {
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": ["equip01", "equip02", "sheathPoint"],
+                        },
+                    ],
+                },
+            },
+        },
+    },
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  固有技：普通攻击伤害变化/ 常驻
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_NormalAttack_DamageHandler",
+            "abilityMixins":
+            [
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK01"],
+                    "damagePercentage": "%Attack_01",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK02"],
+                    "damagePercentage": "%Attack_02",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK03"],
+                    "damagePercentage": "%Attack_03",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK04_01"],
+                    "damagePercentage": "%Attack_04_01",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK04_02"],
+                    "damagePercentage": "%Attack_04_02",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames":["ATK05"],
+                    "damagePercentage": "%Attack_05",
+                },
+            ],
+            "abilitySpecials":
+            {
+                "Attack_01": 0,
+                "Attack_02": 0,
+                "Attack_03": 0,
+                "Attack_04_01": 0,
+                "Attack_04_02": 0,
+                "Attack_05": 0,
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //  空中攻击  常驻
+    // 
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Shenhe_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5063010,
+                    "flySkillID": 5063010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            /*                          "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.3,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                            },*/
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_01_Normal",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_02_Normal",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_BS_Material":
+                {
+                    "duration":0.53,
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_BS_Normal",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "ActCameraRadialBlur",
+                            "cameraRadialBlur":
+                            {
+                                "power": 0.3,
+                                "blurTime": 0.3,
+                                "fadeTime": 0.15,
+                            },
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                        "elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Spear",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_01":
+                {
+                    "onAdded":[
+                        {
+                          "$type": "ClearGlobalValue",
+                          "key": "_ABILITY_FallingAttack_Altitude",
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "FallingAnthem_FallingDamageImmune_02",
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                    "onAdded":[
+                        {
+                            "$type": "SetGlobalValueToOverrideMap",
+                            "globalValueKey": "_ABILITY_FallingAttack_Altitude",
+                            "overrideMapKey": "FallingAnthem_FallingDamageRatio",
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "FallingAnthem_FallingDamageImmune_03",
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Loop_01_Normal",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Loop_02_Normal",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        /*                      {
+                            "$type": "DebugLog",
+                            "content": "FallingAnthem Height Set True!",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 3.0,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },*/
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                        /*                      {
+                            "$type": "DebugLog",
+                            "content": "FallingAnthem Height Reset!",
+                        },*/
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                    /*                  "onRemoved":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces": ["RushMoveType"],
+                        },
+                    ],*/
+                },
+            },
+            "abilitySpecials":
+            {
+                "FallingAnthem_Normal_Loop_Damage": 0,
+                "FallingAnthem_Normal_Rank_1_Damage": 0,
+                "FallingAnthem_Normal_Rank_2_Damage": 0,
+
+                "FallingAnthem_Altitude_Lv0": 20,
+                "FallingAnthem_Altitude_Lv1": 40,
+                "FallingAnthem_Altitude_Lv2": 60,
+                "FallingAnthem_Altitude_Lv3": 100,
+                "FallingAnthem_Altitude_Lv4": 200,
+
+                "FallingAnthem_FallingDamageRatio_Lv0": -1,
+                "FallingAnthem_FallingDamageRatio_Lv1": -1,
+                "FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+                "FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+                "FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+                "FallingAnthem_FallingDamageRatio": 0,
+            },
+        },
+    },
+]

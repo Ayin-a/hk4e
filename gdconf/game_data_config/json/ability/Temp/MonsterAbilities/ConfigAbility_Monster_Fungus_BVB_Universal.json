@@ -1,0 +1,2271 @@
+[
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 蕈兽元素爆发控制 瞬发实现   最后采用的方案
+			"abilityName": "Fungus_BVB_Universal_ElementalBlast_Immediately",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToGlobalValueMixin",
+					"globalValueKey": "SGV_Fungus_StartBurst_Immediately",
+					// 0 为未触发的状态
+					// 1 为触发标记 由TD控制
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps": ["Dummy1", "Reset_GV_State_1"]
+				}
+			],
+			"modifiers": {
+				"Dummy1": {},
+				"Reset_GV_State_1": {
+					"duration": 0.5,
+					"onAdded": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "BurstImmediately"
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_FungusFight_UnionBurstGlitter"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 蕈兽元素爆发控制  等待上一个动作结束后的实现  已弃用
+			"abilityName": "Fungus_BVB_Universal_ElementalBlast_WaitForStandby",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToGlobalValueMixin",
+					"globalValueKey": "SGV_Fungus_StartBurst_WaitForStandby",
+					// 0 为未触发的状态
+					// 1 为触发标记 由TD控制
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps": ["Dummy2", "Reset_GV_State_2"]
+				}
+			],
+			"modifiers": {
+				"Dummy2": {},
+				"Reset_GV_State_2": {
+					"duration": 0.5,
+					"onAdded": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "BurstWaitForStandby"
+							// 这里会额外需要StateID控制的状态机Bool
+							// 释放大招需要满足两个条件：Standby的状态机Bool，以及这个Trigger
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 旋转蕈兽常规移动的特效表现
+			"abilityName": "Monster_Fungus_Trois_RotationVFX",
+			"abilityMixins": [
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Born", "NormalIdle", "NormalMove"],
+					"modifierName": "Rotating_VFX"
+				}
+			],
+			"modifiers": {
+				"Rotating_VFX": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Fungus_Trois_RotateIdle"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 飞行蕈兽系列的通用姿态与旋转管理技能
+			"abilityName": "Monster_Fungus_Un_FlyStateManager",
+			"abilityMixins": [
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Jump_BS", "Launch_Loop"],
+					"modifierName": "JumpLaunch"
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Jump_AS", "Drop_Loop", "Land_AS"],
+					"modifierName": "JumpDrop"
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["HitThrow", "HitThrowDrop", "ReturnToBorn_BS"],
+					"modifierName": "JumpLand"
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["JumpProcess"],
+					"startNormalizedTime": 0,
+					"endNormalizedTime": 999.0,
+					"angularSpeed": 180
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["NormalFly"],
+					"startNormalizedTime": 0,
+					"endNormalizedTime": 999.0,
+					"angularSpeed": 180
+				}
+			],
+			"modifiers": {
+				"JumpLaunch": {
+					"onAdded": [
+						{
+							"$type": "SetPoseBool",
+							"boolID": "AirTag",
+							"value": true
+						}
+					]
+				},
+				"JumpDrop": {
+					"modifierMixins": [
+						{
+							"$type": "MonsterLandMixin",
+							"dropTime": 2.0,
+							"onMotionChange": [
+								{
+									"$type": "SetPoseBool",
+									"boolID": "AirTag",
+									"value": false
+								}
+							]
+						}
+					]
+				},
+				"JumpLand": {
+					"onAdded": [
+						{
+							"$type": "SetPoseBool",
+							"boolID": "AirTag",
+							"value": false
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 每个蕈兽都要有，用于标记自己的大招状态，使自己在必杀期间不会被水泡困住
+			"abilityName": "Fungus_BVB_Un_Water_Bubble_Reject",
+			"abilityMixins": [
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["UnionBurst"],
+					"modifierName": "Bubble_Reject_Mark"
+				}
+			],
+			"modifiers": {
+				"Bubble_Reject_Mark": {
+					"onAdded": [
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceBuffDebuffs": [
+								"Struggle",
+								"ElementFreeze",
+								"ElementFrozen"
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 最爱的蕈兽哟！ 在首次放必杀和残血的时候会发送任务消息
+			"abilityName": "Fungus_BVB_MyFavoriteFungus",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"abilityMixins": [
+				{
+					"$type": "DoActionByStateIDMixin",
+					"stateIDs": ["UnionBurst"],
+					"enterActions": [
+						// 发放大招的消息
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 如果没有发过消息 且 没有消息在播
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnUnionBurst_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnUnionBurst"
+								},
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 4
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								}
+							]
+						}
+					]
+				},
+				{
+					"$type": "AttachModifierToHPPercentMixin",
+					// 数字表示触发的血线
+					"valueSteps": [0.4],
+					"modifierNameSteps": ["HP_Dummy", "SendHalfHPMessage"]
+				}
+			],
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Property_Fix"
+				}
+			],
+			"modifiers": {
+				"Property_Fix": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				},
+				"HP_Dummy": {},
+				"SendHalfHPMessage": {
+					"onAdded": [
+						// 如果没有发过消息  注册事件逻辑到Team上
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHalfHP_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "OnHalfHP_Register"
+								}
+							]
+						}
+					]
+				},
+				// 标记，有这个Modifier时，表示语音正在播放
+				"Voice_In_Playing": {
+					"duration": 5,
+					"stacking": "Refresh",
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 1
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 0
+						}
+					]
+				},
+				// 半血事件：排队
+				"OnHalfHP_Register": {
+					"stacking": "Unique",
+					"thinkInterval": 0.4,
+					"onThinkInterval": [
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 目前没有消息内容在占用
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHalfHP_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnHalfHP"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnHalfHP"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnHalfHP"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnHalfHP"
+								},
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 3
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								},
+								{
+									"$type": "RemoveModifier",
+									"target": "Team",
+									"modifierName": "OnHalfHP_Register"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 主角的飞行水蕈兽 战斗中的词缀消息
+			"abilityName": "Fungus_BVB_Hero",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "DoActionByStateIDMixin",
+					"stateIDs": ["UnionBurst"],
+					"enterActions": [
+						// 发放大招的消息
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 如果没有发过消息 且 没有语音在播放
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroUnionBurst_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								// 发送一组消息，目标任务有区别，不属于目标任务的消息将会被忽略
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnHeroUnionBurst"
+								},
+								// {
+								// 	"$type": "SetGlobalValue",
+								// 	"target": "Team",
+								// 	"key": "SGV_OnHeroUnionBurst_Sent_Mark_",
+								// 	"value": 1
+								// },
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 1
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								}
+							]
+						}
+					]
+				},
+				{
+					"$type": "AttachModifierToHPPercentMixin",
+					// 数字表示触发的血线
+					"valueSteps": [0.4],
+					"modifierNameSteps": ["HP_Dummy", "SendHeroInCrisisMessage"]
+				}
+			],
+			"modifiers": {
+				"HP_Dummy": {},
+				// 标记，有这个Modifier时，表示语音正在播放
+				"Voice_In_Playing": {
+					"duration": 5,
+					"stacking": "Refresh",
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 1
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 0
+						}
+					]
+				},
+				"SendHeroInCrisisMessage": {
+					"onAdded": [
+						// 如果没有发过消息  注册事件逻辑到Team上
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroInCrisis_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "HeroInCrisis_Register"
+								}
+							]
+						}
+					]
+				},
+				// 队友半血事件：排队
+				"HeroInCrisis_Register": {
+					"stacking": "Unique",
+					"thinkInterval": 0.4,
+					"onThinkInterval": [
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 目前没有消息内容在占用
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroInCrisis_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnHeroInCrisis"
+								},
+								// {
+								// 	"$type": "SetGlobalValue",
+								// 	"target": "Team",
+								// 	"key": "SGV_OnHeroInCrisis_Sent_Mark_",
+								// 	"value": 1
+								// },
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 2
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								},
+								{
+									"$type": "RemoveModifier",
+									"target": "Team",
+									"modifierName": "HeroInCrisis_Register"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 主角的飞行水蕈兽 最后一战，语音血线上调到70%
+			"abilityName": "Fungus_BVB_Hero_FinalBattle",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "DoActionByStateIDMixin",
+					"stateIDs": ["UnionBurst"],
+					"enterActions": [
+						// 发放大招的消息
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 如果没有发过消息 且 没有语音在播放
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroUnionBurst_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								// 发送一组消息，目标任务有区别，不属于目标任务的消息将会被忽略
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnHeroUnionBurst"
+								},
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 1
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								}
+							]
+						}
+					]
+				},
+				{
+					"$type": "AttachModifierToHPPercentMixin",
+					// 数字表示触发的血线
+					"valueSteps": [0.7],
+					"modifierNameSteps": ["HP_Dummy", "SendHeroInCrisisMessage"]
+				}
+			],
+			"modifiers": {
+				"HP_Dummy": {},
+				// 标记，有这个Modifier时，表示语音正在播放
+				"Voice_In_Playing": {
+					"duration": 5,
+					"stacking": "Refresh",
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 1
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_Voice_In_Playing_",
+							"value": 0
+						}
+					]
+				},
+				"SendHeroInCrisisMessage": {
+					"onAdded": [
+						// 如果没有发过消息  注册事件逻辑到Team上
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroInCrisis_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "HeroInCrisis_Register"
+								}
+							]
+						}
+					]
+				},
+				// 队友半血事件：排队
+				"HeroInCrisis_Register": {
+					"stacking": "Unique",
+					"thinkInterval": 0.4,
+					"onThinkInterval": [
+						{
+							"$type": "Predicated",
+							"target": "Team",
+							// 目前没有消息内容在占用
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_Voice_In_Playing_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "SGV_OnHeroInCrisis_Sent_Mark_",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							],
+							"successActions": [
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40082",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40083",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40084",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "CallLuaTask",
+									"targetAlias": "40085",
+									"valueString": "OnHeroInCrisis"
+								},
+								{
+									"$type": "ServerLuaCall",
+									"funcName": "SLC_Sent_Mark",
+									"luaCallType": "SpecificGroup",
+									"CallParamList": [247103001],
+									"paramNum": 1,
+									"param1": 2
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "Voice_In_Playing"
+								},
+								{
+									"$type": "RemoveModifier",
+									"target": "Team",
+									"modifierName": "HeroInCrisis_Register"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	// //
+	// db   db d8888b.      d88888b d888888b db    db
+	// 88   88 88  `8D      88'       `88'   `8b  d8'
+	// 88ooo88 88oodD'      88ooo      88     `8bd8'
+	// 88~~~88 88~~~        88~~~      88     .dPYb.
+	// 88   88 88           88        .88.   .8P  Y8.
+	// YP   YP 88           YP      Y888888P YP    YP
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_PlayerTeam",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_PlayerTeam"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_PlayerTeam": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_1",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_1"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_1": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_2",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_2"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_2": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_3",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_3"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_3": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_4",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_4"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_4": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_5",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_5"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_5": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀，体力上限增加效果
+			"abilityName": "Affix_FungusFighter_HPFix_Level_6",
+			"abilitySpecials": {
+				"hp_ratio": 0
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FungusFighter_HPFix_6"
+				}
+			],
+			"modifiers": {
+				"FungusFighter_HPFix_6": {
+					"properties": {
+						"Actor_MaxHPRatio": "%hp_ratio"
+					}
+				}
+			}
+		}
+	},
+	////
+	//       .d8b.  d88888b d88888b d888888b db    db
+	//      d8' `8b 88'     88'       `88'   `8b  d8'
+	//      88ooo88 88ooo   88ooo      88     `8bd8'
+	//      88~~~88 88~~~   88~~~      88     .dPYb.
+	//      88   88 88      88        .88.   .8P  Y8.
+	//      YP   YP YP      YP      Y888888P YP    YP
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 词缀  周期性给12m以内的敌方目标挂上类阴燃之火效果
+			"abilityName": "Affix_FungusFighter_Burning",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"burning_lasing_time": 12, // 燃烧效果的持续时间
+				"burning_tick_interval": 20, // 周期性给范围内上阴燃之火的间隔时间
+				"burning_damage_ratio": 0, // 燃烧伤害的倍率 (AbilityOverride)
+				"burning_element_durability": 50, // 燃烧Debuff的元素含量
+				"element_level_co": 0 // 环境伤害倍率 (Ability onAdded时覆盖)
+			},
+			"onAdded": [
+				// 设置环境伤害倍率
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"type": "ElementLevelCo",
+					"key": "element_level_co"
+				},
+				// 逻辑核心
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Affix_Burning_Handler"
+				}
+			],
+			"modifiers": {
+				// 怪物身上的词缀逻辑处理
+				"Affix_Burning_Handler": {
+					// 光环特效表现
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_CommonSkill_FootCircle_Fire"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_FungusFight_Affix_BurningArea"
+						}
+					],
+					// 周期效果
+					"thinkInterval": "%burning_tick_interval",
+					"onThinkInterval": [
+						{
+							"$type": "ApplyModifier",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"campBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"centerBasedOn": "Self",
+								"shapeName": "CircleR12"
+							},
+							"modifierName": "Affix_Burning_Damage",
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster", "Partner"]
+								}
+							]
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_FungusFight_Affix_BurningImpulse"
+						}
+					]
+				},
+				// 给玩家方上的伤害效果的Modifier
+				"Affix_Burning_Damage": {
+					"duration": "%burning_lasing_time",
+					"elementType": "Fire",
+					"elementDurability": "%burning_element_durability",
+					"stacking": "Refresh",
+					"state": "ElementFire",
+					"thinkInterval": 1,
+					"onThinkInterval": [
+						{
+							"$type": "DamageByAttackValue",
+							"target": "Self",
+							"attacker": "Caster",
+							"attackInfo": {
+								"attackProperty": {
+									"elementType": "Fire",
+									"elementDurability": 0,
+									"ignoreAttackerProperty": true,
+									"damageExtra": "%burning_damage_ratio*%element_level_co",
+									"enBreak": 0
+								},
+								"hitPattern": {
+									"hitImpulseType": "LV1"
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// desc@ 低身位的冰冲击波
+			"abilityName": "Affix_FungusFighter_LowImpulse_Ice",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"element_level_co": 0, // 环境伤害倍率 (AbilityOverride)
+				"damage_ratio": 0 // 伤害倍率
+			},
+			"onAdded": [
+				// 特效展示
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "IceRing_VFX_Display"
+				},
+				// 复写元素反应伤害倍率
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"key": "element_level_co",
+					"type": "ElementLevelCo"
+				}
+			],
+			"abilityMixins": [
+				// 对应逻辑仅在怪物入战时才会生效
+				{
+					"$type": "AttachToAIAlertnessMixin",
+					"alertness": [1, 2],
+					"modifierName": "Main_MonsterHandler"
+				}
+			],
+			"modifiers": {
+				"IceRing_VFX_Display": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_FungusFight_Affix_LowImpulse_FootCircle"
+						}
+					],
+					"onKill": [
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "IceRing_VFX_Display"
+						}
+					]
+				},
+				"Main_MonsterHandler": {
+					"thinkInterval": 15,
+					"onThinkInterval": [
+						// 周期性发出攻击
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "LowImpulse_Ice_Attack"
+						}
+					]
+				},
+				"LowImpulse_Ice_Attack": {
+					"duration": 4,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_GeneralSkill_LowImpulse_Ice_Alert"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_GeneralSkill_LowImpulse_Ice_Area"
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_GeneralSkill_LowImpulse_Ice_DamageWave",
+							"predicates": [
+								{
+									"$type": "ByTargetHPRatio",
+									"target": "Self",
+									"HPRatio": 0,
+									"logic": "Greater"
+								}
+							]
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 1.1,
+									"fanAngle": 360.0,
+									"radius": 15.0,
+									"born": {
+										"$type": "ConfigBornBySelf"
+									}
+								},
+								"attackInfo": {
+									"attackProperty": {
+										"damagePercentage": 0,
+										"damageExtra": "%element_level_co*%damage_ratio",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Ice",
+										"elementDurability": 25,
+										"enBreak": 80,
+										"ignoreAttackerProperty": true
+									},
+									"hitPattern": {
+										"hitImpulseType": "LV2"
+									}
+								}
+							},
+							"predicates": [
+								{
+									"$type": "ByTargetHPRatio",
+									"target": "Self",
+									"HPRatio": 0,
+									"logic": "Greater"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// desc@ 元素增幅器 火元素版本
+			"abilityName": "Affix_FungusFighter_AmplifierApplier_Fire",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"max_element_durability": 150, // 最大元素附着量
+				"element_durability_refresh": 50, // 刷新时，如果不存在，元素量增加量
+				"refresh_interval": 15, // 元素增幅器刷新间隔
+				"resistance_ratio": 0.25, // 抗性提高量
+				"attack_ratio": 0.3 // 强化下攻击提高量
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "MonsterPowerUp_Amplifier_Fire_Host_Latency"
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_TowerDefense_SpecialAbility"
+				}
+			],
+			"modifiers": {
+				"MonsterPowerUp_Amplifier_Fire_Host_Latency": {
+					"duration": 1.0,
+					"onRemoved": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Fire_Host",
+							"predicates": [
+								{
+									"$type": "ByEntityIsAlive",
+									"target": "Caster"
+								}
+							]
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Fire_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_FIRE_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Fire"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Fire",
+									"modifierName": "MonsterPowerUp_Amplifier_Fire_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Fire_Host": {
+					"thinkInterval": "%refresh_interval",
+					"onThinkInterval": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Fire_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_FIRE_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Fire"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Fire",
+									"modifierName": "MonsterPowerUp_Amplifier_Fire_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Fire_Slave": {
+					"state": "AttackUp",
+					"elementType": "Fire",
+					"elementDurability": "%max_element_durability",
+					"properties": {
+						"Actor_AttackRatio": "%attack_ratio",
+						"Actor_EndureDelta": 0.01,
+						"Actor_PhysicalSubHurtDelta": "%resistance_ratio",
+						"Actor_FireSubHurtDelta": 1,
+						"Actor_ElecSubHurtDelta": "%resistance_ratio",
+						"Actor_IceSubHurtDelta": "%resistance_ratio",
+						"Actor_WaterSubHurtDelta": "%resistance_ratio",
+						"Actor_GrassSubHurtDelta": "%resistance_ratio",
+						"Actor_WindSubHurtDelta": "%resistance_ratio",
+						"Actor_RockSubHurtDelta": "%resistance_ratio"
+					},
+					"modifierMixins": [
+						{
+							"$type": "ElementOuterGlowEffectMixin"
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"value": 1,
+							"key": "_AMPLIFIER_FIRE_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "AddGlobalValue",
+							"value": -2,
+							"key": "_AMPLIFIER_COOLDOWN",
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": -2
+						},
+						{
+							"$type": "AddGlobalValue",
+							"value": -1,
+							"key": "_AMPLIFIER_FIRE_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// desc@ 元素增幅器 冰元素版本
+			"abilityName": "Affix_FungusFighter_AmplifierApplier_Ice",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"max_element_durability": 150, // 最大元素附着量
+				"element_durability_refresh": 50, // 刷新时，如果不存在，元素量增加量
+				"refresh_interval": 15, // 元素增幅器刷新间隔
+				"resistance_ratio": 0.25, // 抗性提高量
+				"defence_ratio": 0.85 // 强化下防御提高率
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "MonsterPowerUp_Amplifier_Ice_Host_Latency"
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_TowerDefense_SpecialAbility"
+				}
+			],
+			"modifiers": {
+				"MonsterPowerUp_Amplifier_Ice_Host_Latency": {
+					"duration": 1.0,
+					"onRemoved": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Ice_Host",
+							"predicates": [
+								{
+									"$type": "ByEntityIsAlive",
+									"target": "Caster"
+								}
+							]
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Ice_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_ICE_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Frozen"
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Ice"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Ice",
+									"modifierName": "MonsterPowerUp_Amplifier_Ice_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Ice_Host": {
+					"thinkInterval": "%refresh_interval",
+					"onThinkInterval": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Ice_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_ICE_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Frozen"
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Ice"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Ice",
+									"modifierName": "MonsterPowerUp_Amplifier_Ice_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Ice_Slave": {
+					"state": "DefenseUp",
+					"elementType": "Ice",
+					"elementDurability": "%max_element_durability",
+					"properties": {
+						"Actor_DefenceRatio": "%defence_ratio",
+						"Actor_EndureDelta": 0.01,
+						"Actor_PhysicalSubHurtDelta": "%resistance_ratio",
+						"Actor_FireSubHurtDelta": "%resistance_ratio",
+						"Actor_ElecSubHurtDelta": "%resistance_ratio",
+						"Actor_IceSubHurtDelta": 1,
+						"Actor_WaterSubHurtDelta": "%resistance_ratio",
+						"Actor_GrassSubHurtDelta": "%resistance_ratio",
+						"Actor_WindSubHurtDelta": "%resistance_ratio",
+						"Actor_RockSubHurtDelta": "%resistance_ratio"
+					},
+					"modifierMixins": [
+						{
+							"$type": "ElementOuterGlowEffectMixin"
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"value": 1,
+							"key": "_AMPLIFIER_ICE_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "AddGlobalValue",
+							"value": -2,
+							"key": "_AMPLIFIER_COOLDOWN",
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": -2
+						},
+						{
+							"$type": "AddGlobalValue",
+							"value": -1,
+							"key": "_AMPLIFIER_ICE_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// desc@ 元素增幅器 雷元素版本
+			"abilityName": "Affix_FungusFighter_AmplifierApplier_Electric",
+			"isDynamicAbility": true,
+			"abilitySpecials": {
+				"max_element_durability": 150, // 最大元素附着量
+				"element_durability_refresh": 50, // 刷新时，如果不存在，元素量增加量
+				"refresh_interval": 15, // 元素增幅器刷新间隔
+				"resistance_ratio": 0.25 // 抗性提高量
+			},
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "MonsterPowerUp_Amplifier_Electric_Host_Latency"
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_TowerDefense_SpecialAbility"
+				}
+			],
+			"modifiers": {
+				"MonsterPowerUp_Amplifier_Electric_Host_Latency": {
+					"duration": 1,
+					"onRemoved": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Electric_Host",
+							"predicates": [
+								{
+									"$type": "ByEntityIsAlive",
+									"target": "Caster"
+								}
+							]
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Electric_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_ELEC_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Electric"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Electric",
+									"modifierName": "MonsterPowerUp_Amplifier_Electric_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Electric_Host": {
+					"thinkInterval": "%refresh_interval",
+					"onThinkInterval": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MonsterPowerUp_Wave"
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "MonsterPowerUp_Amplifier_Electric_Slave",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_ELEC_SLAVE",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AMPLIFIER_COOLDOWN",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByAny",
+									"predicates": [
+										{
+											"$type": "ByNot",
+											"predicates": [
+												{
+													"$type": "ByHasFeatureTag",
+													"featureTagIDs": [3005]
+												}
+											]
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Electric"
+										}
+									]
+								}
+							]
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR12",
+								"centerBasedOn": "Self",
+								"campTargetType": "SelfCamp",
+								"campBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"target": "Target",
+									"value": "%element_durability_refresh",
+									"elementType": "Electric",
+									"modifierName": "MonsterPowerUp_Amplifier_Electric_Slave",
+									"useLimitRange": true,
+									"maxValue": "%max_element_durability",
+									"minValue": 0.0
+								},
+								{
+									"$type": "AddGlobalValue",
+									"target": "Target",
+									"value": 1,
+									"key": "_AMPLIFIER_COOLDOWN",
+									"useLimitRange": true,
+									"maxValue": 0,
+									"minValue": -2
+								}
+							]
+						}
+					]
+				},
+				"MonsterPowerUp_Amplifier_Electric_Slave": {
+					"state": "SpeedUp",
+					"elementType": "Electric",
+					"elementDurability": "%max_element_durability",
+					"properties": {
+						"Animator_MoveSpeedRatio": 0.1,
+						"Actor_EndureDelta": 0.01,
+						"Actor_PhysicalSubHurtDelta": "%resistance_ratio",
+						"Actor_FireSubHurtDelta": "%resistance_ratio",
+						"Actor_ElecSubHurtDelta": 1,
+						"Actor_IceSubHurtDelta": "%resistance_ratio",
+						"Actor_WaterSubHurtDelta": "%resistance_ratio",
+						"Actor_GrassSubHurtDelta": "%resistance_ratio",
+						"Actor_WindSubHurtDelta": "%resistance_ratio",
+						"Actor_RockSubHurtDelta": "%resistance_ratio"
+					},
+					"modifierMixins": [
+						{
+							"$type": "ElementOuterGlowEffectMixin"
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "SetAISkillCDMultiplier",
+							"multiplier": 0.5
+						},
+						{
+							"$type": "AddGlobalValue",
+							"value": 1,
+							"key": "_AMPLIFIER_ELEC_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "AddGlobalValue",
+							"value": -2,
+							"key": "_AMPLIFIER_COOLDOWN",
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": -2
+						},
+						{
+							"$type": "SetAISkillCDMultiplier",
+							"multiplier": 1
+						},
+						{
+							"$type": "AddGlobalValue",
+							"value": -1,
+							"key": "_AMPLIFIER_ELEC_SLAVE",
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 雷环，大于一定范围的蕈兽将会周期受到雷击
+			"abilityName": "Affix_FungusFighter_ElectricRing",
+			"abilitySpecials": {
+				"element_level_co": 0, // 环境伤害倍率 (AbilityOverride)
+				"damage_ratio": 0 // 伤害倍率
+			},
+			"abilityMixins": [
+				{
+					"$type": "AttachToAIAlertnessMixin",
+					"alertness": [2],
+					"modifierName": "AffixMain_MonsterHandler"
+				}
+			],
+			"onAdded": [
+				// 复写元素反应伤害倍率
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"key": "element_level_co",
+					"type": "ElementLevelCo"
+				}
+			],
+			"modifiers": {
+				"AffixMain_MonsterHandler": {
+					// 怪物自己身上的雷环特效表现
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_GeneralSkill_ElecDamage_ThunderArea_FootCircle"
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_FungusFight_Affix_ThunderArea_InnerCircle"
+						}
+					],
+					// 周期性扫描 6 ~ 20米范围内的目标，添加一个延迟2秒造成伤害的Modifier
+					"thinkInterval": 0.4,
+					"onThinkInterval": [
+						// 挂上雷击的倒数Modifier
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR20H6", // 最大范围为20米
+								"campBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"centerBasedOn": "Self"
+							},
+							"targetPredicates": [
+								// 此处做处理，使距离过近的目标不算数
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"logic": "Greater",
+									// "target": "Other", // 先看一下默认参数的效果
+									"compareType": "XZ",
+									"value": 6
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Partner"] // 可以保证是友方蕈兽，所以这里直接使用Partner进行判断
+								}
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "ThunderStrike_Countdown",
+									"target": "Other"
+								}
+							]
+						},
+						// 倒数Modifier移除效果
+						{
+							"$type": "Predicated",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6H5", // 范围小于6米时，移除Modifier
+								"campBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"centerBasedOn": "Self"
+							},
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Partner"] // 可以保证是友方蕈兽，所以这里直接使用Partner进行判断
+								}
+							],
+							"successActions": [
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "ThunderStrike_Countdown",
+									"target": "Other"
+								}
+							]
+						}
+					]
+				},
+				// 雷击倒计时与伤害效果
+				"ThunderStrike_Countdown": {
+					"stacking": "Unique",
+					"duration": 2.5,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_ThunderStorm_Gathering"
+						}
+					],
+					// 之前用GV做标记的方式稍微有一点笨重，这里试着用一种比较Tricky的方法来实现：
+					// 让Duration比这个Interval稍长一点，这样，onThinkInterval触发后必定可以正常移除自身
+					// 并且这个Modifier在被外界移除的时候，不会触发不应该触发的事件。
+					"thinkInterval": 2,
+					"onThinkInterval": [
+						{
+							"$type": "DamageByAttackValue",
+							"attacker": "Caster",
+							"target": "Self",
+							"attackInfo": {
+								"attackProperty": {
+									"ignoreAttackerProperty": true,
+									"damageExtra": "%element_level_co*%damage_ratio",
+									"elementType": "Electric",
+									"elementDurability": 25,
+									"enBreak": 30
+								},
+								"hitPattern": {
+									"hitImpulseType": "LV1"
+								}
+							}
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_ThunderStorm_Blast"
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "ThunderStrike_Countdown"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 攻击到蕈兽之后，蕈兽将会在一定时间内持续受到伤害，再次受击会刷新持续时间
+			"abilityName": "Affix_FungusFighter_FireBleeding",
+			"abilitySpecials": {
+				"element_level_co": 0, // 环境伤害倍率 (AbilityOverride)
+				"damage_ratio": 0 // 伤害倍率
+			},
+			"onAdded": [
+				// 设置环境伤害倍率
+				{
+					"$type": "SetSystemValueToOverrideMap",
+					"type": "ElementLevelCo",
+					"key": "element_level_co"
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "AffixMain_MonsterHandler"
+				}
+			],
+			"modifiers": {
+				"AffixMain_MonsterHandler": {
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Partner"] // 同，这个只会对蕈兽生效
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater"
+								},
+								// 这一步是防止燃烧造成的伤害反复刷新自身
+								{
+									"$type": "ByNot",
+									"predicates": [
+										{
+											"$type": "ByAttackTags",
+											"attackTags": ["Affix_Burning_Damage"]
+										}
+									]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"target": "Target",
+									"modifierName": "Burning_Damage_Effect"
+								}
+							]
+						}
+					]
+				},
+				// 持续火焰伤害的效果
+				"Burning_Damage_Effect": {
+					"duration": 10.5,
+					"stacking": "Refresh",
+					"state": "ElementFire",
+					"elementDurability": 50,
+					"elementType": "Fire",
+					"thinkInterval": 1,
+					"onThinkInterval": [
+						{
+							"$type": "DamageByAttackValue",
+							"attacker": "Caster",
+							"target": "Self",
+							"attackInfo": {
+								"attackProperty": {
+									"ignoreAttackerProperty": true,
+									"damageExtra": "%element_level_co*%damage_ratio",
+									"elementType": "Fire",
+									"elementDurability": 0,
+									"enBreak": 0
+								},
+								"attackTag": "Affix_Burning_Damage",
+								"hitPattern": {
+									"hitImpulseType": "LV0"
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	}
+]

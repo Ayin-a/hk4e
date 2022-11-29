@@ -1,0 +1,7088 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10471,
+					"chargeTime": 0.12,
+					"secondChargeTime": 0.2,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseSecondCharged":
+					[
+
+					],
+					"chargeStateIDs": [ "Attack01","Attack02","Attack03","Attack04","Run"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					// "duration": 0.2,
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10001,
+							"costStaminaRatio":"%ExtraAttack_Sword_Stamina_Cost",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Sword_Stamina_Cost": 0,
+				"Flexible_Stamina":-2, //故意少判了一点点体力，为了顾及一部分网络延迟
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  普攻的一些Ability控制
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_NormalAttack_Handler",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack05",
+					"modifierName":"Avatar_Kazuha_NormalAttack_05_Damage",  //普攻最后一击次元斩
+					"normalizeStart":0.068, 
+					"normalizeEnd":1.0,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack05",
+					"modifierName":"Avatar_Kazuha_Hide_Fx",
+					"normalizeStart":0.05, 
+					"normalizeEnd":0.15,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack05",
+					"modifierName":"Avatar_Kazuha_Hide",  //注意角色隐藏功能会叠加。如果隐藏2次会变-2，需要显示2次才能真显示出来。
+					"normalizeStart":0.06, 
+					"normalizeEnd":0.16,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ExtraAttack_AS",
+					"modifierName":"Avatar_Kazuha_NormalAttack_MagicSheath",  //重击收刀特效
+					"normalizeStart":0.46, 
+					"normalizeEnd":0.66,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ElementalArt_FallingAttack_AS",
+					"modifierName":"Avatar_Kazuha_NormalAttack_MagicSheath",  //特化空中攻击收刀特效
+					"normalizeStart":0.275, 
+					"normalizeEnd":0.5,
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_Hide":    //第五击自身消失Trigger
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"doOffStage":true,
+						},
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "EnableHDMesh",
+							"enable": false,
+							"hdMeshKey": "Default",
+						},  
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": false,
+							"doOffStage": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "EnableHDMesh",
+							"enable": true,
+							"hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+						},  
+					],
+				},
+				"Avatar_Kazuha_Hide_Fx":    //第五击自身消失速度线
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_Attack_HideSpark_05", 
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_Attack_ShowSpark_05",
+						},
+					],
+				},
+				"Avatar_Kazuha_NormalAttack_05_Damage":    //第五击生成次元斩
+				{
+					"onAdded":
+					[
+						{
+							//指定Entity朝其当前位置打次元斩
+							"$type": "CreateGadget",
+							"gadgetID": 41047003,
+							"target": "SelfAttackTarget",
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							// "born":
+							// {
+							// 	"$type": "ConfigBornByTarget",
+							// 	"offset" :
+							// 	{
+							// 		"x": 0.0,
+							// 		"y": 0.0,
+							// 		"z": 0.0,
+							// 	},
+							// },
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelectedPoint",
+                                "onGround":true,
+                                "offset" :
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                            },
+							"predicates" :
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Gadget","Monster","GatherObject","Platform"],
+								},
+								{
+									"$type" : "ByHasAttackTarget",
+									"target" : "Self",
+								},
+							],
+						},
+						{
+							//非指定Entity朝前固定位置打次元斩
+							"$type": "CreateGadget",
+							"gadgetID": 41047003,
+							"target": "SelfAttackTarget",
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 2.0,
+								},
+							},
+							"predicates" :
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Gadget","Monster","GatherObject","Platform"],
+									"reject": true,
+								},
+								{
+									"$type" : "ByHasAttackTarget",
+									"target" : "Self",
+								},
+							],
+						},
+						{
+							//无攻击目标朝前固定位置打次元斩
+							"$type": "CreateGadget",
+							"gadgetID": 41047003,
+							"target": "Self",
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 2.0,
+								},
+							},
+							"predicates" :
+							[
+								{
+									"$type" : "ByNot",
+									"predicates" :
+									[
+										{
+											"$type" : "ByHasAttackTarget",
+											"target" : "Self",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_NormalAttack_MagicSheath":   //普攻收刀特效
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_Attack_Spark_Sheath",
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Gadget 41047003
+//  万叶普攻第五击：次元斩 (特效播放及攻击盒)
+//  必须要用gadget打伤害，否则在次元斩特效过程中冲刺则会攻击消失
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			//控制次元斩特效及攻击盒
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_NormalAttack_05",    
+			"onAdded":
+			[
+				{
+					//次元斩刀光特效
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_Attack_05",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Kazuha_Attack05_HitCombo",
+					"value": 0,
+					"doOffStage": true,
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Kazuha_NormalAttack_05_Handler",
+				},
+				
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_NormalAttack_05_Handler":   //控制间隔攻击时间点
+				{
+					"duration": 0.5,
+					"thinkInterval": 0.12,
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_NormalAttack_05_Damage01",
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Kazuha_Attack05_HitCombo",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 5,
+							"doOffStage": true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_NormalAttack_05_Damage02",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_Attack05_HitCombo",
+									"value":1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_NormalAttack_05_Damage03",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_Attack05_HitCombo",
+									"value":2,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_NormalAttack_05_Damage01":  //普攻第五击 Hit1
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":                                                                                                            
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 2.2,
+									"radiusRatio": 0.0,
+									"height": 2.2,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									// "canBeModifiedBy": "OriginOwner",
+									"attackTag": "NormalAttack_05",
+									"attenuationTag": "NormalAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%NormalAttack_05_DamagePercentage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"overrideByWeapon": true,
+										"attackType": "Melee",
+										"bonusCritical": 0,
+										"bonusCriticalHurt": 0,
+										"enBreak": 26.55,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": true,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake": {},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_NormalAttack_05_Damage02":  //普攻第五击 Hit2
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":                                                                                                            
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 2.2,
+									"radiusRatio": 0.0,
+									"height": 2.2,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									// "canBeModifiedBy": "OriginOwner",
+									"attackTag": "NormalAttack_05",
+									"attenuationTag": "NormalAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%NormalAttack_05_DamagePercentage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"overrideByWeapon": true,
+										"attackType": "Melee",
+										"bonusCritical": 0,
+										"bonusCriticalHurt": 0,
+										"enBreak": 26.55,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake": {},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_NormalAttack_05_Damage03":  //普攻第五击 Hit3
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 2.2,
+									"radiusRatio": 0.0,
+									"height": 2.2,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									// "canBeModifiedBy": "OriginOwner",
+									"attackTag": "NormalAttack_05",
+									"attenuationTag": "NormalAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%NormalAttack_05_DamagePercentage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"overrideByWeapon": true,
+										"attackType": "Melee",
+										"bonusCritical": 0,
+										"bonusCriticalHurt": 0,
+										"enBreak": 26.55,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV5",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": true,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.15,
+										"shakeTime": 0.1,
+										"shakeDistance": 20,
+										"shakeDir":
+										{
+											"x":1,
+											"y":-1,
+											"z":0,
+										},
+									},
+								},
+							},                     
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"NormalAttack_05_DamagePercentage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技按键检测(点按、长按区分)
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_Check",
+			"abilityMixins":
+			[
+				{
+					"$type":"SkillButtonHoldChargeMixin",
+					"skillID":10472,
+					"beforeStateIDs":["Kazuha_ElementalArt_BS"],
+					"chargeLoopStateIDs":["Kazuha_ElementalArt_Charge"],
+					"chargeLoopDurations":[3],
+					"nextLoopTriggerID": "NextLoopTrigger",
+					"endHoldTrigger": "EndHoldTrigger",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalArt_BS","Kazuha_ElementalArt_Air"],
+					"modifierName": "Avatar_Kazuha_ElementalArt_ResetMixType",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_HitCheck",
+				},
+				{
+					"$type":"SetGlobalValue",
+					"key":"_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",   //用于元素战技变质检测
+					"value":0,
+					"doOffStage":true,
+				},
+			],
+			"modifiers":
+			{                       
+				"Avatar_Kazuha_ElementalArt_HitCheck":    //元素战技攻击检测
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type":"ApplyModifier",   //增添受击标记
+							"modifierName":"Avatar_Kazuha_ElementalArt_AddHitMark",
+							"target":"Target",
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+						},
+						{
+							"$type" : "Predicated",   //增添掉球检测
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Avatar_Kazuha_ElementalArt_DropBall",
+									"target": "Self",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Kazuha_ElementalArt_MonsterTail",
+							"target": "Target",
+							"predicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+							],
+						},
+						// {
+						//     "$type": "ApplyModifier",
+						//     "modifierName": "Avatar_Kazuha_ElementalArt_LoseWeight",
+						//     "target": "Target",
+						//     "predicates":
+						//     [
+						//         {
+						//             "$type": "ByAttackTags",
+						//             "attackTags": ["FallingAttack"],
+						//         },
+						//         {
+						//             "$type": "ByHitElement",
+						//             "element": "Wind",
+						//         },
+						//         {
+						//             "$type": "ByEntityTypes",
+						//             "entityTypes": ["Monster"],
+						//         },
+						//         {
+						//             "$type": "ByTargetWeight", //WindZoneLevel = 1
+						//             "logic": "LesserOrEqual", //WindZoneLevel = 1
+						//             "weight": 100.0, //WindZoneLevel = 1
+						//         },
+						//     ],
+						// },
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_AddHitMark":   //对技能命中目标添加标记（吸聚效果仅对标记目标有效）
+				{
+					"duration":1.5,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_HitMark",   //该标记位于怪身上
+							"value":1,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_HitMark",
+							"value":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_DropBall":   //元素战技命中掉球，时间短一点防止不掉球
+				{
+					"stacking": "Unique",
+					"duration": 0.2,
+					"onAdded":
+					[
+						{
+							//点按掉球
+							"$type": "GenerateElemBall",
+							"configID": 2021,
+							"baseEnergy": 9,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.5,
+								},
+							},
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							//长按掉球
+							"$type": "GenerateElemBall",
+							"configID": 2021,
+							"baseEnergy": 12,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.5,
+								},
+							},
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_ResetMixType":  //每次进入元素战技BS动作将重置上次质变结果
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalArt_MixType",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_MonsterTail":   //聚怪时对目标上个拖尾特效
+				{
+					"duration": 1.5,
+					"modifierMixins":
+					[
+						{
+							"$type": "VelocityDetectMixin",
+							"minSpeed": 1.0,
+							"maxSpeed": 1.0,
+							"detectOnStart": true,
+							"onNegedge":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Avatar_Kazuha_ElementalArt_MonsterTail",
+								},
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_MonsterTail",
+						},
+					],
+					"onCrash":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Kazuha_ElementalArt_MonsterTail",
+						},
+					],
+				},
+				// "Avatar_Kazuha_ElementalArt_LoseWeight":   //特化空中攻击浮空效果
+				// {
+				//     "duration": 3.0,
+				//     "state": "Struggle",
+				//     "isLimitedProperties": true,
+				//     "properties":
+				//     {
+				//         "Actor_AddGravityScale": -2.0,
+				//     },
+				//     "onAdded":
+				//     [
+				//         {
+				//             "$type": "AttachEffect",
+				//             "effectPattern": "Eff_Avatar_Boy_Bow_Venti_Rise_Monster",
+				//             "predicates":
+				//             [
+				//                 {
+				//                     "$type": "ByEntityTypes",
+				//                     "entityTypes":
+				//                     [
+				//                         "Monster"
+				//                     ],
+				//                 },
+				//             ],
+				//         },
+				//     ],
+				// },
+			},
+		},
+	},
+
+	//元素战技衔接控制，衔接特化空中攻击、碰撞、变色等逻辑
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_AirCheck",
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Kazuha_ElementalArt_LowHeight",
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToAnimatorStateIDMixin",
+					"stateIDs":["Kazuha_ElementalArt_Landed","Kazuha_ElementalArt_Air","Kazuha_ElementalArt_Hold"],
+					"modifierName":"Avatar_Kazuha_ElementalArt_Air_AddMark",
+				},
+				{
+					"$type":"AttachToAnimatorStateIDMixin",
+					"stateIDs":["Kazuha_ElementalArt_Landed","Kazuha_ElementalArt_Air","Kazuha_ElementalArt_Hold_AS","FlyStart","Fly","DropDown","ElementalArt_FallingAttack_BS","ElementalArt_FallingAttack_Loop","ElementalArt_FallingAttack_Loop_Low"],
+					"modifierName":"Avatar_Kazuha_ElementalArt_Air_RemoveMark",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalArt_Landed","Kazuha_ElementalArt_Air","Kazuha_ElementalArt_Hold"],
+					"modifierName": "Avatar_Kazuha_ElementalArt_ClearVelocity",
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"Avatar_Kazuha_ElementalArt_ChangeSkillButton":    //小技能飞向空中后 切换为特化空中攻击Slot
+				{
+					"duration":10.0,    //只有10秒衔接窗口
+					"stacking": "Refresh",
+					"modifierMixins":
+					[
+						{
+							"$type": "AvatarChangeSkillMixin",
+							"index":0,
+							"priority":"AvatarSpecial",
+							"jumpSkillID": 10474,
+							"flySkillID": 10474,
+						},
+						{
+							"$type":"AttachToAnimatorStateIDMixin",
+							"stateIDs":["DropDown"],
+							"modifierName":"Avatar_Kazuha_ElementalArt_Air_Handler",
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_Maple",
+						},
+						{
+							//未解锁突破1时默认播风环绕的特效
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind",
+							"predicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByUnlockTalentParam",
+											"talentParam": "Kazuha_PermanentSkill_1",
+										},
+									],
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_Maple_Die",
+							"doOffStage": true,
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect_Delay",
+							"doOffStage": true,
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect",
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Air_AddMark":   //小技能跳入空中上标记，落地则取消标记（用于特化空中攻击判定）
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Kazuha_ElementalArt_ChangeSkillButton",
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Air_RemoveMark":   //小技能跳入空中上标记，落地则取消标记（用于特化空中攻击判定）
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Kazuha_ElementalArt_ChangeSkillButton",
+							"doOffStage": true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Kazuha_ElementalArt_ChangeSkillButton",
+							"doOffStage": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_ClearVelocity":   //跃向空中时消除惯性力(动画位移不受影响，删不删都没用）
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces": ["RushMoveType","InertiaType"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces": ["RushMoveType","InertiaType"],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Air_Handler":    //跳至空中下落时高度检测(用于判断关闭碰撞盒，防止卡死)
+				{
+					"duration": 3.0,
+					"thinkInterval":0.2,
+					"onThinkInterval":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalArt_LowHeight",
+							"value": 1,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetAltitude",
+									"value":3.0,
+									"logic":"LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalArt_LowHeight",
+							"value": 0,
+							"doOffStage": true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetAltitude",
+									"value":3.0,
+									"logic":"Greater",
+								},
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Kazuha_ElementalArt_LowHeight",
+							"valueSteps": [-0.5, 0.5, 1.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": ["Blank", "Close_Collider"],
+						},
+					],
+				},
+				"Close_Collider":   //低空关闭碰撞盒，防止跳跃完成后卡在怪堆里，限定时间防止阴间Bug
+				{
+					"duration":3.0,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": false,
+							"doOffStage": true,
+							"canBeHandledOnRecover": true,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_IsElementalArt_FallingAttack",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技长按Charge，天气控制+弱风场
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_Charge",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalArt_Charge","Kazuha_ElementalArt_Hold","Kazuha_ElementalArt_Hold_AS"],
+					"modifierName": "Windzone_Remove",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Avatar_Kazuha_ElementalArt_Charge_WindZone",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Avatar_Kazuha_ElementalArt_Charge_WindZone":   //蓄力弱风场
+				{
+					"duration":3.0,
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_Charge_WindZone",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR10",
+							"innerRadius": 3.0,
+							"strength": 3.5,
+							"attenuation": 2.0,
+							"reverse":true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.8,
+									"z": 0.0,
+								},
+								"alongGround": true,    //其朝向与地面法向一致
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+									"reject": true,
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+							],
+						},
+					],
+				},
+				"Windzone_Remove":
+				{
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Avatar_Kazuha_ElementalArt_Charge_WindZone",
+						},
+					],
+				},
+			},
+		},
+	},
+
+	//Trigger移除对应天气及弱风场效果
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_Charge_Remove",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Avatar_Kazuha_ElementalArt_Charge_WindZone",
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技点按 ： 空气跳
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_EmptyJump",
+			"abilityMixins":
+			[
+				{
+					"$type": "AvatarChangeSkillMixin",
+					"priority":"AvatarSpecial",
+					"index": 1,
+					"flySkillID": 10473,
+					"jumpSkillID": 10473,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalArt_Landed", "Kazuha_ElementalArt_Air"],
+					"modifierName": "Avatar_Kazuha_EmptyJump_Effect",
+				},
+				{
+					"$type": "AvatarSteerByCameraMixin",   //可以适当调整方向
+					"stateIDs": ["Kazuha_ElementalArt_Landed", "Kazuha_ElementalArt_Air"],
+					"angularSpeed" : 90,
+					"canReviveStamina": true,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_EnterCD",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Click_Detect",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_EmptyJump_Strike",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_EmptyJump_MixDetect",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_PermanentSkill_1",
+						},
+					],
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Kazuha_PermanentSkill_1_Mix",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_PermanentSkill_1",
+						},
+					],
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Kazuha_Constellation_6",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_Constellation_6",
+						},
+					],
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_EmptyJump_CreateWindZone",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_EmptyJump_DragCamera",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalArt_EnterCD":    //点按CD控制(地面和空中对应两个skillId)
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10472,
+							"cdRatio":1.0,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10472,
+								},
+							],
+						},
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10473,
+							"cdRatio":1.0,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10473,
+								},
+							],
+						},
+					],
+				},  
+				"Avatar_Kazuha_ElementalArt_Click_Detect":   //元素战技点按增加GlobalValue
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+							"value":1,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Kazuha_EmptyJump_Effect":    //播放空气跳吸聚特效
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_EmptyJump",
+						},
+					],
+				},
+				"Avatar_Kazuha_EmptyJump_Strike":    //点按起跳瞬间造成AOE伤害
+				{
+					"duration":0.3,
+					"onAdded":
+					[                 
+						{
+							"$type":"Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetAltitude",
+									"value":2.0,
+									"logic":"Lesser",
+								},
+							],
+							"successActions":  //低空-调整攻击盒打击点
+							[
+								{
+									"$type" : "TriggerAttackEvent",
+									"target" : "Self",
+									"targetType" : "Enemy",
+									"attackEvent":
+									{
+										"attackPattern":
+										{
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"height": 4.0,
+											"radius": 5.0,
+											"born":
+											{
+												"$type": "ConfigBornBySelf",
+												"offset":
+												{
+													"x" : 0.0,
+													"y" : -1.5,
+													"z" : 0.0,
+												},
+												"onGround": true,
+											},
+										},
+										"attackInfo":
+										{
+											"attackTag": "Elemental_Art",
+											// "attenuationTag": "Elemental_Art",
+											"attackProperty":
+											{
+												"damagePercentage": "%ElementalArt_EmptyJump_Damage",
+												"elementType": "Wind",
+												"elementDurability": 25,
+												"enBreak": 150,
+												"attackType":"Range",
+												"strikeType":"Default",
+											},
+											"hitPattern":
+											{
+												"onHitEffectName": "default",
+												"hitImpulseType":"LV7",
+												"overrideHitImpulse":
+												{
+													"hitLevel":"Air",
+													"hitImpulseX":100,
+													"hitImpulseY":800,
+												},
+												"reboundRatio": 0,
+												"retreatType": "ByHitDirectionInverse",
+												"canBeDefenceHalt": false,
+												"hitHaltTime": 0.0,
+												"hitHaltTimeScale": 0.05,
+												"muteHitText": false,
+											},
+											"forceCameraShake": false,
+											"cameraShake":
+											{
+												"shakeType": "CustomVector",
+												"shakeRange": 0.2,
+												"shakeTime": 0.12,
+												"shakeDistance": 20,
+												"shakeDir":
+												{
+													"x":-1.0,
+													"y":0.5,
+													"z":0.0,
+												},
+											},
+										},
+									},
+								},
+							],
+							"failActions":   //高空-调整攻击盒打击点
+							[
+								{
+									"$type" : "TriggerAttackEvent",
+									"target" : "Self",
+									"targetType" : "Enemy",
+									"attackEvent":
+									{
+										"attackPattern":
+										{
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"height": 4.0,
+											"radius": 5.0,
+											"born":
+											{
+												"$type": "ConfigBornBySelf",
+												"offset":
+												{
+													"x" : 0.0,
+													"y" : -2.0,
+													"z" : 0.0,
+												},
+											},
+										},
+										"attackInfo":
+										{
+											"attackTag": "Elemental_Art",
+											// "attenuationTag": "Elemental_Art",
+											"attackProperty":
+											{
+												"damagePercentage": "%ElementalArt_EmptyJump_Damage",
+												"elementType": "Wind",
+												"elementDurability": 25,
+												"enBreak": 150,
+												"attackType":"Range",
+												"strikeType":"Default",
+											},
+											"hitPattern":
+											{
+												"onHitEffectName": "default",
+												"hitImpulseType":"LV7",
+												"overrideHitImpulse":
+												{
+													"hitLevel":"Air",
+													"hitImpulseX":100,
+													"hitImpulseY":800,
+												},
+												"reboundRatio": 0,
+												"retreatType": "ByHitDirectionInverse",
+												"canBeDefenceHalt": false,
+												"hitHaltTime": 0.0,
+												"hitHaltTimeScale": 0.05,
+												"muteHitText": false,
+											},
+											"forceCameraShake": false,
+											"cameraShake":
+											{
+												"shakeType": "CustomVector",
+												"shakeRange": 0.2,
+												"shakeTime": 0.12,
+												"shakeDistance": 20,
+												"shakeDir":
+												{
+													"x":-1.0,
+													"y":0.5,
+													"z":0.0,
+												},
+											},
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_EmptyJump_MixDetect":   //元素变质检测，上attacktag的攻击盒
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",   //点按元素战技攻击检测盒
+							"targetType": "All",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 5.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Kazuha_ElementalArt_Mix_Detect",
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"elementType": "AntiFire",
+										"elementRank": 1.0,
+										"elementDurability": 1,
+										"enBreak": 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_EmptyJump_CreateWindZone":   //起跳瞬间释放一次性风眼
+				{
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Self",
+							"targetPredicates":   //根据自身高度调整风眼生成位置
+							[
+								{
+									"$type":"ByTargetAltitude",
+									"value":2.0,
+									"logic":"Lesser",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",   //离地小于2m
+									"gadgetID": 41047001,
+									"campID": 1001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "CreateGadget",   //离地大于2m
+									"gadgetID": 41047001,
+									"campID": 1001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -1.0,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_EmptyJump_DragCamera":  //拉远镜头
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarCameraParam",
+							"target" : "Self",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 7.0,
+								"forceRadiusDuration" : 0.4,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElementalArt_EmptyJump_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Gadget 41047001
+//  点按_元素战技：一次性风眼
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_EmptyJump_WindHole",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_WindZone_Monster_Small",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_WindZone_Monster_Big",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_WindZone_Other",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalArt_WindZone_Monster_Small":   //针对小怪的一次性吸聚效果
+				{
+					"duration": 0.8,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR6",
+							"innerRadius": 0.5,
+							"strength": 4.0,
+							"attenuation": 2.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 2.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "Lesser",
+									"weight": 100,
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_HitMark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_WindZone_Monster_Big":  //针对大怪的一次性吸聚效果
+				{
+					"duration": 0.8,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR6",
+							"innerRadius": 0.5,
+							"strength": 10.0,
+							"attenuation": 3.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 2.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+								{
+									"$type": "ByTargetWeight",
+									"logic": "GreaterOrEqual",
+									"weight": 100,
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_HitMark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_WindZone_Other":   //针对其他小Gadget的一次性风场
+				{
+					"duration": 0.6,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR6",
+							"innerRadius": 0.5,
+							"strength": 8.0,
+							"attenuation":2.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar","Monster"],
+									"reject": true,
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技长按 ： 高跳
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalArt_FlyAway",
+			"onAbilityStart":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Hold_EnterCD",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Hold_Detect",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_FlyAway_Strike",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_FlyAway_MixDetect",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_PermanentSkill_1",
+						},
+					],
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Kazuha_PermanentSkill_1_Mix",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_PermanentSkill_1",
+						},
+					],
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Kazuha_Constellation_6",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_Constellation_6",
+						},
+					],
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_FlyAway_WindZone",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Kazuha_FlyAway_CameraBlur",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Kazuha_FlyAway_DragCamera",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalArt_Hold_EnterCD":    //长按CD控制(地面和空中对应两个skillId)
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10472,
+							"cdRatio":1.5,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10472,
+								},
+							],
+						},
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10473,
+							"cdRatio":1.5,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10473,
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Hold_Detect":   //元素战技长按增加GlobalValue
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+							"value":2,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Kazuha_FlyAway_Strike":    //元素战技长按造成打击伤害
+				{
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9.0,
+									"massiveAttackRatio": 0.3,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag" : "Elemental_Art",
+									// "attenuationTag": "Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalArt_FlyAway_Damage",
+										"elementType": "Wind",
+										"elementDurability": 50,
+										"enBreak": 300,     //需要一个高Enbreak值才能起到吸怪效果
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel":"Air",
+											"hitImpulseX":0,
+											"hitImpulseY":800,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirectionInverse",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_FlyAway_MixDetect":   //元素变质检测，上attacktag的攻击盒
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",   //长按元素战技攻击检测盒
+							"targetType": "All",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9.0,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Kazuha_ElementalArt_Mix_Detect",
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"elementType": "AntiFire",
+										"elementRank": 1.0,
+										"elementDurability": 1,
+										"enBreak": 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_FlyAway_WindZone":    //元素战技长按产生一次性吸聚风场
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "DebugLog",
+							"content": "攻击了",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_Hold_FlyAway",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+								"alongGround":true,
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41047002,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"alongGround":true,
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_FlyAway_CameraBlur":  //镜头模糊
+				{
+					"duration": 0.2,
+					"modifierMixins":
+					[
+						{
+							"$type": "CameraBlurMixin",
+							"cameraRadialBlur":
+							{
+								"power": 0.25,
+								"fadeTime": 0.15,
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_FlyAway_DragCamera":  //拉远镜头，防止太近挡住特效及地面效果
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarCameraParam",
+							"target" : "Self",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 8.0,
+								"forceRadiusDuration" : 0.4,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElementalArt_FlyAway_Damage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Gadget 41047002
+//  长按_元素战技：一次性风眼
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_EmptyJump_Hold_WindHole",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Hold_WindZone_Monster_Small",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Hold_WindZone_Monster_Big",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalArt_Hold_WindZone_Other",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalArt_Hold_WindZone_Monster_Small":   //针对小体型怪的一次性风场
+				{
+					"duration": 0.8,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR10",
+							"innerRadius": 1.2,
+							"strength": 10.0,
+							"attenuation": 3.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 3.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "Lesser",
+									"weight": 100,
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_HitMark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Hold_WindZone_Monster_Big":   //针对大体型怪的一次性风场
+				{
+					"duration": 0.8,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR10",
+							"innerRadius": 1.0,
+							"strength": 20.0,
+							"attenuation": 4.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 3.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster"],
+								},
+								{
+									//暂时考虑无法击飞的怪物不会被吸引，怪物质量与ImpluseY比值为 1：5.5
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+								{
+									"$type": "ByTargetWeight",
+									"logic": "GreaterOrEqual",
+									"weight": 100,
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalArt_HitMark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_Hold_WindZone_Other":  //针对其他Gadget的一次性风场
+				{
+					"duration": 0.6,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR10",
+							"innerRadius": 1.0,
+							"strength": 10.0,
+							"attenuation": 2.0,
+							"reverse": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+								"alongGround": true,    //该风场生成位置与地面法向保持一致
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar", "Monster"],
+									"reject": true,
+								},
+								{
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  万叶充能技_枫叶斩
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalBurst",
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Kazuha_Reconnect",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Initialize",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Camera_Handler",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst", "Kazuha_ElementalBurst_AS"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_EmotionControl",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Kazuha_ElementalBurst",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Camera_PushTarget",
+					"normalizeStart":0,
+					"normalizeEnd":0.6,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst","Kazuha_ElementalBurst_AS"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_WeatherChange",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst","Kazuha_ElementalBurst_AS"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Invincible",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Kazuha_ElementalBurst","Kazuha_ElementalBurst_AS"],
+					"modifierName":"Avatar_Kazuha_ElementalBurst_WeaponEffect",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Kazuha_ElementalBurst",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_WeaponEmssion",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+			],
+			"onAbilityStart":   //斩击伤害及表现效果
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Strike",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_CameraBlur",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Strike_Damage",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_CreateMist",
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Kazuha_Constellation_6",
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_Constellation_6",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalBurst_Initialize":   //初始化充能技参数
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10475,
+							"cdRatio":1.0,
+							"predicates":
+							[
+								{
+									"$type": "BySkillReady",
+									"skillID": 10475,
+								},
+							],
+						},
+						{
+							"$type": "KillGadget",  //场上只有唯一，干掉多余的
+							"gadgetInfo":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41047004,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Avatar_Kazuha_ElementalBurst_CameraEffect",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 0,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_Camera_Handler":  //控制对应Camera进出及镜头检测
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Kazuha_NoCamera",
+							"value": 0,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+						},
+						{
+							//周围碰撞检测，近身有障碍时将不播放镜头动画
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackNotHitScene",
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"height":0.4,
+										"fanAngle": 30.0,
+										"radius": 1.4,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x" : 0.0,
+												"y" : 1.5,
+												"z" : 0.0,
+											},
+										},
+									},
+									"checkWaterLayer":true,
+								},
+								{
+									"$type": "ByAvatarInWaterDepth",
+									"compareType": "LessAndEqual",
+									"depth": 0.5,
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AvatarEnterCameraShot",
+									"cameraMoveCfgPath":"Camera_Kazuha_ElementalBurst", 
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key": "_ABILITY_Kazuha_NoCamera",
+									"value": 1,
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Camera_Thirdparty",
+								},
+							],
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+							"blend": false,
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Camera",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 6,
+								"forceRadiusDuration": 0.5,
+								"shouldKeepForceRadius":true,
+							},
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+						},
+					],
+					"onAvatarOut":   //释放过程中换人也会重置镜头参数  （加层保护）
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "AvatarCameraParam",
+							"doOffStage":true,
+							"cameraParam":
+							{
+								"forceRadius": 6,
+								"forceRadiusDuration": 0.5,
+								"shouldKeepForceRadius":true,
+							},
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_Camera_PushTarget":   //镜前动画推开敌方目标，别挡哥的镜头
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR3",
+							"strength" : -3,
+							"attenuation" : 2,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "Enemy",
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Grass"],
+								},
+								{
+									"$type" : "ByTargetWeight", //WindZoneLevel = 2
+									"logic" : "LesserOrEqual",  //WindZoneLevel = 2
+									"weight" : 250.0,   //WindZoneLevel = 2
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_Invincible":      //充能技过程中无敌保护
+				{
+					"duration": 2.0,    //加个限定时间，防止摆pose很久了还无敌
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_EmotionControl":    //镜前动画中表情屏蔽，只受动画K帧影响
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEyeKey": false,
+							"toggleEmoSync": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEyeKey": true,
+							"toggleEmoSync": true,
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEyeKey": true,
+							"toggleEmoSync": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_WeatherChange":   //天气变化
+				{
+					"duration":1.5,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Kazuha_ElementalBurst",
+							"transDuration" : 0.3,
+							"duration" : 1.5,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_WeaponEffect":    //镜前动画中武器特效
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Weapon",
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_WeaponEmssion":   //武器发光效果
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetEmissionScaler",//调整武器发光。配置文件为EquipElementStyle。可以参考神之眼AvatarElementStyle的配置进行配置
+							"materialType":"Weapon",
+							"useDefaultColor" :false,
+							"value":5,
+							"duration":0.3,          //渐入渐出时间，这个需要配置在PlusSkillEmission里。
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetEmissionScaler",  //重置武器发光
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.6,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_CameraBlur":     //斩击镜像模糊效果
+				{
+					"duration":0.2,
+					"modifierMixins":
+					[
+						{
+							"$type": "CameraBlurMixin",
+							"cameraRadialBlur":
+							{
+								"power": 0.7,
+								"fadeTime": 0.1,
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_Strike_Damage":    //枫叶斩击伤害
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 1.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",     这一击不走元素衰减
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_Strike_Damage",
+										"elementType": "Wind",
+										"elementDurability": 50,
+										"enBreak": 250,
+										"attackType":"Range",
+										"strikeType":"Slash",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV5",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Air",
+											"hitImpulseX": 250,
+											"hitImpulseY": 600,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByAttacker",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.05,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.8,
+										"shakeTime": 0.3,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 1,
+											"y": 1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseCycle": 0.4,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_CreateMist":     //产生持续扰动风场
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41047004,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 1.0,
+								},
+								"onGround": true,
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_Reconnect":   //处理断线重连的表现恢复
+				{
+					"onReconnect":
+					[
+						{
+							"$type":"SetEmissionScaler",  //重置武器发光
+							"materialType":"Weapon",
+							"value":-1,
+							"duration" : 0.6,
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",   //重置大招镜前贴屏特效
+							"modifierName": "UNIQUE_Avatar_Kazuha_ElementalBurst_CameraEffect",
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElementalBurst_Strike_Damage": 0,
+			},
+		},
+	},
+
+	//镜前枫叶贴屏特效
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalBurst_ScreenEffect",
+			"onAbilityStart":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Avatar_Kazuha_ElementalBurst_CameraEffect",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Avatar_Kazuha_ElementalBurst_CameraEffect":
+				{
+					"isUnique": true,
+					"duration": 3.5,
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerPostProcessEffectMixin",
+							"postEffectAssetName":"PostEffect_Avatar_Kazuha_ElementalBurst_ScreenEffect",
+							"duration":3,
+						},
+					],
+				},
+			},
+		},
+	},
+
+	//万叶必杀技斩击时做空气场变质检测，避免斩击这一刀将怪的元素消耗完
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_ElementalBurst_Strike_Mix",
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+					"value": 0,
+				},
+			],
+			"onAbilityStart":  //EventPattern保证检测攻击在斩击之前
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "All",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4.0,
+							"radius": 9.0,
+							"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1.5,
+									"z" : 1.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag" : "Kazuha_ElementalBurst_Mix_Detect",
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"elementType": "AntiFire",
+								"elementDurability": 1,
+								"elementRank": 1,
+								"enBreak": 0,
+							},
+						},
+					},
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ElementHittingOtherPredicatedMixin",
+					"prePredicates": 
+					[
+						{
+							"$type": "ByAttackTags",
+							"attackTags": ["Kazuha_ElementalBurst_Mix_Detect"],
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "Equal",
+						},
+					],
+					"elementBatchPredicateds":
+					[
+						{
+							"elementTypeArr": ["Fire"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":1,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Water"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":2,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Electric"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":3,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Ice","Frozen"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":4,
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Gadget 41047004
+//  万叶充能技_空气扰动场
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalBurst_Mist",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Mist_Initialize",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_Mist_FieldEffect",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Delay",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Avatar_Kazuha_Constellation_2_Handler",   //命2范围检测
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",
+							"talentParam":"Kazuha_Constellation_2",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_ElementalBurst_Mist_Initialize":   //Gadget扰动场初始化
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						// {
+						// 	// 0风  1火  2水  3雷  4冰
+						// 	"$type":"SetGlobalValue",
+						// 	"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+						// 	"value":0,
+						// 	"doOffStage":true,
+						// },
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_Mist_FieldEffect":   //扰动场区域特效
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"TriggerAbility",
+							"abilityName":"Avatar_Kazuha_ElementalBurst_Mist_Dissipate",
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Delay":    //空气扰动场延迟一定时间打伤害
+				{
+					"duration":1.0,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike",
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike":   //空气扰动场间隔时间造成对应伤害（考虑元素变质）
+				{
+					"duration": "0.6+%ElementalBurst_MistStrike_Duration",
+					"thinkInterval": "%ElementalBurst_MistStrike_Interval",
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Effect",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Fire",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Water",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Electric",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Ice",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Wind",
+						},
+					],
+					"onThinkInterval":
+					[   
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Effect",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Fire",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Water",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Electric",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Ice",
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Kazuha_ElementalBurst_MistStrike_Wind",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"TriggerAbility",
+							"abilityName":"Avatar_Kazuha_ElementalBurst_Mist_Dissipate",
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Effect":    //根据空气场变质情况播放对应的元素特效
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field_Strike",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								"onGround": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field_Strike_Fire",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								"onGround": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field_Strike_Water",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								"onGround": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field_Strike_Electric",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								"onGround": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 3,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field_Strike_Ice",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								"onGround": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 4,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Wind":   //扰动空气场所产生的固有风元素攻击
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_MistStrike_Damage",
+										"elementType": "Wind",
+										"elementDurability": 25,
+										"enBreak": 75,
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Light",
+											"hitImpulseX": 0,
+											"hitImpulseY": 100,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 1.0,
+										"shakeTime": 0.5,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 1,
+											"y": 1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseCycle": 0.4,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Fire":   //扰动空气场附带的火元素攻击(判断是否发生火变质)
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_MistStrike_Damage_Mix",
+										"elementType": "Fire",
+										"elementDurability": 25,
+										"enBreak": 25,
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV2",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Light",
+											"hitImpulseX": 0,
+											"hitImpulseY": 100,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake": {},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Water":   //扰动空气场附带的水元素攻击(判断是否发生水变质)
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_MistStrike_Damage_Mix",
+										"elementType": "Water",
+										"elementDurability": 25,
+										"enBreak": 25,
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV2",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Light",
+											"hitImpulseX": 0,
+											"hitImpulseY": 100,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake":{},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Electric":   //扰动空气场附带的雷元素攻击(判断是否发生雷变质)
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_MistStrike_Damage_Mix",
+										"elementType": "Electric",
+										"elementDurability": 25,
+										"enBreak": 25,
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV2",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Light",
+											"hitImpulseX": 0,
+											"hitImpulseY": 100,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake":{},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 3,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalBurst_MistStrike_Ice":   //扰动空气场附带的冰元素攻击(判断是否发生冰变质)
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target" : "Self",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 9,
+									"massiveAttackRatio": 0.5,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag" : "Elemental_Burst",
+									// "attenuationTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%ElementalBurst_MistStrike_Damage_Mix",
+										"elementType": "Ice",
+										"elementDurability": 25,
+										"enBreak": 25,
+										"attackType":"Range",
+										"strikeType":"Default",
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV2",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Light",
+											"hitImpulseX": 0,
+											"hitImpulseY": 100,
+										},
+										"reboundRatio": 0,
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+									"cameraShake":{},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+									"target": "Self",
+									"value": 4,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+
+				//--------------------命之座2-----------------------
+				"Avatar_Kazuha_Constellation_2_Handler":    //命2 空气场范围内的角色元素精通加成
+				{
+					"thinkInterval": 0.5,
+					"onAdded":
+					[
+						//给空气场内的角色加精通
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Kazuha_Constellation_2_MasteryUp",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR9H10",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kazuha_Constellation_2_MasteryUp_Keeper",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR9H10",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+
+						//给万叶自己加精通
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Kazuha_Constellation_2_MasteryUp",
+							"target": "OriginOwner",
+							"doOffStage": true,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kazuha_Constellation_2_MasteryUp_Keeper",
+							"target": "OriginOwner",
+							"doOffStage": true,
+						},
+					],
+					"onThinkInterval": 
+					[
+						//给空气场内的角色加精通
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Kazuha_Constellation_2_MasteryUp",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR9H10",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kazuha_Constellation_2_MasteryUp_Keeper",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR9H10",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+
+						//给万叶自己加精通
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Kazuha_Constellation_2_MasteryUp",
+							"target": "OriginOwner",
+							"doOffStage": true,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kazuha_Constellation_2_MasteryUp_Keeper",
+							"target": "OriginOwner",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Kazuha_Constellation_2_MasteryUp":    //元素精通加成
+				{
+					"isUnique": true,
+					"duration": 1.0,
+					"elementDurability": 1.0,
+					"elementType": "None",
+					"stacking": "Refresh",
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta": "%Constellation_2_ElementMastery_Delta",
+					},
+				},
+				"Kazuha_Constellation_2_MasteryUp_Keeper":    //命2续航器
+				{
+					"duration": 0.5,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "AddElementDurability",
+							"modifierName": "UNIQUE_Kazuha_Constellation_2_MasteryUp",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				//--------------------命之座2-----------------------
+			},
+			"abilitySpecials":
+			{
+				"ElementalBurst_MistStrike_Interval": 2.0,
+
+				"ElementalBurst_MistStrike_Damage": 0,
+				"ElementalBurst_MistStrike_Damage_Mix": 0,  
+				"ElementalBurst_MistStrike_Duration": 0,
+
+				"Constellation_2_ElementMastery_Delta": 0,
+
+
+				"Mist_Point01_0":0,
+				"Mist_Point01_1":0,
+				"Mist_Point01_2":0,
+				"Mist_Point02_0":0,
+				"Mist_Point02_1":0,
+				"Mist_Point02_2":0,
+				"Mist_Point03_0":0,
+				"Mist_Point03_1":0,
+				"Mist_Point03_2":0,
+				"Mist_Point04_0":0,
+				"Mist_Point04_1":0,
+				"Mist_Point04_2":0,
+			},
+		},
+	},
+
+	//空气扰动场元素质变检测  0风  1火  2水  3雷  4冰
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalBurst_Mist_Mix",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Kazuha_ElementalBurst_Mix_Detect_Pre_Delay",
+				},
+				{
+					"$type": "CopyGlobalValue",   //从角色身上拿到此次是否变质的GlobalValue信息
+					"srcTarget": "OriginOwner",
+					"dstTarget": "Self",
+					"srcKey": "_ABILITY_Kazuha_ElementalBurst_MixType",
+					"dstKey": "_ABILITY_Kazuha_ElementalBurst_MixType",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Kazuha_ElementalBurst_Mix_Fire",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Kazuha_ElementalBurst_Mix_Water",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 2,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Kazuha_ElementalBurst_Mix_Electric",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 3,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Kazuha_ElementalBurst_Mix_Ice",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 4,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"abilityMixins": 
+			[
+				{
+					"$type": "ElementHittingOtherPredicatedMixin",
+					"prePredicates": 
+					[
+						{
+							"$type": "ByAttackTags",
+							"attackTags": ["Kazuha_ElementalBurst_Mix_Detect"],
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "Equal",
+						},
+					],
+					"elementBatchPredicateds": 
+					[
+						{
+							"elementTypeArr": ["Fire"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":1,
+									"doOffStage":true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Kazuha_ElementalBurst_Mix_Fire",
+									"target": "Self",
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Water"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":2,
+									"doOffStage":true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Kazuha_ElementalBurst_Mix_Water",
+									"target": "Self",
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Electric"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":3,
+									"doOffStage":true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Kazuha_ElementalBurst_Mix_Electric",
+									"target": "Self",
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Ice","Frozen"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalBurst_MixType",
+									"value":4,
+									"doOffStage":true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Kazuha_ElementalBurst_Mix_Ice",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Kazuha_ElementalBurst_Mix_Detect_Pre_Delay":   //稍微加个检测延迟
+				{
+					"duration": 0.3,
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kazuha_ElementalBurst_Mix_Detect_Pre",
+						},
+					],
+				},
+				"Kazuha_ElementalBurst_Mix_Detect_Pre":    //根据globalvalue值做攻击检测
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"valueSteps": [ -0.5, 0.5, 100],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": ["Kazuha_ElementalBurst_Mix_Detect", "Blank"],
+						},
+					],
+				},
+				"Blank":{},
+				"Kazuha_ElementalBurst_Mix_Detect":    //空气扰动场标记指定范围内的目标并上AttackTag，不做伤害
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "All",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 8.0,
+									"massiveAttackRatio": 0.7,   //对于水草entity的攻击盒范围
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Kazuha_ElementalBurst_Mix_Detect",
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"elementType": "AntiFire",
+										"elementDurability": 1,
+										"elementRank": 1.0,
+										"enBreak": 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Kazuha_ElementalBurst_Mix_Fire":    //向特效发送元素变质Triiger 火
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Get_Fire",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+						},
+					],
+				},
+				"Kazuha_ElementalBurst_Mix_Water":    //向特效发送元素变质Triiger 水
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Get_Water",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+						},
+					],
+				},
+				"Kazuha_ElementalBurst_Mix_Electric":   //向特效发送元素变质Triiger 雷
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Get_Electric",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+						},
+					],
+				},
+				"Kazuha_ElementalBurst_Mix_Ice":   //向特效发送元素变质Triiger 冰
+				{
+					"duration": 1.0,
+					"onAdded":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Get_Ice",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+						},
+					],
+				},
+			},
+		},
+	},
+
+	//空气扰动场消散，并回收Gadget
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_ElementalBurst_Mist_Dissipate",
+			"onAbilityStart":
+			[
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "AirZone_Wind_Die",
+					"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 0,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "AirZone_Fire_Die",
+					"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "AirZone_Water_Die",
+					"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 2,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "AirZone_Electric_Die",
+					"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 3,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "SendEffectTrigger",
+					"parameter": "AirZone_Ice_Die",
+					"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalBurst_Field",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalBurst_MixType",
+							"value": 4,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Mist_KillSelf",
+				},
+			],
+			"modifiers":
+			{
+				"Mist_KillSelf":
+				{
+					"duration": 2.0,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Gadget 41047005
+//  特化空中攻击__额外斩出小型风眼
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kauzha_ElementalArt_FallingAttack_WindZone",
+			"onAdded":
+			[
+				{
+					"$type":"AttachEffect",
+					"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_WindZone",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						},
+					},
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Kauzha_ElementalArt_FallingAttack_WindZone",
+				},
+				// 暂时去掉风眼Struggle状态
+				// {   
+				//     "$type":"AttachModifier",
+				//     "modifierName":"Kauzha_ElementalArt_FallingAttack_WindZone_AttackTag",
+				// },
+				// {
+				//     "$type":"AttachModifier",
+				//     "modifierName":"Kauzha_ElementalArt_FallingAttack_WindZone_AttackDetect",
+				// },
+				{
+					"$type":"AttachModifier",
+					"modifierName":"Kauzha_ElementalArt_FallingAttack_WindZone_LifeTime",
+				},
+			],
+			"modifiers":
+			{
+				"Kauzha_ElementalArt_FallingAttack_WindZone":   //聚怪的小型风眼
+				{
+					"duration": 3.0,
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR6",
+							"strength": 4.0,
+							"attenuation": 1.0,
+							"innerRadius": 1.2,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "All",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+									"reject": true,
+								},
+								{
+									"$type": "ByTargetWeight",
+									"logic": "LesserOrEqual",
+									"weight": 150,
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+				"Kauzha_ElementalArt_FallingAttack_WindZone_AttackTag":   //打空的攻击盒上attackTag
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 4.0,
+									"radius": 4.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -1.5,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack_WindZone",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+										"elementType" : "None",
+										"elementDurability" : 0,
+										"enBreak" : 0,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV0",
+									},
+								},
+							},
+						},
+					],
+				},
+				"Kauzha_ElementalArt_FallingAttack_WindZone_AttackDetect":  //风眼攻击检测
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Drag",
+							"target": "Target",
+							"predicates":
+							[
+								{
+									"$type": "ByAttackTags",
+									"attackTags":
+									[
+										"FallingAttack_WindZone",
+									],
+								},
+								{
+									"$type": "ByTargetWeight", //WindZoneLevel = 1
+									"logic": "LesserOrEqual", //WindZoneLevel = 1
+									"weight": 100.0, //WindZoneLevel = 1
+								},
+							],
+						},
+					],
+				},
+				"Drag":   //目标失重的同时上Struggle
+				{
+					"duration": 0.5,
+					"stacking": "Refresh",
+					"state": "Struggle",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddGravityScale": -2,
+					},
+				},
+				"Kauzha_ElementalArt_FallingAttack_WindZone_LifeTime":  //生命控制器
+				{
+					"duration": 3.0,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  桐生万叶空中攻击
+//  包含特化空中攻击与普通空中攻击
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_FallingAnthem",
+			"onAdded":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Kazuha_IsElementalArt_FallingAttack",
+					"useLimitRange":true,
+					"maxValue":0,
+					"minValue":0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				//=========================================================
+				// 特化空中攻击
+				//=========================================================
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalArt_FallingAttack_BS","ElementalArt_FallingAttack_Loop","ElementalArt_FallingAttack_Strike","ElementalArt_FallingAttack_AS"],
+					"modifierName": "Avatar_Kauzha_ElementalArt_FallingAttack_Detect",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop",
+						"ElementalArt_FallingAttack_Loop_Low",
+					],
+					"modifierName": "Avatar_Kazuha_ElementalArt_FallingAttack_HideCollider",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS"
+					],
+					"modifierName": "FallingAnthem_BS_Material",
+				},
+				// {
+				//     "$type": "AttachToStateIDMixin",
+				//     "stateIDs":
+				//     [
+				//         "ElementalArt_FallingAttack_BS"
+				//     ],
+				//     "modifierName": "FallingAnthem_Loop_Normal",
+				// },
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop",
+						"ElementalArt_FallingAttack_Loop_Low",
+					],
+					"modifierName": "Avatar_Kazuha_ElementalArt_FallingAttack_LoopDamage",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop",
+						// "ElementalArt_FallingAttack_Strike",
+					],
+					"modifierName": "Avatar_Kazuha_ElementalArt_FallingAttack_DragCamera",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS"
+					],
+					"modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop",
+						"ElementalArt_FallingAttack_Strike",
+						"ElementalArt_FallingAttack_AS"
+					],
+					"modifierName": "FallingAnthem_Height_Detect",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_FallingDamageImmune_01",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop"
+					],
+					"modifierName": "Inertia",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_Strike",
+						"ElementalArt_FallingAttack_AS"
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce_AS",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"ElementalArt_FallingAttack_BS",
+						"ElementalArt_FallingAttack_Loop"
+					],
+					"modifierName": "Avatar_Kazuha_ElementalArt_FallingAttack_WeaponEffect",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["ElementalArt_FallingAttack_BS"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+
+				//=========================================================
+				//普通空中攻击
+				//=========================================================
+				{
+					"$type": "AvatarChangeSkillMixin",
+					"priority":"AvatarCommon",
+					"jumpSkillID": 5047010,
+					"flySkillID": 5047010,
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_Material",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_Loop_Normal",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+						"FallingAnthem_Loop",
+						"FallingAnthem_Loop_Low",
+					],
+					"modifierName": "FallingAnthem_LoopDamage",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_Height_Detect",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_FallingDamageImmune_01",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "Inertia",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_OverHead_Camera",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce_AS",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "FallingAnthem_AttachWeaponEffect",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},                
+				//=========================================================
+				//普通空中攻击
+				//=========================================================
+			],
+			"onAbilityStart":   //下落攻击触发事件
+			[
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Kazuha_IsElementalArt_FallingAttack",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+					"successActions":   //特化空中攻击
+					[   
+						//低空攻击
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"scale": 1.0,
+									"height": 4.0,
+									"centerYOffset": 0.0,
+									"offsetZ": 0.0,
+									"fanAngle": 360.0,
+									"radius": 4.5,
+									"followRootNodeY": false,
+									"followTransformY": false,
+									"offsetAngle": 0.0,
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -1.0,
+											"z": 0.5,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									// "attenuationTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+										// "overrideByWeapon": true,    //该次攻击不能附魔
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Wind",
+										"elementDurability": 25,
+										"elementRank": 1.0,
+										"enBreak": 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel":"Air",
+											"hitImpulseX":0,
+											"hitImpulseY":500,
+										},
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.1,
+										"muteHitText": false
+									},
+									"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.4,
+										"shakeTime": 0.18,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 1,
+										},
+										"extension":
+										{
+											"baseCycle": 0.4,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						//高空攻击
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"scale": 1.0,
+									"height": 4.0,
+									"centerYOffset": 0.0,
+									"offsetZ": 0.0,
+									"fanAngle": 360.0,
+									"radius": 4.5,
+									"followRootNodeY": false,
+									"followTransformY": false,
+									"offsetAngle": 0.0,
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -1.0,
+											"z": 0.5,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									// "attenuationTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+										// "overrideByWeapon": true,   //该次攻击不能附魔
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "Wind",
+										"elementDurability": 25,
+										"elementRank": 1.0,
+										"enBreak": 150,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel":"Air",
+											"hitImpulseX":0,
+											"hitImpulseY":500,
+										},
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.1,
+										"muteHitText": false
+									},
+									"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.4,
+										"shakeTime": 0.18,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 1,
+										},
+										"extension":
+										{
+											"baseCycle": 0.4,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						//突破1额外元素伤害及特效播放
+						{
+							"$type":"Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"Kazuha_PermanentSkill_1",
+								},
+							],
+							"successActions":    //解锁突破1，可触发对应元素质变
+							[
+								{
+									"$type":"TriggerAbility",
+									"abilityName":"Avatar_Kazuha_PermanentSkill_1",
+								},
+							],
+							"failActions":       //未解锁突破1，仅能打出风元素播初始特效
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0.5,
+										},
+									},
+								},
+							],
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41047005,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 1.2,
+									"z": 1.8,
+								},
+							},
+						},
+					],
+					"failActions":      //普通空中攻击
+					[
+						//普通状态第一段
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"scale": 1.0,
+									"height": 2.0,
+									"centerYOffset": 0.0,
+									"offsetZ": 0.0,
+									"fanAngle": 360.0,
+									"radius": 3.0,
+									"followRootNodeY": false,
+									"followTransformY": false,
+									"offsetAngle": 0.0,
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -0.5,
+											"z": 1.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+										"overrideByWeapon": true,
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "None",
+										"elementDurability": 25,
+										"elementRank": 1.0,
+										"enBreak": 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV4",
+										// "hitLevel": "Heavy", //hitlevel = 4
+										// "hitImpulseX": 800, //hitlevel = 4
+										// "hitImpulseY": 0, //hitlevel = 4
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.1,
+										"muteHitText": false
+									},
+									"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.24,
+										"shakeTime": 0.12,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseCycle": 0.24,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						//普通状态第一段
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						//普通状态第二段
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"scale": 1.0,
+									"height": 2.0,
+									"centerYOffset": 0.0,
+									"offsetZ": 0.0,
+									"fanAngle": 360.0,
+									"radius": 5.0,
+									"followRootNodeY": false,
+									"followTransformY": false,
+									"offsetAngle": 0.0,
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -0.5,
+											"z": 1.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+										"overrideByWeapon": true,
+										"strikeType": "Blunt",
+										"attackType": "Melee",
+										"elementType": "None",
+										"elementDurability": 25,
+										"elementRank": 1.0,
+										"enBreak": 150,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV7",
+										// "hitLevel": "Air", //hitlevel = 7
+										// "hitImpulseX": 0, //hitlevel = 7
+										// "hitImpulseY": 800, //hitlevel = 7
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.1,
+										"muteHitText": false
+									},
+									"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.5,
+										"shakeTime": 0.2,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": 1,
+											"z": 1,
+										},
+										"extension":
+										{
+											"baseCycle": 0.4,
+											"cycleDamping": 0,
+											"rangeAttenuation": 0.3,
+										},
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						//普通状态第二段
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				//===========================================
+				//特化空中攻击
+				//===========================================
+				"Avatar_Kauzha_ElementalArt_FallingAttack_Detect":   //检测自身处于特化空中攻击过程中
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_IsElementalArt_FallingAttack",
+							"value":1,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Kazuha_IsElementalArt_FallingAttack",
+							"value":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_FallingAttack_HideCollider":  //下落过程中避免卡死，暂时去掉碰撞盒，落地后恢复正常
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetPassThrough",
+							"passThrough": false,
+							"doOffStage": true,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_FallingAttack_WeaponEffect":   //下落过程中武器附着特效
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Weapon",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Weapon_01",
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_FallingAttack_LoopDamage":   //特化空中攻击的Loop攻击盒
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 1.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+										"strikeType": "Slash",
+										// "overrideByWeapon": true,
+										"attackType": "Melee",
+										"elementType": "Wind",
+										"elementDurability": 0,
+										"enBreak": 25,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV1",
+										// "hitLevel": "Light", //hitlevel = 2
+										// "hitImpulseX": 200, //hitlevel = 2
+										// "hitImpulseY": 0, //hitlevel = 2
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false
+									},
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Kazuha_ElementalArt_FallingAttack_DragCamera":   //特化空中攻击控制镜头移动
+				{
+					"onAdded":
+					[
+						{   //点按
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 5.0,
+								"forceRadiusDuration": 0.35,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+									"forceByCaster":true,
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{   //长按
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 0.35,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_ClickOrHold_Mark",
+									"forceByCaster":true,
+									"value":2,
+									"compareType":"Equal",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 7.0,
+								"forceRadiusDuration": 1.0,
+								"shouldKeepForceRadius": true,
+							},
+						},
+					],
+				},
+				//===========================================
+				
+				"FallingAnthem_AttachWeaponEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+						},
+					],
+				},
+				"FallingAnthem_CameraRadialBlur":
+				{
+					"duration":0.23,
+					"modifierMixins":
+					[
+						{
+							"$type": "CameraBlurMixin",
+							"cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+						},
+					],
+				},
+				"FallingAnthem_BS_Material":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+						},
+					],
+				},
+				"FallingAnthem_BS_VelocityForce_Initialize":
+				{
+					"properties":
+					{
+						"Actor_AddGravityScale": -2,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces":
+							[
+								"RushMoveType"
+							],
+						},
+					],
+				},
+				"FallingAnthem_LoopDamage":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 1.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1
+										}
+									}
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+										"strikeType": "Slash",
+										"overrideByWeapon": true,
+										"attackType": "Melee",
+										"elementType": "None",
+										"elementDurability": 0,
+										"enBreak": 25,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										// "hitLevel": "Light", //hitlevel = 2
+										// "hitImpulseX": 200, //hitlevel = 2
+										// "hitImpulseY": 0, //hitlevel = 2
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false
+									},
+								},
+							},
+						},
+					],
+				},
+				"FallingAnthem_FallingDamageImmune_01":
+				{
+					"onAdded":[
+						{
+						  "$type": "ClearGlobalValue",
+						  "key": "_ABILITY_FallingAttack_Altitude",
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv0",
+									"logic": "LesserOrEqual",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv1",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv0",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv2",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv1",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv3",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv2",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv3",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+					],
+				},
+				"FallingAnthem_FallingDamageImmune_02":
+				{
+					"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+					],
+				},
+				"FallingAnthem_FallingDamageImmune_03":
+				{
+
+					"properties":
+					{
+						"Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+					},
+				},
+				"FallingAnthem_Loop_Normal":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+							"valueSteps":
+							[
+								-1,
+								0.5,
+								1.5
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps":
+							[
+								"FallingAnthem_Loop_Normal_Rank_1",
+								"FallingAnthem_Loop_Normal_Rank_2"
+							],
+						},
+					],
+				},
+				"FallingAnthem_Loop_Normal_Rank_1":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+						},
+					],
+				},
+				"FallingAnthem_Loop_Normal_Rank_2":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+						},
+					],
+				},
+				//水平惯性继承
+				"Inertia":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ApplyInertiaVelocityMixin",
+							"damping": 0,
+							"useXZ": false,
+							"useY": false,
+						},
+					],
+				},
+				"FallingAnthem_Height_Detect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 5,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "Greater",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "Greater",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+						},
+					],
+				},
+				"FallingAnthem_OverHead_Camera":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 4.5,
+								"forceRadiusDuration": 0.2,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorFloat",
+									"parameter": "FallingAnthem_UseCamera",
+									"value": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"FallingAnthem_OverHead_Camera_Remover":
+				{
+					"onAdded":
+					[
+						{
+							"doOffStage": true,
+							"$type": "AvatarExitCameraShot",
+						},
+					],
+				},
+				"FallingAnthem_Landed_Camera":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 0.1,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorFloat",
+									"parameter": "FallingAnthem_UseCamera",
+									"value": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"FallingAnthem_ClearVelocityForce":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces":
+							[
+								"RushMoveType",
+								"InertiaType"
+							],
+						},
+					],
+				},
+				"FallingAnthem_ClearVelocityForce_AS":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces":
+							[
+								"RushMoveType",
+								"InertiaType"
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				// "ElementalArt_FallingAttack_Damage": 0,     //特化空中攻击伤害
+
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  普攻及重击伤害控制
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_NormalAttack_DamageHandler",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%NormalAttack_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%NormalAttack_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03_1"],
+					"damagePercentage": "%NormalAttack_03_1_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03_2"],
+					"damagePercentage": "%NormalAttack_03_2_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04"],
+					"damagePercentage": "%NormalAttack_04_DamagePercentage",
+				},
+				//Gadget打的伤害，放在talent里直接改伤害了
+				// {
+				//     "$type": "ModifyDamageMixin",
+				//     "attackTags": ["NormalAttack_05"],
+				//     "damagePercentage": "%NormalAttack_05_DamagePercentage",
+				// },
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack_1"],
+					"damagePercentage": "%ExtraAttack_1_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ExtraAttack_2"],
+					"damagePercentage": "%ExtraAttack_2_DamagePercentage",
+				},
+			],
+			"abilitySpecials":
+			{
+				"NormalAttack_01_DamagePercentage": 0,
+				"NormalAttack_02_DamagePercentage": 0,
+				"NormalAttack_03_1_DamagePercentage": 0,
+				"NormalAttack_03_2_DamagePercentage": 0,
+				"NormalAttack_04_DamagePercentage": 0,
+				// "NormalAttack_05_DamagePercentage": 0,
+				"ExtraAttack_1_DamagePercentage": 0,
+				"ExtraAttack_2_DamagePercentage": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  突破1 PermanentSkill_1
+//  元素战技接触到火、水、雷、冰四种元素其一，下次特化空中攻击造成额外对应元素伤害
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_PermanentSkill_1",
+			"isDynamicAbility": true,
+			"onAbilityStart":   //每次特化空中攻击进入Trigger，根据Mixtype打出对应元素斩击
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Kazuha_PermanentSkill_1_Effect",
+				},         
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_PermanentSkill_1_Effect":   //根据元素质变结果播放对应颜色特效
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":0,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike_Fire",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike_Water",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":2,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike_Electric",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":3,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_Strike_Ice",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":4,
+									"compareType":"Equal",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+
+	//额外造成对应元素伤害（需要在风元素斩击之前Trigger，EventPattern控制比较精准）
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_PermanentSkill_1_ExtraDamage",
+			"isDynamicAbility": true, 
+			"onAbilityStart":
+			[
+				{
+					//额外造成火元素伤害
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 4.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 4.5,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -1.0,
+									"z": 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							// "attenuationTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%PermanentSkill_1_FallingAttack_Damage",
+								// "overrideByWeapon": true,
+								"strikeType": "Blunt",
+								"attackType": "Melee",
+								"elementType": "Fire",
+								"elementDurability": 25,
+								"elementRank": 1.0,
+								"enBreak": 20,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV1",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+							"forceByCaster":true,
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+				},
+				{
+					//额外造成水元素伤害
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 4.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 4.5,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -1.0,
+									"z": 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							// "attenuationTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%PermanentSkill_1_FallingAttack_Damage",
+								// "overrideByWeapon": true,
+								"strikeType": "Blunt",
+								"attackType": "Melee",
+								"elementType": "Water",
+								"elementDurability": 25,
+								"elementRank": 1.0,
+								"enBreak": 20,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV1",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+							"forceByCaster":true,
+							"value":2,
+							"compareType":"Equal",
+						},
+					],
+				},
+				{
+					//额外造雷元素伤害
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 4.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 4.5,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -1.0,
+									"z": 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							// "attenuationTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%PermanentSkill_1_FallingAttack_Damage",
+								// "overrideByWeapon": true,
+								"strikeType": "Blunt",
+								"attackType": "Melee",
+								"elementType": "Electric",
+								"elementDurability": 25,
+								"elementRank": 1.0,
+								"enBreak": 20,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV1",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+							"forceByCaster":true,
+							"value":3,
+							"compareType":"Equal",
+						},
+					],
+				},
+				{
+					//额外造成冰元素伤害
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 4.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 4.5,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -1.0,
+									"z": 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							// "attenuationTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%PermanentSkill_1_FallingAttack_Damage",
+								// "overrideByWeapon": true,
+								"strikeType": "Blunt",
+								"attackType": "Melee",
+								"elementType": "Ice",
+								"elementDurability": 25,
+								"elementRank": 1.0,
+								"enBreak": 20,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV1",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+							"forceByCaster":true,
+							"value":4,
+							"compareType":"Equal",
+						},
+					],
+				},
+			],
+			"abilitySpecials":
+			{
+				"PermanentSkill_1_FallingAttack_Damage": 0,
+			},
+		},
+	},
+
+	//元素战技吸收元素检测  0风  1火  2水  3雷  4冰
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_PermanentSkill_1_Mix",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Kazuha_ElementalArt_MixType",
+					"value": 0,
+					"doOffStage": true,
+				},
+			],
+			"onAbilityStart":  //元素质变检测攻击盒挪到各自的攻击事件上去了，这里只负责延迟上风特效
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect_Delay",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "ElementHittingOtherPredicatedMixin",
+					"prePredicates": 
+					[
+						{
+							"$type": "ByAttackTags",
+							"attackTags": ["Kazuha_ElementalArt_Mix_Detect"],
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Kazuha_ElementalArt_MixType",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "Equal",
+						},
+					],
+					"elementBatchPredicateds": 
+					[
+						{
+							"elementTypeArr": ["Fire"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"value":1,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Water"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"value":2,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Electric"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"value":3,
+									"doOffStage":true,
+								},
+							],
+						},
+						{
+							"elementTypeArr": ["Ice","Frozen"],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"value":4,
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect_Delay":
+				{
+					"isUnique": true,
+					"duration": 0.05,
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect",
+						},
+					],
+				},
+				"UNIQUE_Avatar_Kazuha_ElementalArt_WindEffect":   //小技能跳向空中后环绕自身的风特效（根据元素变质变色）
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":0,
+									"compareType":"NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind_Fire",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind_Water",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":2,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind_Electric",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":3,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind_Ice",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Kazuha_ElementalArt_MixType",
+									"forceByCaster":true,
+									"value":4,
+									"compareType":"Equal",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  突破2 PermanentSkill_2
+//  触发扩散反应时，提升全队对应元素伤害，数值基于自身元素精通百分比
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_PermanentSkill_2",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Kazuha_PermanentSkill_2_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_PermanentSkill_2_Handler":    //扩散反应检测器
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"entityTypes": ["Monster",],
+							"reactionTypes": ["SwirlFire"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Fire",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Fire",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"entityTypes": ["Monster",],
+							"reactionTypes": ["SwirlWater"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Water",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Water",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"entityTypes": ["Monster",],
+							"reactionTypes": ["SwirlElectric"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Electric",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Electric",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"entityTypes": ["Monster",],
+							"reactionTypes": ["SwirlIce"],
+							"actions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Ice",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"doOffStage": true,
+									"target": "AllPlayerAvatars",
+									"modifierName": "UNIQUE_Avatar_Kazuha_PermanentSkill_2_Ice",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"compareType": "XZ",
+											"value": 40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Avatar_Kazuha_PermanentSkill_2_Fire":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Kazuha_PermanentSkill_2_Duration",
+					"buffID":10001,   //给一个buff提示。
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_FireAddHurtExtraDelta": "%Kazuha_PermanentSkill_2_Factor*%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+					},
+				},
+				"UNIQUE_Avatar_Kazuha_PermanentSkill_2_Water":
+				{
+					"duration": "%Kazuha_PermanentSkill_2_Duration",
+					"stacking": "Unique",
+					"isUnique": true,
+					"buffID":10001,//给一个buff提示。
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_WaterAddHurtExtraDelta": "%Kazuha_PermanentSkill_2_Factor*%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+					},
+				},
+				"UNIQUE_Avatar_Kazuha_PermanentSkill_2_Electric":
+				{
+					"duration": "%Kazuha_PermanentSkill_2_Duration",
+					"stacking": "Unique",
+					"isUnique": true,
+					"buffID":10001,//给一个buff提示。
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElecAddHurtExtraDelta": "%Kazuha_PermanentSkill_2_Factor*%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+					},
+				},
+				"UNIQUE_Avatar_Kazuha_PermanentSkill_2_Ice":
+				{
+					"duration": "%Kazuha_PermanentSkill_2_Duration",
+					"stacking": "Unique",
+					"isUnique": true,
+					"buffID":10001,//给一个buff提示。
+					"state":"AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_IceAddHurtExtraDelta": "%Kazuha_PermanentSkill_2_Factor*%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Kazuha_PermanentSkill_2_Factor": 0,
+				"Kazuha_PermanentSkill_2_Duration": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座1 Constellation_1
+//  元素战技冷却时间减少XX%, 释放元素爆发时重置自身元素战技CD （基础冷却在ConfigTalent里写死）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_Constellation_1",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalBurst"],
+					"modifierName": "Avatar_Kazuha_Constellation_1_ResetCD",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_Constellation_1_ResetCD":   //进入充能技时重置小技能CD
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ModifyAvatarSkillCD",
+							"skillID": 10472,
+							"cdRatio": -1,
+							"doOffStage": true,
+						},
+						{
+							"$type": "ModifyAvatarSkillCD",
+							"skillID": 10473,
+							"cdRatio": -1,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座4 Constellation_4
+//  释放元素战技时获得XX/XX点能量（点按/长按），滑翔过程时，每秒回复能量XX点
+//  上述效果仅在自身能量低于XX%时生效
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_Constellation_4",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalArt_Landed", "Kazuha_ElementalArt_Air"],
+					"modifierName": "Avatar_Kazuha_Constellation_4_ClickRevive",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Kazuha_ElementalArt_Hold"],
+					"modifierName": "Avatar_Kazuha_Constellation_4_HoldRevive",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["FlyStart", "Fly"],
+					"modifierName": "Avatar_Kazuha_Constellation_4_ReviveEnergy",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_Constellation_4_ClickRevive":   //点按恢复能量
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ReviveElemEnergy",
+							"value": "%Energy_Click",
+							"predicates":
+							[
+								{
+									"$type": "ByEnergyRatio",
+									"ratio": "%MaxEnergyRatio",
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_Constellation_4_HoldRevive":   //长按恢复能量
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "ReviveElemEnergy",
+							"value": "%Energy_Hold",
+							"predicates":
+							[
+								{
+									"$type": "ByEnergyRatio",
+									"ratio": "%MaxEnergyRatio",
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				"Avatar_Kazuha_Constellation_4_ReviveEnergy":   //计时器，每秒间隔回复能量值
+				{
+					"thinkInterval": "%Interval",
+					"onThinkInterval":
+					[
+						{
+							"$type": "ReviveElemEnergy",
+							"value": "%Energy_Fly",
+							"predicates":
+							[
+								{
+									"$type": "ByEnergyRatio",
+									"ratio": "%MaxEnergyRatio",
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Interval": 1.0,
+
+				"Energy_Click": 0,
+				"Energy_Hold": 0,
+				"Energy_Fly": 0,
+				"MaxEnergyRatio": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  命之座6 Constellation_6
+//  击败敌方目标后，武器获得风元素附魔，持续XX秒（可刷新不叠加）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Kazuha_Constellation_6",
+			"isDynamicAbility": true,
+			"onAbilityStart":  //从元素战技点按及长按、充能技斩击后进入Trigger
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Kazuha_Constellation_6_WindEnchant",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByEquipParts",
+						"equipPartNames" : ["equip01", "equip02", "sheathPoint"],
+					},
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Kazuha_Constellation_6_DamageUp",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Kazuha_Constellation_6_WindEnchant":    //武器风元素附魔
+				{
+					"duration": "%Duration",
+					"stacking": "Refresh",
+					"elementDurability": 25,
+					"elementType": "Wind",
+					"overrideWeaponElement": true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Kazuha_Constellation_6_Weapon",
+						},
+					],
+				},
+				"Avatar_Kazuha_Constellation_6_DamageUp":   //普攻、重击、空中攻击、特化空中攻击伤害提升
+				{
+					"duration": "%Duration",
+					"stacking": "Refresh",
+					"state": "AttackUp",
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": 
+							[
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+								"ExtraAttack",
+								"FallingAttack",
+							],
+							"damagePercentageRatio": "%FIGHT_PROP_ELEMENT_MASTERY*%ElemToDamage",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElemToDamage": 0,
+				"Duration": 0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 队伍冲刺体力消耗降低 
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Kazuha_DashStamina_Reduction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",        //复制的后面的interval内容
+					"target":"CurTeamAvatars",
+					"modifierName": "UNIQUE_DashStaminaReduction",
+					"doOffStage":true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Razor_DashStaminaReduction_Handler",
+					"doOffStage":true,
+				},
+			],
+			"modifiers":
+			{
+				"Razor_DashStaminaReduction_Handler":
+				{
+					"thinkInterval":5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",  
+							"target":"CurTeamAvatars",
+							"modifierName": "UNIQUE_DashStaminaReduction",
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_DashStaminaReduction":
+				{
+					"isUnique" : true,
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Sprint","SprintBS"],
+							"modifierName": "DashStamina_Reduction",
+						},
+					],
+				},
+				"DashStamina_Reduction":
+				{
+					"properties":
+					{
+						"Actor_CostStaminaRatio":-0.2,
+					}
+				},
+			},
+		}
+	},
+
+]

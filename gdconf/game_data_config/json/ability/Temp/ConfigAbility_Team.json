@@ -1,0 +1,372 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Team_TeamChargeMark
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_TeamChargeMark",
+			"onAdded" : 
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "TeamChargeMark_Decay",		//队伍充能层数随时间衰减
+				},
+			],
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_Ability_TeamChargeMark",
+					"valueSteps" : [ 19.5, 20.5 ],		//充满层数设置
+					"removeAppliedModifier" : true,
+					"modifierNameSteps" : [ "Blank" ],
+					"actionQueues":
+					[
+						[
+							{
+								"$type" : "AddGlobalValue",
+								"key" : "_Ability_TeamFullChargeMark",		//充满时增加队伍充满标记
+								"value" : 1,
+								"useLimitRange" : true,
+								"maxValue" : 1,
+								"minValue" : 0,
+							},
+							{
+								"$type" : "AddGlobalValue",
+								"key" : "_Ability_TeamChargeMark",		//并且清空队伍充能层数
+								"value" : -20,
+								"useLimitRange" : true,
+								"maxValue" : 20,
+								"minValue" : 0,
+							},
+						],
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_Ability_TeamFullChargeMark",
+					"valueSteps" : [-0.5, 0.5, 1.5],		//根据是否有队伍充满标记调整特效
+					"removeAppliedModifier" : true,
+					"modifierNameSteps" : [ "Blank" , "Blank" ],
+					"actionQueues":
+					[
+						[
+							{
+								"$type" : "RemoveModifier",
+								"doOffStage" : true,
+								"modifierName" : "TeamFullChargeEffect",		//换人时通过移除充能标记，移除充满特效
+								"target": "CurTeamAvatars",
+							},
+						],
+						[
+							{
+								"$type" : "ApplyModifier",
+								"modifierName" : "TeamFullChargeEffect",		//充满时为当前角色增加充满特效
+								"target": "CurLocalAvatar",
+							},
+						],
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_Ability_AvatarFullChargeMark",
+					"valueSteps" : [-0.5, 0.5, 1.5],		//根据是否发动小技能增强调整特效
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["Blank","Blank"],
+					"actionQueues":
+					[
+						[
+							{
+								"$type" : "RemoveModifier",
+								"doOffStage" : true,
+								"modifierName" : "AvatarFullChargeEffect",		//时间结束或使用小技能后通过移除小技能增强效果，移除小技能增强特效
+								"target": "CurTeamAvatars",
+							},
+						],
+						[
+							{
+								"$type" : "ApplyModifier",
+								"doOffStage" : true,
+								"modifierName" : "AvatarFullChargeEffect",		//发动时为角色增加发动特效
+								"target": "CurTeamAvatars",
+							},
+						],
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":
+				{
+					"duration" : 0.1,
+				},
+				"TeamChargeMark_Decay" : 
+				{
+					"thinkInterval" : 5.0,		//充能层数衰减间隔
+					"onThinkInterval":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_Ability_TeamChargeMark",
+							"value" : -1,
+							"useLimitRange" : true,
+							"maxValue" : 20,
+							"minValue" : 0,
+						},
+					],
+				},
+				"TeamFullChargeEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern": "Eff_Avatar_WhiteBox_TeamChargeMark",
+							"doOffStage" : true,
+						},
+					],
+				},
+				"AvatarFullChargeEffect" :
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern": "",
+							"doOffStage" : true,
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Combat Test Aura 
+//  **Frequently changed due to balance adjustment**
+//
+////////////////////////////////////////////////////////////////
+	// {
+	// 	"Default": 
+	// 	{
+	// 		"$type": "ConfigAbility",
+	// 		"abilityName": "Combat_TestAura_Avatar",
+	// 		"onAdded":
+	// 		[
+	// 			{
+	// 				"$type" : "ApplyModifier",
+	// 				"target" : "Self",
+	// 				"modifierName" : "Combat_TestAura_Detect",
+	// 			},
+	// 		],
+	// 		"modifiers":
+	// 		{
+	// 			"Combat_TestAura_Detect":
+	// 			{
+	// 				"onAdded" :
+	// 				[
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Override",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_NormalAttack",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_ExtraAttack",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Elemental_Art",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Elemental_Burst",
+	// 					},
+	// 				],
+	// 				"thinkInterval" : 3.0,
+	// 				"onThinkInterval" :
+	// 				[
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Override",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_NormalAttack",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_ExtraAttack",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Elemental_Art",
+	// 					},
+	// 					{
+	// 						"$type" : "ApplyModifier",
+	// 						"doOffStage" : true,
+	// 						"target" : "CurTeamAvatars",
+	// 						"modifierName" : "UNIQUE_Combat_TestAura_Elemental_Burst",
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Combat_TestAura_Override" :
+	// 			{
+	// 				"isUnique" : true,
+	// 				"properties":
+	// 				{
+	// 					"Actor_AddHurtDelta" : "%Override_AddHurtDelta",
+	// 					"Actor_CriticalDelta" : "%Override_CriticalDelta",
+	// 					"Actor_MaxHPRatio" : "%Override_MaxHPRatio",
+	// 					"Actor_ChargeEfficiencyDelta" : "%Override_ChargeEfficiencyDelta",
+	// 					"Actor_FireAddHurtDelta" : "%Override_FireAddHurtDelta",
+	// 					"Actor_ElecAddHurtDelta" : "%Override_ElecAddHurtDelta",
+	// 					"Actor_WaterAddHurtDelta" : "%Override_WaterAddHurtDelta",
+	// 					"Actor_GrassAddHurtDelta" : "%Override_GrassAddHurtDelta",
+	// 					"Actor_WindAddHurtDelta" : "%Override_WindAddHurtDelta",
+	// 					"Actor_IceAddHurtDelta" : "%Override_IceAddHurtDelta",
+	// 					"Actor_RockAddHurtDelta" : "%Override_RockAddHurtDelta",
+	// 				},
+	// 			},
+	// 			"UNIQUE_Combat_TestAura_NormalAttack":
+	// 			{
+	// 				"isUnique" : true,
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_01", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_02", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_03", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_04", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_05", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "NormalAttack_06", 
+	// 						"damagePercentageRatio" : "%NormalAttack_DamageRatio",
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Combat_TestAura_ExtraAttack":
+	// 			{
+	// 				"isUnique" : true,
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "ExtraAttack", 
+	// 						"damagePercentageRatio" : "%ExtraAttack_DamageRatio",
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Combat_TestAura_Elemental_Art":
+	// 			{
+	// 				"isUnique" : true,
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art", 
+	// 						"damagePercentageRatio" : "%Elemental_Art_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art_Hold", 
+	// 						"damagePercentageRatio" : "%Elemental_Art_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art_Extra", 
+	// 						"damagePercentageRatio" : "%Elemental_Art_DamageRatio",
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Combat_TestAura_Elemental_Burst":
+	// 			{
+	// 				"isUnique" : true,
+	// 				"modifierMixins":
+	// 				[
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art", 
+	// 						"damagePercentageRatio" : "%Elemental_Burst_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art_Hold", 
+	// 						"damagePercentageRatio" : "%Elemental_Burst_DamageRatio",
+	// 					},
+	// 					{
+	// 						"$type" : "ModifyDamageMixin",
+	// 						"attackTag" : "Elemental_Art_Extra", 
+	// 						"damagePercentageRatio" : "%Elemental_Burst_DamageRatio",
+	// 					},
+	// 				],
+	// 			},
+	// 		},
+	// 		"abilitySpecials" : 
+	// 		{
+	// 			"Override_AddHurtDelta" : -0.25,
+	// 			"Override_CriticalDelta" : 0.0,
+	// 			"Override_MaxHPRatio" : 0.0,
+	// 			"Override_ChargeEfficiencyDelta" : 0.0,
+	// 			"NormalAttack_DamageRatio" : 1.0,
+	// 			"ExtraAttack_DamageRatio" : 1.0,
+	// 			"Elemental_Art_DamageRatio" : 1.0,
+	// 			"Elemental_Burst_DamageRatio" : 1.0,
+	// 			"Override_FireAddHurtDelta" : 1.0,
+	// 			"Override_ElecAddHurtDelta" : 1.0,
+	// 			"Override_WaterAddHurtDelta" : 1.0,
+	// 			"Override_GrassAddHurtDelta" : 1.0,
+	// 			"Override_WindAddHurtDelta" : 1.0,
+	// 			"Override_IceAddHurtDelta" : 1.0,
+	// 			"Override_RockAddHurtDelta" : 1.0,
+	// 		},
+	// 	},
+	// },
+	// 
+	// 
+]

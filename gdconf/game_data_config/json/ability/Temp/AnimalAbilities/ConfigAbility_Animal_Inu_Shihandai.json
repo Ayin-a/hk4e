@@ -1,0 +1,6592 @@
+[
+
+////////////////////////////////////////////////////////////////
+//
+//  巡逻点闪烁
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BlinkToNext",
+		"abilitySpecials": {
+			"BlinkPointNumStart":0,
+			"BlinkPointNumEnd":0,
+			"BlinkPointNum":0
+		},
+		"onAdded":
+		[					
+			//为了防止初始化时，加grouppoint点的value延迟，狗子初始化寻点延迟
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_InitialPoint_Delay"
+			},
+			//延迟设置出生点
+			// {
+			// 	"$type": "ApplyModifier",
+			// 	"modifierName": "Animal_Inu_Shihandai_SetBornPos_Delay"
+			// },
+			{
+				"$type": "SetGlobalValue",
+				"key": "_IS_INU_SHIHANDAI",
+				"value": 1
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_BLINK_BACK",
+				"value": 0
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_INU_SHIHANDAI_SEARCH_START",
+				"value": 0
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_INU_SHIHANDAI_SEARCH_END",
+				"value": 0
+			},
+			{
+				"$type":"ServerLuaCall",
+				"doOffStage": true,
+				"funcName":"SetHachiWayPointGV",
+				"luaCallType": "FromGroup",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_GetGlobalValue_ToInitial"
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_CAN_TRIGGER_AWARE",
+				"value": 1
+			},
+			//每闪2次，张望一次的计数
+			{
+				"$type": "SetGlobalValue",
+				"key": "_INU_BLINK_NO_SEARCH",
+				"value": 0
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Blink_During"],
+				"modifierName": "Animal_Inu_Shihandai_BlinkHandler"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["OutOfBattleBlink_BS"],
+				"modifierName": "Animal_Inu_Shihandai_OutOfBattle_SetPos"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["OutOfBattleBlink_During"],
+				"modifierName": "Animal_Inu_Shihandai_BlinkToLastPoint_Handler"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_INU_BLINK_POINT_NUM",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalPos",
+						"key": "_INU_BLINK_LAST_POS",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						},
+						"setTarget": false
+					}
+				],
+				"failActions": [
+					{
+						"$type": "SetGlobalPos",
+						"otherTargets":{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation":"OR",
+							"dynamicValue": "%BlinkPointNum",
+							"compareType": "Equal"
+						},
+						"key": "_INU_BLINK_LAST_POS",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						},
+						"setTarget": false
+					}
+				]
+			},
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_INU_BLINK_POINT_NUM",
+						"value": "%BlinkPointNumStart",
+						"compareType": "Equal"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BLINK_BACK",
+						"value": 0
+					}
+				]
+			},
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_INU_BLINK_POINT_NUM",
+						"value": "%BlinkPointNumEnd",
+						"compareType": "Equal"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BLINK_BACK",
+						"value": 1
+					}
+				]
+			},
+			{
+				"$type": "AddGlobalValue",
+				"key": "_INU_BLINK_POINT_NUM",
+				"value": 1,
+				"minValue": 0,
+				"useLimitRange": false,
+				"predicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_BLINK_BACK",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				]
+			},
+			{
+				"$type": "AddGlobalValue",
+				"key": "_INU_BLINK_POINT_NUM",
+				"value": -1,
+				"minValue": 0,
+				"predicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_BLINK_BACK",
+						"value": 1,
+						"compareType": "Equal"
+					}
+				]
+			},
+			{
+				"$type": "SetGlobalValueToOverrideMap",
+				"globalValueKey": "_INU_BLINK_POINT_NUM",
+				"overrideMapKey": "BlinkPointNum"
+			},
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_INU_BLINK_POINT_NUM",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalPos",
+						"key": "_INU_BLINK_POS",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						},
+						"setTarget": false
+					}
+				],
+				"failActions": [
+					{
+						"$type": "SetGlobalPos",
+						"otherTargets":{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation":"OR",
+							"dynamicValue": "%BlinkPointNum",
+							"compareType": "Equal"
+						},
+						"key": "_INU_BLINK_POS",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						},
+						"setTarget": false
+					}
+				]
+			},
+			{
+				"$type": "TryFindBlinkPointByBorn",
+				"born":{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_INU_BLINK_POS"
+				},
+				"limitY": 5,
+				"hitSceneTest": false
+			},
+			//在目标点创建碰撞gadget给帽子子弹触发
+			{
+				"$type": "CreateGadget",
+				"gadgetID": 42607004,
+				"born":{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_INU_BLINK_POS"
+				}
+			}
+		],
+		"modifiers":
+		{
+			"Animal_Inu_Shihandai_SetBornPos_Delay":{
+				"duration": 1,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalPos",
+						"key": "_INU_SHIHANDAI_BORN_POS",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_GetGlobalValue_ToInitial":{
+				"modifierMixins": [
+					{
+						"$type": "ServerUpdateGlobalValueMixin",
+						"key": "_INU_SHIHANDAI_SEARCH_START",
+					},
+					{
+						"$type": "ServerUpdateGlobalValueMixin",
+						"key": "_INU_SHIHANDAI_SEARCH_END",
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_InitialPoint_Delay":{
+				"duration": 1,
+				"onRemoved": [	
+					//获取巡逻点信息
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_INU_SHIHANDAI_SEARCH_START",
+						"overrideMapKey": "BlinkPointNumStart"
+					},
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_INU_SHIHANDAI_SEARCH_END",
+						"overrideMapKey": "BlinkPointNumEnd"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLINK_POINT_NUM",
+						"value": "%BlinkPointNumStart"
+					},
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_INU_BLINK_POINT_NUM",
+						"overrideMapKey": "BlinkPointNum"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BlinkTimer":{
+				"duration": 0.5,
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BlinkOver"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BlinkHandler":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					//发射帽子
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_POS"
+						}
+					},
+					{
+						"$type": "SetGlobalDir",
+						"otherTargets":{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42607004
+						},
+						"born":{
+							"$type": "ConfigBornBySelf",
+							"direction":{
+								"$type": "ConfigDirectionByLookAtEntity"
+							}
+						},
+						"key": "_INU_ANIMAL_HAT_FLY_DIR",
+						"setTarget": false
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42607003,
+						"born":{
+							"$type": "ConfigBornBySelf",
+							"direction":{
+								"$type": "ConfigDirectionByGlobalValue",
+								"directionKey": "_INU_ANIMAL_HAT_FLY_DIR"
+							}
+						}
+					},	
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 0
+					},
+					// {
+					// 	"$type": "ApplyModifier",
+					// 	"modifierName": "Animal_Inu_Shihandai_BlinkTimer"
+					// },
+					
+				],
+				"onRemoved": [
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_LAST_POS"
+						}
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 1
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_INU_BLINK_NO_SEARCH",
+						"value": 1,
+						"useLimitRange": true,
+						"maxValue": 2,
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BLINK_NO_SEARCH",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Animal_Inu_Shihandai_ToSearchPose",
+								"predicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_INU_SHIHANDAI_NOT_FREE",
+										"value": 0,
+										"compareType": "Equal"
+									}
+								]
+							}
+						],
+						"failActions": [
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Animal_Inu_Shihandai_ToNoSearchPose",
+								"predicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_INU_SHIHANDAI_NOT_FREE",
+										"value": 0,
+										"compareType": "Equal"
+									}
+								]
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLINK_NO_SEARCH",
+						"value": 0,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BLINK_NO_SEARCH",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ToNoSearchPose":{
+				"duration": 3,
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "BlinkNoSearch",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "BlinkNoSearch",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ToSearchPose":{
+				"duration": 5,
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Search",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Search",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_OutOfBattle_SetPos":{
+				"onAdded": [
+					//判断是否触发过烟花，触发则闪回上一个触发烟花的坐标，否则返回入战点
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_HAS_FIND_HAPPY",
+								"value": 1
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalPos",
+								"key": "_INU_BLINK_LAST_POS",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_HAPPY_BACK_POINT"
+								}
+							}
+						],
+						"failActions": [
+							{
+								"$type": "SetGlobalPos",
+								"key": "_INU_BLINK_LAST_POS",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_ALERT_POS"
+								}
+							}
+						]
+					},
+					{
+						"$type": "TryFindBlinkPointByBorn",
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_LAST_POS"
+						},
+						"hitSceneTest":false,
+						"limitY": 5
+					},
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_LAST_POS"
+						}
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BlinkToLastPoint_Handler":{
+				"onAdded": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 0
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_BlinkToLastPoint_Timer"
+					}				
+				],
+				"onRemoved": [
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1,
+						// "predicates": [
+						// 	{
+						// 		"$type": "ByTargetGlobalValue",
+						// 		"key": "_INU_SHIHANDAI_IN_OUTOFBATTLE",
+						// 		"value": 0,
+						// 		"compareType": "NoneOrEqual"
+						// 	}
+						// ]
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BlinkToLastPoint_Timer":{
+				"duration": 0.3,
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BlinkOver"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  闪烁目标点
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_TargetPos",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_TargetPos"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Blink_TargetPos":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_IS_INU_SHIHANDAI_BLINK_TARGET",
+						"value": 1
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  闪烁 帽子子弹
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_HatBullet",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_HatBullet"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_IS_INU_SHIHANDAI_BLINK_TARGET",
+						"value": 1,
+						"compareType": "Equal"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "ApplyModifier",
+						"target": "Target",
+						"modifierName": "Animal_Inu_Shihandai_BlinkTargetPos_KillSelf"
+					},
+					{
+						"$type": "ApplyModifier",
+						"target": "Owner",
+						"modifierName": "Animal_Inu_Shihandai_Blink_Arrive"
+					},
+					{
+						"$type": "RemoveModifier",
+						"target": "Self",
+						"modifierName": "Animal_Inu_Shihandai_Blink_HatBullet"
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BlinkTargetPos_KillSelf":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "KillSelf"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Blink_HatBullet":{
+				"onAdded": [
+					{
+						"$type": "Predicated",
+						"target": "Owner",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_IS_INU_SHIHANDAI_BOSS",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "AttachEffect",
+								"effectPattern": "Eff_Animal_Inu_Shihandai_BlinkHatBig"
+							}
+						],
+						"failActions": [
+							{
+								"$type": "AttachEffect",
+								"effectPattern": "Eff_Animal_Inu_Shihandai_BlinkHat"
+							}
+						]
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "KillSelf"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Blink_Arrive":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BlinkOver"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  接受烟花引诱
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_FindHappy",
+		"onAdded": [
+			{
+				"$type": "SetGlobalPos",
+				"key": "_HAPPY_POINT_POS",
+				"born":{
+					"$type": "ConfigBornBySelf"
+				}
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["FindHappy"],
+				"modifierName": "Animal_Inu_Shihandai_FindHappyReact"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["HappyOverBlink_BS"],
+				"modifierName": "Animal_Inu_Shihandai_HappyOverTurn"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["HappyBlink_During"],
+				"modifierName": "Animal_Inu_Shihandai_FindHappyHandler"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["HappyOverBlink_During"],
+				"modifierName": "Animal_Inu_Shihandai_HappyOverBlink"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["HappyLoop"],
+				"modifierName": "Animal_Inu_Shihandai_HappyLoopEffect"
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "FindHappy",
+				"normalizeStart": 0.16,
+				"normalizeEnd": 0.17,
+				"modifierName": "Animal_Inu_Shihandai_FindHappy_Turn"
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [1,2,9001,9002,9003],
+				"modifierName": "Animal_Inu_Shihandai_FindHappy_ControlHandler"
+			}
+			// {
+			// 	"$type": "AttachToAIAlertnessMixin",
+			// 	"alertness": [0,1],
+			// 	"modifierName": "Animal_Inu_Shihandai_FindHappy_ControlHandler"
+			// }
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_FindHappy_ControlHandler":{
+				"modifierMixins": [
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_FIND_HAPPY_POINT",
+						"valueSteps": [-1.5,0.5,1.5],
+						"modifierNameSteps": ["Animal_Inu_Shihandai_FindHappy_Empty","Animal_Inu_Shihandai_FindHappy"]
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_FindHappy_OverDelay"
+					}			
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappy_OverDelay":{
+				"duration": 0.3,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_FIND_HAPPY_POINT",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_HappyOverTurn":{
+				"onAdded": [
+					//转向回城点方向
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_HAPPY_BACK_POINT"
+						}
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappy_Turn":{
+				"onAdded": [
+					//转向烟花方向
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_HAPPY_POINT_POS"
+						}
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappyReact":{
+				"onAdded": [	
+					//进入引诱后，重置触发值
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_START_HAPPY",
+						"value": 1
+					},
+					//设置自己的引诱结束回程点
+					{
+						"$type": "SetGlobalPos",
+						"key":"_INU_SHIHANDAI_HAPPY_BACK_POINT",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					//标记自身触发过烟花
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_HAS_FIND_HAPPY",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_HappyLoopEffect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Happy"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappy_Empty":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_START_HAPPY",
+						"value": 0
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Happy",
+						"value": false
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "HappyLoop",
+						"value": false
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_IN_BATTLE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappy":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "FindHappy",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Happy",
+						"value": true,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "HappyLoop",
+						"value": true,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					}
+				],
+				"thinkInterval": 1,
+				"onThinkInterval": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "FindHappy",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_START_HAPPY",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					//持续关闭眼睛search特效
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_FindHappyHandler":{
+				"onAdded": [
+					{
+						"$type": "TryFindBlinkPointByBorn",
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_HAPPY_POINT_POS",
+							"offset": {
+								"x": 0,
+								"y": 0,
+								"z": 0.5
+							}
+						},
+						"limitY": 5,
+						"hitSceneTest": false,
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					//转向烟花方向
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_HAPPY_POINT_POS"
+						}
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 1
+					} 
+				]
+			},
+			"Animal_Inu_Shihandai_HappyOverBlink":{
+				"onAdded": [
+					{
+						"$type": "TryFindBlinkPointByBorn",
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_HAPPY_BACK_POINT"
+						},
+						"limitY": 5,
+						"hitSceneTest": false,
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 1
+					} 
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default" :
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "Animal_Inu_Shihandai_Steer",
+		"abilityMixins":
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["JumpAttack_BS"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.7,
+				"angularSpeed" : 720,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Alert"],
+				"startNormalizedTime" : 0.45,
+				"endNormalizedTime" : 0.62,
+				"angularSpeed" : 360,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["RangeBlade"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 0.2,
+				"angularSpeed" : 360,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["CounterAttack"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.2,
+				"angularSpeed" : 720,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Blink_Attack"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 0.2,
+				"angularSpeed" : 360,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeAttack_1"],
+				"startNormalizedTime" : 0.09,
+				"endNormalizedTime" : 0.19,
+				"angularSpeed" : 720,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin", 
+				"steerStateIDs": ["MeleeAttack_2"],
+				"startNormalizedTime" : 0.06,
+				"endNormalizedTime" : 0.25,
+				"angularSpeed" : 720,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["MeleeAttack_3"],
+				"startNormalizedTime" : 0.2,
+				"endNormalizedTime" : 0.25,
+				"angularSpeed" : 360,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["RushAttack_BS"],
+				"startNormalizedTime" : 0,
+				"endNormalizedTime" : 0.7,
+				"angularSpeed" : 360,
+				"attackTrigger" : "",
+				"attackDistance" : 2,
+			}
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  警戒
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_ToAlert",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_CloseBroadCast"
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [1],
+				"modifierName": "Animal_Inu_Shihandai_ToAlert_Handler"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Animal_Inu_Shihandai_ToAlert_PoseChangeHandler"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [1],
+				"modifierName": "Animal_Inu_Shihandai_ToAlert_Effect"
+			}
+			// {
+			// 	"$type": "AttachToStateIDMixin",
+			// 	"stateIDs": ["Aware"],
+			// 	"modifierName": "Animal_Inu_Shihandai_ToAlert_Effect"
+			// }
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_CloseBroadCast":{
+				"onAdded": [
+					{
+						"$type": "ResetAIThreatBroadcastRange",
+						"range": 0,
+						"canBeHandledOnRecover": true,
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ToAlert_Effect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Aware_ShowArea",
+						"born":{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointTargetType": "Self",
+							"attachPointName": "EyeTransform",
+							"offset": {
+								"x": 0,
+								"y": -0.5,
+								"z": 0
+							}
+						}
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Aware",
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ToAlert_PoseChangeHandler":{
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Happy",
+						"value": false
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Search",
+						"value": false
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "BlinkNoSearch",
+						"value": false
+					},
+					{
+						"$type": "ServerLuaCall",
+						"luaCallType": "FromGroup",
+						"funcName": "MonsterCallPlayerCaught"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalPos",
+						"key": "_INU_SHIHANDAI_ALERT_POS",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},					
+					//入战后头顶特效显示
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_AlertEffect"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_AlertEffect":{
+				"duration": 2,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_AlertToBattle"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ToAlert_Handler":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "InAware",
+						"value": true,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_CAN_TRIGGER_AWARE",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "Aware",
+							},
+							{
+								"$type": "SetGlobalPos",
+								"otherTargets":{
+									"$type": "SelectTargetsByShape",
+									"campBasedOn": "Self",
+									"campTargetType": "All",
+									"centerBasedOn": "Self",
+									"shapeName": "CircleR30",
+								},
+								"born":{
+									"$type": "ConfigBornByTarget"
+								},
+								"key": "_AWARE_TURN_POS",
+								"setTarget": false,
+								"predicates": [
+									{
+										"$type": "ByEntityTypes",
+										"entityTypes": ["Avatar"]
+									}
+								]
+							},
+							{
+								"$type": "TurnDirectionToPos",
+								"toPos":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_AWARE_TURN_POS"
+								}
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "InAware",
+						"value": false
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  四周寻敌
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Search",
+		"onAdded": [
+			{
+				"$type": "SetGlobalValue",
+				"key": "_INU_SEARCHEYE_EFFECT_ON",
+				"value": 1
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_INU_SEARCHEYE_EFFECT_ON",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Animal_Inu_Shihandai_Search_Effect_Empty","Animal_Inu_Shihandai_Search_Effect"]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Search_Effect_Empty":{
+
+			},
+			"Animal_Inu_Shihandai_Search_Effect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_SearchEye"
+					}
+				],
+				"modifierMixins": [
+					{
+						"$type": "FieldEntityCountChangeMixin",
+						"campTargetType":"Enemy",
+						"targetPredicates": [
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar"]
+							}
+						],
+						"onFieldEnter":[
+							{
+								"$type": "AttachModifier",
+								"modifierName": "Monster_Inu_Shihandai_FeelRangeEffect"
+							}
+						],
+						"onFieldExit": [
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Monster_Inu_Shihandai_FeelRangeEffect"
+							}
+						]
+					}
+				]
+			},
+			"Monster_Inu_Shihandai_FeelRangeEffect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_FeelRangeArea"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  走路巡逻接受信息进入search
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_WalkToSearch",
+		"onAdded": [
+			{
+				"$type": "SetGlobalValue",
+				"key": "_SHIHANDAI_TO_SEARCH",
+				"value": 0
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [1,2,9001,9002,9003],
+				"modifierName": "Animal_Inu_Shihandai_WalkToSearch_Handler"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Search"],
+				"modifierName": "Animal_Inu_Shihandai_ResetSearchValue"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [1,2],
+				"modifierName": "Animal_Inu_Shihandai_BattleAlertness"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_WalkToSearch_Handler":{
+				"modifierMixins": [
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_SHIHANDAI_TO_SEARCH",
+						"valueSteps": [-1.5,0.5,1.5],
+						"modifierNameSteps": ["Animal_Inu_Shihandai_WalkNoSearch","Animal_Inu_Shihandai_WalkToSearch"]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_WalkNoSearch":{
+
+			},
+			"Animal_Inu_Shihandai_WalkToSearch":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "WalkToSearch",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ANIMAL_INU_SHIHANDAI_WALKPOSE",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_NOT_FREE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BE_CAPUTRED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_ResetSearchValue_Delay"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ResetSearchValue_Delay":{
+				"duration": 1,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SHIHANDAI_TO_SEARCH",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_ResetSearchValue":{
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SHIHANDAI_TO_SEARCH",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BattleAlertness":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_NOT_FREE",
+						"value": 1
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_NOT_FREE",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1,
+						// "predicates": [
+						// 	{
+						// 		"$type": "ByTargetGlobalValue",
+						// 		"key": "_INU_SHIHANDAI_IN_OUTOFBATTLE",
+						// 		"value": 0,
+						// 		"compareType": "NoneOrEqual"
+						// 	}
+						// ]
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  走路和闪烁value区分
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_WalkBlinkType",
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_ANIMAL_INU_SHIHANDAI_WALKPOSE",
+				"valueSteps": [-1.5,0.5,1.5],
+				"modifierNameSteps": ["Animal_Inu_Shihandai_BlinkType","Animal_Inu_Shihandai_WalkType"]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BlinkType":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "WalkType",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_WalkType":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "WalkType",
+						"value": true
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  脱战
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_OutOfBattle",
+		"onAdded": [
+			// {
+			// 	"$type": "SetGlobalPos",
+			// 	"born":{
+			// 		"$type": "ConfigBornBySelf",
+			// 	},
+			// 	"key": "_INU_ANIMAL_SHIHANDAI_WALK_BORN_POS"
+			// }
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [901],
+				"modifierName": "Animal_Inu_Shihandai_OutOfBattle_Trigger"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_OutOfBattle_Trigger":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BlinkOutOfbattle",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_OUTOFBATTLE",
+						"value": 1
+					},
+					// {
+					// 	"$type": "SetGlobalValue",
+					// 	"key": "_INU_SEARCHEYE_EFFECT_ON",
+					// 	"value": 0
+					// }
+				],
+				// "thinkInterval": 1,
+				// "onThinkInterval": [
+				// 	{
+				// 		"$type": "SetGlobalValue",
+				// 		"key": "_INU_SEARCHEYE_EFFECT_ON",
+				// 		"value": 0
+				// 	}
+				// ],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_OUTOFBATTLE",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  踩刀跳砸
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_JumpAttack",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_HitCheck"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_IS_INU_SHIHANDAI_BOSS",
+						"value": 1,
+						"compareType": "Equal"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_JumpAttackBig",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					}
+				],
+				"failActions": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_JumpAttack",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					}
+				]
+			},
+			{
+				"$type":"TriggerAttackEvent",
+				"targetType":"Enemy",
+				"attackEvent":
+				{
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius": 6,
+						"height": 6,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0,
+								"y": -2,
+								"z": 0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"attackTag": "Inu_JumpAttack",
+						"attackProperty":
+						{
+							"damagePercentage": 1,
+							"strikeType": "Blunt",
+							"enBreak":101,
+							"elementType":"Electric",
+							"elementDurability":50
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV5"
+						}
+					}
+				}
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "JumpAttack_BS",
+				"normalizeStart": 0.9,
+				"normalizeEnd": 1,
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_Warning"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["JumpAttack_During"],
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_RushMove"
+			},
+			//技能释放期间禁替身
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": [
+					"NormalIdle",
+					"NormalMove"
+				],
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_BanTrickDog"
+			},
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_JumpAttack_BanTrickDog":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_ATTACK",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_ATTACK",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_JumpAttack_HitCheck":{
+				"onAttackLanded": [
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates": [
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"]
+							},
+							{
+								"$type":"ByAttackTags",
+								"attackTags":["Inu_JumpAttack"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalValue",
+								"key": "_INU_SHIHANDAI_JUMPATTACK_HITED",
+								"value": 1
+							},
+							{
+								"$type": "ConfigAbilityAction"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_JumpAttack_Warning":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"born":{
+							"$type": "ConfigBornByTarget",
+							"onGround": true
+						},
+						"key": "_INU_SHIHANDAI_JUMPATTACK_POS",
+						"setTarget": false
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_IS_INU_SHIHANDAI_BOSS",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "TryFindBlinkPointByBorn",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS",
+									"offset": {
+										"x": 0,
+										"y": 0,
+										"z": -1
+									}
+								},
+								"hitSceneTest":false
+							}
+						],
+						"failActions": [
+							{
+								"$type": "TryFindBlinkPointByBorn",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS",
+									"offset": {
+										"x": 0,
+										"y": 0,
+										"z": -1
+									}
+								},
+								"hitSceneType":"BlinkHitSceneTestByThreeSegments",
+								"limitY": 0.7,
+								"ignoreWater": true
+							}
+						]
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_JumpAttack_Warning",
+						"born":{
+							"$type": "ConfigBornByTeleportToPoint",
+						}
+					},		
+				]
+			},
+			"Animal_Inu_Shihandai_JumpAttack_RushMove":{
+				"onAdded": [
+					// {
+					// 	"$type": "FixedMonsterRushMove",
+					// 	"toPos":{
+					// 		"$type": "ConfigBornByTeleportToPoint",
+					// 	},
+					// 	"maxRange": 100,
+					// 	"timeRange": 0.5,
+					// 	"isInAir": true,
+					// 	"animatorStateIDs": ["JumpAttack_During"]
+					// }
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					{
+						"$type": "DoBlink"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					}
+				]
+			}
+		}
+	}
+},
+//踩刀刀上特效
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_JumpAttack_BladeEffectBig",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_BladeEffectBig"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_JumpAttack_BladeEffectBig":{
+				"duration": 2.3,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RangeBlade_ChargeBig"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  Boss狗子虚弱
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossWeak",
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["BeCaptured_BS","BeCaptured_Loop","BeCaptured_AS"],
+				"modifierName": "Animal_Inu_Shihandai_InWeak"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_InWeak":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_WeakTimer"
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_Recover_SkillCD"
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Recover_SkillCD":{
+				"duration": 4,
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Weak",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Weak",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_WeakTimer":{
+				"duration": 24,
+				"onAdded": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "CanBeWeak",
+						"value": false
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "CanBeWeak",
+						"value": true
+					}
+				]
+			},
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  对狗子使用抓捕道具进入挣扎模式
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Captured",
+		"onAdded": [
+			{
+				"$type": "SetGlobalValue",
+				"key": "_CAPTURED_BY_SPECIALITEM",
+				"value": 0
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_CAPTURED_BY_SPECIALITEM",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Animal_Inu_Shihandai_CapturedEmpty","Animal_Inu_Shihandai_Captured"]
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["BeCaptured_BS","BeCaptured_Loop","BeCaptured_AS"],
+				"modifierName": "Animal_Inu_Shihandai_InCaptured_During"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_CapturedEmpty":{
+
+			},
+			"Animal_Inu_Shihandai_Captured":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BeCaptured"
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [101,301,401,501,99999]
+					}
+				]
+			},
+			
+			"Animal_Inu_Shihandai_InCaptured_During":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BE_CAPUTRED",
+						"value": 1
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 0
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BE_CAPUTRED",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAPTURED_BY_SPECIALITEM",
+						"value": 0
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": false
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SEARCHEYE_EFFECT_ON",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_IN_BATTLE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  保护机制
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BattleGrass",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Protect_GrassWall_Handler",
+				"predicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_ANIMAL_INU_SHIHANDAI_PROTECT_TYPETWO",
+						"value": 1,
+						"compareType": "Equal"
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Gadget_GrassWall_KillSelf":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "KillSelf"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_GrassWall_Handler":{
+				"duration": 10,
+				"onAdded": [
+					//八个大藤曼圈
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"key": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						},
+						"setTarget": false
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": -2,
+								"y": 0,
+								"z": -4
+							},
+							"onGround": true
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 2,
+								"y": 0,
+								"z": -4
+							},
+							"onGround": true
+						}	
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 2,
+								"y": 0,
+								"z": 4
+							},
+							"onGround": true
+						}	
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": -2,
+								"y": 0,
+								"z": 4
+							},
+							"onGround": true
+						}		
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 4,
+								"y": 0,
+								"z": -2
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}		
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 4,
+								"y": 0,
+								"z": 2
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": -4,
+								"y": 0,
+								"z": -2
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": -4,
+								"y": 0,
+								"z": 2
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42607001
+						},
+						"modifierName": "Gadget_GrassWall_KillSelf"
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Protect",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Protect_Shield_Handler",
+				"predicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_ANIMAL_INU_SHIHANDAI_PROTECT_TYPE",
+						"value": 1,
+						"compareType": "Equal"
+					}
+				]
+			},
+			
+			// {
+			// 	"$type": "ApplyModifier",
+			// 	"modifierName": "Animal_Inu_Shihandai_Protect_Invisible_Handler",
+			// 	"predicates": [
+			// 		{
+			// 			"$type": "ByTargetGlobalValue",
+			// 			"key": "_ANIMAL_INU_SHIHANDAI_PROTECT_TYPE",
+			// 			"value": 3,
+			// 			"compareType": "Equal"
+			// 		}
+			// 	]
+			// }
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [901],
+				"modifierName": "Animal_Inu_Shihandai_Protect_ShieldRemove"
+			},
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [101],
+				"modifierName": "Animal_Inu_Shihandai_Protect_ResetSkillCD"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [1,2],
+				"modifierName": "Animal_Inu_Shihandai_Protect_Invisible_HandlerCheck"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Protect_Invisible_HandlerCheck":{
+				"onAdded": [
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Animal_Inu_Shihandai_Protect_Invisible_Handler",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ANIMAL_INU_SHIHANDAI_PROTECT_TYPE",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_ResetSkillCD":{
+				"onAdded": [
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [201]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_Shield_Handler":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR20",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+						},
+						"modifierName": "Animal_Inu_Shihandai_Protect_Shield",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_Invisible_Handler":{
+				"duration": 999,
+				"thinkInterval": 5,
+				"onThinkInterval": [
+					{
+						"$type": "Predicated",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR25",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+							//"topLimit": 1
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalPos",
+								"target": "Target",
+								"born":{
+									"$type": "ConfigBornByTarget"
+								},
+								"key": "_INU_SHIHANDAI_INVISBILE_WAVE_POS",
+								"setTarget": false
+							},
+							{
+								"$type": "CreateGadget",
+								"target": "Self",
+								"gadgetID": 42607002,
+								//"sightGroupWithOwner": true,
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_INVISBILE_WAVE_POS"
+								}
+							}
+						]
+					}
+				],
+				"onAdded": [
+					{
+						"$type": "Predicated",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR20",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+							"topLimit": 1
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalPos",
+								"target": "Target",
+								"born":{
+									"$type": "ConfigBornByTarget"
+								},
+								"key": "_INU_SHIHANDAI_INVISBILE_WAVE_POS",
+								"setTarget": false
+							},
+							{
+								"$type": "CreateGadget",
+								"target": "Self",
+								"gadgetID": 42607002,
+								//"sightGroupWithOwner": true,
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_INVISBILE_WAVE_POS"
+								}
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_Shield":{
+				"elementType": "None",
+				"elementDurability": 10,
+				"duration": 999,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_ShieldProtect"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_PROTECTED_BY_SHIELD",
+						"value": 1
+					}
+				],
+				"modifierMixins": [
+					{
+						"$type": "ElementShieldMixin",
+						"elementType": "None",
+						"shieldHPRatio": 1,
+						"damageRatio": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_PROTECTED_BY_SHIELD",
+						"value": 0
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_ShieldProtect_AS"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Protect_ShieldRemove":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+						},
+						"modifierName": "Animal_Protected_RemoveShield",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Protected_RemoveShield":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Animal_Inu_Shihandai_Protect_Shield"
+					}
+				]
+			},
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  藤曼 
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_GrassWall",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_GrassElement"
+			}
+		],
+		"onKill": [
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_GrassElement"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_GrassElement":{
+				"duration": 20,
+				"elementType": "Grass",
+				"elementDurability": 500,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Shaman_Grass_NormalAttack_GrassWall",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset" : 
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							}
+						}
+					}
+				],
+				"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_WoodenObject_BurnOut",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+							"scale": 1.5,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Shaman_Grass_NormalAttack_GrassWall_AS",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								}
+							}
+						},
+						{
+							"$type": "KillSelf",
+						}
+					]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  隐身波纹
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Invisible_Wave",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Invisible_Wave_Handler"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_InvisibleWave_Effect":{
+				"duration": 6.5,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_InvisibleWave"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Invisible_Wave_Handler":{
+				"duration": 5,
+				"thinkInterval": 0.5,
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_InvisibleWave_Effect"
+					},
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR3",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+						},
+						"modifierName": "UNIQUE_Animal_Inu_Shihandai_Protect_InvisibleWave",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}
+				],
+				"onThinkInterval": [
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR3",
+							"centerBasedOn": "Self",
+							"campBasedOn": "Self",
+							"campTargetType": "Alliance",
+						},
+						"modifierName": "UNIQUE_Animal_Inu_Shihandai_Protect_InvisibleWave",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_AFFIX_INU_SHIHANDAI_EVENT_ANIMAL_TAG",
+								"value": 1,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}
+				]
+			},
+			"UNIQUE_Animal_Inu_Shihandai_Protect_InvisibleWave":{
+				"isUnique": true,
+				"stacking": "RefreshUniqueDurability",
+				"duration": 2,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ANIMAL_IN_INVISIBLE_WAVE",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ANIMAL_IN_INVISIBLE_WAVE",
+						"value": 0
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  受到伤害，替身攻击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_TrickDog",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_TrickDog_BeHitCheck",
+				"predicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_BLADEMASTER_LEVEL",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				]
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["TrickAttack_BS"],
+				"modifierName": "Animal_Inu_Shihandai_TrickDog_HideSelf"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Animal_Inu_Shihandai_InBattleCheck"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_InBattleCheck":{
+				"onAdded": [
+					//入战后可以使用替身狗技能的标记
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_BATTLE",
+						"value": 1
+					},
+					//入战后过10秒后再开始释放替身
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_DodgeAllowDelay"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_IN_BATTLE",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_DodgeAllowDelay":{
+				"duration": 10,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_DODGE_ALLOWDELAY",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_DODGE_ALLOWDELAY",
+						"value": 1
+					}
+				],
+				"onChangeAuthority": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_DODGE_ALLOWDELAY",
+						"value": 1
+					}
+				],
+				"onReconnect": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_DODGE_ALLOWDELAY",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_TrickDog_HideSelf":{
+				"onAdded": [
+					//如果是boss狗取离当前位置距离超过5米的地方，普通狗，随机周围位置
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_IS_INU_SHIHANDAI_BOSS",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							//2.6剑道大师判断
+							{
+								"$type": "Predicated",
+								"targetPredicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_BLADEMASTER_LEVEL",
+										"value": 1,
+										"compareType": "MoreThanAndEqual"
+									}
+								],
+								"successActions": [
+									{
+										"$type": "SetGlobalPos",
+										"target": "SelfAttackTarget",
+										"key": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS",
+										"born":{
+											"$type": "ConfigBornByTarget",
+											"bornRandom":{
+												"$type": "BornRandomFromCenter",
+												"minRandomRange": 3,
+												"maxRandomRange": 7
+											},
+											"onGround": true
+										},
+										"setTarget": false
+									},
+									{
+										"$type": "TryFindBlinkPointByBorn",
+										"target": "Self",
+										"hitSceneTest":false,
+										"born":{
+											"$type": "ConfigBornByGlobalValue",
+											"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+										}
+									},
+									//在目标点创建碰撞gadget给帽子子弹触发
+									{
+										"$type": "CreateGadget",
+										"gadgetID": 42607004,
+										"born":{
+											"$type": "ConfigBornByGlobalValue",
+											"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+										}
+									},
+									//发射帽子
+									{
+										"$type": "TurnDirectionToPos",
+										"toPos":{
+											"$type": "ConfigBornByGlobalValue",
+											"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+										}
+									},
+									{
+										"$type": "TriggerBullet",
+										"bulletID": 42607003,
+										"born":{
+											"$type": "ConfigBornBySelf",
+										}
+									}
+								],
+								"failActions": [
+									{
+										"$type": "Predicated",
+										"otherTargets":{
+											"$type": "SelectTargetsBySelfGroup",
+											"operation":"OR",
+											"dynamicValue": 1,
+											"compareType": "GreaterOrEqual",
+											"topLimit": 1
+										},
+										"targetPredicates": [
+											{
+												"$type": "ByTargetPositionToSelfPosition",
+												"compareType": "XYZ",
+												"value": 5,
+												"logic": "Greater"
+											}
+										],
+										"successActions": [
+											{
+												"$type": "SetGlobalPos",
+												"target": "Target",
+												"key": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS",
+												"born":{
+													"$type": "ConfigBornByTarget"
+												},
+												"setTarget": false
+											},
+											{
+												"$type": "TryFindBlinkPointByBorn",
+												"target": "Self",
+												"hitSceneTest":false,
+												"born":{
+													"$type": "ConfigBornByGlobalValue",
+													"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+												}
+											},
+											//在目标点创建碰撞gadget给帽子子弹触发
+											{
+												"$type": "CreateGadget",
+												"gadgetID": 42607004,
+												"born":{
+													"$type": "ConfigBornByGlobalValue",
+													"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+												}
+											},
+											//发射帽子
+											{
+												"$type": "TurnDirectionToPos",
+												"toPos":{
+													"$type": "ConfigBornByGlobalValue",
+													"positionKey": "_INU_SHIHANDAI_BOSS_TRICKDODGE_POS"
+												}
+											},
+											{
+												"$type": "TriggerBullet",
+												"bulletID": 42607003,
+												"born":{
+													"$type": "ConfigBornBySelf",
+												}
+											},
+										],
+										"predicates": [
+											{
+												"$type": "ByTargetPositionToSelfPosition",
+												"compareType": "XYZ",
+												"value": 5,
+												"logic": "Greater"
+											}
+										]
+									}
+								]
+							}
+						],
+						"failActions": [
+							{
+								"$type": "TryFindBlinkPoint",
+								"forwardAngle":90,
+								"minRange": 5,
+								"maxRange": 7,
+								"ignoreWater": true
+							}
+						]
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "SetGlobalPos",
+						"setTarget": false,
+						"key": "_INU_SHIHANDAI_DODGE_DIR_BORN",
+						"target": "SelfAttackTarget",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						}
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607005,
+						"born":{
+							"$type": "ConfigBornBySelf",
+							"onGround": true,
+							"onGroundIgnoreWater": true
+						}
+					},
+					
+				],
+				"onRemoved": [
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_DODGE_DIR_BORN"
+						}
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_Blink",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},					
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_TrickDog_TimerHandler":{
+				"duration": 15,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_CAN_TRICK",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_CAN_TRICK",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_TrickDog_BeHitCheck":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_CAN_TRICK",
+						"value": 1
+					}
+				],
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_CAN_TRICK",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_IN_OUTOFBATTLE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_IN_BATTLE",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							// {
+							// 	"$type": "ByTargetGlobalValue",
+							// 	"key": "_INU_SHIHANDAI_IN_ATTACK",
+							// 	"value": 0,
+							// 	"compareType": "NoneOrEqual"
+							// },
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_DODGE_ALLOWDELAY",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "Trick"
+							},
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Animal_Inu_Shihandai_TrickDog_TimerHandler"
+							}
+						]
+					}					
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  替身狗子爆炸
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_TrickDogExplode",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_TrickDogExplode"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_TrickDogExplode_HitCheck"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_TrickDogExplode_HitCheck":{
+				"duration": 3.5,
+				"onAttackLanded": [
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates": [
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"]
+							},
+							{
+								"$type":"ByAttackTags",
+								"attackTags":["TrickDog_Damage"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalValue",
+								"target": "Owner",
+								"key": "_INU_SHIHANDAI_TRICKDOG_HITED",
+								"value": 1
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_TrickDogExplode":{
+				"duration": 3,
+				"onAdded": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_DodgeExplode",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "Randomed",
+						"chance": 0.6,
+						"successActions": [
+							{
+								"$type": "Randomed",
+								"chance": 0.5,
+								"successActions": [
+									{
+										"$type": "Predicated",
+										"target": "Owner",
+										"targetPredicates": [
+											{
+												"$type": "ByTargetGlobalValue",
+												"key": "_IS_INU_SHIHANDAI_BOSS",
+												"value": 1,
+												"compareType": "Equal"
+											}
+										],
+										"successActions": [
+											{
+												"$type": "FireEffect",
+												"effectPattern": "Eff_Animal_Inu_Shihandai_BigFakeDog1",
+												"born":{
+													"$type": "ConfigBornBySelf"
+												}
+											}
+										],
+										"failActions": [
+											{
+												"$type": "FireEffect",
+												"effectPattern": "Eff_Animal_Inu_Shihandai_DodgeFakeDog1",
+												"born":{
+													"$type": "ConfigBornBySelf"
+												}
+											}
+										]
+									}
+								],
+								"failActions": [
+									{
+										"$type": "Predicated",
+										"target": "Owner",
+										"targetPredicates": [
+											{
+												"$type": "ByTargetGlobalValue",
+												"key": "_IS_INU_SHIHANDAI_BOSS",
+												"value": 1,
+												"compareType": "Equal"
+											}
+										],
+										"successActions": [
+											{
+												"$type": "FireEffect",
+												"effectPattern": "Eff_Animal_Inu_Shihandai_BigFakeDog2",
+												"born":{
+													"$type": "ConfigBornBySelf"
+												}
+											}
+										],
+										"failActions": [
+											{
+												"$type": "FireEffect",
+												"effectPattern": "Eff_Animal_Inu_Shihandai_DodgeFakeDog2",
+												"born":{
+													"$type": "ConfigBornBySelf"
+												}
+											}
+										]
+									}
+								]
+							}
+						],
+						"failActions": [
+							{
+								"$type": "Predicated",
+								"target": "Owner",
+								"targetPredicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_IS_INU_SHIHANDAI_BOSS",
+										"value": 1,
+										"compareType": "Equal"
+									}
+								],
+								"successActions": [
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Animal_Inu_Shihandai_BigFakeDog3",
+										"born":{
+											"$type": "ConfigBornBySelf"
+										}
+									}
+								],
+								"failActions": [
+									{
+										"$type": "FireEffect",
+										"effectPattern": "Eff_Animal_Inu_Shihandai_DodgeFakeDog3",
+										"born":{
+											"$type": "ConfigBornBySelf"
+										}
+									}
+								]
+							}
+						]
+					}
+				],
+				"onRemoved": [
+					{
+						"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 6,
+								"height": 6,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0,
+										"y": -2,
+										"z": 0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "TrickDog_Damage",
+								"attackProperty":
+								{
+									"damagePercentage": 0.75,
+									"strikeType": "Blunt",
+									"enBreak":101,
+									"elementType":"Fire",
+									"elementDurability":50
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV5"
+								}
+							}
+						}
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  受到一定量的伤害触发远程反击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_CounterAttack",
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToHPPercentMixin",
+				"valueSteps": [0.8,0.6,0.4,0.2],
+				"modifierNameSteps": ["Inu_Shihandai_CounterAttack_Empty","Inu_Shihandai_CounterAttack01",
+				"Inu_Shihandai_CounterAttack02","Inu_Shihandai_CounterAttack03","Inu_Shihandai_CounterAttack04"]
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607006,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607006,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": -30,
+							"z": 0
+						}
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607006,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": 30,
+							"z": 0
+						}
+					}
+				}
+			}
+		],
+		"modifiers": {
+			"Inu_Shihandai_CounterAttack_Empty":{
+
+			},
+			"Inu_Shihandai_CounterAttack01":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CounterAttack"
+					}
+				]
+			},
+			"Inu_Shihandai_CounterAttack02":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CounterAttack"
+					}
+				]
+			},
+			"Inu_Shihandai_CounterAttack03":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CounterAttack"
+					}
+				]
+			},
+			"Inu_Shihandai_CounterAttack04":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CounterAttack"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  Boss狗子的反击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_CounterAttackBig",
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToHPPercentMixin",
+				"valueSteps": [0.5],
+				"modifierNameSteps": ["Inu_Shihandai_CounterAttack_Empty","Inu_Shihandai_CounterAttack01"]
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607012,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1.25,
+						"z": 0
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607012,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1.25,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": -30,
+							"z": 0
+						}
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607012,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1.25,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": 30,
+							"z": 0
+						}
+					}
+				}
+			}
+		],
+		"modifiers": {
+			"Inu_Shihandai_CounterAttack_Empty":{
+
+			},
+			"Inu_Shihandai_CounterAttack01":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "CounterAttack"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  反击的飞刀子弹 小狗
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_CounterAttackBlade",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_CounterAttackBlade"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 1,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attenuationTag": "Inu_CounterAttack",
+								"attenuationGroup": "Oceanid_Crab_WaterStream",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Blunt",
+									"enBreak":101,
+									"elementType":"Electric",
+									"elementDurability":50
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2"
+								}
+							}
+						}
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Blink_CounterAttackBlade":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RangeCounterAtttack_Weapon"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  反击的飞刀子弹 大狗
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_CounterAttackBladeBig",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_CounterAttackBladeBig"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 1,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "BladeWind_CanBeBlockBack",
+								"attenuationTag": "Inu_CounterAttack",
+								"attenuationGroup": "Oceanid_Crab_WaterStream",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Blunt",
+									"enBreak":101,
+									"elementType":"Electric",
+									"elementDurability":50
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2"
+								}
+							}
+						}
+					}
+				]
+			}	
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Blink_CounterAttackBladeBig":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RangeCounterAtttack_Weapon_Big"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  Bossbuff机制
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossBuff",
+		"onAdded": [
+			{
+				"$type": "SetGlobalValue",
+				"key": "_IS_INU_SHIHANDAI_BOSS",
+				"value": 1
+			}
+		],
+		"onKill": [
+			{
+				"$type":"DoWatcherSystemAction",
+				"watcherId":1505108,
+				"inThreatListOnly":true,
+				"predicates":
+				[
+					// {
+					// 	"$type":"ByTargetGlobalValue",
+					// 	"key":"_INU_SHIHANDAI_BUFFATTACK_EATED",
+					// 	"value":0,
+					// 	"compareType":"NoneOrEqual"
+					// },
+					// {
+					// 	"$type":"ByTargetGlobalValue",
+					// 	"key":"_INU_SHIHANDAI_BUFFDEFENSE_EATED",
+					// 	"value":0,
+					// 	"compareType":"NoneOrEqual"
+					// },
+					// {
+					// 	"$type":"ByTargetGlobalValue",
+					// 	"key":"_INU_SHIHANDAI_BUFFMOVESPEED_EATED",
+					// 	"value":0,
+					// 	"compareType":"NoneOrEqual"
+					// }
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_INU_SHIHANDAI_TRICKDOG_HITED",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				]
+			},
+			{
+				"$type":"DoWatcherSystemAction",
+				"watcherId":1505109,
+				"inThreatListOnly":true,
+				"predicates":
+				[
+					{
+						"$type":"ByTargetGlobalValue",
+						"key":"_INU_SHIHANDAI_JUMPATTACK_HITED",
+						"value":0,
+						"compareType":"NoneOrEqual"
+					}
+				]
+			},
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [0],
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Initial"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_SkillInitial"
+			},
+		],
+		"onAbilityStart": [
+			{
+				"$type": "ServerLuaCall",
+				"funcName": "SLC_ActiveRandomPoint",
+				"luaCallType": "FromGroup"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_DelayBorn"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossBuff_SkillInitial":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_SkillInitial_Delay"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_SkillInitial_Delay":{
+				"duration": 7,
+				"onRemoved": [
+					{
+						"$type": "SetAISkillCDAvailableNow",
+						"skillIDs": [99999]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_Initial":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_DelayBorn":{
+				"duration": 0.5,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalPos",
+						"otherTargets":{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation": "OR",
+							"value": 0,
+							"compareType": "GreaterOrEqual"
+						},
+						"key": "_INU_BOSS_BUFF_POS",
+						"born":{
+							"$type": "ConfigBornByTarget",
+							"direction":{
+								"$type": "ConfigDirectionByWorld",
+								"eularAngles":
+								{
+									"x" : 0,
+									"y" : 45,
+									"z" : 0,
+								}
+							}
+						},
+						"setTarget": false,
+						"predicates": [
+							{
+								"$type": "ByTargetGadgetState",
+								"gadgetState": 201
+							}
+						]
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607007,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BOSS_BUFF_POS",
+							"offset": {
+								"x": 0,
+								"y": 0,
+								"z": 0
+							}
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607008,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BOSS_BUFF_POS",
+							"offset": {
+								"x": 0,
+								"y": 0.7,
+								"z": 0
+							}
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607009,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BOSS_BUFF_POS",
+							"offset": {
+								"x": 0,
+								"y": 0.7,
+								"z": 0
+							}
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "AddGlobalValue",
+						"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+						"value": 1
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [99999],
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_SHIHANDAI_BOSSBUFF_TYPE",
+								"value": 3,
+								"compareType": "MoreThan"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossBuff_Attack",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_ShieldProtect"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Attack_Effect"
+			}
+		],
+		"onFieldEnter": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type": "ApplyModifier",
+						"target": "TargetTeam",
+						"modifierName": "Inu_Shihandai_Avatar_Buff_Attack"
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Tower_Ball_Active_01",
+						"born":{
+							"$type": "ConfigBornBySelf",
+							"offset": {
+								"x": 0,
+								"y": 0.5,
+								"z": 0
+							}
+						}
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_Attack_Effect"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Owner",
+						"key": "_INU_SHIHANDAI_BUFFATTACK_EATED",
+						"value": 1
+					},
+					{
+						"$type": "KillSelf",
+					}
+				]
+			}
+		],
+		"onKill": [
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_ShieldProtect"
+			},
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Attack_Effect"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossBuff_Attack_Effect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_AvatarBuff_Attack"
+					}
+				]
+			},
+			"Inu_Shihandai_Avatar_Buff_Attack":{
+				"duration": 0.1,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BOSS_BUFF_ATTACK",
+						"value": 1
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_ShieldProtect":{
+				"elementDurability": 7,
+				"elementType": "None",
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_ShieldProtect"
+					}
+				],
+				"modifierMixins": [
+					{
+						"$type": "ElementShieldMixin",
+						"damageRatio":0,
+						"shieldHPRatio": 1,
+						"elementType": "None" 
+					}
+				],
+				"onBeingHit": [
+					{
+						"$type": "AddElementDurability",
+						"value": -1,
+						"elementType": "None",
+						"minValue": 0,
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_ShieldProtect"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_ShieldProtect_AS",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"]
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossBuff_Defense",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Protect"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Protect_Handler"
+			}
+		],
+		"onKill": [
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Protect"
+			},
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Protect_Handler"
+			},
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Effect"
+			},
+		],
+		"abilityMixins": [
+			
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossBuff_Defense_Protect_Handler":{
+				"modifierMixins": [
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_GADGET_INU_BOSSBUFF_DEFENSE_PROTECT",
+						"valueSteps": [-1.5,0.5,2.5],
+						"modifierNameSteps": ["Inu_Shihandai_BossBuffProtect_DefenseEmpty","Inu_Shihandai_BossBuffProtect_Defense"]
+					}
+				]
+			},
+			"Inu_Shihandai_BossBuffProtect_DefenseEmpty":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_InvisibleWave"
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Effect"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_Defense_Effect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_AvatarBuff_Defend"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_Defense_Protect":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_GADGET_INU_BOSSBUFF_DEFENSE_PROTECT",
+						"value": 1
+					}
+				],
+				"thinkInterval": 5,
+				"onThinkInterval": [
+					{
+						"$type": "AddGlobalValue",
+						"key": "_GADGET_INU_BOSSBUFF_DEFENSE_PROTECT",
+						"value": 1,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_GADGET_INU_BOSSBUFF_DEFENSE_PROTECT",
+						"value": 0,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_GADGET_INU_BOSSBUFF_DEFENSE_PROTECT",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					}
+				]
+			},
+			"Inu_Shihandai_BossBuffProtect_Defense":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Effect"
+					}
+				],
+				"modifierMixins": [
+					{
+						"$type": "FieldEntityCountChangeMixin",
+						"campTargetType": "Enemy",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar"]
+							}
+						],
+						"onFieldEnter": [
+							{
+								"$type": "Predicated",
+								"otherTargets":{
+									"$type": "SelectTargetsByShape",
+									"campBasedOn": "Self",
+									"campTargetType": "All",
+									"centerBasedOn": "Self",
+									"shapeName": "CircleR2",
+								},
+								"targetPredicates": [
+									{
+										"$type": "ByEntityTypes",
+										"entityTypes": ["Avatar"]
+									}
+								],
+								"successActions": [
+									{
+										"$type": "ApplyModifier",
+										"target": "Target",
+										"modifierName": "Inu_Shihandai_Avatar_Buff_Defense"
+									}
+								]
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Tower_Ball_Active_01",
+								"born":{
+									"$type": "ConfigBornBySelf"
+								}
+							},
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Animal_Inu_Shihandai_BossBuff_Defense_Effect"
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Owner",
+								"key": "_INU_SHIHANDAI_BUFFDEFENSE_EATED",
+								"value": 1
+							},
+							{
+								"$type": "KillSelf",
+							}
+						]
+					}
+				]
+			},
+			"Inu_Shihandai_Avatar_Buff_Defense":{
+				"duration": 0.5,
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"target": "Team",
+						"modifierName": "Inu_Shihandai_Team_Buff_Defense"
+					}
+				]
+			},
+			"Inu_Shihandai_Team_Buff_Defense":{
+				"duration": 0.1,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BOSS_BUFF_DEFENSE",
+						"value": 1
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossBuff_MoveSpeed",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Protect"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_MoveSpeed_Effect"
+			}
+		],
+		"onKill": [
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossBuff_Protect"
+			}
+		],
+		"onFieldEnter": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type": "ApplyModifier",
+						"target": "TargetTeam",
+						"modifierName": "Inu_Shihandai_Avatar_Buff_MoveSpeed"
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Tower_Ball_Active_01",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Animal_Inu_Shihandai_BossBuff_MoveSpeed_Effect"
+					},
+					{
+						"$type": "ApplyModifier",
+						"otherTargets":{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42607001
+						},
+						"modifierName": "Gadget_GrassWall_KillSelf"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Owner",
+						"key": "_INU_SHIHANDAI_BUFFMOVESPEED_EATED",
+						"value": 1
+					},
+					{
+						"$type": "KillSelf",
+						"duration": 0.1
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossBuff_Protect":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						},
+						"key": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+						"setTarget": false
+					},
+					//4个小藤曼圈
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 0,
+								"y": 0,
+								"z": -2
+							},
+							"onGround": true
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 0,
+								"y": 0,
+								"z": 2
+							},
+							"onGround": true
+						},
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": 2,
+								"y": 0,
+								"z": 0
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}		
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607001,
+						"byServer": false,
+						"born":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+							"offset": {
+								"x": -2,
+								"y": 0,
+								"z": 0
+							},
+							"direction":{
+								"$type": "ConfigDirectionByDefault",
+								"angleOffsetCorrect": {
+									"x": 0,
+									"y": 90,
+									"z": 0
+								}
+							},
+							"onGround": true
+						}		
+					},
+					//八个大藤曼圈
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": -2,
+					// 			"y": 0,
+					// 			"z": -4
+					// 		},
+					// 		"onGround": true
+					// 	},
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": 2,
+					// 			"y": 0,
+					// 			"z": -4
+					// 		},
+					// 		"onGround": true
+					// 	}	
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": 2,
+					// 			"y": 0,
+					// 			"z": 4
+					// 		},
+					// 		"onGround": true
+					// 	}	
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": -2,
+					// 			"y": 0,
+					// 			"z": 4
+					// 		},
+					// 		"onGround": true
+					// 	}		
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": 4,
+					// 			"y": 0,
+					// 			"z": -2
+					// 		},
+					// 		"direction":{
+					// 			"$type": "ConfigDirectionByDefault",
+					// 			"angleOffsetCorrect": {
+					// 				"x": 0,
+					// 				"y": 90,
+					// 				"z": 0
+					// 			}
+					// 		},
+					// 		"onGround": true
+					// 	}		
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": 4,
+					// 			"y": 0,
+					// 			"z": 2
+					// 		},
+					// 		"direction":{
+					// 			"$type": "ConfigDirectionByDefault",
+					// 			"angleOffsetCorrect": {
+					// 				"x": 0,
+					// 				"y": 90,
+					// 				"z": 0
+					// 			}
+					// 		},
+					// 		"onGround": true
+					// 	}
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": -4,
+					// 			"y": 0,
+					// 			"z": -2
+					// 		},
+					// 		"direction":{
+					// 			"$type": "ConfigDirectionByDefault",
+					// 			"angleOffsetCorrect": {
+					// 				"x": 0,
+					// 				"y": 90,
+					// 				"z": 0
+					// 			}
+					// 		},
+					// 		"onGround": true
+					// 	}
+					// },
+					// {
+					// 	"$type": "CreateGadget",
+					// 	"gadgetID": 42607001,
+					// 	"byServer": false,
+					// 	"born":{
+					// 		"$type": "ConfigBornByGlobalValue",
+					// 		"positionKey": "_INU_SHIHANDAI_GRASSWALL_BASEPOS",
+					// 		"offset": {
+					// 			"x": -4,
+					// 			"y": 0,
+					// 			"z": 2
+					// 		},
+					// 		"direction":{
+					// 			"$type": "ConfigDirectionByDefault",
+					// 			"angleOffsetCorrect": {
+					// 				"x": 0,
+					// 				"y": 90,
+					// 				"z": 0
+					// 			}
+					// 		},
+					// 		"onGround": true
+					// 	}
+					// }
+				]
+			},
+			"Animal_Inu_Shihandai_BossBuff_MoveSpeed_Effect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_AvatarBuff_Move"
+					}
+				]
+			},
+			"Inu_Shihandai_Avatar_Buff_MoveSpeed":{
+				"duration": 0.1,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BOSS_BUFF_MOVESPEED",
+						"value": 1
+					}
+				]
+			},
+			"Gadget_GrassWall_KillSelf":{
+				"duration": 0.3,
+				"onAdded": [
+					{
+						"$type": "KillSelf"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  Boss闪烁攻击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BossBlinkAttack",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BossEndure"
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Blink_During"],
+				"modifierName": "Animal_Inu_Shihandai_BossBlinkHandler"
+			}
+		],
+		"onAbilityStart": [
+			// //取当前位置作为blink后的转向点
+			// {
+			// 	"$type": "SetGlobalPos",
+			// 	"key": "_INU_BLINK_LAST_POS",
+			// 	"born":{
+			// 		"$type": "ConfigBornBySelf"
+			// 	}
+			// },
+			// //取玩家背后一个位置点创建目标点
+			// {
+			// 	"$type": "SetGlobalPos",
+			// 	"target": "SelfAttackTarget",
+			// 	"born":{
+			// 		"$type": "ConfigBornByTargetLinearPoint",
+			// 		"baseOnTarget": true,
+			// 		"linearXZ": true,
+			// 		"linearMax": 50,
+			// 		"linearOffset": 5
+			// 	},
+			// 	"key": "_INU_BLINK_POS",
+			// 	"setTarget": false
+			// },
+			// //创建的点进行合法性检测
+			// {
+			// 	"$type": "TryFindBlinkPointByBorn",
+			// 	"born":{
+			// 		"$type": "ConfigBornByGlobalValue",
+			// 		"positionKey": "_INU_BLINK_POS"
+			// 	},
+			// 	"limitY": 5,
+			// 	"hitSceneTest": true,
+			// 	"hitSceneType": "BlinkHitSceneTestByThreeSegments"
+			// },
+			//如果取失败，则改为取离自己距离大于6的一个点。
+			// {
+			// 	"$type": "Predicated",
+			// 	"targetPredicates": [
+			// 		{
+			// 			"$type": "ByFindBlinkPointSuccess",
+			// 			"findPointSuccess": false
+			// 		}
+			// 	],
+			// 	"successActions": [
+			// 		{
+			// 			"$type": "Predicated",
+			// 			"otherTargets":{
+			// 				"$type": "SelectTargetsBySelfGroup",
+			// 				"operation":"OR",
+			// 				"dynamicValue": 1,
+			// 				"compareType": "GreaterOrEqual",
+			// 				"topLimit": 1
+			// 			},
+			// 			"targetPredicates": [
+			// 				{
+			// 					"$type": "ByTargetPositionToSelfPosition",
+			// 					"compareType": "XYZ",
+			// 					"value": 6,
+			// 					"logic": "Greater"
+			// 				}
+			// 			],
+			// 			"successActions": [
+			// 				{
+			// 					"$type": "SetGlobalPos",
+			// 					"target": "Target",
+			// 					"key": "_INU_BLINK_POS",
+			// 					"born":{
+			// 						"$type": "ConfigBornByTarget"
+			// 					},
+			// 					"setTarget": false
+			// 				}
+			// 			],
+			// 			"predicates": [
+			// 				{
+			// 					"$type": "ByTargetPositionToSelfPosition",
+			// 					"compareType": "XYZ",
+			// 					"value": 6,
+			// 					"logic": "Greater"
+			// 				}
+			// 			]
+			// 		},
+			// 		{
+			// 			"$type": "TryFindBlinkPointByBorn",
+			// 			"target": "Self",
+			// 			"born":{
+			// 				"$type": "ConfigBornByGlobalValue",
+			// 				"positionKey": "_INU_BLINK_POS"
+			// 			},
+			// 			"limitY": 5,
+			// 			"hitSceneTest": false,
+			// 		}
+			// 	]
+			// },
+			//2.6剑道挑战判定
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_BLADEMASTER_LEVEL",
+						"value": 1,
+						"compareType": "MoreThanAndEqual"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"key": "_INU_BLINK_POS",
+						"born":{
+							"$type": "ConfigBornByTarget",
+							"bornRandom":{
+								"$type": "BornRandomFromCenter",
+								"minRandomRange": 3,
+								"maxRandomRange": 7
+							},
+							"onGround": true
+						},
+						"setTarget": false
+					}
+				],
+				"failActions": [
+					{
+						"$type": "Predicated",
+						"otherTargets":{
+							"$type": "SelectTargetsBySelfGroup",
+							"operation":"OR",
+							"dynamicValue": 1,
+							"compareType": "GreaterOrEqual",
+							"topLimit": 1,
+							"sortType": "Random"
+						},
+						"targetPredicates": [
+							{
+								"$type": "ByTargetPositionToSelfPosition",
+								"compareType": "XYZ",
+								"value": 6,
+								"logic": "Greater"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetGlobalPos",
+								"target": "Target",
+								"key": "_INU_BLINK_POS",
+								"born":{
+									"$type": "ConfigBornByTarget"
+								},
+								"setTarget": false
+							}
+						],
+						"predicates": [
+							{
+								"$type": "ByTargetPositionToSelfPosition",
+								"compareType": "XYZ",
+								"value": 6,
+								"logic": "Greater"
+							}
+						]
+					}
+				]
+			},
+			{
+				"$type": "TryFindBlinkPointByBorn",
+				"target": "Self",
+				"born":{
+					"$type": "ConfigBornByGlobalValue",
+					"positionKey": "_INU_BLINK_POS"
+				},
+				"limitY": 5,
+				"hitSceneTest": false,
+			},
+			//在目标点创建碰撞gadget给帽子子弹触发
+			{
+				"$type": "CreateGadget",
+				"gadgetID": 42607004,
+				"born":{
+					"$type": "ConfigBornByTeleportToPoint",
+					"offset": {
+						"x": 0,
+						"y": 0.2,
+						"z": 0
+					}
+				}
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossEndure":{
+				"properties": {
+					"Actor_EndureDelta":0.001
+				},
+				"modifierMixins": [
+					{
+						"$type": "VelocityForceMixin",
+						"excludeForces": ["RetreatAirType"]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BossBlinkHandler":{
+				"onAdded": [
+					//发射帽子
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_POS"
+						}
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42607003,
+						"born":{
+							"$type": "ConfigBornBySelf",
+						}
+					},	
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_BlinkBig",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					{
+						"$type": "CreateGadget",
+						"gadgetID": 42607005,
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+										
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_TRIGGER_AWARE",
+						"value": 0
+					}			
+				],
+				"onRemoved": [
+					{
+						"$type": "DoBlink"
+					},
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"key": "_INU_BLINK_LAST_POS",
+						"born":{
+							"$type": "ConfigBornByTarget"
+						},
+						"setTarget": false
+					},
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_BLINK_LAST_POS"
+						}
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_BlinkBig",
+						"born":{
+							"$type": "ConfigBornBySelf"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					}
+				]
+			},
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  BossAlert放大
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_AlertToBeBig",
+		"abilityMixins": [
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [0,1],
+				"modifierName": "Animal_Inu_Shihandai_ResetBig"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Alert"],
+				"modifierName": "Animal_Inu_Shihandai_AlertToBeBig_ApplyEnsure"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Alert","Alert_ToBeBig"],
+				"modifierName": "Animal_Inu_Shihandai_Alert_Invincible"
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_INU_SHIHANDAI_BE_BIG",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Animal_Inu_Shihandai_Small","Animal_Inu_Shihandai_Big"]
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "SetGlobalValue",
+				"key": "_INU_SHIHANDAI_BE_BIG",
+				"value": 1
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Small":{
+				"onAdded": [
+					{
+						"$type": "SetEntityScale",
+						"scale": 1,
+						"canBeHandledOnRecover": true
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Big":{
+				"onAdded": [
+					{
+						"$type": "SetEntityScale",
+						"scale": 2,
+						"canBeHandledOnRecover": true
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_Alert_Invincible":{
+				"state": "Invincible"
+			},
+			"Animal_Inu_Shihandai_ResetBig":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BE_BIG",
+						"value": 0
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Animal_Inu_Shihandai_AlertToBeBig_Ensure"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_AlertToBeBig_ApplyEnsure":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_AlertToBeBig_Ensure"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_AlertToBeBig_Ensure":{
+				"onReconnect": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BE_BIG",
+						"value": 1
+					}
+				],
+				"onChangeAuthority": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BE_BIG",
+						"value": 1
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  近战攻击蓄力
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_MeleeAttackCharge",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_MeleeAttackCharge"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_MeleeAttackCharge":{
+				"duration": 1.35,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_WeaponCharge"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  冲锋攻击
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_RushAtk",
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["RushAttack_Loop"],
+				"modifierName": "Animal_Inu_Shihandai_RushAtk"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["RushAttack_BS","RushAttack_Loop","RushAttack_AS"],
+				"modifierName": "Animal_Inu_Shihandak_RushAtk_BladeEffect"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandak_RushAtk_BladeEffect":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_WeaponCharge"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_RushAtk":{
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RushAtk"
+					},
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42607011,
+						"trackTarget": "Self",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "FixedMonsterRushMove",
+						"toPos":{
+							"$type": "ConfigBornBySelf",
+							"offset": {
+								"x": 0,
+								"y": 0,
+								"z": 15
+							}
+						},
+						"timeRange": 1.2,
+						"animatorStateIDs": ["RushAttack_Loop"]
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "KillGadget",
+						"gadgetInfo":
+						{
+							"$type": "SelectTargetsByChildren",
+							"configID": 42607011,
+							"sortType": "Reversed",
+						},
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					}
+				],
+				"onAttackLanded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "RushHit"
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_RushAtkAS_Charge",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_RushAtkAS_Charge"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_RushAtkAS_Charge":{
+				"duration": 1.45,
+				"onAdded": [
+					// {
+					// 	"$type": "AttachEffect",
+					// 	"effectPattern": "Eff_Animal_Inu_Shihandai_RangeBlade_ChargeBig"
+					// }
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  远程剑气
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_RangeBlade",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_RangeBlade"
+			}
+		],
+		"onKill": [
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "Animal_Inu_Shihandai_Blink_RangeBlade"
+			}
+		],
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 0.3,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "BladeWind_CanBeBlockBack",
+								"attenuationTag": "Inu_Shihandai_RangeBladeDamge",
+								"attenuationGroup": "Oceanid_Crab_WaterStream",
+								"attackProperty":
+								{
+									"damagePercentage": 0.6,
+									"strikeType": "Blunt",
+									"enBreak":5000,
+									"elementType":"Electric",
+									"elementDurability":50
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2"
+								}
+							}
+						}
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_Blink_RangeBlade":{
+				"duration": 3,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RangeBlade"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "KillSelf"
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_Blink_FireRangeBlade",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"target": "AllPlayerAvatars",
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster_CheckBladeType"
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607010,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607010,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": 15,
+							"z": 0
+						}
+					}
+				}
+			},
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42607010,
+				"born":{
+					"$type": "ConfigBornBySelf",
+					"offset": {
+						"x": 0,
+						"y": 1,
+						"z": 0
+					},
+					"direction":{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset": {
+							"x": 0,
+							"y": -15,
+							"z": 0
+						}
+					}
+				}
+			},
+			// {
+			// 	"$type": "TriggerBullet",
+			// 	"bulletID": 42607010,
+			// 	"born":{
+			// 		"$type": "ConfigBornBySelf",
+			// 		"offset": {
+			// 			"x": 0,
+			// 			"y": 1,
+			// 			"z": 0
+			// 		},
+			// 		"direction":{
+			// 			"$type": "ConfigDirectionByDefault",
+			// 			"angleOffset": {
+			// 				"x": 0,
+			// 				"y": 30,
+			// 				"z": 0
+			// 			}
+			// 		}
+			// 	}
+			// },
+			// {
+			// 	"$type": "TriggerBullet",
+			// 	"bulletID": 42607010,
+			// 	"born":{
+			// 		"$type": "ConfigBornBySelf",
+			// 		"offset": {
+			// 			"x": 0,
+			// 			"y": 1,
+			// 			"z": 0
+			// 		},
+			// 		"direction":{
+			// 			"$type": "ConfigDirectionByDefault",
+			// 			"angleOffset": {
+			// 				"x": 0,
+			// 				"y": -30,
+			// 				"z": 0
+			// 			}
+			// 		}
+			// 	}
+			// }
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BladeMaster_CheckBladeType":{
+				"duration": 0.1,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_KAIRAGI_BLADEMASTER_BLADEAIR_TYPE",
+						"value": 4
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_RangeBlade_ChargeBig",
+		"onAbilityStart": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_RangeBlade_ChargeBigEffect"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_RangeBlade_ChargeBigEffect":{
+				"duration": 1.8,
+				"onAdded": [
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_RangeBlade_ChargeBig"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  冲锋子弹
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_RushBullet",
+		"onAbilityStart": [
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"targetPredicates": [
+					{
+						"$type": "ByEntityTypes",
+						"entityTypes": ["Avatar"]
+					}
+				],
+				"successActions": [
+					{
+						"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 1.5,
+								"born":
+								{
+									"$type": "ConfigBornByCollisionPoint",
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "Monster_BladeMaster_BeBlockAttack",
+								"attackProperty":
+								{
+									"damagePercentage": 0.5,
+									"strikeType": "Blunt",
+									"enBreak":5000,
+									"elementType":"None",
+									"elementDurability":50
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType":"LV2"
+								}
+							}
+						}
+					},
+					{
+						"$type": "ApplyModifier",
+						"target": "Owner",
+						"modifierName": "Animal_Inu_Shihandai_BossRushHited"
+					}
+				]
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BossRushHited":{
+				"duration": 0.1,
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "RushHit"
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  出招提示特效
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeHintEffect",
+		"onAbilityStart": [
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Animal_Inu_Shihandai_WeaponFire"
+			}
+		]
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  冰冻抵抗
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_ResistFrozen",
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_ResistFrozen"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_ResistFrozen":{
+				"onAdded": [
+					{
+                        "$type" : "AttachAbilityStateResistance",
+                        "resistanceListID": 14002,
+                        "durationRatio" : 0.8,
+                    }
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  2.6剑道挑战 怒气
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster_Angry",
+		"abilitySpecials": {
+			"hitAngryTimes":14,
+			"physicalSubHurt":-1.5
+		},
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster_Initial"
+			},
+			//判attacktag的做法
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_BladeMaster_BlockBreak_Check"
+			},
+			{
+				"$type": "Predicated",
+				"targetPredicates": [
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_BLADEMASTER_LEVEL",
+						"value": 3,
+						"compareType": "Equal"
+					}
+				],
+				"successActions": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CAN_TRICK",
+						"value": 1
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CANBLOCK",
+						"value": 1
+					}
+				]
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster_AngryBar"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["RushAtk_BS","RushAttack_Loop","RushAttack_AS"],
+				"modifierName": "Monster_BladeMaster_CanBeBlocked"
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_PARRY_HIT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Monster_Parry_None","Monster_Parry_Success"]
+			},
+			// {
+			// 	"$type": "AttachModifierToHPPercentMixin",
+			// 	"valueSteps": [0.001],
+			// 	"modifierNameSteps": ["Monster_BladeMaster_LogEmpty","Monster_BladeMaster_Log"]
+			// },
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["RushBreak_BS","RushBreak_Loop","RushBreak_AS"],
+				"modifierName": "Inu_Shihandai_BladeMaster_InWeak"
+			},
+			// {
+			// 	"$type": "AttachToStateIDMixin",
+			// 	"stateIDs": ["Block"],
+			// 	"modifierName": "Inu_Shihandai_BladeMaster_FreezePos"
+			// },
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_INU_BLADEMASTER_CANBLOCK",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Inu_BladeMaster_CanNotBlock","Inu_BladeMaster_CanBlock"]
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Die"],
+				"modifierName": "Inu_Shihandai_InDie"
+			}
+		],
+		"modifiers": {
+			"Monster_BladeMaster_LogEmpty":{
+
+			},
+			"Monster_BladeMaster_Log":{
+				"onAdded": [
+					{
+						"$type": "ServerMonsterLog",
+						"paramList": [0,0],
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_NORMAL_PARRY_LOG",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SP_PARRY_LOG",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "ServerMonsterLog",
+						"paramList": [1,0],
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_NORMAL_PARRY_LOG",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SP_PARRY_LOG",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "ServerMonsterLog",
+						"paramList": [0,1],
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_NORMAL_PARRY_LOG",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SP_PARRY_LOG",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "ServerMonsterLog",
+						"paramList": [1,1],
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_NORMAL_PARRY_LOG",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SP_PARRY_LOG",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					}
+				]
+			},
+			"Inu_Shihandai_InDie":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_DIE",
+						"value": 1
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_TrickDog_TimerHandler":{
+				"duration": 15,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CAN_TRICK",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CAN_TRICK",
+						"value": 1
+					}
+				]
+			},
+			"Inu_BladeMaster_CanNotBlock":{
+
+			},
+			"Inu_BladeMaster_CanBlock":{
+				"modifierMixins": [
+					{
+						"$type": "MonsterDefendMixin",
+						"defendAngle": 360,
+						"defendTriggerID": "TriggerDefend",
+						"stateIDs": ["NormalIdle","NormalMove","Block"],
+						"onDefendSucceded": [
+							//难度3的狗子一段时间内没有受到攻击，怒气槽会降低
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_BladeMaster_BeHitTimer",
+								"predicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_BLADEMASTER_LEVEL",
+										"value": 3,
+										"compareType": "MoreThanAndEqual"
+									}
+								]
+							},
+							{
+								"$type": "Predicated",
+								"targetPredicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_INU_BLADEMASTER_CAN_TRICK",
+										"value": 1,
+										"compareType": "Equal"
+									}
+								],
+								"successActions": [
+									{
+										"$type": "ApplyModifier",
+										"modifierName": "Inu_BladeMaster_TrickDelay"
+									}
+								]
+							}
+						]
+					}
+				]
+			},
+			"Inu_BladeMaster_TrickDelay":{
+				"duration": 0.2,
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "Trick"
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Inu_Shihandai_BladeMaster_TrickDog_TimerHandler"
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_FreezePos":{
+				"modifierMixins": [
+					{
+						"$type": "RigidBodyFreezeMixin"
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster_CanBlcokTimer":{
+				"duration": 4,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CANBLOCK",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CANBLOCK",
+						"value": 1
+					}
+				]
+			},
+			"Monster_BladeMaster_DecreaseAngry":{
+				"thinkInterval": 3,
+				"onThinkInterval": [
+					{
+						"$type": "AddChargeBarValue",
+						"value": -2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BE_HITED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					}
+				]
+			},
+			"Monster_BladeMaster_BlockBreak_Check":{
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ATTACK_CAN_BEBLOCKED",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Avatar_Blocking"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "BlockBreak"
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_SP_PARRY_LOG",
+								"value": 1
+							},
+							{
+								"$type": "ServerMonsterLog",
+								"paramList": [2]
+							}
+						]
+					},
+					//难度3的狗子一段时间内没有受到攻击，怒气槽会降低
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Monster_BladeMaster_BeHitTimer",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}
+				]
+			},
+			"Monster_BladeMaster_BeHitTimer":{
+				"duration": 2.9,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BE_HITED",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BE_HITED",
+						"value": 0
+					}
+				]
+			},
+			"Shihandai_BladeMaster_CounterAttackCheck":{
+				"modifierMixins":[
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+						"valueSteps": [-0.5,"%hitAngryTimes-0.5","%hitAngryTimes+0.5"],
+						"modifierNameSteps": ["Inu_Shihandai_BladeMaster_GoRush_Empty","Inu_Shihandai_BladeMaster_GoRush"]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster_Initial":{
+				"properties": {
+					"Actor_EndureDelta":0.001
+				},
+				"onAdded": [
+					{
+						"$type": "SetOverrideMapValue",
+						"overrideMapKey":"hitAngryTimes",
+						"value": 40,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAISkillGCD",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 3,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					// {
+					// 	"$type": "UseSkillEliteSet",
+					// 	"skillEliteSetID": 1,
+					// 	"predicates": [
+					// 		{
+					// 			"$type": "ByTargetGlobalValue",
+					// 			"key": "_BLADEMASTER_LEVEL",
+					// 			"value": 1,
+					// 			"compareType": "Equal"
+					// 		}
+					// 	]
+					// },
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 3,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Shihandai_BladeMaster_CounterAttackCheck"
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_InWeak":{
+				"state": "DefenseDown",
+				"properties": {
+					"Actor_PhysicalSubHurtDelta":"%physicalSubHurt"
+				},
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": true
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Mosnter_GeneralSkill_DefendDown"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_IN_WEAK",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": false
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+						"value": 0
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_IN_WEAK",
+						"value": 0
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_GoRush_Empty":{
+
+			},
+			"Inu_Shihandai_BladeMaster_GoRush":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_BladeMaster_CanBlcokTimer",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SHIHANDAI_BLADE_MASTER_GORUSHING",
+						"value": 1
+					},
+					//为了防止时序上defend的trigger和替身trigger冲突
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Inu_Shihandai_BladeMaster_GoRush_DelayTrigger"
+					}
+					
+				]
+			},
+			"Inu_Shihandai_BladeMaster_GoRush_DelayTrigger":{
+				"duration": 0.5,
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "GoRushAtk",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BLADEMASTER_DIE",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					}
+				]
+			},
+			"Monster_BladeMaster_CanBeBlocked":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ATTACK_CAN_BEBLOCKED",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ATTACK_CAN_BEBLOCKED",
+						"value": 0
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+						"value": 0
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SHIHANDAI_BLADE_MASTER_GORUSHING",
+						"value": 0
+					}
+				]
+			},
+			"Monster_Parry_None":{
+
+			},
+			"Monster_Parry_Success":{
+				"onAdded": [
+					//普通难度下完美格挡攻击怒气槽增加
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "AddGlobalValue",
+								"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+								"value": 5,
+								"useLimitRange": true,
+								"maxValue": "%hitAngryTimes"
+							},
+							{
+								"$type": "AddChargeBarValue",
+								"value": 5
+							}
+						]
+					},		
+					//困难难度下完美格挡攻击怒气槽增加
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "AddGlobalValue",
+								"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+								"value": 5,
+								"useLimitRange": true,
+								"maxValue": "%hitAngryTimes"
+							},
+							{
+								"$type": "AddChargeBarValue",
+								"value": 5
+							}
+						]
+					},	
+					//奥传难度下完美格挡攻击怒气槽增加
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "AddGlobalValue",
+								"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+								"value": 7,
+								"useLimitRange": true,
+								"maxValue": "%hitAngryTimes"
+							},
+							{
+								"$type": "AddChargeBarValue",
+								"value": 7
+							},
+							//难度3的狗子一段时间内没有受到攻击，怒气槽会降低
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_BladeMaster_BeHitTimer",
+
+							}
+						]
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Parry_Reset"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_NORMAL_PARRY_LOG",
+						"value": 1
+					},
+					{
+						"$type": "ServerMonsterLog",
+						"paramList": [1]
+					}
+				]
+			},
+			"Parry_Reset":{
+				"duration": 0.2,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_PARRY_HIT",
+						"value": 0
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster_AngryBar":{
+				"modifierMixins": [
+					{
+						"$type": "ChargeBarMixin",
+						"chargeBarIconID": 2,
+						"maxValue": "%hitAngryTimes",
+						"initialValue": 0
+					}
+				],
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_INU_BLADEMASTER_IN_WEAK",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByEntityTypes",
+								"useEventSource": true,
+								"entityTypes": ["Avatar"]
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SHIHANDAI_BLADE_MASTER_GORUSHING",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "Predicated",
+								"targetPredicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_BLADEMASTER_LEVEL",
+										"value": 3,
+										"compareType": "Equal"
+									}
+								],
+								"successActions": [
+									{
+										"$type": "AddGlobalValue",
+										"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+										"value": 1.5,
+										"useLimitRange": true,
+										"maxValue": "%hitAngryTimes"
+									},
+									{
+										"$type": "AddChargeBarValue",
+										"value": 1.5	
+									}
+								],
+								"failActions": [
+									{
+										"$type": "AddGlobalValue",
+										"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+										"value": 1,
+										"useLimitRange": true,
+										"maxValue": "%hitAngryTimes"
+									},
+									{
+										"$type": "AddChargeBarValue",
+										"value": 1	
+									}
+								]
+							}
+							
+						]
+					}
+				],
+				"thinkInterval": 3,
+				"onThinkInterval": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							//难度3的狗子如果一段时间没有被格挡，攻击，则怒气下降
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BE_HITED",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "AddChargeBarValue",
+								"value": -2
+							},
+							{
+								"$type": "AddGlobalValue",
+								"key": "_INU_SHIHANDAI_BLADEMASTER_HIT_RATE",
+								"value": -2,
+								"useLimitRange": true,
+								"maxValue": "%hitAngryTimes"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  剑道挑战最高难度无限格挡
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster_Block",
+		"abilityMixins": [
+			// {
+			// 	"$type": "AttachToAIAlertnessMixin",
+			// 	"alertness": [2],
+			// 	"modifierName": "Animal_Inu_Shihandai_BladeMaster_Block"
+			// }
+			// {
+			// 	"$type": "AttachToStateIDMixin",
+			// 	"stateIDs": ["Block"],
+			// 	"modifierName": "Animal_Inu_Shihandai_BladeMaster_BlockRandom"
+			// }
+		],
+		"onAdded": [
+			
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BladeMaster_BlockRandom":{
+				"thinkInterval": 0.2,
+				"onThinkInterval": [
+					{
+						"$type": "Randomed",
+						"chance": 0.5,
+						"successActions": [
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "BlockType",
+								"value": 0
+							}
+						],
+						"failActions": [
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "BlockType",
+								"value": 1
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster_ShakeCamera",
+		"onAbilityStart": [
+			{
+				"$type": "ActCameraShake",
+				"cameraShake":
+				{
+					"shakeRange":0.125,
+					"shakeTime":1.0,
+					"shakeDistance":35,
+					"shakeType":"CustomVector",
+					"shakeDir":
+					{
+						"x":0,
+						"y":1,
+						"z":0,
+					},
+					"extension":
+					{
+						"baseOnCamera": true,
+						"rangeAttenuation": 0.0
+					}
+				}
+			}
+		]
+	}
+}
+]

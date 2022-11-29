@@ -1,0 +1,48 @@
+----[[======================================
+--||	filename:       DesertRoseFlower_Quest
+--||	owner:          binghong.shen
+--||	description:    沙漠蔷薇
+--||	LogName:        DesertRoseFlower_Quest
+--||	Protection:     [Protection]
+--=======================================]]
+--
+----[[
+--defs.flowerGadgetID
+--defs.waterQuest_Event
+--defs.ActivateQuest1_Event
+--defs.ActivateQuest2_Event
+----]]
+--local extrTriggers = {
+--	initialtrigger = {
+--		{ config_id = 80000001, name = "OnGroupLoad", event= EventType.EVENT_GROUP_LOAD, source = "", condition = "", action = "action_GroupLoad", trigger_count = 0},
+--	}
+--}
+--
+--function RefreshGroup(context, evt)
+--
+--	local Finished = ScriptLib.GetGroupVariableValue(context, "Finished")
+--	if(Finished==1)then
+--		ScriptLib.SetGadgetStateByConfigId(context,defs.flowerGadgetID,302)
+--		return 0
+--	end
+--
+--	return 0
+--end
+--
+--function action_GroupLoad(context, evt)
+--	RefreshGroup(context, evt)
+--	return 0
+--end
+--
+--
+--function LF_Initialize_Group()
+--	for _,v in pairs(extrTriggers.initialtrigger) do
+--		table.insert(triggers, v)
+--		table.insert(suites[init_config.suite].triggers, v.name)
+--	end
+--	table.insert(variables,{  config_id=50000001,name = "Finished", value = 0 })
+--
+--	return 0
+--end
+--
+--LF_Initialize_Group()

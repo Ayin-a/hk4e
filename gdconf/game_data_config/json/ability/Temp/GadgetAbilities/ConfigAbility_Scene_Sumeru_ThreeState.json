@@ -1,0 +1,1711 @@
+[
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Create By Mazijun
+//	该文件收纳须弥三态物件的通用Ability
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_三态显形植物(基于移动平台的情况，需要物件本身做一些设计)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiVisualizationplant_01_Ability",
+			"onAdded":
+			[
+	            {//初始化，激化态时间
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 5.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 3.0,
+				},
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-10,10,210,310],
+				  "modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+			],
+			"modifiers":
+			{
+				"NormalState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_XuMiVisualizationplant_01",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_SceneObj_XuMiVisualizationplant_01_Disappear",
+						},
+					],
+				},
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_XuMiVisualizationplant_02",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 200,
+							"MPTriggerOnRemote": true,
+						},
+					],
+					
+				},
+				"DestoryState":
+				{
+					"onAdded":
+					[
+						
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 300,
+							"MPTriggerOnRemote": true,
+						},
+					]
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_须弥毒气蘑菇（原炸弹蘑菇）
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{//炸弹蘑菇本体
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiBombmushroom_01_Ability",
+			"onAdded":
+			[
+	            {//初始化，激化态时间
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 6.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 2.0,
+				},
+				{//初始化技能CD
+					"$type": "SetGlobalValue",
+					"key": "GasCD",
+					"value": 1,
+				},
+			],
+			"abilityMixins":
+			[
+				{//GrassState由模板控制
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-10,10,210,310],
+				  "modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+				{//CD计算器
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GasCD",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-0.5,0.5,1.5],
+				  "modifierNameSteps":["TryTrigger","CDTimer"],
+				  "removeAppliedModifier":false,
+				},
+				{
+					"$type": "FieldEntityCountChangeMixin",
+					"simpleCountGlobaValueKey": "AvatarCount",
+					"campTargetType": "All",
+					"targetPredicates" : 
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+	            {//维持在ActiveLoop时持续毒气攻击
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Excited"],
+					"modifierName": "PoisonGasLoop",
+				},
+			],
+			"modifiers":
+			{
+				"CDTimer":
+				{//暂定3秒CD
+					"duration":2.9,
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "GasCD",
+							"value": 0,
+						},
+					],
+				},
+				"TryTrigger":
+				{//每次CD结束时会尝试触发。否则就静默等待HasAvatar补触发
+					"duration":0.1,
+					"onRemoved":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+		                            "key": "AvatarCount",
+		                            "value": 1,
+		                            "compareType": "MoreThanAndEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+		                            "key": "GrassState",
+		                            "value": 0,
+		                            "compareType": "Equal",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "Attack",
+									"MPTriggerOnRemote": true,
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "GasCD",
+									"value": 1,
+								},
+							],
+						},
+					],
+				},				
+				"NormalState":
+				{
+					"modifierMixins":
+					[
+						{
+						  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+						  "globalValueKey":"AvatarCount",
+						  "valueSteps":[-0.5,0.5,4.5],
+						  "modifierNameSteps":["NoAvatar","HasAvatar"],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "GrassState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"NoAvatar":
+				{//正常态附近无玩家时
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "FieldEnter",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "ResetAnimatorTrigger",
+							"triggerID": "Attack",
+						},
+					],
+				},
+				"HasAvatar":
+				{//正常态附近有玩家时
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "FieldEnter",
+							"value": 1,
+							"MPTriggerOnRemote": true,
+						},
+						{//第一次进入时会触发
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+		                            "key": "GasCD",
+		                            "value": 0,
+		                            "compareType": "Equal",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "Attack",
+									"MPTriggerOnRemote": true,
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "GasCD",
+									"value": 1,
+								},
+							],
+						},
+					],
+				},
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "GrassState",
+							"value": 200,
+							"MPTriggerOnRemote": true,
+						},											
+					],
+				},
+				"DestoryState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "GrassState",
+							"value": 300,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "ResetAnimatorTrigger",
+							"triggerID": "Attack",
+						},
+					]
+				},
+				"PoisonGasLoop":
+				{//持续在这个状态下，会不停打出攻击盒
+					"onAdded":
+					[
+						{
+			              "$type": "DebugLog",
+			              "content": "TD_Test: Attach PoisonGasLoop!!!!!!!!!!!",
+			            },
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_SceneObj_XuMiBombmushroom_02",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_SceneObj_XuMiBombmushroom_02_Loop",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{
+                            "$type": "TriggerAbility",
+                            "abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiBombmushroom_01_Attack02"
+                        },
+					],
+					"modifierMixins":
+					[
+						{//ThinkInterval性能优化
+							"$type":"ThinkIntervalMixin",
+							"thinkInterval":0.5,
+							"onThinkInterval":
+							[
+								{
+		                            "$type": "TriggerAbility",
+		                            "abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiBombmushroom_01_Attack02"
+		                        },
+							],
+						},						
+					],
+				},
+			},
+		},
+	},
+	{//毒气攻击01
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiBombmushroom_01_Attack01",
+			"abilitySpecials": 
+            {
+            	"AvatarDamageValue":1.5,
+            	"MonsterDamageValue":1.5,
+                "DamageSystemValue": 1,
+            },
+			"onAdded":
+			[				
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "DamageSystemValue",
+			        "type": "ElementLevelCo",
+		        },	
+			],
+			"onAbilityStart":
+			[
+				//毒雾攻击
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "PoisonGas01",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DelayAttack",
+				},
+			],
+			"modifiers":
+			{
+				"PoisonGas01":
+				{
+					"stacking": "MultipleRefresh",
+                    "stackingOption": {"maxModifierNumForMultipleType": 1,},
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_SceneObj_XuMiBombmushroom_01",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "ShootPoint",
+							},
+						},						
+					],
+				},
+				"DelayAttack":
+				{
+					"duration":0.5,
+					"onRemoved":
+					[
+						{//对avatar发动攻击
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"entityTypes": ["Avatar"],
+							"attackEvent": 
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType":"TriggerNoRepeat",
+									"radius":4,
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%AvatarDamageValue*%DamageSystemValue",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"trueDamage":true,
+										"enBreak": 0,
+										"ignoreAttackerProperty": true,
+									},
+									"hitPattern": 
+                                    {
+                                        "onHitEffectName":"default",
+                                        "hitImpulseType": "LV1",
+                                        "hitHaltTime": 0.0,
+                                        "muteHitText": false,
+                                    },
+								}
+							}			
+						},
+						{//对monster发动攻击
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"entityTypes": ["Monster"],
+							"attackEvent": 
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType":"TriggerNoRepeat",
+									"radius":4,
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%MonsterDamageValue*%DamageSystemValue",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"trueDamage":true,
+										"enBreak": 20,
+										"ignoreMassive": true,
+										"ignoreAttackerProperty": true,
+									},
+									"hitPattern": 
+                                    {
+                                        "onHitEffectName":"default",
+                                        "hitImpulseType": "LV2",
+                                        "hitHaltTime": 0.0,
+                                        "muteHitText": false,
+                                    },
+								}
+							}			
+						},
+					],
+				},
+			},
+		},
+	},
+	{//毒气攻击02
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiBombmushroom_01_Attack02",
+			"abilitySpecials": 
+            {
+            	"AvatarDamageValue":0.4,
+            	"MonsterDamageValue":0.4,
+                "DamageSystemValue": 1,
+            },
+			"onAdded":
+			[				
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "DamageSystemValue",
+			        "type": "ElementLevelCo",
+		        },	
+			],
+			"onAbilityStart":
+			[
+				//毒雾攻击
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "PoisonGas02",
+				},
+
+			],
+			"modifiers":
+			{
+				"PoisonGas02":
+				{
+					"stacking": "MultipleRefresh",
+                    "stackingOption": {"maxModifierNumForMultipleType": 1,},
+					"onAdded":
+					[						
+						{//对avatar发动攻击
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"entityTypes": ["Avatar"],
+							"attackEvent": 
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType":"TriggerNoRepeat",
+									"radius":4,
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%AvatarDamageValue*%DamageSystemValue",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 0,
+										"trueDamage":true,
+										"ignoreMassive": true,
+										"ignoreAttackerProperty": true,
+									},
+									"hitPattern": 
+                                    {
+                                        "onHitEffectName":"default",
+                                        "hitImpulseType": "LV1",
+                                        "hitHaltTime": 0.0,
+                                        "muteHitText": false,
+                                    },
+								}
+							}			
+						},
+						{//对monster发动攻击
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"entityTypes": ["Monster"],
+							"attackEvent": 
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType":"TriggerNoRepeat",
+									"radius":4,
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damageExtra": "%MonsterDamageValue*%DamageSystemValue",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 20,
+										"trueDamage":true,
+										"ignoreMassive": true,
+										"ignoreAttackerProperty": true,
+									},
+									"hitPattern": 
+                                    {
+                                        "onHitEffectName":"default",
+                                        "hitImpulseType": "LV2",
+                                        "hitHaltTime": 0.0,
+                                        "muteHitText": false,
+                                    },
+								}
+							}			
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_生命之菇
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiLifeMushroom_01_Ability",
+			"onAdded":
+			[
+	            {//初始化，激化态时间
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 10.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 1.0,
+				},
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[10,210],
+				  "modifierNameSteps":["ExcitedState"],
+				},
+			],
+			"modifiers":
+			{
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_XuMiLifeMushroom_01",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_可抬起石块
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_XuMiRisingShitou_01_Ability",
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":1,
+			},
+			"onAdded":
+			[
+	            {//初始化，激化态时间
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 10.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 3.0,
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "HitAll",
+					"predicates":
+					[
+						{
+	                    	"$type": "ByAny",
+	                        "predicates": 
+	                        [
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 202
+	                            },
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 300
+	                            },
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 301
+	                            },
+	                        ]
+	                    }
+					]
+				},
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-10,10,210,310],
+				  "modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+                {
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["HasHitBox"],
+					"modifierName":"State_HasHitBox",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["NoHitBox"],
+					"modifierName":"State_NoHitBox",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "NtoW",
+					"modifierName": "HitAll",
+					"normalizeStart": 0.5,
+					"normalizeEnd": 0.75,
+				},
+			],
+			"modifiers":
+			{
+				"HitAll":
+				{
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "AllExceptSelf",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius": 2.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"strikeType": "Pierce",
+										"attackType": "Range",
+										"enBreak": 200,
+										"ignoreLevelDiff": true,
+									},
+									"hitPattern" :
+									{
+										"hitImpulseType":"LV4",
+										"retreatType": "ByAttacker",
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+					],
+				},
+				"NormalState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider0"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider200"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider300"],
+							"setEnable":false,
+						},
+					],
+				},
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 200,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider0"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider200"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider300"],
+							"setEnable":false,
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 300,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider0"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider200"],
+							"setEnable":false,
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider300"],
+							"setEnable":false,
+						},
+					]
+				},
+				"State_HasHitBox":
+				{//攻击盒可用
+					"onAdded":
+					[						
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider0"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":0,
+									"compareType":"Equal",
+								},
+							],
+						},						
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider200"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":200,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["Collider300"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":300,
+									"compareType":"MoreThanAndEqual",
+								},
+							],
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox0"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":0,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox200"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":200,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox300"],
+							"setEnable":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GrassState",
+									"value":300,
+									"compareType":"MoreThanAndEqual",
+								},
+							],
+						},
+					],
+				},
+				"State_NoHitBox":
+				{//攻击盒不可用
+					"modifierMixins":
+					[
+						{
+							"$type": "ChangeColliderTagMixin",
+							"transName": "Collider0",
+							"tag": "Airwall",
+						},
+						{
+							"$type": "ChangeColliderTagMixin",
+							"transName": "Collider200",
+							"tag": "Airwall",
+						},
+						{
+							"$type": "ChangeColliderTagMixin",
+							"transName": "Collider300",
+							"tag": "Airwall",
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox0"],
+							"setEnable":false
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox200"],
+							"setEnable":false
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox300"],
+							"setEnable":false
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_片片莲
+//	需要放在GrassGadget_ThreeState之后1
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_LotusLeaf_01_Ability",
+			"onAdded":
+			[
+	            {//初始化，激化态时间
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 10.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 2.0,
+				},
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-10,10,210,310],
+				  "modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+                {
+                    "$type": "DoActionOnGlobalValueChangeMixin",
+                    "globalValueKey": "GrassState",
+                    "actions": 
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Monster_Slime_Grass_JumpPrepared",
+                        },
+                    ]
+                },
+			],
+			"modifiers":
+			{
+				"NormalState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "platformState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Conversion",
+							"patternName":"_ConversionSpread",
+							"useCurve": true,
+                            "lerpCurveIndex": 0,
+                            "lerpTime": 1,
+                            "value":0,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 200,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "platformState",
+							"value": 1,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Conversion",
+							"patternName":"_ConversionSpread",
+							"useCurve": true,
+                            "lerpCurveIndex": 0,
+                            "lerpTime": 1,
+                            "value":2,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 300,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "platformState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Conversion",
+							"patternName":"_ConversionSpread",
+							"useCurve": true,
+                            "lerpCurveIndex": 0,
+                            "lerpTime": 1,
+                            "value":-2,
+							"canBeHandledOnRecover": true,
+						},
+					]
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_须弥弹跳蘑菇
+//	需要放在GrassGadget_ThreeState之后1
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_JumpMushroom_01_Ability",
+			"onAdded":
+			[
+	            {
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 10.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 2.0,
+				},
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"GrassState",
+				  "defaultGlobalValueOnCreate": 1,
+				  "valueSteps":[-10,10,210,310],
+				  "modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+			],
+			"modifiers":
+			{
+				"NormalState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "SetTrampolineAbilityMixin",
+							"abilityName":"Avatar_Trampoline_Jump_Controller",
+							"isExcitedState": false
+						},						
+					],
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"ExcitedState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "SetTrampolineAbilityMixin",
+							"abilityName":"Avatar_Trampoline_Jump_Controller",
+							"isExcitedState": true
+						},						
+					],
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 200,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DisableTrampolineMixin",
+						},						
+					],
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "gadgetState",
+							"value": 300,
+							"MPTriggerOnRemote": true,
+						},
+					]
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	三态物件_草神透镜
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_Lens_01_Ability",
+			"onAdded":
+			[
+	            {
+					"$type": "SetGlobalValue",
+					"key": "GV_ExcitedDuration",
+					"value": 10.0,
+				},
+				{//初始化，智慧冲击波等级
+					"$type": "SetGlobalValue",
+					"key": "WisdomImpactLevel",
+					"value": 1.0,
+				},
+				{//初始化，是否在激化态的时候打开了透镜界面
+					"$type": "SetGlobalValue",
+					"key": "GV_Lens_Open_Excited",
+					"value": 0,
+				},
+				// {
+				// 	"$type": "AttachModifier",
+				// 	"modifierName":"AttachLensEffect"
+				// }
+			],
+			"onFieldEnter":
+			[//只有主机玩家进入才能触发
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates": 
+					[
+						{
+							"$type" : "ByHostOrGuest",
+							"isHost" : true,
+						},	
+					],
+					"successActions": 
+					[
+						{//通知自己的group,group里需要重置一些变量
+							"$type": "ServerLuaCall",
+							"target": "Caster",
+							"luaCallType": "FromGroup",
+							"funcName": "SLC_Player_Approach_Self",
+						},
+						// {
+						// 	"$type": "ApplyModifier",
+						// 	"target": "Caster",
+						// 	"modifierName": "UNIQUE_FindSmokeInGroup",
+						// },
+					],
+				},
+			],
+			"onFieldExit": 
+			[//只有主机玩家离开才能触发
+				// {
+				// 	"$type": "Predicated",
+				// 	"target": "Target",
+				// 	"targetPredicates": 
+				// 	[
+				// 		{
+				// 			"$type" : "ByHostOrGuest",
+				// 			"isHost" : true,
+				// 		},	
+				// 	],
+				// 	"successActions": 
+				// 	[
+				// 		{
+				// 			"$type": "ApplyModifier",
+				// 			"target": "Caster",
+				// 			"modifierName": "UNIQUE_RemoveSmokeInGroup",
+				// 		},
+				// 	],
+				// },
+			],
+			"abilityMixins":
+			[
+				{//次数逻辑放在模板上
+					"$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+					"globalValueKey":"GrassState",
+					"defaultGlobalValueOnCreate": 1,
+					"valueSteps":[-10,10,210,310],
+					"modifierNameSteps":["NormalState","ExcitedState","DestoryState"],
+				},
+			],
+			"modifiers":
+			{
+				"AttachLensEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lens_01",
+							"born": 
+              				{
+				                "$type": "ConfigBornByAttachPoint",
+				                "attachPointName": "LensPoint",
+				            },
+						},
+					],
+				},
+				"NormalState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"type": "Int",
+							"parameter": "GadgetState",
+							"value": 0,
+							"effectPattern": "Eff_SceneObj_Lens_01",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName":"UNIQUE_LensInteract_Smoke",
+						},
+						{//材质到正常态
+                            "$type":"SetMaterialParamFloatByTransform",
+                            "matName":"Mat_Lens",
+                            "patternName":"_ConversionStateChange",
+                            "value":0,
+							"useCurve": true,
+                            "lerpCurveIndex": 1,
+                            "lerpTime": 1,
+                        },
+					],
+					"onRemoved":
+					[
+						// {
+						// 	"$type": "FireEffect",
+						// 	"effectPattern": "Eff_SceneObj_RayReflexEquipment_Water_Dis",
+              			// 	"born": 
+              			// 	{
+				        //         "$type": "ConfigBornByAttachPoint",
+				        //         "attachPointName": "LensPoint",
+				        //     },
+				        //     "predicates":
+				        //     [
+						// 		{
+						// 			"$type":"ByTargetGlobalValue",
+						// 			"key": "GrassState",
+						// 			"value": 0,
+						// 			"compareType": "Equal",
+						// 		},
+						// 	]
+						// },
+					],
+				},
+				"ExcitedState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"type": "Int",
+							"parameter": "GadgetState",
+							"value": 201,
+							"effectPattern": "Eff_SceneObj_Lens_01",
+						},
+						{//正常态到激化态
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lens_03",
+							"born": 
+              				{
+				                "$type": "ConfigBornByAttachPoint",
+				                "attachPointName": "LensPoint",
+				            },
+						},
+						{//材质到激化态
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat_Lens",
+							"patternName":"_ConversionStateChange",
+							"value":2,
+							"useCurve": true,
+							"lerpCurveIndex": 1,
+							"lerpTime": 1,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName":"UNIQUE_LensInteract_Aranara",
+						},
+					],
+					"onRemoved":
+					[
+						{//激化态到正常态
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Lens_04",
+              				"born": 
+              				{
+				                "$type": "ConfigBornByAttachPoint",
+				                "attachPointName": "LensPoint",
+				            },
+				            "predicates":
+				            [
+								{
+									"$type":"ByTargetGlobalValue",
+									"key": "GrassState",
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"GV_Lens_Open_Excited",
+									"value":0,
+								},
+							],
+						},
+					],
+				},
+				"DestoryState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"type": "Int",
+							"parameter": "GadgetState",
+							"value": 301,
+							"effectPattern": "Eff_SceneObj_Lens_01",
+						},
+						{//正常态到枯萎态
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_Lens_05",
+							"born": 
+              				{
+				                "$type": "ConfigBornByAttachPoint",
+				                "attachPointName": "LensPoint",
+				            },
+						},
+						{//材质到枯萎态
+                            "$type":"SetMaterialParamFloatByTransform",
+                            "matName":"Mat_Lens",
+                            "patternName":"_ConversionStateChange",
+                            "value":-1,
+							"useCurve": true,
+                            "lerpCurveIndex": 1,
+                            "lerpTime": 1,
+                        },
+					],
+					"onRemoved": 
+					[
+						{//枯萎态到正常态
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_Lens_02",
+							"born": 
+              				{
+				                "$type": "ConfigBornByAttachPoint",
+				                "attachPointName": "LensPoint",
+				            },
+						},
+					]
+				},
+				"UNIQUE_LensInteract_Smoke":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{//打开界面
+							"$type": "UIInteractMixin",
+							"ui_message_id":"OpenPage",
+							"actionList":
+							[
+								{
+									"$type": "DebugLog", 
+									"content": "#DeathZoneLens# open page-smoke",
+								},
+							],
+						},
+						{//关闭界面
+							"$type": "UIInteractMixin",
+							"ui_message_id":"ClosePage",
+							"actionList":
+							[
+								{//找自己组内的兰纳罗，让在201的兰纳罗回到0
+									"$type": "ExecuteGadgetLua",
+									"param1": 0,
+									"otherTargets": 
+									{
+										"$type": "SelectTargetsBySelfGroup",
+										"operation": "AND",
+										"value": 0,
+										"compareType": "Equal",
+									},
+									"predicatesForeach": 
+									[
+										{
+											"$type": "ByTargetGadgetState",
+											"target": "Target",
+											"gadgetState": 201,
+										},
+									],
+								},
+								{//如果是激化态的时候进的界面，退出的时候slc通知group
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "GV_Lens_Open_Excited",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+									[
+										{
+											"$type": "ServerLuaCall",
+											"luaCallType": "FromGroup",
+											"funcName": "SLC_Lens_Closed_Excited",
+										},
+										{//关上界面一定回零
+											"$type": "SetGlobalValue",
+											"key": "GV_Lens_Open_Excited",
+											"value": 0,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_LensInteract_Aranara":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{//打开界面
+							"$type": "UIInteractMixin",
+							"ui_message_id":"OpenPage",
+							"actionList":
+							[
+								{//在激化态的时候打开了透镜界面
+									"$type": "SetGlobalValue",
+									"key": "GV_Lens_Open_Excited",
+									"value": 1,
+								},
+								{//找自己组内在0的兰纳罗，让兰纳罗进201出现
+									"$type": "ExecuteGadgetLua",
+									"param1": 201,
+									"otherTargets": 
+									{
+										"$type": "SelectTargetsBySelfGroup",
+										"operation": "AND",
+										"value": 0,
+										"compareType": "Equal",
+									},
+									"predicatesForeach": 
+									[
+										{
+                                            "$type": "ByTargetGadgetState",
+                                            "target": "Target",
+                                            "gadgetState": 0,
+                                        }
+									],
+								},
+								{
+									"$type": "DebugLog", 
+									"content": "#DeathZoneLens# open page-anarana",
+								},
+							],
+						},
+						{//关闭界面
+							"$type": "UIInteractMixin",
+							"ui_message_id":"ClosePage",
+							"actionList":
+							[
+								{//找自己组内的兰纳罗，让在201的兰纳罗回到0
+									"$type": "ExecuteGadgetLua",
+									"param1": 0,
+									"otherTargets": 
+									{
+										"$type": "SelectTargetsBySelfGroup",
+										"operation": "AND",
+										"value": 0,
+										"compareType": "Equal",
+									},
+									"predicatesForeach": 
+									[
+										{
+											"$type": "ByTargetGadgetState",
+											"target": "Target",
+											"gadgetState": 201,
+										}
+									],
+								},
+								{//如果是激化态的时候进的界面，退出的时候slc通知group
+									"$type": "Predicated",
+									"target": "Self",
+									"targetPredicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "GV_Lens_Open_Excited",
+											"value": 1,
+											"compareType": "Equal",
+										},
+									],
+									"successActions": 
+									[
+										{
+											"$type": "ServerLuaCall",
+											"luaCallType": "FromGroup",
+											"funcName": "SLC_Lens_Closed_Excited",
+										},
+										{//关上界面一定回零
+											"$type": "SetGlobalValue",
+											"key": "GV_Lens_Open_Excited",
+											"value": 0,
+										},
+									],
+                                },
+								{
+									"$type": "DebugLog", 
+									"content": "#DeathZoneLens# close page-anarana",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_FindSmokeInGroup":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": 1,
+					"onAdded":
+					[
+						{//找自己组内的黑烟，同组在0的黑烟都进入901
+							"$type": "ExecuteGadgetLua",
+							"param1": 901,
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsBySelfGroup",
+								"operation": "AND",
+								"value": 1,
+								"compareType": "Equal",
+							},
+							"predicatesForeach": 
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"target": "Target",
+									"gadgetState": 0,
+								},
+							],
+						},
+					],
+				},
+				
+			},
+		},
+	},				
+]

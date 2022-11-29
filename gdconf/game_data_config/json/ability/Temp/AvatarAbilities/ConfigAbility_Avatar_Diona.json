@@ -1,0 +1,4789 @@
+[
+	////////////////////////////////////////////////////////////////
+	//
+	//  箭的表现
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_Arrow_FX",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "FastAim", ],
+					"modifierName": "Diona_Arrow_FX",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"Diona_Arrow_FX":
+				{
+					"onAdded":
+					[
+						//直接复用了温迪的资源，有潜在风险
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Venti_Arrow",
+						},
+					]
+				}
+			}
+		}
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//	蓄力逻辑
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootAimingArrow_Charge",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "FastAim" ],
+					"modifierName": "ShootAimingArrow_Charge_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin", //播放瞄准蓄力特效
+					"stateIDs": [ "FastAim", "FastAimShoot" ],
+					"modifierName": "ShowAimingEffect",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"AimLoop",
+					"modifierName":"Aim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"FastAimLoop",
+					"modifierName":"FastAim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+				// {
+				//  "$type": "AttachToStateIDMixin",
+				//  "stateIDs": [ "Aim", "AimShoot"],
+				//  "modifierName": "ShootAimingArrow_Charge_Add",
+				// },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "FastAim", "FastAimShoot", "AimShoot" ],
+					"modifierName": "ShootAimingArrow_Charge_Remove",
+				},
+				{
+					"$type": "AttachToStateIDMixin", //播放瞄准蓄力特效
+					"stateIDs": [ "Aim", "AimShoot" ],
+					"modifierName": "ShowAimingEffect",
+				},
+			],
+			"onAbilityStart":
+			[
+				///////////////////////射完了记得清一下标记及相关特效////////////////////////////////////
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Enchanted_Time",
+					"value": -5,
+					"useLimitRange": true,
+					"maxValue": 5,
+					"minValue": 0,
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "AimChargeMark",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "WindMagic_Arrow_Glow_Once",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "WindMagic_Arrow_Glow_WithoutWind_Once",
+				},
+				////////////////////////////////////////////////////////////////////////////////////////
+			],
+			"modifiers":
+			{
+				"ShootAimingArrow_Charge_Handler":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "AimChargeMark",
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Boy_Bow_Venti_Arrow",
+						},
+					],
+				},
+				"Aim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+				"FastAim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+				"ShootAimingArrow_Charge_Remove":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": -5,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "AimChargeMark",
+							"doOffStage":true,
+						}
+					],
+				},
+				"AimChargeMark":
+				{
+					"stacking": "MultipleRefreshNoRemove",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						},
+					],
+				},
+				"ShowAimingEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "WindMagic_Arrow_Glow_WithoutWind_Once",
+						},
+					],
+					"thinkInterval": 0.1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+							"overrideMapKey":"Diona_AimShoot_Enchanted_Ratio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "WindMagic_Arrow_Glow_Once",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+									"forceByCaster": true,
+									"compareType": "MoreThan",
+								},
+							]
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "WindMagic_Arrow_Glow_WithoutWind_Once",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 1,
+									"forceByCaster": true,
+									"compareType": "Equal",
+								},
+							]
+						},
+					],
+				},
+				"WindMagic_Arrow_Glow_Once":
+				{
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Once_02",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Loop_02",
+						},
+					]
+				},
+				"WindMagic_Arrow_Glow_WithoutWind_Once":
+				{
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Once_01",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Loop_01",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Once_Talent",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+									"value":0.9,
+									"compareType":"LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Glow_Loop_Talent",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+									"value":0.9,
+									"compareType":"LessAndEqual",
+								},
+							],
+						},
+					]
+				}
+			},
+			"abilitySpecials":
+			{
+				"Enchanted_Time":3,
+				"Diona_AimShoot_Enchanted_Ratio":1,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//	Press Shoot
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_PressShoot",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10391,
+					"chargeTime": 0.2,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 100,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetCameraLockTime",
+							"lockTime": 0.3,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10394,
+							"isHold": true,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 101,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10391,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10393,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10394,
+							"isHold": true,
+						},
+						// {
+						//	"$type": "SetAnimatorTrigger",
+						//	"triggerID": "AimEnd",
+						// },
+					],
+					"chargeStateIDs": [ "ShootBS", "Shoot", "FastAim", "FastAimShoot" ],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "FastAim", "FastAimShoot" ],
+					"modifierName": "KeepFastAiming",
+				},
+				{
+					// 当快速瞄准射击结束时，会设置FastAimShootFinish，使得动画从FastAim状态出来，同时会通过FastAimShooting防止在射击过程中点击了瞄准按钮直接退出
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "FastAimShoot" ],
+					"modifierName": "SetFastAimShooting",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "ShootBS", "FastAim", "FastAimShoot" ],
+					"modifierName": "SetNeedAimEndStates",
+				},
+			],
+			"modifiers":
+			{
+				"KeepFastAiming":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAiming",
+							"value": true,
+						},
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.73,
+								"y": -0.12,
+								"z": -1.9
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.73,
+								"y": 0.3,
+								"z": -1.6
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold": 360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},									
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov": 30,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAiming",
+							"value": false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"SetFastAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "AimEnd",
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorBool",
+									"parameter": "FastAiming",
+									"value": true
+								},
+							]
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				}
+			},
+		},
+	},
+
+	/////////////瞄准模式射箭及特效逻辑//////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootArrow_Aiming",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Avatar_Diona_ShootArrow_ResetGlobalValue",
+					"target":"Self",
+				},
+				// {
+				// 	"$type": "AddGlobalValue",
+				// 	"key" : "_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+				// 	"value" : 1.0,
+				// 	"useLimitRange" : true,
+				// 	"maxValue" : 1,
+				// 	"minValue" : 0,							
+				// },
+			],
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"SetGlobalValueToOverrideMap",
+					"globalValueKey":"_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+					"overrideMapKey":"Diona_AimShoot_Enchanted_Ratio",
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41022016,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName": "FocusAnchor",
+							"attachPointTargetType": "Self",
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+							"forceByCaster": true,
+							"compareType": "MoreThan",
+						},
+					]
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41022017,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName": "FocusAnchor",
+							"attachPointTargetType": "Self",
+						}
+					},
+					"predicates": [
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+							"forceByCaster": true,
+							"compareType": "LessAndEqual",
+						},
+					]
+				},
+				////////////////////////////////////////////////////////
+				{
+					"$type": "ActCameraShake",
+					"cameraShake":
+					{
+						"shakeType": "Center",
+						"shakeRange": 0.2,
+						"shakeTime": 0.12,
+						"shakeDistance": 30,
+						"extension":
+						{
+							"baseOnCamera": true,
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+							"forceByCaster": true,
+							"compareType": "MoreThan",
+						},
+					]
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Onshooting",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset":
+						{
+							"x": -0.7, // + means up, - means down
+							"y": 0.0, // + means left, - means right
+							"z": 0.0, // + means forward, - means backward
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+							"forceByCaster": true,
+							"compareType": "MoreThan",
+						},
+					]
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ExtraAttack_Onshooting_Unsuccessful",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponL",
+						"offset":
+						{
+							"x": -0.8, // + means up, - means down
+							"y": 0.1, // + means left, - means right
+							"z": 0, // + means forward, - means backward
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": "%Enchanted_Time*%Diona_AimShoot_Enchanted_Ratio",
+							"forceByCaster": true,
+							"compareType": "LessAndEqual",
+						},
+					]
+				},
+			],
+			"modifiers":
+			{
+				"AimChargeMark":
+				{
+					"stacking": "MultipleRefreshNoRemove",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 5,
+							"minValue": 0,
+						},
+					],
+				},
+				"Avatar_Diona_ShootArrow_ResetGlobalValue":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key" : "_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+							"value" : 1.0,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,	
+							"doOffStage":true,				
+						},
+					],
+					"onReconnect":		
+					[
+						{
+							"$type" : "SetGlobalValue",
+							"key" : "_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Enchanted_Time":3,
+				"Diona_AimShoot_Enchanted_Ratio":1,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_AimPressShoot",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10393,
+					"chargeTime": 0,
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10391,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10393,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10394,
+							"isHold": true,
+						},
+					],
+					"chargeStateIDs": [ "Aim", "AimShoot" ],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "AimShoot" ],
+					"modifierName": "KeepAiming",
+				},
+				{
+					// 通过AimShooting防止在射击过程中点击了瞄准按钮直接退出
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "AimShoot" ],
+					"modifierName": "SetAimShooting",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "AimShoot" ],
+					"modifierName": "SetNeedAimEndStates",
+				},
+			],
+			"modifiers":
+			{
+				"KeepAiming":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Aiming",
+							"value": true,
+						},
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.73,
+								"y": -0.12,
+								"z": -1.9
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.73,
+								"y": 0.3,
+								"z": -1.6
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold": 360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov": 30,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Aiming",
+							"value": false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"SetAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": false,
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				}
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Avatar_Diona_ShootArrow_Enchanted_WithoutIce
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootArrow_Enchanted_WithoutIce",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Ganyu_Arrow_Fly_Big",//复用甘雨的特效
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene": 
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",
+						"surfaceEffect": 
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": 
+							{
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0,
+							},
+							"born": 
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"attenuationTag": "ExtraAttack",
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty": 
+							{
+								"damagePercentage": "%DamageWithoutIce",
+								"strikeType": "Pierce",
+								"enBreak": 10,
+				          		"enHeadBreak": 30,
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "default",
+			          			"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern": 
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head",
+			          			"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"bulletWane": 
+							{
+								"waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval": 0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio": 0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval": 0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin": "Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio": 0.1,
+								"elementDurabilityWaneInterval": 0.05,
+								"elementDurabilityWaneRatio": 0.1,
+								"elementDurabilityWaneMinRatio": 0.1,
+							},
+						}
+					},
+				},
+			],
+			"abilitySpecials": 
+			{
+				"DamageWithoutIce": 0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Bullet_Diona_ShootArrow_WithIce
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Bullet_Diona_ShootArrow_WithIce",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Ganyu_Arrow_Fly_Ice",
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene": 
+					{
+						"defaultEffect": "Eff_Ganyu_Arrow_IceCharge_Hit",
+						"surfaceEffect": 
+						{
+							"Water": "Eff_Arrow_Hit_Water"
+						}
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							// "ignoreMassive" : true,
+							// "massiveAttackRatio":0.5,
+							"size": 
+							{
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0,
+							},
+							"born": 
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"attenuationTag": "ExtraAttack",
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty": 
+							{
+								"damagePercentage": "%DamageWithIce",
+								"strikeType": "Pierce",
+								"elementType": "Ice",
+								"elementDurability": 25,
+								"enBreak": 20,
+				          		"enHeadBreak": 60,
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "Eff_Ganyu_Arrow_IceCharge_Hit",
+			          			"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern": 
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head_Ice",
+			          			"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"bulletWane": 
+							{
+								"waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval": 0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio": 0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval": 0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin": "Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio": 0.1,
+								"elementDurabilityWaneInterval": 0.05,
+								"elementDurabilityWaneRatio": 0.1,
+								"elementDurabilityWaneMinRatio": 0.1,
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+
+			},
+			"abilitySpecials": 
+			{
+				"DamageWithIce":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  Shoot  Arrow
+	//
+	////////////////////////////////////////////////////////////////
+
+	///////////////////普攻平射/////////////////////////
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName":  "Avatar_Diona_ShootArrow_01",
+			"onAbilityStart":
+			[
+				{
+					"$type":  "TriggerBullet",
+					"bulletID":  41039001,
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "PRIVATE_LHand",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+						"direction":
+						{
+							"$type":  "ConfigDirectionByAttachPoint",
+							"attachPointName":  "FocusAnchor",
+							"attachPointTargetType":  "Self",
+							"maxAngle":30,
+						}
+					},
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Venti_ShootArrow_Small",
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "WeaponL",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+					},
+				},
+			   /* {
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Boy_Claymore_Razor_ExtraAttack_Cycle",
+				},*/
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName":  "Avatar_Diona_ShootArrow_02",
+			"onAbilityStart":
+			[
+				{
+					"$type":  "TriggerBullet",
+					"bulletID":  41039002,
+					"born":  {
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "PRIVATE_LHand",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+						"direction":
+						{
+							"$type":  "ConfigDirectionByAttachPoint",
+							"attachPointName":  "FocusAnchor",
+							"attachPointTargetType":  "Self",
+							"maxAngle":30,
+						}
+					},
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Venti_ShootArrow_Big",
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "WeaponL",
+						"offset":  {
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName":  "Avatar_Diona_ShootArrow_03",
+			"onAbilityStart":
+			[
+				{
+					"$type":  "TriggerBullet",
+					"bulletID":  41039003,
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "PRIVATE_LHand",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+						"direction":
+						{
+							"$type":  "ConfigDirectionByAttachPoint",
+							"attachPointName":  "FocusAnchor",
+							"attachPointTargetType":  "Self",
+							"maxAngle":30,
+						}
+					},
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Venti_ShootArrow_Big",
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "WeaponL",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName":  "Avatar_Diona_ShootArrow_04",
+			"onAbilityStart":
+			[
+				{
+					"$type":  "TriggerBullet",
+					"bulletID":  41039004,
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "PRIVATE_LHand",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+						"direction":
+						{
+							"$type":  "ConfigDirectionByAttachPoint",
+							"attachPointName":  "FocusAnchor",
+							"attachPointTargetType":  "Self",
+							"maxAngle":30,
+						}
+					},
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Venti_ShootArrow_Small",
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "WeaponL",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName":  "Avatar_Diona_ShootArrow_05",
+			"onAbilityStart":
+			[
+				{
+					"$type":  "TriggerBullet",
+					"bulletID":  41039005,
+					"born":
+					{
+						"$type":  "ConfigBornByAttachPoint",
+						"attachPointName":  "PRIVATE_LHand",
+						"offset":
+						{
+							"x":  0.0,
+							"y":  0.0,
+							"z":  0.0,
+						},
+						"direction":
+						{
+							"$type":  "ConfigDirectionByAttachPoint",
+							"attachPointName":  "FocusAnchor",
+							"attachPointTargetType":  "Self",
+							"maxAngle":30,
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+
+			},
+		},
+	},
+	//普攻平射表现及技能升级配置
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootArrow_Light_Material",
+			"onAdded":
+			[
+				//箭头拖尾特效
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Venti_Arrow_Fly_Small",
+				},
+			],
+			"onAbilityStart":
+			[
+				//箭头命中敌人，或不同场景时的特效
+				//可以在collision的时候trigger，这样不像安柏那样超多Ability，可以少写一个。
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",
+						"surfaceEffect":
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootArrow_Heavy_Material",
+			"onAdded":
+			[
+				//箭头拖尾特效
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Venti_Arrow_Fly_Big",
+				},
+			],
+			"onAbilityStart":
+			[
+				//箭头命中敌人，或不同场景时的特效
+				//可以在collision的时候trigger，这样不像安柏那样超多Ability，可以少写一个。
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect": "Eff_Arrow_Hit_Earth",
+						"surfaceEffect":
+						{
+							"Water": "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+
+  ////////////////////////////////////////////////////////////////////////////////////////
+  ///
+  /// 元素战技
+  ///
+  ///////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName": "Avatar_Diona_NekoShoot_Press",
+			"abilityMixins":
+			[
+				{
+					"$type": "SkillButtonHoldChargeMixin",
+					"skillID": 10392,
+					"beforeStateIDs" : ["Flask_BS"],
+					"chargeLoopStateIDs" : ["Flask_Charge"],
+					"chargeLoopDurations" : [ 0.05, ],
+					"nextLoopTriggerID" : "NextLoopTrigger",
+					"endHoldTrigger" : "EndHoldTrigger",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"Flask_Long","Flask_Long_AS",
+					],
+					"modifierName": "Stealth_Controller",
+				},
+				// {
+				// 	"$type":"AttachToNormalizedTimeMixin",
+				// 	"stateID":"Flask_Short",
+				// 	"modifierName":"Create_ShortAttack_Target",
+				// 	"normalizeStart":0.0,
+				// 	"normalizeEnd":0.5,
+				// },
+				// {
+				// 	"$type":"AttachToNormalizedTimeMixin",
+				// 	"stateID":"Flask_Charge",
+				// 	"modifierName":"Create_ChargeAttack_Target",
+				// 	"normalizeStart":0.4,
+				// 	"normalizeEnd":0.8,
+				// },
+				// {
+				// 	"$type": "AttachToStateIDMixin",
+				// 	"stateIDs":
+				// 	[
+				// 		"Flask_BS",
+				// 	],
+				// 	"modifierName": "Create_Attack_Target",
+				// },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"AvatarSkillStart",
+					"skillID":10392,
+					"cdRatio":1,
+				},
+				{//长按时的护盾强化，默认为1
+					"$type":"AddGlobalValue",
+					"value":-0.75,
+					"key":"_Diona_ElementalArt_Shield_Enchanted_Ratio",
+					"useLimitRange":true,
+					"maxValue":1.75,
+					"minValue":1,
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Press",
+				},
+				{
+					"$type" : "Predicated",
+					"target" : "Self",
+					"targetPredicates":
+					[							
+						{
+							"$type" : "ByHasAttackTarget",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetSelfAttackTarget",
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": 45.0,
+										"randomRote": 8.0,
+									},
+								},
+							},
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": -45.0,
+										"randomRote": 8.0,
+									},
+								},
+							},
+						},					
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetSelfAttackTarget",
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": 45,
+										"z": 0,
+									},
+								},
+							},
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": -45,
+										"z": 0,
+									},
+								},
+							},
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Stealth_Controller":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StealthOn",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StealthOff",
+						},
+					],
+				},
+				"Create_ShortAttack_Target":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",//迪奥娜小技能空放的目标
+							"gadgetID": 41022018,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 7.0,
+								},
+								"onGround":true,
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByHasAttackTarget",
+										},
+									],
+								}
+							],
+						},
+					],
+				},
+				"Create_ChargeAttack_Target":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",//迪奥娜小技能空放的目标
+							"gadgetID": 41022018,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 7.0,
+								},
+								"onGround":true,
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByHasAttackTarget",
+										},
+									],
+								}
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				// "Minus":-0.5,
+				// "Plus":0.5,
+				// "sin18":0.31,
+				// "cos18":0.95,
+				// "sin54":0.81,
+				// "cos54":0.59,
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName": "Avatar_Diona_NekoShoot_Holdup",
+			"onAbilityStart":
+			[
+				{
+					"$type":"AvatarSkillStart",
+					"skillID":10392,
+					"cdRatio":2.5,
+				},
+				{//长按时的护盾强化，默认为1
+					"$type":"AddGlobalValue",
+					"value":0.75,
+					"key":"_Diona_ElementalArt_Shield_Enchanted_Ratio",
+					"useLimitRange":true,
+					"maxValue":1.75,
+					"minValue":1,
+				},
+				{
+					"$type":  "FireEffect",
+					"effectPattern":  "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Holdon",
+					"born":
+					{
+						"$type":  "ConfigBornBySelf",
+					},
+				},
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type" : "ByHasAttackTarget",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": 50.0,
+										"randomRote": 5.0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//2
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": 70.0,
+										"randomRote": 5.0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//3
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": 0.0,
+										"randomRote": 10.0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//4
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": -50.0,
+										"randomRote": 5.0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//5
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttackTarget",
+									"scatter":
+									{
+										"maxDistance": 8.0,
+										"maxScatterAngle": -90.0,//根据距离线性衰减
+										"centerRote": -70.0,
+										"randomRote": 5.0,
+									},
+								},
+							},
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": -30,
+										"z": 0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": -60,
+										"z": 0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": 0,
+										"z": 0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039006,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": 30,
+										"z": 0,
+									},
+								},
+							},
+						},
+						{
+							"$type":"SetSelfAttackTarget",//1
+							"turnToTargetImmediately":true,
+							"turnToTargetKeepUpAxisDirection":true,
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "SectorR15D90",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+								"topLimit":1,
+								"entityTypePriority":["Monster","Gadget"],
+								"sortType": "Random",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Gadget"],
+								},
+							],
+						},
+						{
+							"$type":  "TriggerBullet",
+							"bulletID":  41039007,
+							"born":
+							{
+								"$type":  "ConfigBornByAttachPoint",
+								"attachPointName":  "WeaponL",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+					            "direction": 
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": -80, //还是度数，得填90
+										"y": 60,
+										"z": 0,
+									},
+								},
+							},
+						},
+					],
+				}
+			],
+			"modifiers":
+			{
+
+			},
+			"abilitySpecials":
+			{
+				"SHield_Ratio":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName": "Avatar_Diona_ElementalArt_Bullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Timer",
+				},
+				{
+					"$type": "SetRandomOverrideMapValue",
+					"overrideMapKey": "RandomSpeedRatio",
+					"valueRangeMin": 0.8,
+					"valueRangeMax": 1.0,
+				},
+				{
+			        "$type": "AttachModifier",
+			        "modifierName": "ElementalArt_Bullet_Ball",
+		        },
+				// {
+				// 	"$type": "ApplyModifier",
+				// 	"modifierName": "RandomSpeed",
+				// 	"target": "Self",
+				// },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Avatar_Diona_ElementalArt_Shield",
+					"target":"Owner",
+					// "predicates":
+					// [
+					// 	{
+					// 		"$type":"ByTargetGlobalValue",
+					// 		"target":"Owner",
+					// 		"key":"_ABILITY_CrystalSeed_Ice_Shield_Mark",
+					// 		"value":0,
+					// 		"compareType":"NoneOrEqual"
+					// 	},
+					// ],
+				},
+				{
+					"$type": "FireHitEffect",
+					"hitScene": 
+					{
+						"defaultEffect": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Bullet_HitScene",
+						"surfaceEffect": 
+						{
+							"Water": "Eff_Arrow_Hit_Water"
+						}
+					},
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius" : 0.5,
+							"born": 
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": 
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": 0.0, // + means forward, - means backward
+								}
+							},
+							// "ignoreMassive":true,
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo": 
+						{
+							"canBeModifiedBy": "OriginOwner",
+							"attackTag": "Elemental_Art",
+							"attenuationTag":"Elemental_Art",
+							"attackProperty": 
+							{
+								"damagePercentage": "%ElementalArt_Damage",
+								"strikeType": "Pierce",
+								"elementType": "Ice",
+								"elementDurability": 25,
+								"enBreak": 30,
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Bullet_Hit",
+			          			"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"canHitHead": false,
+						},
+					},
+				},
+				{
+					"$type": "SetGlobalPos",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Diona_GenerateElemBall_CustomPos",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+					},
+					"setTarget": true,
+				},
+			],
+			"modifiers":
+			{
+				"Timer":
+				{
+					"duration":0.3,
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"AngularVelocityUp",
+						},
+					],
+				},
+				"AngularVelocityUp":
+				{
+					"properties":
+					{
+						"Actor_BulletMoveAngularVelocityRatio":10,
+					},
+				},
+				"RandomSpeed":
+				{
+					"properties":
+					{
+						"Animator_OverallSpeedRatioMultiplied" : "%RandomSpeedRatio",
+					},
+				},
+				"ElementalArt_Bullet_Ball":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[							
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                 	"$type": "ByTargetGlobalValue",
+				                 	"key": "_ANIMAL_ENTITY_TYPE",
+				                 	"value": 0,
+				                 	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Ball",
+									"target": "OriginOwner",
+								},							
+							],
+						},
+					],
+				},
+				"Ball":
+				{
+					"duration": 1.0,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type": "Randomed",
+							"chance": 0.8,
+							"doOffStage":true,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2022,
+									"doOffStage":true,
+									"baseEnergy": 3,
+									"ratio": 1,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "_ABILITY_Diona_GenerateElemBall_CustomPos",	
+										"onGround": true,
+										"alongGround": false,
+										"onGroundIgnoreWater": true,
+										"onGroundRaycastUpDist": 3,
+									},
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials": 
+			{
+				"ElementalArt_Damage": 0,
+				"RandomSpeedRatio":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName": "Avatar_Diona_ElementalArt_Bullet_Trail_01",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Bullet_Trail",
+				},
+				{
+					"$type": "TriggerSetVisible",
+					"visible": false,
+				},
+			],
+			"abilitySpecials": 
+			{
+
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type":  "ConfigAbility",
+			"abilityName": "Avatar_Diona_ElementalArt_Bullet_Trail_02",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Bullet_Trail_Big",
+				},
+				{
+					"$type": "TriggerSetVisible",
+					"visible": false,
+				},
+			],
+			"abilitySpecials": 
+			{
+
+			},
+		},
+	},
+
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Diona_ElementalArt_Shield",
+			"onAdded":
+			[
+				{//标记迪奥娜已经突破1 ，用于联机时突破天赋，在remote端做判断
+					"$type":"AddGlobalValue",
+					"value":1,
+					"key":"_ABILITY_Diona_PermanentSkill_1",
+					"useLimitRange":true,
+					"maxValue":1,
+					"minValue":0,
+					"doOffStage":true,
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_PermanentSkill_1",
+						},									
+					],
+				},
+				{//长按时的护盾强化，默认为1
+					"$type":"AddGlobalValue",
+					"value":1,
+					"key":"_Diona_ElementalArt_Shield_Enchanted_Ratio",
+					"useLimitRange":true,
+					"maxValue":1,
+					"minValue":0,
+					"doOffStage":true,
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Diona_Constellation_2_Handler",
+					"target":"Self",
+					"doOffStage":true,
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_Constellation_2",
+						},									
+					],
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AddElementDurability",
+					"modifierName": "UNIQUE_Diona_Elemental_Art_Shield",
+					"target": "Team",
+					"value": "%IceShield_LifeTime",
+					"useLimitRange": true,
+					"maxValue": "%IceShield_LifeTime*5",
+					"minValue": 0,
+					"doOffStage":true,
+				},
+				{
+					"$type":"SetGlobalValueToOverrideMap",//计算长按护盾吸收量的增加
+					"globalValueKey":"_Diona_ElementalArt_Shield_Enchanted_Ratio",
+					"overrideMapKey":"Shield_Enchanted_Ratio",
+					"doOffStage":true,
+				},
+				{
+					"$type":"AttachModifier",
+					"target":"Team",
+					"modifierName":"UNIQUE_Diona_Elemental_Art_Shield",
+					"doOffStage":true,
+				},
+				//命之座2给其他角色的队伍上modifier
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Diona_Constellation_2_RemoteTeamShield_Timer",
+					"target":"Self",
+					"doOffStage":true,
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_Constellation_2",
+						},									
+					],
+				},
+                {
+                    "$type":"ChangeShieldValue",
+                    "target":"Team",
+                    "modifierName":"UNIQUE_Diona_Elemental_Art_Shield",
+					"shieldHPRatio": "%SHield_Ratio*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+					"shieldHP":"%SHieldHp_Const*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+					"maxShieldByHPRatio":"%SHield_Ratio*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+					"maxShieldHP":"%SHieldHp_Const*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+                    "doOffStage":true,
+                },
+			],
+			"modifiers" :
+			{
+				"UNIQUE_Diona_Elemental_Art_Shield":
+				{
+					"duration":"%IceShield_LifeTime",
+					"isUnique":true,
+					"elementType": "None",
+					"elementDurability":"%IceShield_LifeTime",
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_IceShield_Born",
+						},
+						{
+							"$type":"AttachModifier",
+							"target":"Team",
+							"modifierName":"UNIQUE_Diona_PermanentSkill_1_Handler",
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Diona_PermanentSkill_1",
+								},									
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalMainShieldMixin",
+							"shieldType": "Avatar_Ice",
+							"shieldHPRatio": "%SHield_Ratio*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+							"shieldHP":"%SHieldHp_Const*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_IceShield",
+							"targetMuteHitEffect": true,
+							"showDamageText": "INFO_ELITE_DEFENCE",
+							"childShieldModifierName": "UNIQUE_Diona_Elemental_Art_Shield_Child",
+							"onShieldBroken":
+							[
+
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_IceShield_Die",
+						},
+					],
+				},
+				"UNIQUE_Diona_Elemental_Art_Shield_Child":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"Diona_ElementalArt_Shield_Frozen_Modifier",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalSubShieldMixin",
+							"mainShieldModifierName":"UNIQUE_Diona_Elemental_Art_Shield",
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta": 0,	
+					},
+					"onBeingHit":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitEnBreak",
+									"enBreak": 0,
+									"logic": "Greater",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "ShieldHitEffect",
+									"target": "Team",
+								},
+							],
+						},				
+					],
+				},
+				"UNIQUE_Diona_PermanentSkill_1_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins"://在team 上通过 curlocalavatarMixin 挂在角色身上的modifier ，在断线重连时恢复的有问题,这个会在1.3 dev解决，1.2上策划先将这个modifier 改成通过 thinkInterval 去刷 
+					[
+						{
+							"$type":"CurLocalAvatarMixinV2",
+							"modifierName":"DionaPermanentSkill_SpeedUp",
+						},
+					],
+					// "thinkInterval":1,
+					// "onThinkInterval":
+					// [
+					// 	{
+					// 		"$type":"AttachModifier",
+					// 		"target":"CurLocalAvatar",
+					// 		"modifierName":"DionaPermanentSkill_SpeedUp",
+					// 	}
+					// ],
+				},
+				"ShieldHitEffect": 	
+				{
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type":"SendEffectTrigger",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_IceShield",
+							"parameter":"BeHit",
+						},	
+					],
+				},
+				"DionaPermanentSkill_SpeedUp":
+				{
+					"stacking":"Refresh",
+					"state":"SpeedUp",
+					"isLimitedProperties":true,
+					// "duration":2,
+					"properties":
+					{
+						"Actor_CostStaminaRatio": "%Diona_CostStaminaDelta",
+						"Animator_MoveSpeedRatio" : "%Diona_Speed",
+					},					
+				},
+				"Diona_Constellation_2_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags":["Elemental_Art"],
+							"damagePercentageRatio": "%Constellation_AttackUp_Ratio",
+						},
+					],
+					// "onAttackLanded":
+					// [
+					// 	{
+					// 		"$type":"Predicated",
+					// 		"target":"Other",
+					// 		"targetPredicates":
+					// 		[
+					// 			{
+					// 				"$type" : "ByAttackTags",
+					// 				"attackTags" : ["Elemental_Art"],
+					// 			},
+					// 			{
+					// 				"$type" : "ByEntityTypes",
+					// 				"entityTypes" : ["Monster"],
+					// 			},
+					// 			{
+					// 				"$type": "ByTargetGlobalValue",
+					// 				"key": "_ANIMAL_ENTITY_TYPE",
+					// 				"value": 0,
+					// 				"compareType": "NoneOrEqual",
+					// 			},
+					// 		],
+					// 		"successActions":
+					// 		[
+					// 			{
+					// 				"$type" : "RemoveUniqueModifier",
+					// 				"modifierName" : "UNIQUE_Diona_Constellation_2_Shield",
+					// 				"target": "RemoteTeams",
+					// 				"predicates":
+					// 				[
+					// 					{
+					// 						"$type": "ByTargetPositionToSelfPosition",
+					// 						"compareType": "XZ",
+					// 						"value": 40,
+					// 						"logic": "LesserOrEqual",
+					// 					},
+					// 				],
+					// 				"doOffStage": true,
+					// 			},
+					// 			{
+					// 				"$type":"AttachModifier",
+					// 				"modifierName":"UNIQUE_Diona_Constellation_2_Shield",
+					// 				"target":"RemoteTeams",
+					// 				"predicates":
+					// 				[
+					// 					{
+					// 						"$type": "ByTargetPositionToSelfPosition",
+					// 						"compareType": "XZ",
+					// 						"value": 40,
+					// 						"logic": "LesserOrEqual",
+					// 					},
+					// 				],
+					// 				"doOffStage": true,
+					// 			},
+					// 		],
+					// 	},
+					// ],
+				},
+				"UNIQUE_Diona_Constellation_2_RemoteTeamShield_Timer"://
+				{
+					"duration":0.5,
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Diona_Constellation_2_RemoteTeamShield_Handler",
+							"doOffStage":true,
+						}
+					],
+				},
+				"UNIQUE_Diona_Constellation_2_RemoteTeamShield_Handler":
+				{
+					"isUnique":true,
+					"stacking":"MultipleRefresh",
+					"duration":"%Constellation_Shield_Duration",
+					"onAdded":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_Diona_Constellation_2_Shield",
+							"target": "RemoteTeams",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_Diona_Constellation_2_Shield",
+							"target":"RemoteTeams",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Diona_Constellation_2_Shield":
+				{
+					"duration":"%Constellation_Shield_Duration",
+					"isUnique":true,
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_IceShield_Born",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityIsAlive",
+									"target":"CurLocalAvatar",
+								},
+							],
+						},
+						{
+							"$type":"AttachModifier",
+							"target":"Team",
+							"modifierName":"UNIQUE_Diona_PermanentSkill_1_Handler",
+							"predicates":
+							[
+								// {
+								// 	"$type": "ByUnlockTalentParam",//Remoted端不会被同步天赋解锁信息，联机时直接突破，是判不到的。
+								// 	"talentParam": "Diona_PermanentSkill_1",
+								// },	
+								{
+									"$type":"ByTargetGlobalValue",//Remoted端不会被同步天赋解锁信息，联机时直接突破，是判不到的,所以改成globalvalue，是能判到的。
+									"forceByCaster":true,
+									"key":"_ABILITY_Diona_PermanentSkill_1",
+									"value":1,
+									"compareType":"Equal",
+								},						
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalMainShieldMixin",
+							"shieldType": "Avatar_Ice",
+							"shieldHPRatio": "%SHield_Ratio*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio*%Talent_Teammate_Shield_Ratio",
+							"shieldHP":"%SHieldHp_Const*%Shield_Enchanted_Ratio*%Talent_Shield_Enchanted_Ratio*%Talent_Teammate_Shield_Ratio",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_IceShield",
+							"targetMuteHitEffect": true,
+							"showDamageText": "INFO_ELITE_DEFENCE",
+							"childShieldModifierName": "UNIQUE_Diona_Constellation_2_Shield_Child",
+							"onShieldBroken":
+							[
+
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_IceShield_Die",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityIsAlive",
+									"target":"CurLocalAvatar",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Diona_Constellation_2_Shield_Child":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"Diona_ElementalArt_Shield_Frozen_Modifier",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "GlobalSubShieldMixin",
+							"mainShieldModifierName":"UNIQUE_Diona_Constellation_2_Shield",
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta": 0,	
+					},
+					"onBeingHit":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitEnBreak",
+									"enBreak": 0,
+									"logic": "Greater",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "ShieldHitEffect",
+									"target": "Team",
+								},
+							],
+						},				
+					],
+				},
+				"Diona_ElementalArt_Shield_Frozen_Modifier":
+				{
+					"duration":0.1,
+					"elementDurability":50,
+					"elementType":"Frozen",
+				},
+			},
+			"abilitySpecials":
+			{
+				"SHield_Ratio":0,
+				"SHieldHp_Const":0,
+				"IceShield_LifeTime":0,
+				"Diona_CostStaminaDelta":0,
+				"Diona_Speed":0,
+				"Shield_Enchanted_Ratio":0,
+				"Talent_Shield_Enchanted_Ratio":1,
+				"Constellation_AttackUp_Ratio":0,
+				"Talent_Teammate_Shield_Ratio":0,
+				"Constellation_Shield_Duration":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Ice_Wine Fog
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_Elemental_Burst_Attack",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["DionaElementalBurst"],
+					"modifierName": "Elemental_Burst_Flask_Hand",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["DionaElementalBurst", ],
+					"modifierName": "Elemental_Burst_Invincible_1",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "DionaElementalBurst_AS",
+					"modifierName": "Elemental_Burst_Invincible_2",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.17,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10395,
+				},
+				{
+					"$type": "KillGadget",		
+					"gadgetInfo":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41039015,
+						"sortType": "Default",
+					}
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41039014,
+					"born":
+					{
+						"$type":"ConfigBornByAttachPoint",
+						"attachPointName":"PRIVATE_Tail",
+						"attachPointTargetType":"Self",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByEntity",
+						},
+					},
+				},
+				// {
+				// 	"$type": "CreateGadget",
+				// 	"gadgetID": 41039015,
+				// 	"campID": 1001,
+				// 	"campTargetType": "Enemy",
+				// 	"born":
+				// 	{
+				// 		"$type": "ConfigBornByTarget",
+				// 		"offset":
+				// 		{
+				// 			"x": 0.0,
+				// 			"y": 0.0,
+				// 			"z": 6.0,
+				// 		},
+				// 		"onGround": true,
+				// 		"alongGround": true,
+				// 	},
+				// },
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Diona_Elemental_Burst_Mark",
+					"target":"Self",
+				},
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Avatar_Loli_Bow_Diona_ElementalBurst_Impact",
+				// 	"born":
+				// 	{
+				// 		"$type": "ConfigBornBySelf",
+				// 		"offset":
+				// 		{
+				// 			"x": 0.0,
+				// 			"y": 0.0,
+				// 			"z": 0.0,
+				// 		},
+				// 	},
+				// },
+			],
+			"modifiers":
+			{
+				"Diona_Elemental_Burst_Mark"://判断迪奥娜是否在充能技状态下
+				{
+					"duration":15,
+					"onAdded":
+					[
+				        {
+							"$type": "AddGlobalValue",
+							"key": "_Ability_Diona_Elemental_Burst",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+				        {
+							"$type": "AddGlobalValue",
+							"key": "_Ability_Diona_Elemental_Burst",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+							"doOffStage":true,
+						},
+					],						
+				},
+				"Elemental_Burst_Flask_Hand":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_ElementalArt_Flask_HoldupStandby",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_ElementalBurst_Cast",
+						},
+					],
+				},
+				"Elemental_Burst_Invincible_1":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"Elemental_Burst_Invincible_2":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type": "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"damage":1,
+			},
+		},
+	},
+
+	{
+		"Default" :
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_Elemental_Art_Flask",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalBurst_Flask_Explode",
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": 
+					{
+						"attackPattern": 
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height": 0.0,
+							"fanAngle": 360.0,
+							"radius": 3.0,
+							"massiveAttackRatio": 0.8,
+							"detectDirection": "Clockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.2,
+									"z" : 0.0,
+								},
+								"onGround":true,
+							},
+						},
+						"attackInfo": 
+						{
+							"attenuationTag": "Elemental_Burst",
+							"attackTag": "Elemental_Burst",
+							"canBeModifiedBy":"OriginOwner",
+							"attackProperty": 
+							{
+								"damagePercentage": "%Elemental_Burst_Damage",
+								"elementType": "Ice",
+								"elementDurability": 25,
+								"enBreak": 50,
+						  		"strikeType": "Default",
+				          		"attackType": "Range",
+							},
+							"hitPattern": 
+							{
+								"onHitEffectName": "default",
+			          			"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+							"cameraShake": 
+							{ 
+
+							},
+						},
+					},
+				},
+				{
+					"$type": "SetGlobalPos",
+					"target": "OriginOwner",
+					"key": "_ABILITY_Diona_IceWine_Fog_CustomPos",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+					},
+					"setTarget": true,
+				},
+				// {
+				// 	"$type": "CreateGadget",
+				// 	"gadgetID": 41039015,
+				// 	"campID": 1001,
+				// 	"campTargetType": "Enemy",
+				// 	"born":
+				// 	{
+				// 		"$type": "ConfigBornBySelf",
+				// 		"offset":
+				// 		{
+				// 			"x": 0.0,
+				// 			"y": 0.0,
+				// 			"z": 0.0,
+				// 		},
+				// 		"onGround": true,
+				// 		// "alongGround": true,
+				// 	},
+				// },
+				{
+					"$type": "TriggerAbility",
+					"abilityName": "Avatar_Diona_Elemental_Burst_Creata_IceWine_Fog",	//叫迪奥娜建
+					"target": "OriginOwner",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Flask_Bullet",
+				},
+			],
+			"modifiers":
+			{
+
+			},
+			"abilitySpecials":
+			{
+				"HealHPRatio":0.0,
+				"HealHP_Const":0,
+				"Elemental_Burst_Damage":0,
+			},
+		},
+	},
+
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_Elemental_Burst_Creata_IceWine_Fog",
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41039015,
+					"campID": 1001,
+					"doOffStage":true,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornByGlobalValue",
+						"positionKey": "_ABILITY_Diona_IceWine_Fog_CustomPos",	//用长按发射的子弹回传的位置创建，保证迪奥娜直接控制领域座，没有中间商赚差价
+						"onGround": true,
+						"alongGround": false,
+						"onGroundIgnoreWater": true,
+						"onGroundRaycastUpDist": 3,
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+
+			},
+		},
+	},
+
+
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_IceWine_Fog",
+			"onAdded": 
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Ice_Fog_Attack",
+					"target": "Self",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Ice_Fog_HealHp",
+					"target": "Self",
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "AimShoot_Enchanted_Handler",
+					"target": "Self",
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_Constellation_4",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Constellation_6_Modifier",
+					"target": "Self",
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_Constellation_6",
+						},
+					],
+				},
+			],
+			"onKill":
+			[
+                {
+                    "$type":"ReviveElemEnergy",
+                    "value":"%Talent_ReviveElemEnergyRatio",
+                    "target":"OriginOwner",
+					"predicates":
+					[
+						{
+							"$type": "ByUnlockTalentParam",
+							"talentParam": "Diona_Constellation_1",
+						},
+						{
+							"$type":"ByEntityIsAlive",
+						},
+					],
+                },
+			],
+			"modifiers":
+			{
+				"Ice_Fog_Attack":
+				{
+					"duration": 12.5,
+					"thinkInterval": 2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"SendEffectTrigger",
+							"parameter":"Attack",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_ElementalBurst_IceWine_Fog",
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackCircle",
+									"triggerType" : "TriggerNoRepeat",
+									"fanAngle" : 360.0,
+									"radius" : 6.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attenuationTag":"Elemental_Burst",
+									"canBeModifiedBy":"OriginOwner",
+									"attackTag":"Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%Elemental_Burst_Damage",
+										"elementType": "Ice",
+										"elementDurability": 25,
+										"enBreak": 50.0,
+								  		"strikeType": "Default",
+						          		"attackType": "Range",
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "default",
+			          					"hitImpulseType":"LV1",
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Diona_Talent_ElementalBurst_Monster_AttackDown",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6_5H5",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Diona_PermanentSkill_2",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Diona_Talent_ElementalBurst_Monster_AttackDown",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6_5H5",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Diona_PermanentSkill_2",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalBurst_IceWine_Fog",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SendEffectTrigger",
+							"parameter":"Die",
+							"effectPattern":"Eff_Avatar_Loli_Bow_Diona_ElementalBurst_IceWine_Fog",
+						},
+					],
+				},
+				"Ice_Fog_HealHp":
+				{
+					"duration": 12.5,
+					"thinkInterval": 2.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "HealHP",
+							"amountByCasterMaxHPRatio": "%HealHPRatio",
+							"amount":"%HealHP_Const",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR7",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Diona_Talent_ElementalBurst_Monster_AttackDown":
+				{
+					"duration":"%AttackDown_Duration",
+					"stacking":"Refresh",
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"state":"DefenseDown",
+					"properties":
+					{
+						"Actor_AttackRatio" :"%Diona_Talent_AttackRatio",
+					},
+				},
+				"AimShoot_Enchanted_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"target":"OriginOwner",
+							"modifierName":"UNIQUE_AimShoot_Enchanted_Modifier",
+							"predicates":
+							[
+                        		{
+                        			"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":7,
+									"logic": "LesserOrEqual",
+                        		},
+							],
+						},
+					],
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"target":"OriginOwner",
+							"modifierName":"UNIQUE_AimShoot_Enchanted_Modifier",
+							"predicates":
+							[
+                        		{
+                        			"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":7,
+									"logic": "LesserOrEqual",
+                        		},
+							],
+						},
+					],
+				},
+				"UNIQUE_AimShoot_Enchanted_Modifier":
+				{
+					"duration":2,
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key" : "_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+							"doOffStage":true,
+							"value" : 0.4,
+							"useLimitRange" : true,
+							"maxValue" : 0.4,
+							"minValue" : 0,							
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"doOffStage":true,
+							"key" : "_ABILITY_Diona_AimShoot_Enchanted_Ratio",
+							"value" : 0.6,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 0,							
+						},
+					],
+				},
+				"Constellation_6_Modifier":
+				{
+					"duration":12.5,
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Diona_Talent_ElementalBurst_Avatar_HPChange_Handler",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR7",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+					],
+					"thinkInterval":0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Diona_Talent_ElementalBurst_Avatar_HPChange_Handler",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR7",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Diona_Talent_ElementalBurst_Avatar_HPChange_Handler":
+				{
+					"duration":2,
+					"stacking":"Refresh",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachModifier",
+							"target":"Self",
+							"modifierName":"Diona_Talent_ElementalBurst_ElemMasteryUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type" : "ByTargetHPRatio",
+									"target" : "Self",
+									"HPRatio" : 0.5,
+									"logic" : "Greater",
+								},
+							],
+						},
+						{
+							"$type":"RemoveModifier",
+							"target":"Self",
+							"modifierName":"Diona_Talent_ElementalBurst_ElemMasteryUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type" : "ByTargetHPRatio",
+									"target" : "Self",
+									"HPRatio" : 0.5,
+									"logic" : "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"AttachModifier",
+							"target":"Self",
+							"modifierName":"Diona_Talent_ElementalBurst_HealedAddUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type" : "ByTargetHPRatio",
+									"target" : "Self",
+									"HPRatio" : 0.5,
+									"logic" : "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"RemoveModifier",
+							"target":"Self",
+							"modifierName":"Diona_Talent_ElementalBurst_HealedAddUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type" : "ByTargetHPRatio",
+									"target" : "Self",
+									"HPRatio" : 0.5,
+									"logic" : "Greater",
+								},
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByEventMixin",
+							"type" : "Both",
+							"onEvent" : "HP",
+							"actions" :
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"Diona_Talent_ElementalBurst_ElemMasteryUp",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type" : "ByTargetHPRatio",
+											"target" : "Self",
+											"HPRatio" : 0.5,
+											"logic" : "Greater",
+										},
+									],
+								},
+								{
+									"$type":"RemoveModifier",
+									"target":"Self",
+									"modifierName":"Diona_Talent_ElementalBurst_ElemMasteryUp",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type" : "ByTargetHPRatio",
+											"target" : "Self",
+											"HPRatio" : 0.5,
+											"logic" : "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"Diona_Talent_ElementalBurst_HealedAddUp",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type" : "ByTargetHPRatio",
+											"target" : "Self",
+											"HPRatio" : 0.5,
+											"logic" : "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"RemoveModifier",
+									"target":"Self",
+									"modifierName":"Diona_Talent_ElementalBurst_HealedAddUp",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type" : "ByTargetHPRatio",
+											"target" : "Self",
+											"HPRatio" : 0.5,
+											"logic" : "Greater",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Diona_Talent_ElementalBurst_ElemMasteryUp":
+				{
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_ElemMasteryDelta" :"%Diona_Talent_ElemMastery",
+					},
+				},
+				"Diona_Talent_ElementalBurst_HealedAddUp":
+				{
+					"isLimitedProperties":true,
+					"state":"DefenseUp",
+					"properties":
+					{
+						"Actor_HealedAddDelta" :"%Diona_Talent_HealedAddDelta",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"HealHPRatio":0.0,
+				"HealHP_Const":0,
+				"Elemental_Burst_Damage":0,
+				"Talent_ReviveElemEnergyRatio":0,
+				"Diona_Talent_AttackRatio":0,
+				"AttackDown_Duration":0,
+				"Diona_Talent_HealedAddDelta":0,
+				"Diona_Talent_ElemMastery":0,
+			}
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Bullet_Diona_ShootArrow
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_ShootArrow_Damage",
+			"abilityMixins": 
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%NormalAttack_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%NormalAttack_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%NormalAttack_03_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04"],
+					"damagePercentage": "%NormalAttack_04_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK05"],
+					"damagePercentage": "%NormalAttack_05_DamagePercentage",
+				},
+			],
+			"abilitySpecials":
+			{
+				"NormalAttack_01_DamagePercentage":0.0,
+				"NormalAttack_02_DamagePercentage":0.0,
+				"NormalAttack_03_DamagePercentage":0.0,
+				"NormalAttack_04_DamagePercentage":0.0,
+				"NormalAttack_05_DamagePercentage":0.0,
+			},
+		},
+	},
+/////////////////////////////////////////////////////////////////
+///
+///  空中攻击5039010Avatar_Diona_FallingAnthem
+///
+//////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Diona_FallingAnthem",
+			"abilityMixins":
+			[
+				{
+					"$type": "AvatarChangeSkillMixin",
+					"priority":"AvatarCommon",
+					"jumpSkillID": 5039010,
+					"flySkillID": 5039010,
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_Material",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "FallingAnthem_Loop_Normal",
+				},
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "Inertia",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_OverHead_Camera",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+					],
+					"modifierName": "FallingAnthem_AttachEffect_BS_01", //气流效果
+				},
+			],
+			"onAdded":
+			[
+			],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "strikeType": "Pierce",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 50,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV2",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            /*
+                          "forceCameraShake": true,
+
+                          "cameraShake":
+                          {
+                              "shakeType": "CustomVector",
+                          "shakeRange": 0.3,
+                          "shakeTime": 0.12,
+                          "shakeDistance": 30,
+                          "shakeDir":
+                            {
+                              "x": 0,
+                              "y": 1,
+                              "z": 0,
+                            },
+                          },
+
+                          "cameraShake":
+                          {
+                              "shakeType": "CustomVector",
+                              "shakeRange": 0.08,
+                              "shakeTime": 0.06,
+                              "shakeDistance": 15,
+                              "shakeDir":
+                              {
+                                  "x": 0,
+                                  "y": 1,
+                                  "z": 0,
+                              },
+                              "extension":
+                              {
+                                  "baseCycle": 0.24,
+                                  "cycleDamping": 0,
+                                  "rangeAttenuation": 0.3,
+                              },
+                          },
+                          */
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.5,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "strikeType": "Pierce",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV3",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            /*
+                          "forceCameraShake": false,
+                          "cameraShake":
+                          {
+                              "shakeType": "CustomVector",
+                              "shakeRange": 0.08,
+                              "shakeTime": 0.06,
+                              "shakeDistance": 15,
+                              "shakeDir":
+                              {
+                                  "x": 0,
+                                  "y": 1,
+                                  "z": 1,
+                              },
+                              "extension":
+                              {
+                                  "baseCycle": 0.4,
+                                  "cycleDamping": 0,
+                                  "rangeAttenuation": 0.3,
+                              },
+                          },
+                          */
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachEffect_BS_01":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "ActCameraRadialBlur",
+                            "cameraRadialBlur":
+                            {
+                                "power": 0.3,
+                                "blurTime": 0.3,
+                                "fadeTime": 0.15,
+                            },
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Pierce",
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 10,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+				"FallingAnthem_Loop_Normal":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Bow_FallAnthem_Loop_02",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+		},
+	},
+]

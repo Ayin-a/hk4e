@@ -1,0 +1,1562 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Pose
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_PoseHandler",
+		"onAdded": 
+		[
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_Limbo",
+			},
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_ChargeBar",
+			},
+			{
+				"$type":"SetGlobalValue",
+				"key":"_SYLPH_DEATH_TAG_",
+				"value":0,
+			},
+		],
+		"abilityMixins": 
+		[
+			// _SYLPH_POSE_TAG_
+			// 0:未激活
+			// 1:激活
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_SYLPH_POSE_TAG_",
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier": true,
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"modifierNameSteps": ["Pose_None", "Pose_Activated"],
+			},
+			{
+				"$type":"AttachModifierToHPPercentMixinV2",
+				"valueSteps":[0.02],
+				"modifierNameSteps":["Sylph_Empty","Sylph_DyingPoseState"]
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Sylph_Limbo":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.0,
+				},
+			},
+			"Empty": {},
+			"Achieve_Moniter": {
+				"onKill": [
+					{
+						"$type": "DoWatcherSystemAction",
+						"watcherId": 82125,
+						"inThreatListOnly": true
+					}
+				]
+			},
+			"UNIQUE_Sylph_ChargeBar":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "ChargeBarMixin",
+						"chargeBarElementType": "None",
+						"chargeBarIconID": 2,
+						"initialValue": 0,
+						"maxValue": 100,
+					},
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_CHARGEBAR_VALUE",
+						"valueSteps": [-0.5, 0.5, 99.5, 100.5],
+						"removeAppliedModifier": true,
+						"modifierNameSteps": ["Achieve_Moniter", "Empty", "ChargeActivated"],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.1875,
+						"valueMax": 0.3125,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":20,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.3125,
+						"valueMax": 0.4375,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":40,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.4375,
+						"valueMax": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":70,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":100,
+							},
+						],
+					},
+				],
+			},
+			// 通过充能条来控制怪物激活/未激活的pose切换
+			"ChargeActivated":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":0,
+					},
+					{
+						"$type": "ResetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+			},
+			"Pose_None":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+				],
+			},
+			"Pose_Activated":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "VelocityForceMixin",
+						"excludeForces": ["WindZoneType", "AirflowType","RetreatAirType"],
+					},
+				],
+				"properties":
+				{
+					"Entity_WeightRatio": 2.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type":"SetAISkillCDAvailableNow",
+						"skillIDs":[601],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [601],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider_Activated"],
+						"setEnable": true,
+					},
+				],
+			},
+			// 通过血量来控制怪物是否进入濒死pose
+			"Sylph_DyingPoseState":
+			{
+				"state": "DenyLockOn",
+				"properties" :
+				{
+					"Actor_EndureDelta":0,
+					"Actor_SubHurtDelta":1.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": true,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":false,
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToAllied",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToEnemy",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_LockHP",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_NoHeal",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":0,
+					},
+				],
+			},
+			"Dying_IsGhostToAllied":
+			{
+				"state": "IsGhostToAllied",
+			},
+			"Dying_IsGhostToEnemy":
+			{
+				"state": "IsGhostToEnemy",
+			},
+			"Dying_LockHP":
+			{
+				"state": "LockHP",
+			},
+			"Dying_NoHeal":
+			{
+				"state": "NoHeal",
+			},
+			"Sylph_Empty":
+			{
+
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_PoseAction",
+		"abilityMixins": 
+		[
+			// Pose驱动动画状态
+			// 如果用SetAISkillCDAvailableNow，不会立刻退出当前技能状态并执行亡语
+			// 限制是，技能配置中的modifier要做好生命周期管理，避免亡语的时候有没下掉的modifier
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [211, 311],
+				"modifierName": "Sylph_DyingAnimState",
+			},
+		],
+		"modifiers": 
+		{
+			// Pose用一个参数就可以控制了，但是由于AnimatorController是从anystate拉线，所以需要区分两种trigger参数
+			"Sylph_DyingAnimState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"thinkInterval": 0.2,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_Steer",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_Standby"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Warning"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["GrassBullet"],
+				"startNormalizedTime" : 0.1,
+				"endNormalizedTime" : 0.85,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh"],
+				"startNormalizedTime" : 0.05,
+				"endNormalizedTime" : 0.7,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh_AS1"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh_AS2"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_Barrage"],
+				"startNormalizedTime" : 0.05,
+				"endNormalizedTime" : 0.9,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExitBattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_ExitBattle",
+		"abilityMixins": 
+		[
+			{
+				"$type":"AttachToPoseIDMixin",
+				"poseIDs":[901],
+				"modifierName":"ExitBattle",
+			},
+		],
+		"modifiers": 
+		{
+			"ExitBattle":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ActivatedToNormal",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SYLPH_POSE_TAG_",
+						"value": 0,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Sylph_Face",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  GrassBullet
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_GrassBullet",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["GrassBullet"],
+				"modifierName": "GrassBullet_Timer",
+			},
+		],
+		"modifiers": 
+		{
+			"GrassBullet_Timer" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "GrassBullet_Handler",
+					},
+				],
+			},
+			"GrassBullet_Handler" :
+			{
+				"duration": 3.07,  //发射子弹前的时间
+				"onAdded": 
+				[
+					// {
+					// 	"$type": "FireEffect",
+					// 	"effectPattern": "Eff_Monster_Sylph_Grass_GrassBullet_Monster",
+					// },
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_GrassBullet_BS",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_GrassBulletTrigger",
+		"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42006701,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "BulletAttachPoint",
+					},
+					"trackTarget": "SelfAttackTarget",
+				},
+			],
+	},
+},
+
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_GrassBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "GrassBullet_Eff",
+			},
+		],
+		"onKill": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Grass_GrassBulletExplode",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 2.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Blunt",
+							"enBreak": 20.0,
+							"elementDurability":50,
+							"elementType": "Grass",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName" : "none",
+							"hitImpulseType":"LV3",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type":"KillSelf",
+			},
+		],
+		"modifiers": 
+		{
+			"GrassBullet_Eff":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_GrassBullet",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FlyHigh
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_FlyHigh",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["FlyHigh"],
+				"modifierName": "FlyHigh_Handler",
+			},
+		],
+		"modifiers": 
+		{
+			"FlyHigh_Handler" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "HealArea_Timer",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "FlyHigh_Eff_Handler",
+					},
+				],
+			},
+			"HealArea_Timer" :
+			{
+				"duration": 1.5, //施法前摇时间
+				"onRemoved": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006703,
+						"target": "SelfAttackTarget",
+						"byServer": true,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset" : 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 1,
+							},
+							"onGround":true,
+						},
+					},
+				],
+			},
+			"FlyHigh_Eff_Handler" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Sylph_Grass_GrassCatch",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_HealArea",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "HealArea_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "HealArea_Hit_Check",
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "HealArea_LifeHandler",
+			},
+		],
+		"modifiers":
+		{
+			"HealArea_Hit_Check":
+			{
+				"duration": 2.0,
+				"onAttackLanded":
+				[
+					{
+						"$type":"Predicated",
+						"target":"Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Avatar", "Partner"],
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "TriggerBullet",
+								"bulletID": 42006702,
+								"target": "OriginOwner",
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 2.2,
+										"z": 0.0,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByEntity",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"trackTarget": "Target",
+							},
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "BulletHitAvatar",
+								"target": "OriginOwner",
+							},
+						],
+					},
+				],
+			},
+			"HealArea_Timer":
+			{
+				"duration": 1.24,  //法术场创建出来之后蓄力时间
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_GrassCatch_GrassCircle",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_GrassCatch_GrassCircleHit",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern" :
+							{
+								"$type" : "ConfigAttackSphere",
+								"triggerType" : "TriggerNoRepeat",
+								"radius": 3.0,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.0,
+									"strikeType": "Blunt",
+									"enBreak": 20.0,
+									"elementDurability":50,
+									"elementType": "Grass",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "none",
+									"hitImpulseType":"LV3",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				],
+			},
+			"HealArea_LifeHandler":
+			{
+				"duration": 5.0,
+				"onRemoved": 
+				[
+					{
+						"$type": "KillSelf",
+					},
+					{
+						"$type": "ResetAnimatorTrigger",
+						"triggerID": "BulletHitAvatar",
+						"target": "OriginOwner",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_HealArea_Hit",
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Grass_GrassCatch_Seed",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "Target",
+				"targetPredicates" :
+				[
+					{
+						"$type" : "ByEntityTypes",
+						"entityTypes" : ["Monster"],
+					},
+					{
+						"$type" : "ByTargetType",
+						"targetType": "OriginOwner",
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_SYLPH_POSE_TAG_",
+						"compareType": "MoreThanAndEqual",
+						"value": 0,
+					},
+				],
+
+				"successActions":
+				[
+					{
+						"$type": "FireEffect",
+						"target": "Target",
+						"effectPattern": "Eff_Monster_Sylph_Grass_GrassCatch_SeedEnhance",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x" : 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					{
+						"$type" : "ApplyModifier",
+						"modifierName":"AddEnergy50",
+						"target": "Target",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"AddEnergy50":
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type": "AddChargeBarValue",
+						"value": 50,
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Deathrattle"],
+				"modifierName": "Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006706,
+						// "byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_DeathPosAction",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_LifeHandler",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Timer" :
+			{
+				"duration": 1.2,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Deathrattle_Actions",
+					},
+				],
+			},
+			"Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 2.5,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.25,
+									"strikeType": "Blunt",
+									"enBreak": 50.0,
+									"elementDurability":60,
+									"elementType": "Grass",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				],
+			},
+			"Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Barrage
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_Activated_Barrage",
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Grass_Activated_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Activated_Deathrattle"],
+				"modifierName": "Activated_Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006704,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_Activated_DeathPosAction",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_LifeHandler",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_SYLPH_GRASS_DEATHBULLET_COUNT_",
+				"value": 3,
+				"target": "Self",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Timer" :
+			{
+				"duration": 1.8,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Grass_Activated_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Activated_Deathrattle_Actions",
+					},
+				],
+			},
+			"Activated_Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 5.0,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.5,
+									"strikeType": "Blunt",
+									"enBreak": 100.0,
+									"elementDurability":100,
+									"elementType": "Grass",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+					{
+						"$type":"Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR20H40",
+							"centerBasedOn": "Self",
+							"campTargetType": "Alliance",
+							"campBasedOn": "Self",
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_ALERTNESS_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "Equal",
+							},
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							}, 
+							{
+								"$type": "ByTargetType",
+								"targetType": "Owner",
+								"isTarget": false,
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "TriggerBullet",
+								"bulletID": 42006705,
+								"target": "Target",
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 0.2,
+										"z": 0.0,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByEntity",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"trackTarget": "Target",
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_SYLPH_GRASS_DEATHBULLET_COUNT_", 
+										"value": 0,
+										"compareType": "MoreThan",
+										"target": "Self",
+									},
+								],
+							},
+							{
+								"$type": "AddGlobalValue",
+								"key": "_SYLPH_GRASS_DEATHBULLET_COUNT_",
+								"target": "Self",
+								"value": -1,
+								"useLimitRange": true,
+								"maxValue": 3,
+								"minValue": -1,
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_SYLPH_GRASS_DEATHBULLET_COUNT_", 
+										"value": 0,
+										"compareType": "MoreThan",
+										"target": "Self",
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+			"Activated_Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Grass_Activated_DeathBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Grass_Activated_Deathrattle_Seed",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "Target",
+				"targetPredicates" :
+				[
+					{
+						"$type" : "ByEntityTypes",
+						"entityTypes" : ["Monster"],
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"key": "_SYLPH_POSE_TAG_",
+						"value": 0,
+						"compareType": "MoreThanAndEqual",
+					},
+					
+				],
+				"successActions":
+				[
+					{
+						"$type": "FireEffect",
+						"target": "Target",
+						"effectPattern": "Eff_Monster_Sylph_Grass_Activated_Deathrattle_SeedEnhance",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset" : 
+							{
+								"x" : 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					{
+						"$type" : "ApplyModifier",
+						"modifierName":"AddEnergy100",
+						"target": "Target",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"AddEnergy100":
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type": "AddChargeBarValue",
+						"value": 100,
+						"target": "Target",
+					},
+				],
+			},
+		},
+	},
+},
+]

@@ -1,0 +1,4346 @@
+[
+
+
+////////////////////////////////////////////////////////////////
+//
+//  13301 白缨枪
+//
+//  普通攻击伤害提升13%~25% OK
+//
+// ////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_NormalAttackUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName":"UNIQUE_Pole_NormalAttackUp",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_NormalAttackUp": //旧时代的很多写成了modiferMxin便于调试，用abilityMixin好一些。但差别不大。
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"],
+							"damagePercentageRatio":"%Rate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  13302 钺矛
+//
+//  ，cd10秒，冷却完成后对命中目标造成60%~100%攻击力伤害 OK
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_ExtraDamageWhenCDReady",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Pole_ExtraDamageWhenCDReady",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Pole_ExtraDamageWhenCDReady_CD","UNIQUE_Pole_ExtraDamageWhenCDReady_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_ExtraDamageWhenCDReady_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":113302,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"DamageByAttackValue",  //这个效果格挡后伤害仍然会给出，但是打元素盾后伤害不会出现，因为元素盾主人是锁血状态。
+									"target":"Target",
+									"born":
+									{
+										"$type":"ConfigBornByTarget",
+										"offset":
+										{
+											"x":0,
+											"y":0,
+											"z":0,
+										},
+									},
+									"attackInfo":
+									{
+										"attackProperty":
+										{
+											"damagePercentage": "%Rate",
+											"elementType":"None",
+											"strikeType":"Default",
+											"enBreak" : 50,
+										},
+										"hitPattern" :
+										{
+											"onHitEffectName" : "default",
+											"hitImpulseType":"LV2",
+											"reboundRatio" : 0,
+											"hitHaltTime" : 0.0,
+											"hitHaltTimeScale" : 0.01,
+											"muteHitText" : false,
+										},
+										"forceCameraShake": false,
+									},
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Pole_ExtraDamageWhenCDReady_Keep",
+								},
+								{
+									"$type":"FireEffect",
+									"target":"Target",
+									"effectPattern":"Eff_Weapon_SpecialHit_Light",
+									"born":
+									{
+										"$type":"ConfigBornByHitPoint",//注意下可能不能用collisionpoint，确实拿不到
+										// "offset":
+										// {
+										// 	"x":0,
+										// 	"y":0.7,
+										// 	"z":0,
+										// },
+									},
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_ExtraDamageWhenCDReady_Keep":
+				{
+					"duration":0.06,
+					"isUnique":true,
+					"stacking":"Unique",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"target":"Self",
+							"key":"_ABILITY_Weapon_Pole_ExtraDamageWhenCDReady",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_ExtraDamageWhenCDReady_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":113302,
+                        },
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Weapon_Pole_ExtraDamageWhenCDReady",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+
+				},
+			},
+			"abilitySpecials" :
+			{
+					"Rate" : 0,
+					"CDTime": 0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  13303 黑缨枪
+//
+//  对史莱姆增加26%~40%伤害   OK
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_SlimeKiller",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_SlimeKiller_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_SlimeKiller_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"damagePercentageRatio":"%Rate",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									// "target":"Target",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByHasFeatureTag",
+									"featureTagIDs":[4002],
+								},
+							],
+						},
+					],
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"FireEffect",
+							"target":"Target",
+							"effectPattern":"Eff_Weapon_SpecialHit_Light",
+							"born":
+							{
+								"$type":"ConfigBornByHitPoint",
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									// "target":"Target",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByHasFeatureTag",
+									"featureTagIDs":[4002],
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+	///////////////////////////////////////////////////////////////
+	//
+	//  13304 旗杆
+	//
+	//  系列，武器词缀_击杀目标恢复角色8%生命值；
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_HealAmountHPonEnemyKilled",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByKillingMixin",
+					//算的是此角色最后一击的tag。不一定是击杀那一击（可能是别人击杀的）
+					"detectWindow":0.6, //这段时间之后击杀都算，但是无论是modifiermixin还是abilitymixin都需要角色在场。
+					"onKill":
+					[
+						{
+							"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+							"target":"Other",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "HealHP",
+									"target":"Self",
+									"amountByTargetMaxHPRatio": "%HealAmount",
+								},
+							],
+						},
+					]
+				},
+			],
+			"abilitySpecials":
+			{
+				"HealAmount": 0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  13401 匣里灭辰
+//
+//  对带有水、火附着的单位伤害提高30%  ，用全伤 OK
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_DamageUpToWaterEnemy",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_DamageUpToWaterEnemy_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_DamageUpToWaterEnemy_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"ignoreEventInfo":true,
+							"damagePercentageRatio":"%Rate",//
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									// "target":"Target",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByAny",
+									"predicates":
+									[
+										{
+											"$type":"ByHasElement",//Predicate的目标默认是Target，就是传进来的参数.
+											// "target":"Target",
+											"element":"Water",
+										},
+										{
+											"$type":"ByHasElement",
+											"element":"Fire",
+										},
+									],
+								}
+							],
+						},
+					],
+					"isUnique":true,
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  13403 流月针
+//
+//  拾取微粒后普通攻击附带20~60%伤害 OK （以前有攻击次数限制）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_NormalAttackExtraDamageWhenGetEnergyBall",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_NormalAttackExtraDamageWhenGetEnergyBall_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_NormalAttackExtraDamageWhenGetEnergyBall_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByEnergyChangeMixin",
+							"elementTypes":["Electric","Fire","Water","Grass","Ice","Wind","Rock"],
+							"doWhenEnergyMax":true,
+							"onGainEnergyByBall":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Pole_NormalAttackExtraDamage",
+									"predicates":
+									[
+										{
+		                                    "$type":"ByEquipAffixReady",
+		                                    "equipAffixDataID":113402,
+		                                    "target":"Self",
+		                                },
+									],
+								},
+							],
+						},
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Pole_NormalAttackExtraDamage":
+				{
+					"isUnique":true,
+					"duration":5,
+					"state":"AttackUp",
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},
+                                {
+                                    "$type": "ByHitDamage",
+                                    "damage": 0,
+                                    "logic": "Greater",
+                                },
+							],
+							"successActions":
+							[
+								/*{
+									"$type":"ApplyModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Weapon_Pole_MinusGlobalValue",
+								},*/
+								{
+									"$type":"DamageByAttackValue",  //这个效果格挡后伤害仍然会给出，但是打元素盾后伤害不会出现，因为元素盾主人是锁血状态。
+									"target":"Target",
+									"born":
+									{
+										"$type":"ConfigBornByTarget",
+										"offset":
+										{
+											"x":0,
+											"y":0,
+											"z":0,
+										},
+									},
+									"attackInfo":
+									{
+										"attackTag":"WeaponSkill",
+										"attackProperty":
+										{
+											"damagePercentage": "%Rate",
+											"elementType":"None",
+											"strikeType":"Default",
+										},
+										"hitPattern" :
+										{
+                                            "onHitEffectName" : "none",
+                                            "hitImpulseType":"Default",
+											"reboundRatio" : 0,
+											"hitHaltTime" : 0.0,
+											"hitHaltTimeScale" : 0.01,
+											"muteHitText" : false,
+										},
+										"forceCameraShake": false,
+									},
+
+								},
+							]
+						},
+					],
+				},
+				/*"UNIQUE_Weapon_Pole_MinusGlobalValue":
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_AttackBuffValue",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":3,
+							"minValue":0,
+						},
+					],
+				},*/
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  13402 试作星镰
+//
+//  释放小技能后提升普通攻击和重攻击伤害，叠加2层。 OK
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_NormalAttackAndExtraAttackUpAfterSkill",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_NormalAttackAndExtraAttackUpAfterSkill_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_NormalAttackAndExtraAttackUpAfterSkill_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerSkill":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Pole_NormalAttackAndExtraAttackUpAfterSkill",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_NormalAttackAndExtraAttackUpAfterSkill":
+				{
+					"duration":12,
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":2,
+					},
+					"state":"AttackUp",
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+							"damagePercentageRatio":"%Rate",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  13404 黑岩刺枪
+//
+//  击倒敌人后获得15%攻击力提升，持续30秒，最多叠加3层。每层时间独立 2020.3.26 测试完成
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Blackrock",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPON_Blackrock_COUNT", //默认应该会置0
+					"valueSteps":
+					[
+                        // -0.5
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+                        // "Weapon_Blank",
+						"UNIQUE_Pole_Blackrock_Buff1",
+						"UNIQUE_Pole_Blackrock_Buff2",
+						"UNIQUE_Pole_Blackrock_Buff3",
+					],
+				},
+				{
+					"$type":"DoActionByKillingMixin",
+					"detectWindow":0.6,
+					"onKill":
+					[
+						{
+							"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+							"target":"Other",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Pole_Blackrock_Timer_Ind",
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 3,
+									"minValue": 0,
+									"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_Blackrock_Timer_Ind": //独立计时，每次失效就会减少1层
+				{
+					"isUnique":true,
+					"duration":"%Dua",
+					"stacking": "MultipleRefresh",
+					"state":"AttackUp",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Pole_Blackrock_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Blackrock1_Pole",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+					},
+				},
+				"UNIQUE_Pole_Blackrock_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock2_Pole",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*2",
+					},
+				},
+				"UNIQUE_Pole_Blackrock_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock3_Pole",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*3",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"Dua": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//   13405 决斗之枪
+	//
+	//   周围敌人少于2个，提升40%攻击，周围敌人大于等于2个，提升20%攻击和防御。  已测。2020.3.18 可以考虑程序升级下实现。
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Dual",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_Dual_Handler",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Pole_Dual_Enemy",
+					"valueSteps" : [-0.5, "%Count-0.5", 999],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Pole_Dual_Atk","UNIQUE_Pole_Dual_AtkDef"],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_Dual_Handler":
+				{
+					"isUnique":true,
+					"thinkInterval":1, //1秒实测反应挺快的。可以慢一些不影响效果。
+					"onThinkInterval":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Self",
+							// "targetPredicates":
+							// [
+							// 	{
+							// 		"$type":"ByIsCombat",
+							// 	},
+							// ],
+							"successActions":
+							[
+
+								{
+									"$type":"SetGlobalValue",
+									"key":"_ABILITY_Weapon_Pole_Dual_Enemy_Count",
+									"value":0,
+								},
+								{
+									//程序优化一下，用一个aciton获取targets数量。然后compare就行了
+									"$type":"ApplyModifier",
+									"modifierName":"Pole_Dual_Add",
+									"otherTargets":
+									{
+										"$type":"SelectTargetsByShape",
+										"shapeName": "CircleR8",
+										"centerBasedOn": "Self",
+										"campTargetType": "Enemy",
+										"campBasedOn": "Self",
+										"sortType": "Nearest", //从近开始选
+									},
+									"predicates":
+									[
+										{
+											"$type":"ByEntityTypes",
+											"entityTypes":["Monster"],
+										},
+										{
+						                	"$type": "ByTargetGlobalValue",
+						                	"key": "_ANIMAL_ENTITY_TYPE",
+						                	"value": 0,
+						                	"compareType": "NoneOrEqual",
+						                },
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Pole_Dual_Timer",
+								},
+							],
+						},
+					],
+				},
+				"Pole_Dual_Add": //通过给周围的怪加，然后给角色获得count。 类lisa逻辑。
+				{
+					"duration": 0.1,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Pole_Dual_AddOnAvatar",
+							"target": "Caster",
+						},
+					],
+				},
+				"Pole_Dual_AddOnAvatar":  //跨remote只能通过ApplyModifier进行通信
+				{
+					"duration": 0.1,
+					"stacking": "Multiple",
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Caster",
+							"key": "_ABILITY_Weapon_Pole_Dual_Enemy_Count",
+							"value": 1,
+						},
+					],
+				},
+				"UNIQUE_Pole_Dual_Timer":
+				{
+					"duration": 0.8,
+					"isUnique": true,
+					"onRemoved":
+					[
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_Weapon_Pole_Dual_Enemy_Count",
+							"overrideMapKey":"Now_Count", //目前记录的数值
+							"doOffStage":true,
+						},
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Weapon_Pole_Dual_Enemy",
+							"value":"%Now_Count",
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Dual_Atk":
+				{
+					"isUnique":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate",
+					}
+				},
+				"UNIQUE_Pole_Dual_AtkDef":
+				{
+					"isUnique":true,
+					"state":"DefenseUp",
+					"properties":
+					{
+						"Actor_AttackRatio":"%Atk",
+						"Actor_DefenceRatio":"%Def",
+					}
+				},
+			},
+			"abilitySpecials":
+			{
+				"Count":0,
+				"Rate":0.0,
+				"Atk":0.0,
+				"Def":0.0,
+				"Now_Count":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	///
+	///  长枪 （备用）
+	///
+	///  普攻概率获得一个强化效果，强化重攻击伤害60%，持续xx秒。   重击持续时长很难定，不好做。。  测试2020.4.27
+	///
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_HeavyExtra",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_HeavyExtra_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_HeavyExtra_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater"
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags": [ "NormalAttack_01", "NormalAttack_02", "NormalAttack_03", "NormalAttack_04", "NormalAttack_05", "NormalAttack_06" ],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":"%Chance",
+									"successActions":
+									[
+										{
+											"$type":"ApplyModifier",
+											"modifierName":"UNIQUE_Pole_HeavyExtra"
+										},
+									],
+								},
+							],
+
+						},
+					],
+				},
+				"UNIQUE_Pole_HeavyExtra":
+				{
+					"isUnique":true,
+					"state":"AttackUp",
+					"duration":"%Time",
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Attack_ExtraUp_Pole",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+							},
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["ExtraAttack"],
+							"damagePercentageRatio":"%Rate", //得想办法结束时把这个加成去掉
+						},
+					],
+					"onAttackLanded":				   //思路为命中后再去掉加成。
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["ExtraAttack",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Pole_HeavyExtra_Remover"
+								},
+							],
+						}
+					],
+
+				},
+				"UNIQUE_Pole_HeavyExtra_Remover":
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":1,//重击命中后1秒内都可以加成重击。
+					"onRemoved":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Pole_HeavyExtra",
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Chance":0,
+				"Rate":0,
+				"Time":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	///
+	///  13406 千岩长枪
+	///
+	///  队伍中每有一个来自璃月角色，增加5%攻击和2%暴击  （防御太弱了，先改成暴击）
+	//
+	//   联机队友和试用角色其实是算的，但是限制最多4层。	//
+	///
+	//   这把武器必须后台生效。后台能清除和添加buff
+	///
+	///////////////////////////////////////////////////////////////
+
+	{ //虽然很长但是很稳。还有种办法是每次都remove掉再上，这样数值也会是正确的。
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Liyue",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AddGlobalValue", //不设置个初始值不让用这个key，只好先设一次。
+					"key":"_ABILITY_Pole_Liyue_Num",
+					"value":0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByTeamStatusMixin",
+					"waitTime": 20, //默认为5，但是联机时可能加载太慢，做了一个保底时间。最多20。
+					"waitForBigteam": true,
+					"runPostRecover":true,//用于退出联机时恢复处理一次mixin。
+					"actions":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"doOffStage":true,
+							"key":"_ABILITY_Pole_Liyue_Num",
+							"value":4,
+							"useLimitRange":true,
+							"maxValue":4,
+							"predicates":
+							[
+								{
+									"$type":"ByBigTeamHasFeatureTag",
+									"featureTagID":1002,
+									"number":4,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"doOffStage":true,
+							"key":"_ABILITY_Pole_Liyue_Num",
+							"value":3,
+							"useLimitRange":true,
+							"maxValue":3,
+							"predicates":
+							[
+								{
+									"$type":"ByBigTeamHasFeatureTag",
+									"featureTagID":1002,
+									"number":3,
+									"logic":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"doOffStage":true,
+							"key":"_ABILITY_Pole_Liyue_Num",
+							"value":2,
+							"useLimitRange":true,
+							"maxValue":2,
+							"predicates":
+							[
+								{
+									"$type":"ByBigTeamHasFeatureTag",
+									"featureTagID":1002,
+									"number":2,
+									"logic":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"doOffStage":true,
+							"key":"_ABILITY_Pole_Liyue_Num",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"predicates":
+							[
+								{
+									"$type":"ByBigTeamHasFeatureTag",
+									"featureTagID":1002,
+									"number":1,
+									"logic":"Equal",
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"doOffStage":true,
+							"key":"_ABILITY_Pole_Liyue_Num",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"predicates":
+							[
+								{
+									"$type":"ByBigTeamHasFeatureTag",
+									"featureTagID":1002,
+									"number":0,
+									"logic":"LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_Pole_Liyue_Num",
+							"overrideMapKey":"Pole_Liyue_Num",
+							"doOffStage":true,
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Pole_LiyueBuff",
+							"doOffStage":true,
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_Pole_LiyueBuff",
+							"doOffStage":true,
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_LiyueBuff":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate*%Pole_Liyue_Num",
+						"Actor_CriticalDelta":"%Crit*%Pole_Liyue_Num",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0.0,
+				"Crit":0.0,
+				"Pole_Liyue_Num":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13407 西风长枪
+	//
+	//  造成的伤害暴击时，有【X%】的概率制造一个通用原子能量球。 需内置cd。 （5.11单机测试完毕）
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_GenerateBallWhenCritic",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Pole_GenerateBallWhenCritic_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_GenerateBallWhenCritic_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Randomed",
+							"target": "Target",
+							"chance": "%Rate",
+							"predicates":
+							[
+								{
+									"$type": "ByHitCritical",
+								},
+								{
+									"$type": "ByEntityTypes",
+									"target": "Target",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+								{
+								   "$type":"ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":113407,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Pole_GenerateBallWhenCritic",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_GenerateBallWhenCritic":
+				{
+					"duration": "%CDTime",
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":113407,
+                        },
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Weapon_ExtraElementBall",//考虑了下，在自己身上播特效比较容易看到。
+                        },
+                        {
+                            "$type": "GenerateElemBall",
+                            "configID": 2024,
+                            "baseEnergy": 6,
+                            "ratio": 1,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset" :
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": -1,
+                                },
+                                "bornRandom" :
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange":0,
+                                    "maxRandomRange":0.5,
+                                },
+                            },
+                        },
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	// 13408 宗室猎枪
+	//
+	// 每次攻击暴击增加%Rate，发动暴击后解除
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_CritUpWhenHitNoCrit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Pole_CritUpWhenHitNoCrit_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_CritUpWhenHitNoCrit_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHitCritical",
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Pole_CritUpWhenHitNoCrit_CD",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByHitCritical",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "UNIQUE_Pole_CritUpWhenHitNoCrit",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_CritUpWhenHitNoCrit_CD":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Pole_CritUpWhenHitNoCrit",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_CritUpWhenHitNoCrit":
+				{
+					"stacking": "Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CriticalDelta": "%Rate",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "UNIQUE_Pole_CritUpWhenHitNoCrit",
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   13409 龙脊长枪
+	//
+	//   普攻和重击命中敌人时，有50%概率在敌方头上生成不稳定的冰晶核，坠落造成100%单体伤害，CD为10s
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Pole_Dragonfell",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Pole_Dragonfell",
+					"removeAppliedModifier":true,
+					"valueSteps":[-1.5,-0.5,0.5],
+					"modifierNameSteps":
+					[
+					 	"UNIQUE_Pole_Dragonfell_CD",
+						"UNIQUE_Pole_Dragonfell_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_Dragonfell_CD":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":113409,
+                        },
+					],
+					"onRemoved":
+					[
+						{
+							//重置技能CD，必须后台也能检测
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_Dragonfell",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Dragonfell_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":"%ChanceProb",
+							"target":"Target",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+								// {  //考虑不再限制造成伤害。不然免疫怪没法打。
+								// 	"$type":"ByHitDamage",
+								// 	"damage":0,
+								// 	"logic":"Greater",
+								// },
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":113409,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetGlobalPos",
+									"key":"_ABILITY_Weapon_Dragonfell_Pos",
+									"target":"Target",
+									"born":
+									{
+										"$type":"ConfigBornByHitPoint",
+										"offset":
+										{
+											"x":0,
+											"y":0,
+											"z":0,
+										},
+									},
+									"setTarget":false,
+								},{
+									"$type":"CreateGadget",
+									"gadgetID":40020006,
+									"campID":1001,
+									"campTargetType":"Enemy",
+									"born":
+									{
+										"$type":"ConfigBornByGlobalValue",
+										"positionKey": "_ABILITY_Weapon_Dragonfell_Pos",
+										// "direction":
+										// {
+										// 	"$type": "ConfigDirectionByGlobalValue",  //这个默认读的target导致功能废了。
+										// 	"target":"Self",
+										// 	"directionKey":"_ABILITY_Weapon_WorldDwon_Dir",//Direction没法用，测下来这个只有action的target存在globalvalue，才能读到这个参数。
+										// },
+									},
+								},
+								{
+									//重置技能CD，注意下场也会执行恢复cd
+									"$type":"AddGlobalValue",
+									"key":"_ABILITY_Pole_Dragonfell",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ChanceProb":0,
+				"Rate":0,   //未使用
+				"RateToIce":0,   //未使用
+				"CDTime":0,
+			},
+		},
+	},
+//gagdet的Ability
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Pole_Dragonfell_Gadget",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Dragonfell_Appear",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["WeaponSkill"],
+					"damagePercentage":"%RateToIce", //记得修改
+					"predicates":
+					[
+						{
+							"$type":"ByEntityTypes",
+							"entityTypes":["Monster",],
+						},
+						{
+                            "$type": "ByAny",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByHasElement", //包括冰附着
+                                    "element": "Ice",
+                                },
+								{
+                                    "$type": "ByHasElement", //冰史莱姆冰深渊,和冻结
+                                    "element": "Frozen",
+                                },
+		                    ]
+                        },
+                    ],
+				},
+			],
+			"modifiers":
+			{
+				"Dragonfell_Appear":
+				{
+					"duration": 0.4,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_Dragonfell_Gadget",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"targetType":"Enemy",
+									"fanAngle": 360.0,
+									"height": 2,
+									"radius": 3,
+									"born":
+									{
+										"$type":"ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -1, //circle是向上扩展的，拉回来
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy":"OriginOwner",
+									"attackTag" : "WeaponSkill",
+									"attackProperty":
+									{
+										"damagePercentage": "%Rate",
+										"elementType": "None",
+										"attackType": "Range",
+										"elementDurability": 0,
+										"enBreak": 20,
+									},
+									"hitPattern":
+									{
+										"hitImpulseType":"LV4",
+										"overrideHitImpulse":
+										{
+											"hitLevel":"Heavy",
+											"hitImpulseX": 500,
+											"hitImpulseY": 0,
+										},
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt" : false,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.01,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"RateToIce":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  13501  护摩之枪  Equip_Pole_Homa
+//
+//  角色当前最大生命值10%转换为攻击力；此外，当自身血量低于50%时，转换系数额外提升XX%。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Homa_MaxHpToAtk",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "Predicated",
+					"doOffStage": true,
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetHPRatio",
+							"HPRatio": 0.5,
+							"logic": "LesserOrEqual",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Handler",
+							"doOffStage": true,
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Handler",
+							"doOffStage": true,
+						},
+					],
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+					"value": "%FIGHT_PROP_MAX_HP",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "DoActionByEventMixin",
+					"type": "Both",
+					"onEvent": "HP",
+					"actions":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetHPRatio",
+									"HPRatio": 0.5,
+									"logic": "LesserOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Handler",
+									"doOffStage": true,
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Handler",
+									"doOffStage": true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Handler",
+									"doOffStage": true,
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Handler",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Handler":  //高于50%生命值转换器
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Buff",
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToPredicateMixin",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Change",
+							"type": "Both",
+							"predicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+											"value": "%FIGHT_PROP_MAX_HP",
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "AttachModifierToPredicateMixin",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Buff",
+							"type": "Both",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Change":
+				{
+					"isUnique": true,
+					"duration": 0.03,
+					"stacking": "Multiple",
+					"stackingOption": {
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+							"value": "%FIGHT_PROP_MAX_HP",
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Buff",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Handler":  //低于50%生命值转换
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Weapon_Pole_Homa_EffectDelay",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Buff",
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToPredicateMixin",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Change",
+							"type": "Both",
+							"predicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+											"value": "%FIGHT_PROP_MAX_HP",
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "AttachModifierToPredicateMixin",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Buff",
+							"type": "Both",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Weapon_Pole_Homa_Effect",
+							"doOffStage": true,
+							"otherTargets":
+                            {
+                                "$type":"SelectTargetsByEquipParts",
+                                "equipPartNames" : ["equip01","equip02","sheathPoint"],
+                            },
+						},
+					],
+				},
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Change":
+				{
+					"isUnique": true,
+					"duration": 0.03,
+					"stacking": "Multiple",
+					"stackingOption": {
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Homa_Last_MaxHp",
+							"value": "%FIGHT_PROP_MAX_HP",
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Buff",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Homa_EffectDelay":   //延迟给武器挂特效
+				{
+					"isUnique": true,
+					"duration": 5.5,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Pole_Homa_Effect",
+							"doOffStage": true,
+							"otherTargets":
+                            {
+                                "$type":"SelectTargetsByEquipParts",
+                                "equipPartNames" : ["equip01","equip02","sheathPoint"],
+                            },
+						},
+					],
+					"thinkInterval": 1.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Pole_Homa_Effect",
+							"doOffStage": true,
+							"otherTargets":
+                            {
+                                "$type":"SelectTargetsByEquipParts",
+                                "equipPartNames" : ["equip01","equip02","sheathPoint"],
+                            },
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Homa_Effect":   //武器特效_Modifier挂在武器上
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Pole_Homa_Buff",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Buff":   //最大生命值转攻击力
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackExtraDelta": "%FIGHT_PROP_MAX_HP*%MaxHptoAtk_Factor",
+					},
+				},
+				"UNIQUE_Pole_Homa_MaxHpToAtk_Extra_Buff":   //低血量额外提升攻击力
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackExtraDelta": "%FIGHT_PROP_MAX_HP*%MaxHptoAtk_Factor+%FIGHT_PROP_MAX_HP*%MaxHptoAtk_Extra_Factor",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Hp_Rate": 0,   //未使用
+				"MaxHptoAtk_Factor": 0,
+				"MaxHptoAtk_Extra_Factor": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  13502 天空之脊      （5.12 单机测试完毕）
+//	普攻和重击有xx%概率触发可穿透的真空刃，技能CD为5s
+//  暴击率+20%，攻击速度+20% (填表实现暴击率，攻击速度表里没有只能加在json里)
+//   注意，gadget都应当受到owner增伤加成。 2020.10.12确认
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Weapon_Pole_Dvalin",
+		"isDynamicAbility":true,
+		"onAdded":
+		[
+			{
+				"$type":"AttachModifier",
+				"modifierName":"UNIQUE_Pole_Dvalin_AtkSpeedUp",
+			},
+		],
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey":"_ABILITY_Weapon_Pole_DvalinWhenCDReady",
+				"removeAppliedModifier":true,
+				"valueSteps":[-1.5,-0.5,0.5],
+				"modifierNameSteps":
+				[
+					"UNIQUE_Pole_Dvalin_CD",
+					"UNIQUE_Pole_Dvalin_Handler",
+				],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Pole_Dvalin_CD":
+			{
+				"stacking":"Unique",
+				"isUnique":true,
+				"duration":"%CDTime",
+				"onAdded":
+				[
+					{
+                        "$type":"EquipAffixStart",
+                        "CD":"%CDTime",
+                        "equipAffixDataID":113502,
+                    },
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"AddGlobalValue",
+						"key":"_ABILITY_Weapon_Pole_DvalinWhenCDReady",
+						"value":1,
+						"useLimitRange":true,
+						"maxValue":0,
+						"minValue":0,
+						"doOffStage":true,
+					},
+				],
+			},
+			"UNIQUE_Pole_Dvalin_Handler":
+			{
+				"stacking":"Unique",
+				"isUnique":true,
+				"onAttackLanded":
+				[
+					{
+						"$type":"Randomed",
+						"target":"Target",
+						"chance":"%ChanceProb",
+						"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Monster"],
+							},
+							{
+								"$type":"ByAttackTags",
+								"attackTags":
+								[
+									"NormalAttack_01",
+									"NormalAttack_02",
+									"NormalAttack_03",
+									"NormalAttack_04",
+									"NormalAttack_05",
+									"NormalAttack_06",
+									"ExtraAttack",
+								],
+							},
+							{
+	                            "$type":"ByEquipAffixReady",
+	                            "equipAffixDataID":113502,
+	                            "target":"Self",
+	                        },
+						],
+						"successActions":
+						[
+							{
+								"$type":"TriggerBullet",
+								"bulletID": 40010012,     //导表GadgetData_Avatar中武器刀波，json表在ConfigGadget_SkillObj_Equip
+								"campID":1001,
+								"born":
+								{
+									"$type":"ConfigBornBySelf",
+									"offset":
+									{
+										"x":0.0,
+										"y":1.3,
+										"z":0.4,
+									},
+								},
+							},
+							{
+								"$type":"AddGlobalValue",
+								"key":"_ABILITY_Weapon_Pole_DvalinWhenCDReady",
+								"value":-1,
+								"useLimitRange":true,
+								"maxValue":-1,
+								"minValue":-1,
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Pole_Dvalin_AtkSpeedUp":
+			{
+				"isUnique":true,
+				"isLimitedProperties":true,
+				"properties":
+				{
+					"Animator_AttackSpeedRatio":"%Speed_Rate",
+				},
+			},
+		},
+
+		"abilitySpecials":
+		{
+			"Crit_Rate": 0,  //未使用
+			"Speed_Rate":0,
+			"ChanceProb":0,
+			"Atk_Rate":0,    //未使用
+			"CDTime":0,
+		},
+	},
+},
+//配置对应武器的子弹参数
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Weapon_Dvalin_Wave_Bullet",
+		"onAdded":
+		[
+			{
+				//子弹在生成时挂对应特效
+				"$type":"AttachEffect",
+				"effectPattern":"Eff_Weapon_Dvalin_Pole_AttackWave",
+				"target":"Self",
+			},
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type": "Predicated",
+                "target": "Target",
+                "targetPredicates":
+                [
+                    {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": ["MonsterEquip"],
+                    },
+                ],
+                "successActions":
+                [
+                	{
+                		"$type":"DamageByAttackValue",
+                		"target":"Target",
+                		"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackTag":"WeaponSkill",
+							"attackProperty":
+							{
+								"damagePercentage":"%Atk_Rate",
+								"enBreak":50,
+								"strikeType":"None",
+								"bonusCritical":0,
+								"bonusCriticalHurt":0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName":"default",
+								"hitImpulseType":"LV2",
+								"reboundRatio":0,
+								"canBeDefenceHalt":false,
+								"hitHaltTime":0.0,
+								"hitHaltTimeScale":0.01,
+								"muteHitText":false,
+							},
+							"forceCameraShake":false,
+						},
+                	},
+                ],
+                "failActions":
+                [
+                	{
+                		"$type":"TriggerAttackEvent",
+						"targetType":"Enemy",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type":"ConfigAttackBox",
+								"triggerType":"TriggerNoRepeat",
+								"size":
+								{
+									"x":0.1,
+									"y":0.1,
+									"z":0.1,
+								},
+								"born":
+								{
+									"$type":"ConfigBornByCollisionPoint",
+									"offset":
+									{
+										"x":0,
+										"y":0,
+										"z":0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy":"OriginOwner",
+								"attackTag":"WeaponSkill",
+								"attackProperty":
+								{
+									"damagePercentage":"%Atk_Rate",
+									"enBreak":50,
+									"strikeType":"None",
+									"bonusCritical":0,
+									"bonusCriticalHurt":0,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName":"default",
+									"hitImpulseType":"LV2",
+									"reboundRatio":0,
+									"canBeDefenceHalt":false,
+									"hitHaltTime":0.0,
+									"hitHaltTimeScale":0.01,
+									"muteHitText":false,
+								},
+								"forceCameraShake":false,
+							},
+                		},
+                	},
+                ],
+			},
+		],
+		"abilitySpecials":
+		{
+			"Atk_Rate":0,
+		},
+	},
+},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  13504 贯虹之槊
+//  基础数值：护盾强效+XX%
+//  攻击命中敌人时，提升自身攻击力X%，持续10s，最多叠加5层
+//  角色如果拥有护盾，则伤害提升攻击力效果翻倍
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Kunwu_DamageUpWithShield",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Pole_Kunwu_DamageUpWithShield_Handler",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Pole_Kunwu_BuffEffHandler",
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Pole_Kunwu_BuffLevel",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Pole_Kunwu_IsHasShield",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Pole_Kunwu_IsHasShield",
+					"valueSteps":[-0.5,0.5,1.5],
+					"modifierNameSteps":["UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff","UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff"],
+				},
+				{
+					"$type": "AttachModifierToPredicateMixin",
+					"type": "Current",
+					"modifierName": "UNIQUE_Weapon_Pole_Kunwu_CheckShield",
+					"predicates":
+					[
+						{
+							"$type": "ByHasShield",
+							"type": "All",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				//攻击命中叠层判定
+				"UNIQUE_Weapon_Pole_Kunwu_DamageUpWithShield_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Weapon_Pole_Kunwu_AddCount",
+									"target":"Self",
+								},
+							],
+						},
+					],
+				},
+				//实时检测自身是否有盾,并上个Tag
+				"UNIQUE_Weapon_Pole_Kunwu_CheckShield":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":1,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//Buff叠层计数器
+				"UNIQUE_Weapon_Pole_Kunwu_AddCount":
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_Kunwu_BuffLevel",
+							"value":1,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Weapon_Pole_Kunwu_BuffTimer",
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_BuffTimer":
+				{
+					"isUnique":true,
+					"stacking":"Refresh",
+					"duration":"%Timer",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_Kunwu_BuffLevel",
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//无盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Pole_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Blank",
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level01",
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level02",
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level03",
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level04",
+								"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*3",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_NoShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*5",
+					},
+				},
+				//有盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Pole_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Blank",
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level01",
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level02",
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level03",
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level04",
+								"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*6",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*8",
+					},
+				},
+				"UNIQUE_Weapon_Pole_Kunwu_HasShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*10",
+					},
+				},
+				//实时检测自身Buff对应的特效层数
+				"UNIQUE_Weapon_Pole_Kunwu_BuffEffHandler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Pole_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"Weapon_Pole_Kunwu_Eff_Blank",
+								"Weapon_Pole_Kunwu_Eff_1",
+								"Weapon_Pole_Kunwu_Eff_2",
+								"Weapon_Pole_Kunwu_Eff_3",
+								"Weapon_Pole_Kunwu_Eff_4",
+								"Weapon_Pole_Kunwu_Eff_5",
+							],
+						},
+					],
+				},
+				"Weapon_Pole_Kunwu_Eff_Blank":
+				{},
+				"Weapon_Pole_Kunwu_Eff_1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_01",
+						},
+					],
+				},
+				"Weapon_Pole_Kunwu_Eff_2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_02",
+						},
+					],
+				},
+				"Weapon_Pole_Kunwu_Eff_3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_03",
+						},
+					],
+				},
+				"Weapon_Pole_Kunwu_Eff_4":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_04",
+						},
+					],
+				},
+				"Weapon_Pole_Kunwu_Eff_5":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_05",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Shield_Up": 0,
+				"Dmg_Rate":0,
+				"Timer":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  13505   和璞鸢  Equip_Pole_Morax
+//
+//  普通攻击和重击命中提升攻击力%，，满层数伤害提升25%。  OK
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_AttackUpAndSkillDamageUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_AttackUpAndSkillDamageUp_Handler"
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Pole_13502_AttackBuffLevel",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,100],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" :
+					[
+						"Blank",
+						"UNIQUE_Pole_AttackUpA",
+						"UNIQUE_Pole_AttackUpB",
+						"UNIQUE_Pole_AttackUpA",
+						"UNIQUE_Pole_AttackUpB",
+						"UNIQUE_Pole_AttackUpA",
+						"UNIQUE_Pole_AttackUpB",
+						"UNIQUE_Pole_SkillDamageUp",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":
+				{},
+				"UNIQUE_Pole_AttackUpAndSkillDamageUp_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								/*{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},*/
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Pole_AddGlobalValue",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_AddGlobalValue":
+				{
+					"isUnique":true,
+					"duration":0.3,
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Pole_BuffTime",
+							"target": "Self",
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_ABILITY_Pole_13502_AttackBuffLevel",
+							"overrideMapKey":"Buff_Level",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_13502_AttackBuffLevel",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":7,
+						},
+					],
+				},
+				"UNIQUE_Pole_BuffTime"://properties值并不会实时更新，只能删掉modifier重加的时候才会更新。所以加攻不能放在这里。
+				{
+					"isUnique":true,
+					"duration":6,
+					"stacking":"Refresh",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Pole_13502_AttackBuffLevel",
+							"value" : -100,
+							"useLimitRange" : true,
+							"maxValue" : 7,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Pole_AttackUpA":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%Rate*%Buff_Level+%Rate", //因为这个override总是差1（无论什么顺序都是global先变导致buff先上，然后才global传递到override）
+					},
+				},
+				"UNIQUE_Pole_AttackUpB":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%Rate*%Buff_Level+%Rate",
+					},
+				},
+				"UNIQUE_Pole_SkillDamageUp":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"state":"AttackUp",
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern" :"Eff_Weapon_TriggerGreen",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern" :"Eff_Weapon_StackFull",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_StackFull_Loop",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"properties":
+					{
+						"Actor_AttackRatio" : "%Rate*7",
+						"Actor_AddHurtDelta" : "%Rate2",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Pole_13502_AttackBuffLevel",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Rate2":0,
+				"Buff_Level":0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//
+// 备用 只用于json搜索和affixid，不是武器id
+// 触发元素反应后增加“攻击”即可
+// 触发冰系相关反应，提升攻击20%~40%，持续12秒。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_AttacktUpAfterReaction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Pole_AttacktUpAfterReaction_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Pole_AttacktUpAfterReaction_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Explode","Stream","Burning","Melt","Shock","Freeze","SwirlFire","SwirlWater",],//冰相关
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Pole_AttacktUpAfterReaction",
+								}
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Pole_AttacktUpAfterReaction":
+				{
+					"duration":20,
+					"state":"AttackUp",
+					"isUnique":true,
+		  			"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+			//这个列表是所有元素反应["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce",],
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  13414 幕府枪 Equip_Pole_Bakufu
+	//  1、元素战技伤害+xx%
+	//  2、元素战技命中时扣除持有者xx点能量（0时不扣），之后每秒返还x点能量，持续Y秒。
+	//  该效果xx秒内最多触发一次。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Bakufu",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Weapon_Pole_Bakufu_CheckArtHit",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"damagePercentageRatio": "%Rate",
+					"attackTags": ["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Weapon_Pole_Bakufu_CheckArtHit":
+				{
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster",],
+								},
+								{
+				                 	"$type": "ByTargetGlobalValue",
+				                 	"key": "_ANIMAL_ENTITY_TYPE",
+				                 	"value": 0,
+				                 	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra"],
+								},
+								{
+                                    "$type":"ByEquipAffixReady", //cd将由affix控制。更新写法
+                                    "equipAffixDataID":113414,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"doOffStage": true,
+									"modifierName":"UNIQUE_Weapon_Pole_Bakufu_ReturnEnergy",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Pole_Bakufu_ReturnEnergy"://可能需要一个返还能量的特效。
+				{
+					"isUnique": true,
+					"duration": "%Dura+0.6",//为保证不少tick，至少多0.4秒。
+					"onAdded":
+					[
+						{
+							"$type":"EquipAffixStart", //这样就纯affix控制cd，其实也减少冗余，新的写法。
+							"equipAffixDataID":113414,
+							"CD": "%CDTime",
+							"doOffStage": true,
+						},
+						{
+							"$type":"ReviveElemEnergy",
+							"value":"-%EnergyCost",
+							"doOffStage": true,
+						},
+						// {
+						// 	"$type":"AttachEffect",
+						// 	"effectPattern": "Eff_Weapon_Bakufu_GainEnergy_Loop",
+						// 	"doOffStage": true,
+						// },
+					],
+					"thinkInterval": 2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value": "%EnergyPerTime",
+							"doOffStage": true,
+						},
+						// {
+						// 	"$type":"FireEffect",
+						// 	"effectPattern": "Eff_Weapon_Bakufu_GainEnergy",
+						// },
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"EnergyCost":0,
+				"EnergyPerTime":0,
+				"Dura":0,
+				"CDTime":0,
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13415 鱼叉枪 Equip_Pole_Mori
+	//  提升元素爆发的伤害和暴击率。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Mori",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "ModifyDamageMixin",
+					"attackTags": [
+						"Elemental_Burst",
+					],
+					"damagePercentageRatio": "%Damage_Rate",
+					"bonusCritical": "%Crit_Rate",
+				},
+			],
+			"abilitySpecials": {
+				"Damage_Rate": 0,
+				"Crit_Rate": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13416 珊瑚宫枪 Equip_Pole_Maria
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Maria",
+			"isDynamicAbility": true,
+			"onRemoved": [
+				{
+					"$type": "SetGlobalValue", //移除时最好清理下GV
+					"key": "_ABILITY_Pole_Maria_BuffValue",
+					"value": 0,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "DoActionByTeamStatusMixin",
+					"waitTime": 20, //默认为5，但是联机时可能加载太慢，做了一个保底时间。最多20。
+					"waitForBigteam": true,
+					"runPostRecover": true,
+					"actions": [
+						{
+							"$type":"GetTeamTotalMaxEnergyToOverridemap",
+							"teamType": "BigTeam",
+							"doOffStage": true,
+							"overrideMapKey": "Pole_Maria_TeamEnergy",
+						},
+						{
+							"$type": "SetGlobalValue", //将数值乘以比例后设置到globalvalue上，用action限制上下限作为buff效果。
+							"doOffStage": true,
+							"value": "%Pole_Maria_TeamEnergy*%Ratio/100", //注意是每点提升百分比的，所以除100.
+							"key": "_ABILITY_Pole_Maria_BuffValue",
+							"useLimitRange": true,
+							"maxValue": "%Max_Value",
+							"minValue": 0,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap", //将计算结果放到新的override，用于加成。
+							"doOffStage": true,
+							"globalValueKey": "_ABILITY_Pole_Maria_BuffValue",
+							"overrideMapKey": "Pole_Maria_BuffValue",
+						},
+					],
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"attackTags": [
+						"Elemental_Burst"
+					],
+					"damagePercentageRatio": "%Pole_Maria_BuffValue",
+				},
+			],
+			"abilitySpecials": {
+				"Ratio": 0,
+				"Max_Value": 0,
+				"Pole_Maria_TeamEnergy": 0,
+				"Pole_Maria_BuffValue": 0,
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13509 魔神枪 Equip_Pole_Narukami
+	//  特定情况下强化属性。
+	//  1、充能效率转攻击力
+	//  2、元素爆发释放时获得大量充能效率。10秒左右，无cd可刷新。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Narukami",
+			"isDynamicAbility": true,
+			"onAbilityStart": [
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Pole_Narukami_ChargeToAtk_Buff",
+					"doOffStage": true,
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Pole_Narukami_ChargeToAtk_Buff",
+					"doOffStage": true,
+				},
+			],
+			"onAdded": [
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Pole_Narukami_Last_ChargeEfficiency",
+					"value": 0,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToPredicateMixin", //这个有时候不卸下导致错误。
+					"modifierName": "UNIQUE_Pole_Narukami_ChargeToAtk_Refresh",
+					"type": "Both",
+					"predicates": [
+						{
+							"$type": "ByNot", //测试下来有时候不会回收modifier（导致不得不添加了duration）。需要找程序查查问题。
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Narukami_Last_ChargeEfficiency",
+									"value": "%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY-1",//不管初始是多少（0还是正确），我们只关心有差异就调整。此变量甚至不参与计算
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Weapon_Pole_Narukami_ChargeUp",
+						},
+					]
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Pole_Narukami_ChargeToAtk_Refresh": {
+					"isUnique": true,
+					"duration": 0.1,
+					"onAdded": [
+						{ //更新参数
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Narukami_Last_ChargeEfficiency",
+							"value": "%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY-1",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Narukami_AttackRatio",
+							"value": "%ChargetoAtk_Factor*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY-%ChargetoAtk_Factor",//取不带转换的充能效率。
+							"doOffStage": true,
+						},
+						{
+							"$type":"Predicated",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type":"ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Narukami_AttackRatio",
+									"compareType": "MoreThan",
+									"value": "%MaxAttackRatio",
+								},
+							],
+							"successActions": [//如果超过上限，使用上限
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "AttackRatio",
+									"value": "%MaxAttackRatio",
+									"doOffStage": true,
+								},
+							],
+							"failActions": [
+								{
+									"$type":"Predicated",
+									"doOffStage": true,
+									"targetPredicates": [
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Pole_Narukami_AttackRatio",
+											"compareType": "LessAndEqual",
+											"value": 0,
+										},
+									],
+									"successActions": [//低于0设置成0，
+										{
+											"$type": "SetOverrideMapValue",
+											"overrideMapKey": "AttackRatio",
+											"value": 0,
+											"doOffStage": true,
+										},
+									],
+									"failActions": [//在范围内，说明正确。
+										{
+											"$type":"SetOverrideMapValue",
+											"overrideMapKey": "AttackRatio",
+											"value": "%ChargetoAtk_Factor*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY-%ChargetoAtk_Factor",
+											"doOffStage": true,
+										},
+									]
+								},
+							]
+						},
+						{
+							"$type":"TriggerAbility",
+							"abilityName": "Weapon_Pole_Narukami", //刷新buff数值 注意下会不会因为晚一帧丢了一帧buff。
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Narukami_ChargeToAtk_Buff": //充能效率转攻击力%
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio",//取不带转换的充能效率。
+					},
+				},
+				"UNIQUE_Weapon_Pole_Narukami_ChargeUp":{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"onAdded": [
+						{
+							"$type":"AttachEffect",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"effectPattern": "Eff_Weapon_NarukamiBuff_Pole",
+						},
+					],
+					"properties": {
+						"Actor_ChargeEfficiencyDelta":"%ChargeEfficiency",
+					}
+				},
+			},
+			"abilitySpecials": {
+				"ChargetoAtk_Factor": 0,
+				"MaxAttackRatio":0,
+				"ChargeEfficiency": 0,
+				"Dura": 0,
+				"AttackRatio":0,//记录攻击%用。
+			}
+
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13507 息灾 Equip_Pole_Santika
+	//  提升全元素伤害。
+	//  小技能施放后提升攻击力，后场时效果更强。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Santika",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", //根据在前台和后台控制两套buff
+					"globalValueKey": "_ABILITY_Pole_Santika_IsOffStage",//实现方式是modifier常驻，但是buff时长结束后将GV减少到0达成没有buff效果。
+					"valueSteps": [
+						-0.5,
+						0.5,
+						1.5
+					],
+					"removeAppliedModifier": true,
+					"defaultGlobalValueOnCreate": 0,
+					"modifierNameSteps": [
+						"UNIQUE_Pole_Santika_Buff_OnStage",
+						"UNIQUE_Pole_Santika_Buff_OffStage"
+					],
+				},
+				{
+					"$type": "OnAvatarUseSkillMixin", //当施放小技能时，触发开始增益buff
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Santika_Timer",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern": "Eff_Weapon_Santika_Buff",
+						},
+					],
+				},
+			],
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Pole_Santika_WeaponBaseBuff",
+				},
+				{
+					"$type": "Predicated", //初始化
+					"targetPredicates": [
+						{
+							"$type":"ByIsLocalAvatar",
+							"target": "Self",
+						},
+					],
+					"successActions": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Santika_IsOffStage",
+							"value": 0,
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Santika_IsOffStage",
+							"value": 1,
+						},
+					]
+				},
+			],
+			"onAvatarIn": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pole_Santika_IsOffStage",
+					"value": 0,
+					"doOffStage": true,
+				},
+			],
+			"onAvatarOut": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pole_Santika_IsOffStage",
+					"value": 1,
+					"doOffStage": true,
+				},
+			],
+			"onRemoved": [ //因为初始化时不能清零，需要保证移除时清零
+				{
+					"$type": "SetGlobalValue",
+					"value": 0,
+					"key": "_ABILITY_Pole_Santika_AttackBuffLevel",
+					"doOffStage": true,
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Pole_Santika_WeaponBaseBuff": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_ElecAddHurtDelta": "%BaseBuff",
+						"Actor_FireAddHurtDelta": "%BaseBuff",
+						"Actor_WindAddHurtDelta": "%BaseBuff",
+						"Actor_IceAddHurtDelta": "%BaseBuff",
+						"Actor_WaterAddHurtDelta": "%BaseBuff",
+						"Actor_GrassAddHurtDelta": "%BaseBuff",
+						"Actor_RockAddHurtDelta": "%BaseBuff",
+					},
+				},
+				"UNIQUE_Pole_Santika_Timer":
+				{
+					"isUnique": true,
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"value": 1,
+							"key": "_ABILITY_Pole_Santika_AttackBuffLevel",
+							"useLimitRange": true,
+							"maxValue": 6,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [ //移除时清零
+						{
+							"$type": "SetGlobalValue",
+							"value": 0,
+							"key": "_ABILITY_Pole_Santika_AttackBuffLevel",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Santika_Buff_OnStage":{
+					"isUnique": true,
+					"modifierMixins": [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Pole_Santika_AttackBuffLevel",
+							"defaultGlobalValueOnCreate": 0,
+							"valueSteps": [
+								0.5,
+								1.5,
+								2.5,
+								3.5,
+								4.5,
+								5.5,
+								10
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": [
+								"UNIQUE_Pole_Santika_AttackUp1",
+								"UNIQUE_Pole_Santika_AttackUp2",
+								"UNIQUE_Pole_Santika_AttackUp3",
+								"UNIQUE_Pole_Santika_AttackUp4",
+								"UNIQUE_Pole_Santika_AttackUp5",
+								"UNIQUE_Pole_Santika_AttackUp6",
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_Santika_AttackUp1":{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp2": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*2", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp3": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*3", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp4": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*4", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp5": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*5", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp6": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*6", //直接写死节省性能
+					},
+				},
+				"UNIQUE_Pole_Santika_Buff_OffStage":
+				{//这个buff必须立刻响应前台后台，，所以不能和之前的写在一起。
+					"isUnique": true,
+					"modifierMixins": [
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Pole_Santika_AttackBuffLevel",
+							"valueSteps": [
+								0.5,
+								1.5,
+								2.5,
+								3.5,
+								4.5,
+								5.5,
+								10
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": [
+								"UNIQUE_Pole_Santika_AttackUp1_OffStage",
+								"UNIQUE_Pole_Santika_AttackUp2_OffStage",
+								"UNIQUE_Pole_Santika_AttackUp3_OffStage",
+								"UNIQUE_Pole_Santika_AttackUp4_OffStage",
+								"UNIQUE_Pole_Santika_AttackUp5_OffStage",
+								"UNIQUE_Pole_Santika_AttackUp6_OffStage",
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_Santika_AttackUp1_OffStage": { //缺乏判断buff是否存在的逻辑，需要再写
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*2", //直接写死，不然运算要性能
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp2_OffStage": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*4",
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp3_OffStage": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*6",
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp4_OffStage": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*8",
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp5_OffStage": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*10",
+					},
+				},
+				"UNIQUE_Pole_Santika_AttackUp6_OffStage": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRatio*12",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"BaseBuff":0,
+				"Interval":0,
+				"AttackRatio":0,
+				"Dura":0,
+				"Buff_Level":0,
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13417 3.0 锻造长柄 Weapon_Pole_Arakalari
+	//  产生草元素相关反应掉落buff球，拾取buff球的角色攻击力提升20%，持续12秒，每20秒可触发一次
+	//  
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Arakalari",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Weapon_Pole_Arakalari_CD_Mark",
+					"value": 0,
+				}
+			],
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Pole_Arakalari_CD_Mark",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-0.5,0.5,1.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Weapon_Pole_Arakalari_Handler",
+						"UNIQUE_Weapon_Pole_Arakalari_CD_Set"
+					],
+				},
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Weapon_Pole_Arakalari_Handler":
+				{
+					"isUnique": true,
+					"modifierMixins": 
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"reactionTypes": ["Burning","Overdose","Overgrow","OverdoseElectric","OverdoseGrass","OvergrowMushroomElectric","OvergrowMushroomFire"],
+							"entityTypes": ["Monster"],
+							"actions": 
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Weapon_Pole_Arakalari_Gadget_Creator",
+									"target": "CurLocalAvatar",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByEquipAffixReady",
+											"equipAffixDataID": 13417,
+											"target": "Self",
+										}
+									]
+								},
+								{
+									"$type": "SetGlobalValue",
+									"doOffStage": true,
+									"key": "_ABILITY_Weapon_Pole_Arakalari_CD_Mark",
+									"value": 1,
+									"predicates": 
+									[
+										{
+											"$type": "ByEquipAffixReady",
+											"equipAffixDataID": 13417,
+											"target": "Self",
+										}
+									]
+								},
+							
+							]
+						}
+					]
+
+				},
+				"Weapon_Pole_Arakalari_Gadget_Creator":
+				{
+					"duration": 0.5,
+					"onAdded": 
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 40020010,
+							"doOffStage": true,
+							"ownerIs": "Caster",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0.5,
+									"maxRandomRange": 1.5,
+								},"onGround": true,
+								"onGroundRaycastUpDist": 3,
+								"offset": 
+								{
+									"x": 0,
+									"y": 0.7,
+									"z": 2,
+								},
+							},
+						},
+					]
+				},
+				"UNIQUE_Weapon_Pole_Arakalari_CD_Set":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%ColdDown",
+					"onAdded": 
+					[
+						{
+							"$type": "EquipAffixStart",
+							"CD": "%ColdDown",
+							"equipAffixDataID": 131417,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Weapon_Pole_Arakalari_CD_Mark",
+							"value": 0,
+							"doOffStage": true
+						}
+					],
+				}
+			},
+			"abilitySpecials": 
+			{
+				"ColdDown":0
+			}
+		}
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Ability_Weapon_Pole_Arakalari_Trigger",
+			"onAdded": 
+			[
+				{
+                    "$type":"AttachModifier",
+                    "modifierName":"Weapon_Pole_Arakalari_EFF",
+                },
+			],
+			"onKill": 
+			[
+				{
+                    "$type":"FireEffect",
+                    "effectPattern":"Eff_Weapon_ArakalariBuff_Ball_2_Dissipate",
+                },
+			],
+			"onFieldEnter": 
+			[
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates": 
+					[
+						{
+                            "$type":"ByEntityTypes",
+                            "target":"Target",
+                            "entityTypes":["Avatar"],
+                        }, 
+					],
+					"successActions": 
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Weapon_Arakalari_Attack_Up",
+							"target": "Target",						
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Arakalari_Attack_Up",
+							"target": "Target",							
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "Weapon_Arakalari_Mastery_Up_Absorb_Eff_Pole"
+						},
+						{
+							"$type":"KillSelf",
+							"duration":0.15,
+						},
+					]
+				},
+				
+			],
+			"modifiers": 
+			{
+				"Weapon_Pole_Arakalari_EFF":
+				{
+					"duration": "%TriggerDuration",
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_ArakalariBuff_Ball_2",
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "KillSelf"
+						},						
+					]
+				},
+				"UNIQUE_Weapon_Arakalari_Attack_Up":
+				{
+					"isUnique": true,
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"stacking": "Refresh",
+					"properties": 
+                    {
+						"Actor_AttackRatio": "%Rate",
+                    },
+					
+				},
+				"Weapon_Arakalari_Mastery_Up_Absorb_Eff_Pole":
+				{
+					"duration": 0.7,
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_ArakalariBuff_Ball_2_Absorb"
+						}
+					]
+				}
+			},
+			"abilitySpecials": 
+			{
+				"BuffTime":0,
+				"Rate":0,
+				"TriggerDuration":0
+			}
+		}
+		
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13511 赤王长柄 Equip_Pole_Deshret
+	//  角色精通转化为攻击力
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Deshret", //叠层buff在每次刷新buff的时候才会刷新数值。装备上改变精通只刷新基础词缀。
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pole_Deshret_Last_ElemMastery", //初始0，如果mastery是0，就不会触发刷新逻辑。不过正好效果也是0，不触发不会有问题。
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pole_Deshret_Stack",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Pole_Deshret_Handler",
+					"doOffStage": true,
+				},
+			],
+			"onRemoved": [
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Pole_Deshret_Stack_Timer",
+					"doOffStage": true,
+				},
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Pole_Deshret_StackBuff",
+					"doOffStage": true,
+				},
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Pole_Deshret_BaseBuff",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"defaultGlobalValueOnCreate": 0,
+					"globalValueKey": "_ABILITY_Pole_Deshret_Stack",
+					"valueSteps": [
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Pole_Deshret_StackEff1",
+						"UNIQUE_Pole_Deshret_StackEff2",
+						"UNIQUE_Pole_Deshret_StackEff3",
+					],
+				},
+				{
+					"$type": "AttachModifierToPredicateMixin", //按雷神的做法制作了。//和博洋约定了虽然每帧判定，但消耗还行。后续需要检测功能时再提需求制作。
+					"modifierName": "UNIQUE_Pole_Deshret_MasteryToAtk_Refresh",
+					"type": "Both",
+					"predicates": [
+						{
+							"$type": "ByNot", //测试下来有时候不会回收modifier（导致不得不添加了duration）。需要找程序查查问题。
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+									"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY", //不管初始是多少（0还是正确），我们只关心有差异就调整。此变量甚至不参与计算
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Pole_Deshret_MasteryToAtk_Refresh":{
+					"isUnique": true,
+					"duration": 0.1, //是防止不回收，并非内置cd。毕竟装备界面更新精通应该更新效果。
+					"onAdded": [
+						{ //更新参数，并防止精通为负。
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+							"doOffStage": true,
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+							"overrideMapKey": "Cur_Mastery",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果精通为负，设置为0.
+							"overrideMapKey": "Cur_Mastery",
+							"value": 0,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+									"value": 0,
+									"compareType": "LessAndEqual",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",//精通产生变化就刷新buff
+							"modifierName": "UNIQUE_Pole_Deshret_BaseBuff",
+							"doOffStage": true,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Pole_Deshret_BaseBuff",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Pole_Deshret_Handler": //精通转换器,
+				{
+					"isUnique": true,
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target", //不加dooffstage，后台不生效				
+							"targetPredicates": [
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"Elemental_Art",
+										"Elemental_Art_Hold",
+										"Elemental_Art_Extra",
+									],
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Pole_Deshret_TriggerCD",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Pole_Deshret_TriggerCD":{
+					"isUnique": true,
+					"duration": "%Trigger_CD", //0.1秒内只接受3次获得buff的消息，防止过度运算。
+					"stacking": "Multiple",
+					"stackingOption": {
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Pole_Deshret_Stack",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 3,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Pole_Deshret_Stack",//将层级设到level上用于计算buff
+							"overrideMapKey": "Level",
+						},
+						{ //更新参数，并防止精通为负。
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+							"overrideMapKey": "Cur_Mastery",
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果精通为负，设置为0.
+							"overrideMapKey": "Cur_Mastery",
+							"value": 0,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Pole_Deshret_Last_ElemMastery",
+									"value": 0,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Pole_Deshret_Stack_Timer",//注意用的apply，看下是否需要回收
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Pole_Deshret_StackBuff", 
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Pole_Deshret_StackBuff", //stackbuff每次触发时刷新。
+						},
+					]
+				},
+				"UNIQUE_Pole_Deshret_Stack_Timer":{//控制buff的和GV的移除
+					"isUnique": true,
+					"duration": "%Dura",
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Pole_Deshret_Stack",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Pole_Deshret_StackBuff", //这个buff没有跟着GV，所以还要手动移除。
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Pole_Deshret_BaseBuff":{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackExtraDelta": "%Cur_Mastery*%Ratio_Base",
+					},
+				},
+				"UNIQUE_Pole_Deshret_StackBuff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackExtraDelta": "%Cur_Mastery*%Ratio_Level*%Level",
+					},
+				},
+				"UNIQUE_Pole_Deshret_StackEff1": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack1_Deshret",
+						}
+					],
+				},
+				"UNIQUE_Pole_Deshret_StackEff2": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack2_Deshret",
+						}
+					],
+				},
+				"UNIQUE_Pole_Deshret_StackEff3": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack3_Deshret",
+						}
+					],
+				},
+			},
+			"abilitySpecials": {
+				"Ratio_Base": 0,
+				"Ratio_Level": 0,
+				"Dura":0,
+				"Trigger_CD": 0,
+				"Stack_Max": 3,
+				"Level":0,
+				"Cur_Mastery":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  13419 蒙德活动枪 Weapon_Pole_Windvane
+	//  元素反应加攻加精通
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Pole_Windvane",
+			"isDynamicAbility": true,
+			"abilityMixins": [
+				{ //一个检测发生了元素反应的mixin
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20, //这个就是默认值
+					"entityTypes": [
+						"Monster",
+					],
+					"reactionTypes": [
+						"Explode",
+						"Stream",
+						"Burning",
+						"Melt",
+						"Freeze",
+						"Shock",
+						"Superconductor",
+						"SwirlFire",
+						"SwirlWater",
+						"SwirlElectric",
+						"SwirlIce",
+						"CrystallizeFire",
+						"CrystallizeWater",
+						"CrystallizeElectric",
+						"CrystallizeIce",
+						"Overdose",
+						"OverdoseElectric",
+						"OverdoseGrass",
+						"Overgrow",
+						"OvergrowMushroomFire",
+						"OvergrowMushroomElectric"
+					],
+					"actions": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Pole_Windvane",
+						},
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Pole_Windvane": {
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio": "%AttackRate",
+						"Actor_ElemMasteryDelta": "%ElemMastery",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"AttackRate":0,
+				"ElemMastery":0,
+				"Dura": 0,
+			}
+		},
+	},
+		
+]

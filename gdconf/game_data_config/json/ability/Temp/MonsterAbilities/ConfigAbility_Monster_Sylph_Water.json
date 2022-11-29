@@ -1,0 +1,1996 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Pose
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_PoseHandler",
+		"onAdded": 
+		[
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_Limbo",
+			},
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_ChargeBar",
+			},
+			{
+				"$type":"SetGlobalValue",
+				"key":"_SYLPH_DEATH_TAG_",
+				"value":0,
+			},
+		],
+		"abilityMixins": 
+		[
+			// _SYLPH_POSE_TAG_
+			// 0:未激活
+			// 1:激活
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_SYLPH_POSE_TAG_",
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier": true,
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"modifierNameSteps": ["Pose_None", "Pose_Activated"],
+			},
+			{
+				"$type":"AttachModifierToHPPercentMixinV2",
+				"valueSteps":[0.02],
+				"modifierNameSteps":["Sylph_Empty","Sylph_DyingPoseState"]
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Sylph_Limbo":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.0,
+				},
+			},
+			"Empty": {},
+			"Achieve_Moniter": {
+				"onKill": [
+					{
+						"$type": "DoWatcherSystemAction",
+						"watcherId": 82125,
+						"inThreatListOnly": true
+					}
+				]
+			},
+			"UNIQUE_Sylph_ChargeBar":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "ChargeBarMixin",
+						"chargeBarElementType": "None",
+						"chargeBarIconID": 2,
+						"initialValue": 0,
+						"maxValue": 100,
+					},
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_CHARGEBAR_VALUE",
+						"valueSteps": [-0.5, 0.5, 99.5, 100.5],
+						"removeAppliedModifier": true,
+						"modifierNameSteps": ["Achieve_Moniter", "Empty", "ChargeActivated"],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.1875,
+						"valueMax": 0.3125,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":20,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.3125,
+						"valueMax": 0.4375,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":40,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.4375,
+						"valueMax": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":70,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":100,
+							},
+						],
+					},
+				],
+			},
+			// 通过充能条来控制怪物激活/未激活的pose切换
+			"ChargeActivated":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":0,
+					},
+					{
+						"$type": "ResetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+			},
+			"Pose_None":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+				],
+			},
+			"Pose_Activated":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "VelocityForceMixin",
+						"excludeForces": ["WindZoneType", "AirflowType", "RetreatAirType"],
+					},
+				],
+				"properties":
+				{
+					"Entity_WeightRatio": 2.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type":"SetAISkillCDAvailableNow",
+						"skillIDs":[601],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [601],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider_Activated"],
+						"setEnable": true,
+					},
+				],
+			},
+			// 通过血量来控制怪物是否进入濒死pose
+			"Sylph_DyingPoseState":
+			{
+				"state": "DenyLockOn",
+				"properties" :
+				{
+					"Actor_EndureDelta":0,
+					"Actor_SubHurtDelta":1.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": true,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":false,
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToAllied",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToEnemy",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_LockHP",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_NoHeal",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":0,
+					},
+				],
+			},
+			"Dying_IsGhostToAllied":
+			{
+				"state": "IsGhostToAllied",
+			},
+			"Dying_IsGhostToEnemy":
+			{
+				"state": "IsGhostToEnemy",
+			},
+			"Dying_LockHP":
+			{
+				"state": "LockHP",
+			},
+			"Dying_NoHeal":
+			{
+				"state": "NoHeal",
+			},
+			"Sylph_Empty":
+			{
+
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_PoseAction",
+		"abilityMixins": 
+		[
+			// Pose驱动动画状态
+			// 如果用SetAISkillCDAvailableNow，不会立刻退出当前技能状态并执行亡语
+			// 限制是，技能配置中的modifier要做好生命周期管理，避免亡语的时候有没下掉的modifier
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [211, 311],
+				"modifierName": "Sylph_DyingAnimState",
+			},
+		],
+		"modifiers": 
+		{
+			// Pose用一个参数就可以控制了，但是由于AnimatorController是从anystate拉线，所以需要区分两种trigger参数
+			"Sylph_DyingAnimState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"thinkInterval": 0.2,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_Steer",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_Standby"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Warning"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["WaterBullet"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.16,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["WaterBullet"],
+				"startNormalizedTime" : 0.9,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.3,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh"],
+				"startNormalizedTime" : 0.9,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_Barrage"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExitBattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_ExitBattle",
+		"abilityMixins": 
+		[
+			{
+				"$type":"AttachToPoseIDMixin",
+				"poseIDs":[901],
+				"modifierName":"ExitBattle",
+			},
+		],
+		"modifiers": 
+		{
+			"ExitBattle":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ActivatedToNormal",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SYLPH_POSE_TAG_",
+						"value": 0,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Sylph_Face",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  WaterBullet
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_WaterBullet",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["WaterBullet"],
+				"modifierName": "WaterBullet_Timer",
+			},
+		],
+		"modifiers": 
+		{
+			"WaterBullet_Timer" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "WaterBullet_Handler",
+					},
+				],
+			},
+			"WaterBullet_Handler" :
+			{
+				"duration": 1.0,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_WaterBullet_BS",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42006101,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "BulletAttachPoint",
+						},
+						"trackTarget": "SelfAttackTarget",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_WaterBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "WaterBullet_Eff",
+			},
+		],
+		"onKill": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Water_WaterBullet_AS",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 0.8,
+							"strikeType": "Blunt",
+							"enBreak": 20.0,
+							"elementDurability":25,
+							"elementType": "Water",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName" : "none",
+							"hitImpulseType":"LV3",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type":"KillSelf",
+			},
+		],
+		"modifiers": 
+		{
+			"WaterBullet_Eff":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_WaterBullet_Loop",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FlyHor
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_FlyHor",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["FlyHor_BS"],
+				"modifierName": "FlyHor_Turn",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["FlyHor_Loop"],
+				"modifierName": "FlyHor_Actions",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42006102,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "RootNode",
+					"offset":
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+		],
+		"modifiers": 
+		{
+			"FlyHor_Turn":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "TurnDirectionToPos",
+						"target": "SelfAttackTarget",
+						"toPos":
+						{
+							"$type": "ConfigBornByTarget",
+						},
+					},
+					{
+						"$type":"TryFindBlinkPointByBorn",
+						"target":"Self",
+						"hitSceneTest":true,
+						"hitSceneType":"BlinkHitSceneTestByThreeSegments",
+						"limitY": 10,
+						"born":
+						{
+							"$type":"ConfigBornByTargetLinearPoint",
+							"linearOffset": -10,
+							"linearXZ":false,
+						},
+					},
+				],
+			},
+			"FlyHor_Actions":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Fly_Loop",
+					},
+					{
+						"$type":"FixedMonsterRushMove",
+						"timeRange":1,
+						"animatorStateIDs":["FlyHor_Loop"],
+						"target":"Self",
+						"isInAir":true,
+						"toPos":
+						{
+							"$type":"ConfigBornByTeleportToPoint",
+						},
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_ElementBullet_Hit",
+		"onAdded": 
+		[
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Water_ElementBullet",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius" : 1.0,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 0.6,
+							"strikeType": "None",
+							"elementType":"Water",
+							"elementDurability": 25,
+							"enBreak" : 0,
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "",
+							"hitImpulseType": "LV3",
+							"retreatType":"ByHitDirection",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.0,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Water_ElementBullet_AS",
+				"scale": 2,	
+			},
+			{
+				"$type": "KillSelf",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FlyHigh
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_FlyHigh",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToAnimatorStateIDMixin",
+				"stateIDs": ["FlyHigh"],
+				"modifierName": "FlyHigh_Handler",
+			},
+		],
+		"modifiers": 
+		{
+			"FlyHigh_Handler" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "HealArea_Timer",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "FlyHigh_Eff_Handler",
+					},
+				],
+			},
+			"HealArea_Timer" :
+			{
+				"duration": 1.22,
+				"onRemoved": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006103,
+						"target": "SelfAttackTarget",
+						"byServer": true,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset" : 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 1,
+							},
+							"onGround":true,
+						},
+					},
+				],
+			},
+			"FlyHigh_Eff_Handler" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Sylph_Water_Heal",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_HealArea",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "HealArea_Timer",
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "HealArea_LifeHandler",
+			},
+		],
+		"modifiers":
+		{
+			"HealArea_Timer":
+			{
+				"duration": 1.3,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Heal_Hit",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "HealArea_Actions",
+					},
+				],
+			},
+			"HealArea_Actions":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "HealHP",
+						"amountByTargetMaxHPRatio": "%HealPercent",
+						"otherTargets": 
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR3H5",
+							"centerBasedOn": "Self",
+							"campTargetType": "Alliance",
+							"campBasedOn": "Self",
+						},
+						"predicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+						],
+					},
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 5.5,
+								"fanAngle": 360.0,
+								"radius": 3.0,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : -0.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackProperty":
+								{
+									"damagePercentage": 0.8,
+									"strikeType": "Default",
+									"elementType":"Water",
+									"elementDurability": 25,
+									"enBreak" : 100.0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									"hitImpulseType": "LV4",
+									"retreatType":"ByHitDirection",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.0,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					},
+				],
+			},
+			"HealArea_LifeHandler":
+			{
+				"duration": 5.0,
+				"onRemoved": 
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+		"abilitySpecials":
+		{
+			"HealPercent":0.4,
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Deathrattle"],
+				"modifierName": "Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006106,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_DeathPosAction",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_LifeHandler",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Timer" :
+			{
+				"duration": 1.2,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Deathrattle_Actions",
+					},
+				],
+			},
+			"Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 2.5,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.0,
+									"strikeType": "Blunt",
+									"enBreak": 50.0,
+									"elementDurability":25,
+									"elementType": "Water",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				],
+			},
+			"Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Barrage
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_Activated_Barrage",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Activated_Barrage"],
+				"modifierName": "Activated_Barrage_Eff",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"height": 4,
+						"fanAngle": 360.0,
+						"radius": 6.0,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" : 0.0,
+								"y" : -2.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Default",
+							"elementType":"Water",
+							"elementDurability": 50,
+							"enBreak" : 100.0,
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType": "LV3",
+							"retreatType":"ByHitDirection",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.0,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Water_Activated_RangeAtk_Damage",
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"offset" :
+					{
+						"x" : 0.0,
+						"y" : 0.0,
+						"z" : 0.0,
+					},
+				},
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Barrage_Eff" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Activated_RangeAtk",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Water_Activated_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Activated_Deathrattle"],
+				"modifierName": "Activated_Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006104,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					// 2.3导能原盘复刻
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006107,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_Activated_DeathPosAction",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_LifeHandler",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_HealHandler",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_SYLPH_WATER_DEATHBULLET_COUNT_",
+				"value": 3,
+				"target": "Self",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Timer" :
+			{
+				"duration": 1.8,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Activated_Deathrattle_Actions",
+					},
+				],
+			},
+			"Activated_Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 5.0,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.2,
+									"strikeType": "Blunt",
+									"enBreak": 100.0,
+									"elementDurability":25,
+									"elementType": "Water",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+					{
+						"$type":"Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR20H40",
+							"centerBasedOn": "Self",
+							"campTargetType": "Alliance",
+							"campBasedOn": "Self",
+							"sortType": "LowHpRatio",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							}, 
+							{
+								"$type": "ByTargetType",
+								"targetType": "Owner",
+								"isTarget": false,
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "TriggerBullet",
+								"bulletID": 42006105,
+								"target": "Target",
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset" : 
+									{
+										"x": 0.0,
+										"y": 0.2,
+										"z": 0.0,
+									},
+									"direction":
+									{
+										"$type": "ConfigDirectionByEntity",
+										"angleOffset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"trackTarget": "Target",
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_SYLPH_WATER_DEATHBULLET_COUNT_", 
+										"value": 0,
+										"compareType": "MoreThan",
+										"target": "Self",
+									},
+								],
+							},
+							{
+								"$type": "AddGlobalValue",
+								"key": "_SYLPH_WATER_DEATHBULLET_COUNT_",
+								"target": "Self",
+								"value": -1,
+								"useLimitRange": true,
+								"maxValue": 3,
+								"minValue": -1,
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_SYLPH_WATER_DEATHBULLET_COUNT_", 
+										"value": 0,
+										"compareType": "MoreThan",
+										"target": "Self",
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+			"Activated_Deathrattle_HealHandler": 
+			{
+				"onAttackLanded" :
+				[
+					{
+						"$type" : "ApplyModifier",
+						"modifierName" : "Activated_Deathrattle_HealHp",
+						"target" : "Target",
+						"predicates" :
+						[
+							{
+								"$type": "ByTargetType",
+								"targetType": "Self",
+								"isTarget": false,
+							},
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+						],
+					},
+				],
+			},
+			"Activated_Deathrattle_HealHp": 
+			{
+				"duration": 0.2,
+				"onAdded":
+				[
+					{
+						"$type": "HealHP",
+						"amountByTargetMaxHPRatio": "%HealHPRatio",
+						"target":"Self",
+					},
+				],
+			},
+			"Activated_Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+		"abilitySpecials" :
+		{
+			"HealHPRatio" : 0.2,
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_Activated_DeathBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle_HealBullet_Loop",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "Predicated",
+				"target" : "Target",
+				"targetPredicates" :
+				[
+					{
+						"$type" : "ByEntityTypes",
+						"entityTypes" : ["Monster"],
+					},
+				],
+				"successActions":
+				[
+					{
+						"$type": "SetGlobalPos",
+						"target": "Target",
+						"key": "_DeathBullet_HealPos_",
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"attachPointTargetType": "Target",
+							"offset" :
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+						"setTarget": false,
+					},
+					{
+						"$type" : "ApplyModifier",
+						"modifierName" : "DeathBulletHeal_Handler",
+						"target" : "Owner",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle_HealBullet_AS",
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+							"offset" : 
+							{
+								"x" : 0.0,
+								"y" : 0.0,
+								"z" : 0.0,
+							},
+						},
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"DeathBulletHeal_Handler":
+			{
+				"duration": 1,
+				"onAdded":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"target": "Caster",
+						"targetType" : "AllExceptSelf",
+						"attackEvent":
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 0.5,
+								"born":
+								{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey":"_DeathBullet_HealPos_",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0,
+									"strikeType": "Default",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "none",
+									"hitImpulseType":"LV0",
+									"canBeDefenceHalt" : false,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.0,
+									"muteHitText" : false,
+								},
+							},
+						},
+					},
+				],
+			},
+		},
+	},
+},
+// 2.3导能原盘复刻
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Water_Elite_Activated_DeathPosAction",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_LifeHandler",
+			},
+			// 加个中间变量，防止后面爆炸的时候Owner已经无了
+			{
+				"$type":"SetGlobalValue",
+				"key":"_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_GADGETTAG_",
+				"value":1,
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Owner",
+						"key": "_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Timer" :
+			{
+				"duration": 1.8,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Activated_Deathrattle_Actions",
+					},
+				],
+			},
+			"Activated_Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type": "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "All",
+							"campBasedOn": "Self",
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes":
+								[
+									"Monster"
+								],
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Activated_Deathrattle_HealHp",
+								"target": "Target",
+							},
+						],
+					},
+					{
+						"$type": "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "All",
+							"campBasedOn": "Self",
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes":
+								[
+									"Monster"
+								],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_GADGETTAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Activated_Deathrattle_DeathrattleChargeUp",
+								"target": "Target",
+							},
+						],
+					},
+				],
+			},
+			"Activated_Deathrattle_HealHp": 
+			{
+				"duration": 0.2,
+				"onAdded":
+				[
+					{
+						"$type": "HealHP",
+						"amountByTargetMaxHPRatio": "%HealHPRatio",
+						"target":"Self",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle_HealBullet_AS",
+						"target": "Self",
+					},
+				],
+			},
+			"Activated_Deathrattle_DeathrattleChargeUp" :
+			{
+				"duration": 0.1,
+				"onAdded":
+				[
+					{
+						"$type": "AddChargeBarValue",
+						"value": "%DeathrattleChargeUp",
+						"target": "Self",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Common_AddChargeValue",
+						"target": "Self",
+					},
+				],
+			},
+			"Activated_Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+		"abilitySpecials" :
+		{
+			"HealHPRatio": 0.2,
+			"DeathrattleChargeUp": 0.0, 
+		},
+	},
+},
+]

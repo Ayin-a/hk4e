@@ -1,0 +1,5904 @@
+[
+////////////////////////////////////////////////
+//
+// Water Area
+//
+////////////////////////////////////////////////
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_WaterArea",
+		"isDynamicAbility":true,
+		"abilityMixins":
+        [
+            {
+                "$type": "AttachModifierToSurfaceTypeMixin",
+                "surfaceType": "Water",
+                "modifiersWithPredicates":
+                [
+                	{
+                		"modifierName": "WaterAreaModifier",
+                		"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByEntityTypes",
+										"entityTypes":["Equip"],
+									},
+								],
+							},
+						],
+                	},
+                	{
+                		"modifierName": "WaterAreaModifier",
+                		"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["MonsterEquip"],
+							},	
+						],
+                	},
+                ],
+            },
+        ],
+		"modifiers" :
+		{
+			"WaterAreaModifier" :
+			{
+				/*"isUnique": true,*/
+				"thinkInterval": 0.25,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "WaterAreaWaterModifier",
+						"target" : "Self",
+					},
+				],
+			},
+			"WaterAreaWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":50,
+			}
+		},
+	},
+},
+
+////////////////////////////////////////////////
+//
+// electricWater Area
+//
+////////////////////////////////////////////////
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_ElectricWaterArea_Clear",
+		"isDynamicAbility":true,
+		"onAbilityStart" : 
+		[
+			{
+                "$type":"AddGlobalValue",
+                "target":"Team",
+                "key":"_ElectricWaterLoseHp",
+                "useLimitRange":true,
+                "value" : -10,
+                "maxValue":6,
+                "minValue":0,
+            },
+		],
+	},
+},
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_ElectricWaterArea",
+		"isDynamicAbility":true,
+		"abilitySpecials":
+		{
+			"ElectricWaterAreaHurtLevel":0,
+		},
+		"abilityMixins":
+        [
+            {
+                "$type": "AttachModifierToSurfaceTypeMixin",
+                "surfaceType": "ElectricWater",
+                "modifiersWithPredicates":
+                [
+                	{
+                		"modifierName": "ElectricWaterAreaModifier",
+            			"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByEntityTypes",
+										"entityTypes":["Equip"],
+									},
+								],
+							},
+						],
+                	},
+                ],
+                "extraExitTriggerLevelAbility": "SceneAbility_ElectricWaterArea_Clear",
+                "extraResetTriggerLevelAbility": "SceneAbility_ElectricWaterArea_Clear",
+            },
+        ],
+		"modifiers" :
+		{
+			"ElectricWaterLoseHp":
+			{
+				"thinkInterval":2.0,
+				"onThinkInterval":
+				[
+					{
+                        "$type":"AddGlobalValue",
+                        "target":"Team",
+                        "key":"_ElectricWaterLoseHp",
+                        "useLimitRange":true,
+                        "value" : 1,
+                        "maxValue":6,
+                        "minValue":0,
+                        "predicates": 
+						[
+							{
+								"$type": "ByGameTimeIsLocked",
+								"isLocked": false,
+							},
+							{
+                                "$type": "ByTargetGlobalValue",
+                                "target":"Self",
+                                "key": "HAS_ELECTRIC_FAIRY_BUFF",
+                                "value": 0,
+                                "compareType": "NoneOrEqual",
+                            },
+						],
+                    },
+                    {
+		              "$type": "CopyGlobalValue",
+		              "srcTarget": "Team",
+		              "doOffStage": true,
+		              "dstTarget": "Self",
+		              "srcKey": "_ElectricWaterLoseHp",
+		              "dstKey": "_ElectricWaterLoseHp",
+		            },
+                    {
+		                "$type": "SetGlobalValueToOverrideMap",
+		                "globalValueKey": "_ElectricWaterLoseHp",
+		                "overrideMapKey": "ElectricWaterAreaHurtLevel",
+		            },
+					{
+						"$type": "LoseHP",
+						"target": "Self",
+						"amountByTargetMaxHPRatio": "0.0315*%ElectricWaterAreaHurtLevel+0.1",//每秒低温的扣血百分比
+						"amount":"20.47*%ElectricWaterAreaHurtLevel+20",
+						"enableInvincible": true,//无敌可以抵挡这个扣血行为
+						"enableLockHP": true,//锁血可以抵挡这个扣血行为							
+						"lethal": true,//低温扣血的致死性
+						"disableWhenLoading":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByGameTimeIsLocked",
+								"isLocked": false,
+							},
+							{
+                                "$type": "ByTargetGlobalValue",
+                                "key": "HAS_ELECTRIC_FAIRY_BUFF",
+                                "value": 0,
+                                "compareType": "NoneOrEqual",
+                            },
+                            {
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_MinusElectricReject",
+						"target":"Team",
+					},	
+				]
+			},
+			"UNIQUE_MinusElectricReject":
+			{
+				"isUnique":true,
+				"stacking": "Unique",
+				"duration":0.5,
+				"onAdded":
+				[
+					{
+						"$type": "AddGlobalValue",
+						"key": "_ABILITY_SceneObj_Electric_Fairy_Immunity_Time",
+						"value": -1,
+						"useLimitRange": true,
+						"maxValue": 100,
+						"minValue": 0,
+					},	
+				]
+			},
+			"ElectricWaterAreaModifier" :
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachModifier",
+						"modifierName": "ElectricWaterLoseHp",
+						"target" : "Self",
+					},	
+				],
+				"thinkInterval": 0.25,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "ElectricWaterAreaWaterModifier",
+						"target" : "Self",
+					},
+				],
+			},
+			"ElectricWaterAreaWaterModifier":
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":50,
+			},
+		},
+	},
+},
+////////////////////////////////////////////////
+//
+// BlackMud
+//
+////////////////////////////////////////////////
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_BlackMudArea",
+		"isDynamicAbility":true,
+		"abilityMixins":
+        [
+            {
+                "$type": "AttachModifierToSurfaceTypeMixin",
+                "surfaceType": "BlackMud",
+                "modifiersWithPredicates":
+                [
+                	{
+                		"modifierName": "BlackMudAreaBuff",
+                		"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByEntityTypes",
+										"entityTypes":["Equip"],
+									},
+								],
+							},
+						],
+                	},
+                ],
+            },
+        ],
+		"modifiers" :
+		{
+			"BlackMudAreaBuff":
+			{
+				"onAdded":
+				[
+					{
+						"$type" : "AttachModifier",
+						"modifierName" : "BlackMudAreaBuff_Monster",
+						"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Monster"],
+							},
+							{
+								"$type": "ByNot",
+								"predicates": 
+								[
+									{
+										"$type": "ByHasFeatureTag",
+										"featureTagIDs": [ 4006 ],
+									},
+								],
+							},
+							{
+								"$type": "ByNot",
+								"predicates": 
+								[
+									{
+										"$type": "ByHasFeatureTag",
+										"featureTagIDs": [ 4009 ],
+									},
+								],
+							},
+							//排除下遗迹巨蛇
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_MONSTER_Nithhoggr_None_SelfTag",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type" : "AttachModifier",
+						"modifierName" : "BlackMudAreaBuff_Avatar",
+						"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"],
+							},
+						],
+					},	
+					{
+						"$type" : "AttachModifier",
+						"modifierName" : "BlackMudAreaBuff_Avatar02",
+						"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"],
+							},
+						],
+					},	
+					{
+						"$type" : "AttachModifier",
+						"modifierName" : "BlackMudAreaBuff_Avatar_FX",
+						"predicates":
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"],
+							},
+						],
+					},
+				]
+			},
+			"BlackMudAreaBuff_Monster":
+			{
+				"state": "AttackUp",
+				"properties":
+				{
+					"Actor_PhysicalSubHurtDelta":"%SubHurtDelta_AllType",
+					"Actor_FireSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_ElecSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_IceSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_WaterSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_GrassSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_WindSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_RockSubHurtDelta" : "%SubHurtDelta_AllType",
+					"Actor_AttackRatio": "%AttackRatio",
+				},
+				"modifierMixins": 
+				[
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_MONSTER_ChasmChallenge_Tag",
+						"valueSteps": [0.5, 1.5],
+						"modifierNameSteps": ["BlackMudAreaBuff_Monster_ForTheChasmChallenge"],
+					},
+				],
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_AbyssCarpet_Enhanced",
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SceneMud_Tag",
+						"value": 1,
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_MONSTER_SceneMud_Tag",
+						"value": 0,
+					},		
+				],
+			},
+			"BlackMudAreaBuff_Monster_ForTheChasmChallenge":
+			{
+				"properties":
+				{
+					"Actor_PhysicalSubHurtDelta":"%SubHurtDelta_AllType_Addition",
+					"Actor_FireSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_ElecSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_IceSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_WaterSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_GrassSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_WindSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_RockSubHurtDelta" : "%SubHurtDelta_AllType_Addition",
+					"Actor_AttackRatio": "%AttackRatio_Addition",
+				},
+			},
+			"BlackMudAreaBuff_Avatar":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"DoWatcherSystemAction",
+						"watcherId":1137,
+						"authorityOnly":true,
+					},
+				],
+				"thinkInterval":1.0,
+				"onThinkInterval":
+				[
+					{
+                        "$type" : "AddRegionalPlayVarValue",
+                        "varType"  : "LightStoneEnergy",
+                        "addValue"  : -1.0,
+                    },
+				],
+			},
+			"BlackMudAreaBuff_Avatar02":
+			{
+				"thinkInterval":1.0,
+				"onThinkInterval":
+				[
+                	{
+						"$type": "LoseHP",
+						"target": "Self",
+						"amountByTargetMaxHPRatio": 0.004,//每秒低温的扣血百分比
+						"amount":60,
+						"enableInvincible": true,//无敌可以抵挡这个扣血行为
+						"enableLockHP": true,//锁血可以抵挡这个扣血行为							
+						"lethal": true,//低温扣血的致死性
+						"disableWhenLoading":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByGameTimeIsLocked",
+								"isLocked": false,
+							},
+                            {
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Avatar"],
+							},
+						],
+					},
+				],
+			},	
+			"BlackMudAreaBuff_Avatar_FX":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachToStateIDMixin",
+						"stateIDs": ["NormalMove", "SprintBS", "Sprint"],
+						"modifierName": "BlackMudAreaBuff_Avatar_Footprint",
+						"isCheckOnAttach": true,
+					},
+				],
+			},
+			"BlackMudAreaBuff_Avatar_Footprint":
+			{
+				"onAdded":
+				[
+					{
+                        "$type": "AttachEffect",
+                        "effectPattern": "Eff_Character_Abyss_Footprint",
+                    },
+				],
+			},
+		},
+		"abilitySpecials": 
+		{
+			"SubHurtDelta_AllType": 0,
+			"AttackRatio": 0,
+			"SubHurtDelta_AllType_Addition": 0,
+			"AttackRatio_Addition": 0,
+		},
+	},
+},
+////////////////////////////////////////////////
+//
+// Rain
+//
+////////////////////////////////////////////////
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_Rain",
+		"modifiers" :
+		{
+			"LightRainModifier" :
+			{
+				"elementType": "Water",
+				"elementDurability": 0,
+				"duration": 15.0,		
+				"retainWhenDurabilityIsZero": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "SelfAddDurabilityMixin",						
+						"value" : 8,
+						"useLimitRange": true,
+						"maxValue": 30.0,
+						"thinkInterval": 0.5,
+					},
+				],
+			},
+			/*
+			"LightRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"elementDurability": 30,
+			},
+			*/
+			"HeavyRainModifier" :
+			{
+				"elementType": "Water",
+				"elementDurability": 0,
+				"duration": 15.0,		
+				"retainWhenDurabilityIsZero": true,
+				"modifierMixins":
+				[
+					{
+						"$type": "SelfAddDurabilityMixin",						
+						"value" : 8,
+						"useLimitRange": true,
+						"maxValue": 30.0,
+						"thinkInterval": 0.5,
+					},
+				],
+			},
+			/*
+			"HeavyRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":30,
+			},
+			*/
+		},
+	},
+},
+/*
+{
+	"Default" : 
+	{
+		"$type" : "ConfigAbility",
+		"abilityName" : "SceneAbility_Rain",
+		"modifiers" :
+		{
+			"LightRainModifier" :
+			{
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 0,
+				"duration": 15.0,
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "AddElementDurability",
+						"value" : 10,
+						"modifierName":"LightRainModifier",
+						"elementType" : "Water",
+						"useLimitRange": true,
+						"maxValue": 30.0,
+						"target" : "Self",
+						"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByEntityTypes",
+										"entityTypes":["Equip","Grass","Water"],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+			
+			"LightRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"elementDurability": 30,
+			},
+			
+			"LightRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":30,
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "AddElementDurability",
+						"value" : 10,
+						"modifierName":"HeavyRainWaterModifier",
+						"elementType" : "Water",
+						"useLimitRange": true,
+						"maxValue": 30.0,
+					},
+				]
+			},
+			"HeavyRainModifier" :
+			{
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 0,
+				"duration": 15.0,
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "AddElementDurability",
+						"value" : 10,
+						"modifierName":"HeavyRainModifier",
+						"elementType" : "Water",
+						"useLimitRange": true,
+						"maxValue": 30.0,
+						"target" : "Self",
+						"predicates":
+						[
+							{
+								"$type":"ByNot",
+								"predicates":
+								[
+									{
+										"$type":"ByEntityTypes",
+										"entityTypes":["Equip","Grass","Water"],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+			"HeavyRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":30,
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type" : "AddElementDurability",
+						"value" : 10,
+						"modifierName":"HeavyRainWaterModifier",
+						"elementType" : "Water",
+						"useLimitRange": true,
+						"maxValue": 30.0,
+					},
+				]
+			},
+			
+			"HeavyRainWaterModifier" :
+			{
+				"duration": 8.0,
+				"elementType": "Water",
+				"stacking":"RefreshAndAddDurability",
+				"elementDurability": 10,
+				"maxElementDurability":30,
+			},
+			
+		},
+	},
+},
+*/
+////////////////////////////////////////////////////////////////
+//
+//  Thunder
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneAbility_Thunder",
+			"isDynamicAbility":true,
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 70000009,
+					"campID": 9001,
+					"byServer" : true,
+					"campTargetType": "AllExceptSelf",
+					"born":
+					{
+						"$type": "ConfigBornByStormLightning",
+						"hitHeightRatio": 1,
+						"selectRange": 100,
+						"lightningHitOrNotRatio": 0.01,
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Storm_Lightning",
+			"onAdded":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Lightning_Timer",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Lightning_Lifetime_Manager",
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Thunder_EarlyWarning_01",
+					"predicates":
+					[
+						{
+							"$type":"ByNot",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetWeatherName",
+									"weatherName":"Weather_Dq_HeGuan_Doom",
+								},
+							],
+						}
+					],
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Thunder_EarlyWarning_01_Tsurumi",
+					"predicates":
+					[
+						{
+							"$type":"ByTargetWeatherName",
+							"weatherName":"Weather_Dq_HeGuan_Doom",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Lightning_Timer":
+				{
+					"duration" : 2.0,
+					"onAdded" :
+					[
+						{
+							"$type" : "UpdateReactionDamage",
+							"levelTarget" : "OriginOwner",
+							"reactionDamageName" : "ElementAbility_Storm_Lightning_BaseReactionDamage",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType" : "All",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"duration" : 0.1,
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" :
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Weather_Attack",
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"damageExtra": "%ElementAbility_Storm_Lightning_BaseReactionDamage*%Storm_Lightning_Damage_Factor",
+										"elementType" : "Electric",
+										"elementDurability" : 50,
+										"enBreak": 200,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Air",	//hitlevel = 8
+										// "hitImpulseX": 795,	//hitlevel = 8
+										// "hitImpulseY": 900,	//hitlevel = 8
+										"hitImpulseType":"LV8",
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+									"forceCameraShake": true,
+						        	"cameraShake": 
+						        	{
+						        		"shakeType": "CustomVector",
+										"shakeRange": 0.36,
+										"shakeTime": 0.18,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": -1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseOnCamera": false,
+											"baseCycle": 0.12,
+											"cycleDamping": 0.18,
+											"rangeAttenuation": 0.2,
+										},
+						        	},
+								}
+							}
+						},
+						{
+							"$type" : "FireEffectForStorm",
+							"height" : 150,
+							"born" :
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+							},
+						},
+						{
+							"$type" : "Randomed",
+							"chance" : 0.1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 1,
+									"ratio": 1,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 1.0,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Lightning_Lifetime_Manager":
+				{
+					"duration": 6.0,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"target": "Self",							
+						}
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Storm_Lightning_Damage_Factor": 0.75,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Thunder_New
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneAbility_Thunder_New",
+			"isDynamicAbility":true,
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 70000014,
+					"campID": 9001,
+					"byServer" : true,
+					"campTargetType": "AllExceptSelf",
+					"born":
+					{
+						"$type": "ConfigBornByStormLightning",
+						"hitHeightRatio": 1,
+						"selectRange": 100,
+						"lightningHitOrNotRatio": 0.01,
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Storm_Lightnin_New",
+			"onAdded":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Lightning_Timer",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Lightning_Lifetime_Manager",
+				},
+				{//OnEntityReady是Entity发给level的事件，晚一帧执行,所以手动加个延迟
+					"$type" : "ApplyModifier",
+					"modifierName" : "WarningEffect_Timer",
+				},
+			],
+			"modifiers":
+			{
+				"WarningEffect_Timer":
+				{
+					"duration":0.05,
+					"onRemoved":
+					[
+						{
+							"$type" : "FireEarlyWarningEffectForStorm",
+							"born" :
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+							},
+						},
+					],
+				},
+				"Lightning_Timer":
+				{
+					"duration" : 2.0,
+					"onAdded" :
+					[
+						{
+							"$type" : "UpdateReactionDamage",
+							"levelTarget" : "OriginOwner",
+							"reactionDamageName" : "ElementAbility_Storm_Lightning_BaseReactionDamage",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "All",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"duration" : 0.1,
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" :
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Weather_Attack",
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"damageExtra": "%ElementAbility_Storm_Lightning_BaseReactionDamage*%Storm_Lightning_Damage_Factor",
+										"elementType" : "Electric",
+										"elementDurability" : 50,
+										"enBreak": 200,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Air",	//hitlevel = 8
+										// "hitImpulseX": 795,	//hitlevel = 8
+										// "hitImpulseY": 900,	//hitlevel = 8
+										"hitImpulseType":"LV8",
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+									"forceCameraShake": true,
+						        	"cameraShake": 
+						        	{
+						        		"shakeType": "CustomVector",
+										"shakeRange": 0.36,
+										"shakeTime": 0.18,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x": 0,
+											"y": -1,
+											"z": 0,
+										},
+										"extension":
+										{
+											"baseOnCamera": false,
+											"baseCycle": 0.12,
+											"cycleDamping": 0.18,
+											"rangeAttenuation": 0.2,
+										},
+						        	},
+								}
+							}
+						},
+						{
+							"$type" : "FireEffectForStorm",
+							"height" : 150,
+							"born" :
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0,
+								},
+							},
+						},
+						{
+							"$type" : "Randomed",
+							"chance" : 0.1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 1,
+									"ratio": 1,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 1.0,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Lightning_Lifetime_Manager":
+				{
+					"duration": 6.0,
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"target": "Self",							
+						}
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Storm_Lightning_Damage_Factor": 0.75,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Grass
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "GrassMaterial",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Grass",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "AntiFire",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Grass",
+							"state" : "Normal",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"elementType": "Grass",
+					"elementDurability": 120,
+				},
+				"AntiFire":
+				{
+					"elementType": "AntiFire",
+					"elementDurability": 35,
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Water
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "WaterMaterial",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaterMaterial",
+				},
+			],
+			"modifiers":
+			{
+				"WaterMaterial":
+				{
+					"elementType": "Water",
+					"elementDurability": 80,
+					"isElementDurabilityMutable": false,
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  小灌木
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "BushMaterial01",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Bush_Attack_Count",
+					"value": -4,
+					"useLimitRange": true,
+					"maxValue": 4,
+					"minValue": 0,
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"onAdded":
+					[
+						{
+							//燃烧时免疫其余燃烧攻击
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_BURNING_IGNITE_ONLY",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Bush_Burnt",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.2,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "FireEffect",
+									//"effectPattern": "Eff_Avatar_WoodSpike_Strike_Splinter",
+									"effectPattern": "Eff_Bush_Destroy_ConfigID",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.2,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+							],
+						},
+						{
+							"$type": "KillSelf",
+							"duration": 0.1,
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["ExplodeDamage"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Bush_Destroy_ConfigID",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.2,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+								{
+									"$type": "KillSelf",
+									"duration": 0.1,
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Death_Type",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Attack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 0,
+						},
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElementDurability",
+									"element": "Fire",
+									"durability": 10,
+									"compareType": "MoreThan",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},			
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "GrassMaterial",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Bush_Attack_Count",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  小灌木_雪山
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Bush_NoFire01",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Bush_Attack_Count",
+					"value": -4,
+					"useLimitRange": true,
+					"maxValue": 4,
+					"minValue": 0,
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							//"effectPattern": "Eff_Avatar_WoodSpike_Strike_Splinter",
+							"effectPattern": "Eff_Bush_Destroy_ConfigID",
+							"born": 
+							{
+								"$type": "ConfigBornType",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": -0.2,
+									"z": 0.0,
+								},
+								"onGround":true,
+							},
+						},
+						{
+							"$type": "KillSelf",
+							"duration": 0.1,
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Attack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 0,
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "GrassMaterial",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Bush_Attack_Count",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  大灌木(预备废弃)
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "BushMaterial02",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Bush_Attack_Count",
+					"value": -4,
+					"useLimitRange": true,
+					"maxValue": 4,
+					"minValue": 0,
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"onAdded":
+					[
+						{
+							//燃烧时免疫其余燃烧攻击
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_BURNING_IGNITE_ONLY",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Bush_Burnt",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.6,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "FireEffect",
+									//"effectPattern": "Eff_Avatar_WoodSpike_Strike_Splinter",
+									"effectPattern": "Eff_Bush_Destroy_ConfigID",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.6,
+											"z": 0.0,
+										},
+									},
+								},
+							],
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Death_Type",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Attack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+						},
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElementDurability",
+									"element": "Fire",
+									"durability": 10,
+									"compareType": "MoreThan",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},			
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "GrassMaterial",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Bush_Attack_Count",
+											"value": 3,
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			}
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////
+//
+//	黄色灌木
+//
+//////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "YellowBushMaterial01",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_Bush_Attack_Count",
+					"value": -4,
+					"useLimitRange": true,
+					"maxValue": 4,
+					"minValue": 0,
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"elementType": "Wood",
+					"elementDurability": 30,
+					"onAdded":
+					[
+						{
+							//燃烧时免疫其余燃烧攻击
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_BURNING_IGNITE_ONLY",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Bush_Burnt_Yellow",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.2,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "FireEffect",
+									//"effectPattern": "Eff_Avatar_WoodSpike_Strike_Splinter",
+									"effectPattern": "Eff_Bush_Destroy_Yellow",
+									"born": 
+									{
+										"$type": "ConfigBornType",
+										"offset": 
+										{
+											"x": 0.0,
+											"y": -0.2,
+											"z": 0.0,
+										},
+										"onGround":true,
+									},
+								},
+							],
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Death_Type",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_Bush_Attack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 0,
+						},
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElementDurability",
+									"element": "Fire",
+									"durability": 10,
+									"compareType": "MoreThan",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"key": "_Bush_Death_Type",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},			
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "GrassMaterial",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_Bush_Attack_Count",
+											"value": 2,
+											"compareType": "Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  狗尾巴草-白
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Foxtail_Grass01_Material",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Foxtail_Grass_Material",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Foxtail_Grass_Material":
+				{
+					"onBeingHit":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Foxtail_Grass01_Die",
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  狗尾巴草-黄
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Foxtail_Grass02_Material",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Foxtail_Grass_Material",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Bush",
+							"state" : "Normal",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Foxtail_Grass_Material":
+				{
+					"onBeingHit":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Foxtail_Grass02_Die",
+						},
+						{
+							"$type": "KillSelf",
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Tree
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "TreeMaterial01",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GrassMaterial",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Tree",
+							"state" : "Normal",
+						},
+					],
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "AntiFire",
+					"predicates":
+					[
+						{
+							"$type": "ByScenePropState",
+							"entityType" : "Tree",
+							"state" : "Normal",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"GrassMaterial":
+				{
+					"elementType": "Grass",
+					"elementDurability": 1000,
+				},
+				"AntiFire":
+				{
+					"elementType": "AntiFire",
+					"elementDurability": 100,
+				},
+			}
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  Cold (thermometer)
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Cold_WhiteBox",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+			],
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"Avatar_Ready":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "StageReadyMixin",						
+							"onStageReady":
+							[
+								{
+									"$type": "DebugLog",
+									"content": "Set Avatar Is Ready",
+								},
+								// AVATAR_IS_READY:
+								//   0 - Not Ready
+								//   1 - Ready
+								{
+									"$type": "AddGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"value": 1,
+									"useLimitRange": true,
+									"minValue": 1,
+									"maxValue": 1,
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Cold_WhiteBox",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+			],
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Init_CreateGadget",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},
+				"Init_CreateGadget":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",//角色进入寒冷环境后，创建显示温度计的Dummy
+							"gadgetID": 70900045,
+							"campID": 4001,
+							"campTargetType": "All",
+							"doOffStage":true,
+						},
+					],
+					"thinkInterval":0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "DUMMY_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Init",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Init_CreateGadget",
+								},
+							],
+						},
+					],
+				},
+				"Init":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Cold_WhiteBox_Team_MixinCarrier",
+							"doOffStage":true,					
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Cold_WhiteBox_Team_Temperature_Handler",
+							"doOffStage":true,	
+							"target":"Self",				
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Cold_WhiteBox_Avatar_Temperature_Handler",
+							"doOffStage":true,	
+							"target":"CurTeamAvatars",				
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Cold_WhiteBox_MonsterIce_Trigger",
+							"doOffStage":true,	
+							"target":"CurTeamAvatars",				
+						},
+					],
+					"thinkInterval":3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Cold_WhiteBox_Avatar_Temperature_Handler",
+							"doOffStage":true,	
+							"target":"CurTeamAvatars",				
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Avatar_Cold_WhiteBox_MonsterIce_Trigger",
+							"doOffStage":true,	
+							"target":"CurTeamAvatars",				
+						},
+					],
+				},
+				"Avatar_Cold_WhiteBox_Team_MixinCarrier":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Avatar_Cold_WhiteBox_Temperature_Mark",
+							"valueSteps" : [-1,-0.5,1,9],
+							"removeAppliedModifier":true,
+							"modifierNameSteps" : ["Cold_Handler","Warm_Handler","Blank"],
+						},
+					],
+				},
+				"Blank":
+				{
+
+				},
+				"Cold_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Warm_Dummy_ChargeBar",
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 70900045,
+								"sortType": "Default",
+							},
+							"doOffStage":true,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Cold_Dummy_ChargeBar",
+							"doOffStage":true,
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 70900045,
+								"sortType": "Default",
+							},
+						},
+					],
+				},
+				"Warm_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Cold_Dummy_ChargeBar",
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 70900045,
+								"sortType": "Default",
+							},
+							"doOffStage":true,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Warm_Dummy_ChargeBar",
+							"doOffStage":true,
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 70900045,
+								"sortType": "Default",
+							},
+						},
+					],
+				},
+				"Cold_WhiteBox_Team_Temperature_Handler"://队伍温度管理
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Mark",
+							"value":0,
+							"useLimitRange":true,
+							"maxValue":9,
+							"minValue":-1,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					"thinkInterval":0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Mark",
+							"value":-10,
+							"useLimitRange":true,
+							"maxValue":9,
+							"minValue":-1,
+							"target":"Self",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"key":"_ABILITY_Team_Cold_WhiteBox_Temperature_Lock",
+											"value":1,
+											"compareType":"Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Cold_WhiteBox_Avatar_Temperature_Handler"://角色取暖管理
+				{
+					"stacking":"Unique",
+					"onBeingHit":
+					[
+						{
+							"$type":"AttachModifier",//标明角色正在被火烤
+							"modifierName":"Avatar_Cold_WhiteBox_Temperature_Lock",
+							"target":"CurTeamAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Element_Burning_Warm"],
+								},
+							],
+						},
+						{
+							"$type":"AttachModifier",//角色被火烤时Team不会去改变温度
+							"modifierName":"Team_Cold_WhiteBox_Temperature_Lock",
+							"doOffStage":true,
+							"target":"Team",
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Element_Burning_Warm"],
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",//被火烤时改变角色身上的温度
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Mark",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":9,
+							"minValue":-1,
+							"target":"Team",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Element_Burning_Warm"],
+								},
+							],
+						},
+						// {
+						// 	"$type":"ApplyModifier",
+						// 	"modifierName":"Cold_Dummy_ChargeBar_ChangeTrigger",//通知TeamEntity改变温度计的含量，暂时用不到，先干掉
+						// 	"target":"Team",
+						// 	"predicates":
+						// 	[
+						// 		{
+						// 			"$type":"ByAttackTags",
+						// 			"attackTags":["Element_Burning_Warm"],
+						// 		},
+						// 	],
+						// },
+					],
+				},
+				"Cold_Dummy_ChargeBar_ChangeTrigger"://暂时用不到，先干掉
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"AddElementDurability",//被火烤时改变温度计傀儡上的温度条
+							"value":10,
+							"modifierName":"Cold_Dummy_ChargeBar",
+							"elementType":"Wind",
+							"useLimitRange":true,
+							"maxValue":100,
+							"minValue":0,
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 70900045,
+								"sortType": "Default",
+							},
+							"doOffStage":true,
+						},
+					],
+				},
+				"Team_Cold_WhiteBox_Temperature_Lock"://通知Team角色正在烤火，你不要降温
+				{
+					"duration":0.3,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Team_Cold_WhiteBox_Temperature_Lock",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Team_Cold_WhiteBox_Temperature_Lock",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+						},
+					],
+				},
+				"Avatar_Cold_WhiteBox_Temperature_Lock"://标明角色正在被火烤
+				{
+					"duration":0.3,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Lock",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Lock",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Cold_Dummy_ChargeBar"://傀儡身上过冷的温度计
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "DamageByAttackValue",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":   
+								{
+									"damageExtra": 1,
+								},
+							},
+						},
+					],
+					"duration":"%Cold_Charge_Time",
+					"elementDurability": 100,
+					"elementType": "Wind",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+							"revert": false,
+						},
+					],
+					"onRemoved"://温度过低后给所有角色上低温伤害BUFF
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Cold_WhiteBox_Damage_Handler",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Lock",
+											"value":1,
+											"compareType":"Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Avatar_Cold_WhiteBox_Ice_Handler",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"key":"_ABILITY_Avatar_Cold_WhiteBox_Temperature_Lock",
+											"value":1,
+											"compareType":"Equal",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Warm_Dummy_ChargeBar"://傀儡身上的取暖温度计
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "DamageByAttackValue",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":   
+								{
+									"damageExtra": 1,
+								},
+							},
+						},
+					],
+					"duration":"%Warm_Charge_Time",
+					"stacking":"Unique",
+					"elementDurability": 100,
+					"elementType": "Rock",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+							"revert": true,
+						},
+					],
+					"onRemoved"://取暖完成后移除角色身上的低温伤害BUFF
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Avatar_Cold_WhiteBox_Damage_Handler",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"Avatar_Cold_WhiteBox_Ice_Handler",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Cold_WhiteBox_Ice_Handler":
+				{
+					"stacking":"Unique",
+					"elementDurability": 10,
+					"elementType": "Ice",
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+							"modifierName":"Delay_Check_Cold_Tag",
+						},
+					],
+				},
+				"Delay_Check_Cold_Tag":
+				{
+					"duration": "%Frozen_Mute_Time",
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+							"modifierName":"Avatar_Cold_WhiteBox_Ice_Handler",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Avatar_Cold_WhiteBox_InCold_Tag",
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+					],
+				},
+
+				"Avatar_Cold_WhiteBox_Damage_Handler"://低温伤害BUFF，包含伤害、特效及减速效果
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type":"DamageByAttackValue",
+							"target":"Self",
+							"attackInfo":
+							{
+								"attackTag" : "Cold_WhiteBox_Damage",
+								"attackProperty": 
+								{
+									"damagePercentage": "%Avatar_Cold_Damage_OnAdded",
+									"enBreak": 10,
+									"strikeType":"Default",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									// "hitLevel": "Mute",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+							"doOffStage":true,
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+								"offset":
+								{
+									"x":0,
+									"y":0.5,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_InCold_Tag",
+							"value":5,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"doOffStage":true,
+						},
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_WhiteBox_ColdDamage",
+							"doOffStage":true,
+						},					
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Avatar_Cold_WhiteBox_InCold_Tag",
+							"value":-5,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"doOffStage":true,
+						},	
+					],
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachToStateIDMixin",
+							"stateIDs":["NormalMove"],
+							"modifierName":"Avatar_Cold_WhiteBox_MoveSpeed_Down",
+						},
+					],
+					"thinkInterval":"%Cold_WhiteBox_Damage_ThinkInterval",
+					"onThinkInterval":
+					[
+						{
+							"$type":"DamageByAttackValue",
+							"target":"Self",
+							"attackInfo":
+							{
+								"attackTag" : "Cold_WhiteBox_Damage",
+								"attackProperty": 
+								{
+									"damagePercentage": "%Avatar_Cold_Damage_onThinkInterval",
+									"enBreak": 10,
+									"strikeType":"Default",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "",
+									// "hitLevel": "Mute",
+									// "hitImpulseX": 0,
+									// "hitImpulseY": 0,
+									"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+							"doOffStage":true,
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+								"offset":
+								{
+									"x":0,
+									"y":0.5,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type":"ApplyModifier",//给中途换上来的玩家添加寒属性伤害BUFF
+							"modifierName":"Avatar_Cold_WhiteBox_Damage_Handler",
+							"target":"CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+				},
+				"Avatar_Cold_WhiteBox_MoveSpeed_Down":
+				{
+					"properties" :
+					{
+						"Animator_OverallSpeedRatioMultiplied" : "%Avatar_Cold_SpeedRatio",//低温伤害时的减速BUFF
+					},
+				},
+				"Avatar_Cold_WhiteBox_MonsterIce_Trigger"://角色给一定范围内的怪上寒属性BUFF
+				{
+					"stacking":"Unique",
+					"thinkInterval":2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Cold_WhiteBox_MonsterIce",
+							"otherTargets": 
+							{
+					"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR50",//这个范围要考量一下
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"key":"_ABILITY_Monster_Recently_Warmed",
+											"value":1,
+											"compareType":"Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Cold_WhiteBox_Monster_Temperature_Handler",//给怪添加取暖的modifier
+							"otherTargets": 
+							{
+					"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR50",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Cold_WhiteBox_MonsterIce":
+				{
+					"isUnique" : true,
+					"state" : "ElementIce",
+					"stacking" : "Unique",
+					"duration": 5,
+					"elementType" : "Ice",
+					"elementDurability": 50,
+					"onAdded" :
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_WhiteBox_ColdDamage",
+						},
+					],
+				},
+				"UNIQUE_Cold_WhiteBox_Monster_Temperature_Handler":
+				{
+					"isUnique" : true,
+					"stacking" : "Unique",
+					"onBeingHit":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Cold_WhiteBox_Monster_Warmed_Mark",
+							"target":"Self",
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Element_Burning_Warm"],
+								},
+							],
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Cold_WhiteBox_MonsterIce",
+							"target":"Self",
+							"predicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Element_Burning_Warm"],
+								},
+							],
+						},
+					],
+				},
+				"Cold_WhiteBox_Monster_Warmed_Mark":
+				{
+					"duration":3,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",//被火烤的怪不能被冻上
+							"key":"_ABILITY_Monster_Recently_Warmed",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",//被火烤的怪不能被冻上
+							"key":"_ABILITY_Monster_Recently_Warmed",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Avatar_Cold_Damage_OnAdded":0.1,                    //角色受到低温影响时的瞬间伤害
+				"Avatar_Cold_Damage_onThinkInterval":0.3,			//角色受到低温影响时的持续伤害
+				"Cold_WhiteBox_Damage_ThinkInterval":1,             //低温效果伤害频率
+				"Avatar_Cold_SpeedRatio":0.8,                        //角色低温时受到的减速效果
+				"Cold_Charge_Time":30,                               //低温条充能时间（即在低温环境下经过这些时间后开始受到低温影响）
+				"Warm_Charge_Time":1,                               //取暖条充能时间（靠近火源后，经过这些时间，移除角色身上的低温影响）
+				"Frozen_Mute_Time":5,
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  Cold Charge Dummy
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Cold_WhiteBox_ChargeDummy_StartCharge",
+			"onAdded":
+			[
+				{
+					"$type" : "DamageByAttackValue",
+					"target": "Self",
+					"attackInfo":
+					{
+						"attackProperty":   
+						{
+							"damageExtra": 1,
+						},
+					},
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Dummy_Ready",//关卡初始化的时候标记Dummy已经创建完成
+					"target": "Team",
+				},
+			],
+			"modifiers":
+			{
+				"Dummy_Ready":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "DUMMY_IS_READY",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 1,
+							"maxValue": 1,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  雷元素环境
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Element_Evn_Electric",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////
+//
+//  火元素环境
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Element_Evn_Fire",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////
+//
+//  冰元素环境
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Element_Evn_Ice",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////
+//
+//  水元素环境
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Element_Evn_Water",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////
+//
+//  岩元素环境
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Element_Evn_Rock",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////
+//
+//  螺旋深渊
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Spiral_Abyss",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+
+//////////////////////////////////
+//
+//  螺旋深渊
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Spiral_Abyss_Ball",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+
+//////////////////////////////////
+//
+//  螺旋深渊 元素浓度
+//
+//////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Spiral_Abyss_Element",
+		"isDynamicAbility":true,
+		"abilityMixins":
+		[
+		],
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Avatar_Ready",//关卡初始化的时候标记角色已经初始化完成
+				"target": "Self",
+			},
+		],
+		"modifiers":
+		{
+			"Avatar_Ready":
+			{
+				"modifierMixins":
+				[
+					{
+						"$type": "StageReadyMixin",						
+						"onStageReady":
+						[
+							{
+								"$type": "DebugLog",
+								"content": "Set Avatar Is Ready",
+							},
+							// AVATAR_IS_READY:
+							//   0 - Not Ready
+							//   1 - Ready
+							{
+								"$type": "AddGlobalValue",
+								"key": "AVATAR_IS_READY",
+								"value": 1,
+								"useLimitRange": true,
+								"minValue": 1,
+								"maxValue": 1,
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////////////
+//
+// 雷元素机制
+//
+//////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Element_Evn_Electric",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{/*
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Element_Handle",//元素浓度控制器
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+					*/
+				},
+				"Element_Handle":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						//雷元素判定
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_THUNDER_AREA",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Thunder_Summonor",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Thunder_Summonor",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+						//雷元素2阶段
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_THUNDER_AREA",
+									"compareType": "Equal",
+									"value": 2,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Thunder_Summonor_Phase2",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Thunder_Summonor_Phase2",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+					],
+				},
+//////////////////////////////////
+//
+//落雷召唤
+//
+////////////////////////////////
+				"Thunder_Summonor":
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+
+						{
+							"$type":"Randomed",
+							"chance":0.7,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 2,
+											"maxRandomRange": 2,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target":"CurLocalAvatar",
+							"key": "ThunderPos2",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 8,
+									"maxRandomRange": 18,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target":"CurLocalAvatar",
+							"key": "ThunderPos3",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 8,
+									"maxRandomRange": 18,
+								},
+							},
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.5,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos4",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 8,
+											"maxRandomRange": 18,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.5,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos5",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 8,
+											"maxRandomRange": 18,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Thunder_Hit",//延时落雷
+							"target": "CurTeamAvatars",
+						},
+						{
+						    "$type": "SetAvatarHitBuckets",
+						    "overrideAvatarHitBucketSetting":
+						    {
+						    	"meleeBucketCount": 4,
+						    },
+					    },
+					],
+					"thinkInterval": 12,
+					"onThinkInterval":
+					[
+						{
+							"$type":"Randomed",
+							"chance":0.7,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 2,
+											"maxRandomRange": 2,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target":"CurLocalAvatar",
+							"key": "ThunderPos2",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 8,
+									"maxRandomRange": 18,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target":"CurLocalAvatar",
+							"key": "ThunderPos3",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 8,
+									"maxRandomRange": 18,
+								},
+							},
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.5,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos4",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 8,
+											"maxRandomRange": 18,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.5,
+							"successActions":
+							[
+								{
+									"$type": "SetGlobalPos",
+									"target":"CurLocalAvatar",
+									"key": "ThunderPos5",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"bornRandom" :
+										{
+											"$type": "BornRandomFromCenter",
+											"minRandomRange": 8,
+											"maxRandomRange": 18,
+										},
+									},
+								},
+								{
+									"$type": "AddGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 1,
+									"minValue": 0,
+								},
+							],
+						},
+
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Thunder_Hit",//延时落雷
+							"target": "CurTeamAvatars",
+						},
+					],
+				},
+				"Thunder_Hit":
+				{
+					"duration": 2.5,
+					"onAdded":
+					[
+						//预警特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos2",
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos3",
+							},
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos4",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos5",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						//落雷特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV3",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "First_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						
+						
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos2",
+							},
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos2",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos2",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+						},
+						
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos3",
+							},
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos3",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos3",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+						},
+						
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos4",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos4",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos4",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Second_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos5",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos5",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos5",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "Third_Thunder",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+
+						{
+							"$type": "AddGlobalValue",
+							"key": "First_Thunder",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "Second_Thunder",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "Third_Thunder",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+						},
+					],
+				},
+/////////////////////////////
+//
+//雷元素召唤2阶段
+//
+/////////////////////////////
+				"Thunder_Summonor_Phase2":
+				{
+					"stacking":"Unique",
+					"thinkInterval":30,//召唤落雷时间间隔
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Thunder_Hit_Phase2",
+							"target": "CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Thunder_Hit_Phase2":
+				{
+					"stacking":"Unique",
+					"duration":5,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Thunder_Trace",
+							"target": "CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+					"thinkInterval":0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Thunder_Trace",
+							"target": "CurTeamAvatars",
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Thunder_Trace":
+				{
+					"duration":0.45,
+					"onAdded":
+					[
+						//随机位置
+						{
+							"$type": "SetGlobalPos",
+							"target":"CurLocalAvatar",
+							"key": "ThunderPos_Phase2",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 1,
+									"maxRandomRange": 1,
+								},
+							},
+						},
+						//预警特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos_Phase2",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						//落雷特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos_Phase2",
+							},
+						},
+						//落雷伤害
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos_Phase2",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Default",
+										"elementType": "Electric",
+										"elementDurability": 50,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										// "hitLevel": "Heavy",	//hitlevel = 2
+										// "hitImpulseX": 50,	//hitlevel = 2
+										// "hitImpulseY": 800,	//hitlevel = 2
+										"hitImpulseType":"LV7",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",
+											"hitImpulseX": 50,
+											"hitImpulseY": 800,
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+									},
+								},
+							},
+						},
+						//创造闪电球
+						{
+							"$type":"Randomed",
+							"chance":0.65,
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",//创造闪电球
+									"gadgetID": 70900269,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"doOffStage":true,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos_Phase2",
+										"offset" : 
+										{
+											"x" : 0.0,
+											"y" : 1.0,
+											"z" : 0.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},					
+			},
+			"abilitySpecials" :
+			{
+				"CounterStage" : 0.0,
+			},
+		},
+	},
+///////////////////////////////////////////////
+//
+// 火元素机制
+//
+////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Element_Evn_Fire",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Element_Handle",//元素浓度控制器
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},
+				"Element_Handle":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						//火元素判定
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_FIRE_AREA",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Fire_Summonor",//召唤火围绕
+									"target": "Team",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Fire_Summonor",
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Fire_Damge",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+					],
+				},
+
+/////////////////////////////
+//
+//火焰召唤
+//
+/////////////////////////////	
+				"Fire_Summonor":
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"FIRE_CHARGES",
+							"value":0,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":0,
+							"target":"CurTeamAvatars",
+						},
+					],
+					"thinkInterval": 10,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"FIRE_CHARGES",
+							"value":1,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":10,
+							"target":"CurLocalAvatar",
+						},
+						//先下后上，刷新数值
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Fire_Charge_Controller",
+							"target": "CurLocalAvatar",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Fire_Charge_Controller",
+							"target":"CurLocalAvatar",
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Fire_Charge_Controller":
+				{
+					"stacking": "Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"FIRE_CHARGES",
+							"overrideMapKey":"CounterStage",
+							"isFromOwner": false,
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Fire_Damge",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Fire_Damge",
+						},
+					],
+					"onAvatarOut" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Remove_Fire",
+							"doOffStage":true,
+						},
+						
+					],
+					"onAvatarIn" :
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Remove_Fire",
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"FIRE_CHARGES",
+							"overrideMapKey":"CounterStage",
+							"isFromOwner": false,
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Fire_Damge",
+						},
+						
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Fire_Damge",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "FIRE_CHARGES",
+									"value": 0,
+									"compareType": "MoreThan",
+								},
+							],
+						},
+					],
+				},
+
+				//在后台每2秒移除一层灼烧
+				"Remove_Fire":
+				{
+					"thinkInterval":2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"FIRE_CHARGES",
+							"value":-1,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":10,
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Fire_Damge":
+				{
+					"elementType":"Fire",
+					"elementDurability":50,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Fire_Level_01",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "FIRE_CHARGES",
+									"value": 3,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Fire_Level_02",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "FIRE_CHARGES",
+									"value": 3,
+									"compareType": "MoreThan",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "FIRE_CHARGES",
+									"value": 6,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Fire_Level_03",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "FIRE_CHARGES",
+									"value": 6,
+									"compareType": "MoreThan",
+								},
+							],
+						},
+					],
+					"thinkInterval": 2,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "DamageByAttackValue",
+							"target": "CurLocalAvatar",
+							"attacker" : "Self",
+							"attackInfo":
+							{
+								"attackProperty":   
+								{
+									"damagePercentage": 0.0,
+									"strikeType": "None",
+									"elementType": "Fire",
+									"elementDurability": 50,
+									"enBreak": 0.0,
+									"damageExtra": "%CounterStage*10",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "none",
+									// "hitLevel" : "Light",
+									// "hitImpulseX" : 600,
+									// "hitImpulseY" : 800,
+									"hitImpulseType":"LV6",
+									"overrideHitImpulse":
+									{
+										"hitLevel": "Light",
+										"hitImpulseX": 600,
+										"hitImpulseY": 800,
+									},
+									"reboundRatio" : 0,
+									"canBeDefenceHalt" : false,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+							},
+						},
+					],
+				},							
+			},
+			"abilitySpecials" :
+			{
+				"CounterStage" : 0.0,
+			},
+		},
+	},
+/////////////////////////////////////
+//
+// 冰元素机制
+//
+//////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Element_Evn_Ice",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Element_Handle",//元素浓度控制器
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},
+				"Element_Handle":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						//冰元素判定
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_ICE_AREA",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Ice_Summonor",//召唤寒冰围绕
+									"target": "Team",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Ice_Summonor",
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Ice_SpeedSlow",//间隔召唤落雷
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+					],
+				},
+/////////////////////////////
+//
+//寒冰召唤
+//
+/////////////////////////////
+				"Ice_Summonor":
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"SLOW_CHARGES",
+							"value":0,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":1,
+							"target":"CurTeamAvatars",
+						},
+					],
+					"thinkInterval":5,//上减速BUFF的间隔时间
+					"onThinkInterval":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"SLOW_CHARGES",
+							"value":-0.05,
+							"useLimitRange":true,
+							"minValue":-0.7,
+							"maxValue":0,
+							"target":"CurLocalAvatar",
+						},
+						//先下后上，刷新数值
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Ice_Charge_Controller",
+							"target": "CurLocalAvatar",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Ice_Charge_Controller",
+							"target": "CurLocalAvatar",
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Ice_Charge_Controller":
+				{
+					"stacking": "Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"SLOW_CHARGES",
+							"overrideMapKey":"CounterStage",
+							"isFromOwner": false,
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Ice_SpeedSlow",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Ice_SpeedSlow",
+							"doOffStage":true,
+						},
+					],
+					"onAvatarOut" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Remove_Slow",
+							"doOffStage":true,
+						},
+						
+					],
+					"onAvatarIn" :
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Remove_Slow",
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"SLOW_CHARGES",
+							"overrideMapKey":"CounterStage",
+							"isFromOwner": false,
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Ice_SpeedSlow",
+						},
+
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Ice_SpeedSlow",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "SLOW_CHARGES",
+											"value": -0.05,
+											"compareType": "MoreThan",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				//在后台每2秒移除一层减速
+				"Remove_Slow":
+				{
+					"thinkInterval":2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"SLOW_CHARGES",
+							"value":0.05,
+							"useLimitRange":true,
+							"minValue":-0.7,
+							"maxValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+
+				"Ice_SpeedSlow":
+				{
+					"stacking": "Refresh",
+					"elementDurability": 50,
+					"elementType": "Ice",
+					"properties" :
+					{
+						"Animator_MoveSpeedRatio" : "%CounterStage",//冰元素环境下减速10%
+					},
+					"onBeingHit":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"SLOW_CHARGES",
+							"value":0.0,
+							"useLimitRange":true,
+							"minValue":0,
+							"maxValue":0,
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElement",
+									"element": "Fire",
+								},
+							],
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Ice_SpeedSlow",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElement",
+									"element": "Fire",
+								},
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Ice_Level_01",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SLOW_CHARGES",
+									"value": -0.2,
+									"compareType": "MoreThan",
+								},
+							],
+						},
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Ice_Level_02",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SLOW_CHARGES",
+									"value": -0.5,
+									"compareType": "MoreThan",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SLOW_CHARGES",
+									"value": -0.2,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type" : "AttachEffect",//低温时的表现
+							"effectPattern" : "Eff_Element_Ice_Level_03",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "SLOW_CHARGES",
+									"value": -0.5,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+					],
+				},						
+			},
+			"abilitySpecials" :
+			{
+				"CounterStage" : 0.0,
+			},
+		},
+	},
+////////////////////////////////////////////
+//
+// 水元素机制
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Element_Evn_Water",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Element_Handle",//元素浓度控制器
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},
+				"Element_Handle":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						//水元素判定
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_WATER_AREA",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Water_Summonor",//召唤寒冰围绕
+									"target": "CurTeamAvatars",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Water_Summonor",
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+					],
+				},
+/////////////////////////////
+//
+//水召唤
+//
+/////////////////////////////
+				"Water_Summonor":
+				{
+					"stacking":"Unique",
+					"elementDurability": 55,
+					"elementType": "Water",
+					"isElementDurabilityMutable": false,
+				},							
+			},
+			"abilitySpecials" :
+			{
+				"CounterStage" : 0.0,
+			},
+		},
+	},
+////////////////////////////////////////////
+//
+// 岩元素机制
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Element_Evn_Rock",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Element_Handle",//元素浓度控制器
+									"target": "Team",
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},
+				"Element_Handle":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						//水元素判定
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "IN_ROCK_AREA",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "Team",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Rock_Summonor",//召唤岩围绕
+									"target": "CurTeamAvatars",
+									"doOffStage":true,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "Rock_Summonor",
+									"target": "CurTeamAvatars",
+								},
+							],
+						},
+					],
+				},
+/////////////////////////////
+//
+//岩召唤
+//
+/////////////////////////////
+				"Rock_Summonor":
+				{
+					"stacking":"Unique",
+					"elementDurability": 55,
+					"elementType": "Rock",
+					"isElementDurabilityMutable": false,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Element_StickRock",
+						},
+					],
+				},							
+			},
+			"abilitySpecials" :
+			{
+				"CounterStage" : 0.0,
+			},
+		},
+	},
+////////////////////////////////////////////
+//
+//  螺旋深渊 攻速
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_AttackSpeed",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS",
+									"target": "Team",
+									"value":203,
+									"useLimitRange":true,
+									"minValue":203,
+									"maxValue":203,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+
+////////////////////////////////////////////
+//
+//  螺旋深渊 充能
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_ElmentCharge",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS",
+									"target": "Team",
+									"value":204,
+									"useLimitRange":true,
+									"minValue":204,
+									"maxValue":204,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+
+////////////////////////////////////////////
+//
+//  螺旋深渊 体力
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_CostReduce",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS",
+									"target": "Team",
+									"value":901,
+									"useLimitRange":true,
+									"minValue":901,
+									"maxValue":901,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+
+////////////////////////////////////////////
+//
+//  螺旋深渊 护盾
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_SheildUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS",
+									"target": "Team",
+									"value":902,
+									"useLimitRange":true,
+									"minValue":902,
+									"maxValue":902,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+////////////////////////////////////////////
+//
+//  螺旋深渊 球 治疗
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_Ball_Heal",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS_BALL",
+									"target": "Team",
+									"value":203,
+									"useLimitRange":true,
+									"minValue":203,
+									"maxValue":203,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+
+
+////////////////////////////////////////////
+//
+//  螺旋深渊 球 攻速
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_Ball_AttackSpeed",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS_BALL",
+									"target": "Team",
+									"value":204,
+									"useLimitRange":true,
+									"minValue":204,
+									"maxValue":204,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+
+////////////////////////////////////////////
+//
+//  螺旋深渊 球 移速
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_Ball_MoveSpeed",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS_BALL",
+									"target": "Team",
+									"value":901,
+									"useLimitRange":true,
+									"minValue":901,
+									"maxValue":901,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+////////////////////////////////////////////
+//
+//  螺旋深渊 球 防御
+//
+////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Team_Spiral_Abyss_Ball_Defence",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WaitForAvatarReady",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"WaitForAvatarReady":
+				{
+					"thinkInterval": 0.5,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "AVATAR_IS_READY",
+									"compareType": "Equal",
+									"value": 1,
+									"target": "CurLocalAvatar",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"SPIRAL_ABYSS_BALL",
+									"target": "Team",
+									"value":902,
+									"useLimitRange":true,
+									"minValue":902,
+									"maxValue":902,
+									"doOffStage":true,
+								},
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "WaitForAvatarReady",
+								},
+							],
+						},
+					],
+				},					
+			},
+		},
+	},
+]

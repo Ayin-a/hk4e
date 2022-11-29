@@ -1,0 +1,5512 @@
+[
+
+//Index
+//
+//*************************  普通攻击  ****************************************************
+//普攻_01:Avatar_Tighnari_ShootArrow_01 
+//普攻_02:Avatar_Tighnari_ShootArrow_02
+//普攻_03:Avatar_Tighnari_ShootArrow_03
+//普攻_04:Avatar_Tighnari_ShootArrow_04 
+//普攻子弹拖尾轻：Bullet_Tighnari_Arrow_Material_Small
+//普攻子弹拖尾重：Bullet_Tighnari_Arrow_Material_Big
+//下落攻击：Avatar_Tighnari_FallingAnthem
+
+//*************************  瞄准射击  ****************************************************
+//瞄准模式下点击和蓄力:Avatar_Tighnari_PressShoot
+//蓄力期间特效表现:Avatar_Tighnari_ShootAimingArrow_Charge
+//蓄力点击发射：Avatar_Tighnari_ShootArrow_Aiming
+//瞄准模式下攻击逻辑: Avatar_Tighnari_AimPressShoot
+//蓄力未完成箭(物理）：Bullet_Tighnari_Arrow_NoGrass_Material
+//蓄力完成箭（草）：Bullet_Tighnari_Arrow_WithGrass_Material
+//蓄力2段箭(草）：Tighnari_AimingArrow_BeforeFission_Material
+//蓄力2段分裂箭（草）：Tighnari_AimingArrow_Fission_Material
+
+//*************************  元素战技  ****************************************************
+//元素战技：Avatar_Tighnari_ElementalArt
+//生成烟雾以及掉球：Avatar_Tighnari_ElementalArt_SetGadget
+//丢出去的球：SkillObj_Tighnari_ElementalArt_Ball_Material
+//干扰烟雾的gadget：SkillObj_Tighnari_ElementalArt_CenterGadget_Material
+//嘲讽的gadget：SkillObj_Tighnari_ElementalArt_TauntGadget_Material
+//身边的计数效果：Skillobj_Tighnari_ExtraAttack_Count
+
+//*************************  元素爆发  ****************************************************
+//元素爆发动画: Avatar_Tighnari_ElementalBurst
+//元素爆发发射器：Avatar_Tighnari_ElementalBurst_Trigger
+//1、2段子弹伤害：Avatar_Tighnari_ElementalBurst_Bullet_Damage1  
+//1、2段子弹表现：Avatar_Tighnari_ElementalBurst_Bullet_1_Material 
+
+//*************************  天赋命之座新增 ability  ****************************************************
+//普攻子弹伤害管理：Bullet_Tighnari_ArrowDamage_Handler，挂子弹上
+//命之座
+
+////////////////////////////////////////////////////////////////
+//
+//  箭的表现
+//
+////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_PressShoot  普攻和进蓄力逻辑。 
+  //
+  ///////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_PressShoot",
+      "abilityMixins": [
+        {
+          "$type": "ButtonHoldChargeMixin",
+          "skillID": 10691,
+          "chargeTime": 0.2,
+          "OnBeginUncharged": [
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "DoSkill",
+            },
+            {
+              "$type": "SetAnimatorInt",
+              "intID": "SkillID",
+              "value": 100,
+            },
+          ],
+          "OnReleaseUncharged": [
+            {
+              "$type": "SetCameraLockTime",
+              "lockTime": 0.3,
+            },
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "DoSkill",
+            },
+            {
+              "$type": "SetAnimatorInt",
+              "intID": "SkillID",
+              "value": 1,
+            },
+          ],
+          "OnBeginCharged": [
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "DoSkill",
+            },
+            {
+              "$type": "SetAnimatorInt",
+              "intID": "SkillID",
+              "value": 101,
+            },
+          ],
+          "OnReleaseCharged": [
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "DoSkill",
+            },
+            {
+              "$type": "SetAnimatorInt",
+              "intID": "SkillID",
+              "value": 1,
+            },
+          ],
+          "chargeStateIDs": [
+            "ShootBS",
+            "Shoot01",
+            "Shoot02",
+            "Shoot03",
+            "Shoot04",
+            "FastAim",
+            "FastAimShoot"
+          ],
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FastAim",
+            "FastAimShoot"
+          ],
+          "modifierName": "KeepFastAiming",
+        },
+        {
+          //当快速瞄准射击结束时，会设置FastAimShootFinish，使得动画从FastAim状态出来，同时会通过FastAimShooting防止在射击过程中点击了瞄准按钮直接退出
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FastAimShoot"
+          ],
+          "modifierName": "SetFastAimShooting",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "ShootBS",
+            "FastAim",
+            "FastAimShoot"
+          ],
+          "modifierName": "SetNeedAimEndStates",
+        },
+      ],
+      "modifiers": {
+        "KeepFastAiming": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "FastAiming",
+              "value": true,
+            },
+            {
+              "$type": "AvatarEnterFocus",
+              "cameraFollowLower": {
+                "x": 0.755,
+                "y": 0.17,
+                "z": -1.9
+              },
+              "cameraFollowUpper": {
+                "x": 0.755,
+                "y": 0.37,
+                "z": -1.6
+              },
+              "cameraFastFocusMode": true,
+              "faceToTarget": true,
+              "faceToTargetAngleThreshold": 360,
+              "assistance": {
+                "ps4": {
+                  "useFocusSticky": true,
+                  "useGyro": false,
+                },
+                "ps5": {
+                  "useFocusSticky": true,
+                  "useGyro": false,
+                },
+                "other": {
+                  "useFocusSticky": true,
+                  "useGyro": true,
+                },
+              },
+              "canMove": true,
+              "vcam_fov": 30,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "FastAiming",
+              "value": false,
+            },
+            {
+              "$type": "AvatarExitFocus",
+              "keepRotation": true,
+            },
+          ],
+        },
+        "SetFastAimShooting": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "FastAimShooting",
+              "value": true,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "FastAimShooting",
+              "value": false,
+            },
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "AimEnd",
+              "predicates": [
+                {
+                  "$type": "ByAnimatorBool",
+                  "parameter": "FastAiming",
+                  "value": true
+                },
+              ]
+            },
+          ]
+        },
+        "SetNeedAimEndStates": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "InStatesNeedAimEnd",
+              "value": true,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "InStatesNeedAimEnd",
+              "value": false,
+            },
+          ]
+        },
+      },
+    },
+  }, //Avatar_Tighnari_PressShoot
+  ////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_AimPressShoot  瞄准模式下攻击逻辑
+  //
+  ////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_AimPressShoot",
+      "abilityMixins": [
+        {
+          "$type": "ButtonHoldChargeMixin",
+          "skillID": 10693,
+          "chargeTime": 0,
+          "OnReleaseCharged": [
+            {
+              "$type": "SetAnimatorTrigger",
+              "triggerID": "DoSkill",
+            },
+            {
+              "$type": "SetAnimatorInt",
+              "intID": "SkillID",
+              "value": 1,
+            },
+          ],
+          "chargeStateIDs": [
+            "Aim",
+            "AimShoot"
+          ],
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "Aim",
+            "AimShoot"
+          ],
+          "modifierName": "KeepAiming",
+        },
+        {
+          // 通过AimShooting防止在射击过程中点击了瞄准按钮直接退出
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "AimShoot"
+          ],
+          "modifierName": "SetAimShooting",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "Aim",
+            "AimShoot"
+          ],
+          "modifierName": "SetNeedAimEndStates",
+        },
+      ],
+      "modifiers": {
+        "KeepAiming": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "Aiming",
+              "value": true,
+            },
+            {
+              "$type": "AvatarEnterFocus",
+              "cameraFollowLower": {
+                "x": 0.755,
+                "y": 0.17,
+                "z": -1.9
+              },
+              "cameraFollowUpper": {
+                "x": 0.755,
+                "y": 0.37,
+                "z": -1.6
+              },
+              "cameraFastFocusMode": true,
+              "faceToTarget": true,
+              "faceToTargetAngleThreshold": 360,
+              "assistance": {
+                "ps4": {
+                  "useFocusSticky": true,
+                  "useGyro": false,
+                },
+                "ps5": {
+                  "useFocusSticky": true,
+                  "useGyro": false,
+                },
+                "other": {
+                  "useFocusSticky": true,
+                  "useGyro": true,
+                },
+              },
+              "canMove": true,
+              "vcam_fov": 30,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "Aiming",
+              "value": false,
+            },
+            {
+              "$type": "AvatarExitFocus",
+              "keepRotation": true,
+            },
+          ],
+        },
+        "SetAimShooting": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "AimShooting",
+              "value": true,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "AimShooting",
+              "value": false,
+            },
+          ]
+        },
+        "SetNeedAimEndStates": {
+          "onAdded": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "InStatesNeedAimEnd",
+              "value": true,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "InStatesNeedAimEnd",
+              "value": false,
+            },
+          ]
+        }
+      },
+    },
+  }, //Avatar_Tighnari_AimPressShoot
+
+  /////////////蓄力逻辑//////////////////////////////////////////////////////////////
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ShootAimingArrow_Charge
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootAimingArrow_Charge",
+      "abilityMixins": [
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "Aim",
+            "FastAim"
+          ],
+          "modifierName": "Tighnari_Arrow_FX",//蓄力时搭箭特效
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "Aim",
+            "FastAim"
+          ],
+          "modifierName": "ShootAimingArrow_ChargeMark",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FastAim",
+            "FastAimShoot",
+            "Aim",
+            "AimShoot"
+          ],
+          "modifierName": "ShowAimingEffect",
+        },
+        {
+          "$type": "AttachToNormalizedTimeMixin",
+          "stateID": "AimLoop",
+          "modifierName": "Aim_ChangeAlpha",
+          "normalizeStart": 0.0,
+          "normalizeEnd": 1.0,
+        },
+        {
+          "$type": "AttachToNormalizedTimeMixin",
+          "stateID": "FastAimLoop",
+          "modifierName": "FastAim_ChangeAlpha",
+          "normalizeStart": 0.0,
+          "normalizeEnd": 1.0,
+        },
+      ],
+      "onAbilityStart": [
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_WithoutElement_Loop", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_Loop", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_Loop_Focus_1", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_Loop_Focus_2", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_Loop_Focus_3", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "RemoveModifier",
+            "modifierName": "Aiming_Arrow_Glow_Loop_03", //射完了记得清一下标记及相关特效
+          },
+          {
+            "$type": "SetGlobalValue", //射完了记得清一下标记及相关特效,由于0要用于秒蓄，平时不能设置为零 //7.19修改为甘雨同款后，需要设成0.
+            "key": "_Enchanted_Time",
+            "value": -1,
+          },
+      ],
+      "modifiers": {
+        "Tighnari_Arrow_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Bow_Arrow",
+            },
+          ]
+        },
+        "ShootAimingArrow_ChargeMark": {
+          "onAdded": [
+            {
+              "$type": "SetGlobalValue", //需要重置为0，便于触发秒蓄。
+              "key": "_Enchanted_Time",
+              "value": 0,
+            },
+          ],
+          "thinkInterval": 0.3,
+          "onThinkInterval": [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_Enchanted_Time",
+              "value": 1,
+              "useLimitRange": true,
+              "maxValue": 9,
+              "minValue": 0,
+            },
+          ],
+        },
+        "Aim_ChangeAlpha": {
+          "modifierMixins": [
+            {
+              "$type": "EffectChangeAlphaMixin",
+              "target": "Team",
+              "startDuration": 0.2,
+              "endDuration": 0.3,
+            },
+          ],
+        },
+        "FastAim_ChangeAlpha": {
+          "modifierMixins": [
+            {
+              "$type": "EffectChangeAlphaMixin",
+              "target": "Team",
+              "startDuration": 0.2,
+              "endDuration": 0.3,
+            },
+          ],
+        },
+        "ShowAimingEffect": 
+        //2022/7/19 需求修改了。变成E期间0.3秒蓄力，命6后直接秒蓄。所以边界有所不同。
+        //判断是否是E
+        //不是E，只用计算命6即可。没有变化。
+        //是E，因为减2.4秒了。
+        //如果非命6，播放0.3秒的特效。
+        //如果命6，则直接开始秒蓄。并且改为和甘雨同款。
+        {
+          "onAdded": [ //如果在interval里面写了GV>0，所以总是能正确播放的，但是为了首次进瞄准能准确响应，还是保留了弓手的onAdded播特效逻辑。
+            {
+              "$type": "AttachModifier",
+              "modifierName": "Aiming_Arrow_Glow_WithoutElement_Loop",
+              "predicates": [//如果在E状态下并且有6命，不予播放。其他情况都可以播。排掉那1/4的情况即可。
+                // {
+                //   "$type": "ByAny",
+                //   "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",//现在只有E之外要播满
+                      "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+                      "value": 0,
+                      "compareType": "NoneOrEqual",
+                    },
+                //     {
+                //       "$type": "ByTargetOverrideMapValue",
+                //       "targetKey": "Talent6",
+                //       "targetValue": 0,
+                //       "logic": "LesserOrEqual",
+                //     },
+                //   ]
+                // },
+              ],
+            },
+            {
+              "$type": "AttachModifier",
+              "modifierName": "Aiming_Arrow_Glow_Loop_Focus_3",
+              "predicates": [ //如果在E状态下并无6命，播另一个效果
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+                  "value": 0,
+                  "compareType": "MoreThan",
+                },
+                {
+                  "$type": "ByTargetOverrideMapValue",
+                  "targetKey": "Talent6",
+                  "targetValue": 0,
+                  "logic": "LesserOrEqual",
+                },
+              ],
+            },
+            {
+              "$type": "AttachModifier",
+              "modifierName": "Aiming_Arrow_Glow_Loop_03",
+              "predicates": [ //为E+命6单独写一个蓄力完成，因为秒蓄了，不能等interval
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+                  "value": 0,
+                  "compareType": "MoreThan",
+                },
+                {
+                  "$type": "ByTargetOverrideMapValue",
+                  "targetKey": "Talent6",
+                  "targetValue": 0,
+                  "logic": "Greater",
+                },
+              ],
+            },
+            //进瞄准时，如果E失效了，会导致6命时原本的快速蓄特效播一半（enchanted还在0或者1，切回到无E状态，重新开播无E的蓄力特效）,这里应该补一点buff时长
+            //保证在进瞄准时存在buff，瞄准期间就能帮助走完buff，保持buff时长,+5%，+0.6秒吧。
+            //播完就扣掉，防止有人拿这个续命            
+              {
+                "$type": "AddElementDurability",
+                "modifierName": "UNIQUE_Tighnari_ElementalArt_FastCharge",
+                "value": 5,
+                "useLimitRange": true,
+                "maxValue": 105,
+                "minValue": 0,
+              },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Enchanted_Time",
+              "value": -1,
+              "doOffStage": true,
+            },
+            {//播完就扣掉，防止有人拿这个续命   
+              "$type": "AddElementDurability",
+              "modifierName": "UNIQUE_Tighnari_ElementalArt_FastCharge",
+              "value": -5,
+              "useLimitRange": true,
+              "maxValue": 105,
+              "minValue": 0,
+              "doOffStage": true,
+            },
+          ],
+          "thinkInterval": 0.1,
+          "onThinkInterval": [
+            {
+              "$type": "Predicated",//注意蓄力过程中突然GV消失的情况。
+              "targetPredicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+              ],
+              "successActions": [ //没buff情况下，正常计算4、9两个节点，只不过9的节点和talent6有关。 新增在6播放缩圈特效
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_WithoutElement_Loop", //开始蓄力特效,补充1开始的是为了R状态下连续射击不会少特效。
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 1,
+                      "compareType": "MoreThanAndEqual",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 4,
+                      "compareType": "LessAndEqual",//避免持续太久，从E回来后重播了这个特效。
+                    },
+                  ]
+                },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop",//1阶完成和持续特效
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 4,
+                      "compareType": "MoreThanAndEqual",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "8-%Talent6",
+                      "compareType": "LessAndEqual",
+                    },
+                  ]
+                },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop_Focus_1", //2阶缩圈特效，播放1.5秒，所以从4开始播放，主要用于通常状态的缩圈，不要用于E状态下。
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 4,
+                      "compareType": "MoreThanAndEqual",
+                    },
+                    {
+                      "$type": "ByTargetOverrideMapValue", //不存在命6
+                      "targetKey": "Talent6",
+                      "targetValue": 0,
+                      "logic": "LesserOrEqual",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",//增加这个，防止E消失后达成单边条件，重播特效。
+                      "key": "_Enchanted_Time",
+                      "value": "8-%Talent6",
+                      "compareType": "LessAndEqual",
+                    },
+                  ]
+                },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop_Focus_2",//2阶缩圈特效，播放0.6秒，所以从7开始播放，主要用于通常状态的缩圈，不要用于E状态下。
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "7-%Talent6",
+                      "compareType": "MoreThanAndEqual",
+                    },
+                    {
+                      "$type":"ByTargetOverrideMapValue",//存在命6
+                      "targetKey": "Talent6",
+                      "targetValue": 0,
+                      "logic": "Greater",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "8-%Talent6",
+                      "compareType": "LessAndEqual",
+                    },
+                  ]
+                },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop_03",//蓄完播2阶完成持续特效
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "9-%Talent6",
+                      "compareType": "MoreThanAndEqual",
+                    },
+                  ]
+                },
+              ],
+              "failActions": [//1阶缩圈没有命6才会播//不播2阶缩圈直接上2阶特效。//但如果在最后2秒蓄力，就会播放了2段蓄力特效，并且修改GV保证buff消失了还是2阶。
+                // {
+                //   "$type": "AttachModifier",
+                //   "modifierName": "Aiming_Arrow_Glow_WithoutElement_Loop", //开始蓄力特效
+                //   "predicates": [
+                //     {
+                //       "$type": "ByTargetGlobalValue",
+                //       "key": "_Enchanted_Time",
+                //       "value": 1,
+                //       "compareType": "MoreThanAndEqual",
+                //     },
+                //     {
+                //       "$type": "ByTargetOverrideMapValue", //不存在命6时才会播
+                //       "targetKey": "Talent6",
+                //       "targetValue": 0,
+                //       "logic": "LesserOrEqual",
+                //     },
+                //     {
+                //       "$type": "ByTargetGlobalValue",
+                //       "key": "_Enchanted_Time",
+                //       "value": 4,
+                //       "compareType": "LessAndEqual",
+                //     },
+                //   ]
+                // },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop_Focus_3",
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 0,//value为1会导致延后0.3秒，这个特效太短不能延后，所以特殊处理。其他特效保持和其他角色一样错误。
+                      "compareType": "MoreThanAndEqual",
+                    },
+                    // {
+                    //   "$type": "ByTargetOverrideMapValue",//如果存在6命播另一个效果
+                    //   "targetKey": "Talent6",
+                    //   "targetValue": 0,
+                    //   "logic": "Greater",
+                    // },
+                    {
+                      "$type": "ByTargetOverrideMapValue", //不存在命6时才会播
+                      "targetKey": "Talent6",
+                      "targetValue": 0,
+                      "logic": "LesserOrEqual",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": 2,
+                      "compareType": "LessAndEqual", //避免持续太久，从E回来后重播了这个特效。//每6命时，0.3秒还是能播完的。
+                    },
+                  ],
+                },
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "Aiming_Arrow_Glow_Loop_03",//播蓄力完成和loop特效
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "9-%Skill-%Talent6",//E先减8点，然后Talent6再减，所以-1也会立刻触发。
+                      "compareType": "MoreThanAndEqual",
+                    },
+                  ],
+                },
+                {//有buff情况下，立刻将数值set到满。使得所有效果都正常触发。如果仅修改判定，buff回退的时候可能会回到1阶蓄力，所以还会修改参数。
+                  "$type":"SetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 9,
+                  "predicates": [
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_Enchanted_Time",
+                      "value": "9-%Skill-%Talent6",
+                      "compareType": "MoreThanAndEqual",
+                    },
+                  ]
+                },
+              ],   
+            },
+          ],
+        },
+        "Aiming_Arrow_Glow_WithoutElement_Loop": {
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Loop_01",//不用播1阶缩圈特效，弓手都已经合并到Loop_01里了。
+            },
+          ]
+        },
+        "Aiming_Arrow_Glow_Loop": {
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Loop_02_Burst",//1阶蓄力完成提示，同时也是2阶的开始
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Loop_02",
+            },
+          ]
+        },
+        "Aiming_Arrow_Glow_Loop_Focus_1":{//2阶蓄力的聚气提示,仅在非E状态下提示非6命玩家。
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Once_01", //2阶蓄力的聚气提示。后续改名为focus吧。
+            },
+          ],
+        },
+        "Aiming_Arrow_Glow_Loop_Focus_2": { //2阶蓄力的聚气提示,仅在非E状态下提示6命玩家。
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Once_02", //2阶蓄力的聚气提示。后续改名为focus吧。
+            },
+          ],
+        },
+        "Aiming_Arrow_Glow_Loop_Focus_3": { //2阶蓄力的聚气提示,仅在E状态下提示非6命玩家。   对于E+6命，无需提示。
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Once_03", //2阶蓄力的聚气提示。后续改名为focus吧。
+            },
+          ],
+        },
+        "Aiming_Arrow_Glow_Loop_03":{//2阶蓄力完成特效
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Loop_Fission_Burst",//2阶蓄力（完成时）爆发特效
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Glow_Loop_Fission",
+            },
+          ]
+        },
+      },
+      "abilitySpecials": {
+        "Talent6":0,
+        "Skill":8,
+      }
+    },
+  },
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ShootArrow_Aiming  根据不同蓄力时间发射无属性、草属性、二段蓄力箭
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_Aiming",
+      "onAbilityStart": [     
+        //建议重新算一下重新理一下逻辑：
+        //1判定是否E（因为影响表现），是再判定是否命6，影响0~4之前。非命6，只影响5~9.
+        //2非E的时候，判定命6，是，则影响5~9，否，无效果。
+
+        //在蓄力过程中E失效的话，主要在1上，让强制提升即可。
+        //蓄力过程命6生效或失效，生效是可以每0.1秒检测的，保证能回到正确分支即可。失效则不可能，可以不处理。
+
+        //实际会射出什么箭
+        {
+          "$type": "Predicated",
+          "targetPredicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 0,
+              "compareType": "NoneOrEqual",
+            },
+          ],
+          "successActions": [
+            {
+              "$type": "FireEffect", //普通箭
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Onshooting_Unsuccessful",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponR",
+                "offset": {
+                  "x": 0.0, // + means up, - means down
+                  "y": 0.0, // + means left, - means right
+                  "z": 0.9, // + means forward, - means backward
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 3, //非buff下时，普通箭不会被talent6影响。//buff下也是直接拔高数值，这里可以写死。
+                  "compareType": "LessAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "TriggerBullet", //普通箭
+              "bulletID": 41069011,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponL",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "FocusAnchor",
+                  "attachPointTargetType": "Self",
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 3, 
+                  "compareType": "LessAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "FireEffect", //1、2阶箭特效
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Onshooting",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponR",
+                "offset": {
+                  "x": 0.0, // + means up, - means down
+                  "y": 0.0, // + means left, - means right
+                  "z": 0.9, // + means forward, - means backward
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 4, //命6不影响这个判定。
+                  "compareType": "MoreThanAndEqual", //
+                },
+              ]
+            },
+            {
+              "$type": "TriggerBullet", //1阶箭
+              "bulletID": 41069012,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponL",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "FocusAnchor",
+                  "attachPointTargetType": "Self",
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 4,
+                  "compareType": "MoreThanAndEqual",
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "8-%Talent6",
+                  "compareType": "LessAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "TriggerBullet", //2阶箭
+              "bulletID": 41069013,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponL",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "FocusAnchor",
+                  "attachPointTargetType": "Self",
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Talent6", //命6只减少2阶蓄力时间
+                  "compareType": "MoreThanAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "TriggerAbility", //触发突破1
+              "abilityName": "Avatar_Tighnari_PermanentSkill_1",
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Talent6", //
+                  "compareType": "MoreThanAndEqual",
+                },
+              ],
+            },
+            {
+              "$type": "ActCameraShake",
+              "cameraShake": {
+                "shakeType": "Center",
+                "shakeRange": 0.2,
+                "shakeTime": 0.12,
+                "shakeDistance": 30,
+                "extension": {
+                  "baseOnCamera": true,
+                },
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": 4, //仅命6无法影响到震屏。
+                  "compareType": "MoreThanAndEqual", //
+                },
+              ]
+            },
+          ],
+          "failActions": [//如果存在小技能
+            {
+              "$type": "FireEffect", //普通箭
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Onshooting_Unsuccessful",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponR",
+                "offset": {
+                  "x": 0.0, // + means up, - means down
+                  "y": 0.0, // + means left, - means right
+                  "z": 0.9, // + means forward, - means backward
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "8-%Skill-%Talent6", //非buff下时，普通箭不会被talent6影响。buff才会做减法
+                  "compareType": "LessAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "TriggerBullet", //普通箭
+              "bulletID": 41069011,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponL",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "FocusAnchor",
+                  "attachPointTargetType": "Self",
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "8-%Skill-%Talent6", //当在buff下时，射不出1阶蓄力，而且普通的也只有0、1的时候能射出。
+                  "compareType": "LessAndEqual",
+                },
+              ]
+            },
+            {
+              "$type": "FireEffect",//二阶箭
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Onshooting",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponR",
+                "offset": {
+                  "x": 0.0, // + means up, - means down
+                  "y": 0.0, // + means left, - means right
+                  "z": 0.9, // + means forward, - means backward
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Skill-%Talent6", //命6会影响这个判定。
+                  "compareType": "MoreThanAndEqual", //
+                },
+              ]
+            },
+            {
+              "$type": "TriggerBullet",//二阶箭
+              "bulletID": 41069013,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "WeaponL",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "FocusAnchor",
+                  "attachPointTargetType": "Self",
+                }
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Skill-%Talent6",  
+                  "compareType": "MoreThanAndEqual",
+                },
+              ],
+            },
+            {
+              "$type": "ActCameraShake",
+              "cameraShake": {
+                "shakeType": "Center",
+                "shakeRange": 0.2,
+                "shakeTime": 0.12,
+                "shakeDistance": 30,
+                "extension": {
+                  "baseOnCamera": true,
+                },
+              },
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Skill-%Talent6", //在命6和buff处理下，会修改value，在4之前也会震屏。
+                  "compareType": "MoreThanAndEqual", //
+                },
+              ]
+            },
+            {
+              "$type": "AddGlobalValue", //每次射出超级蓄力后-1次数。//后续要调整成1段蓄力就是超级蓄。
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": -1,
+              "useLimitRange": true,
+              "maxValue": 3,
+              "minValue": 0,
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Skill-%Talent6",
+                  "compareType": "MoreThanAndEqual",
+                },
+              ],
+            },
+            {
+              "$type": "TriggerAbility", //触发突破1
+              "abilityName": "Avatar_Tighnari_PermanentSkill_1",
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_Enchanted_Time",
+                  "value": "9-%Skill-%Talent6",
+                  "compareType": "MoreThanAndEqual",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      "abilitySpecials": {
+        "Talent6": 0,//命6可以减少多少蓄力
+        "Skill":8,//小技能可以减少多少蓄力 
+      },  
+    },
+  },
+  
+  ////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ShootArrow 普攻的ability
+  //
+  ////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_01",
+      "onAbilityStart": [
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069001,
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByAttachPoint",
+              "attachPointName": "FocusAnchor",
+              "attachPointTargetType": "Self",
+            },
+          },
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ShootSpark_Small",
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+          },
+        },
+      ],
+    },
+  },//Avatar_Tighnari_ShootArrow_01
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_02",
+      "onAbilityStart": [
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069002,
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByAttachPoint",
+              "attachPointName": "FocusAnchor",
+              "attachPointTargetType": "Self",
+            },
+          },
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ShootSpark_Small",
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+          },
+        },
+      ],
+    },
+  },//Avatar_Tighnari_ShootArrow_02 //注意此击太晚会和手错开很奇怪。只能提早发射
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_03",
+      "onAbilityStart": [
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069003,
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByAttachPoint",
+              "attachPointName": "FocusAnchor",
+              "attachPointTargetType": "Self",
+            },
+          },
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ShootSpark_Small",
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+          },
+        },
+      ],
+    },
+  },//Avatar_Tighnari_ShootArrow_03
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_03_01",
+      "onAbilityStart": [
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069003,
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByAttachPoint",
+              "attachPointName": "FocusAnchor",
+              "attachPointTargetType": "Self",
+            },
+          },
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ShootSpark_Small",
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+          },
+        },
+      ],
+    },
+  },//Avatar_Tighnari_ShootArrow_03_01
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ShootArrow_04",
+      "onAbilityStart": [
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069004,
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByAttachPoint",
+              "attachPointName": "FocusAnchor",
+              "attachPointTargetType": "Self",
+            },
+          },
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ShootSpark_Big",
+          "born": {
+            "$type": "ConfigBornByAttachPoint",
+            "attachPointName": "WeaponL",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+          },
+        },
+      ],
+    },
+  },//Avatar_Tighnari_ShootArrow_04
+
+  ////////////普攻中的轻型箭和重型箭///////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Bullet_Tighnari_Arrow_Material_Small",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+      ],
+      "modifiers": {
+        "Bullet_FX":
+        {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_Arrow_Fly_Small",
+            },
+          ]
+        },
+      },
+      "onAbilityStart": 
+      [
+        {
+          "$type": "FireHitEffect",
+          "hitScene": {
+            "defaultEffect": "Eff_Arrow_Hit_Earth",
+            "surfaceEffect": {
+              "Water": "Eff_Arrow_Hit_Water",
+            }
+          },
+        },
+      ],
+    },
+  }, //Bullet_Tighnari_Arrow_Material_Small
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Bullet_Tighnari_Arrow_Material_Big",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+      ],
+      "modifiers": {
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_Arrow_Fly_Big",
+            },
+          ]
+        },
+      },
+      "onAbilityStart": 
+      [
+        {
+          "$type": "FireHitEffect",
+          "hitScene": {
+            "defaultEffect": "Eff_Arrow_Hit_Earth",
+            "surfaceEffect": {
+              "Water": "Eff_Arrow_Hit_Water",
+            }
+          },
+        },
+      ],
+    },
+  }, //Bullet_Tighnari_Arrow_Material_Big
+  /////////////蓄力未完成箭和完成箭////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Bullet_Tighnari_Arrow_NoGrass_Material",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+      ],
+      "modifiers": {
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_Arrow_Fly_Big",
+            },
+          ]
+        },
+      },
+      "onAbilityStart": [
+        {
+          "$type": "FireHitEffect",
+          "hitScene": {
+            "defaultEffect": "Eff_Arrow_Hit_Earth",
+            "surfaceEffect": {
+              "Water": "Eff_Arrow_Hit_Water"
+            }
+          },
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackBox",
+              "triggerType": "TriggerNoRepeat",
+              "size": {
+                "x": 0.1,
+                "y": 0.1,
+                "z": 1.0,
+              },
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": -0.5,
+                }
+              },
+              "checkHitLayerType": "Both",
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack",
+              "attackProperty": {
+                "damagePercentage": "%NoGrassDamage",
+                "strikeType": "Pierce",
+                "enBreak": 10,
+                "enHeadBreak": 30,
+              },
+              "hitPattern": {
+                "onHitEffectName": "default",
+                "hitImpulseType": "LV2", //Light x200 y0
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "canHitHead": true,
+              "hitHeadPattern": {
+                "onHitEffectName": "Eff_Arrow_Hit_Head",
+                "hitImpulseType": "LV5", //Air 480 y600
+                "hitHaltTime": 0.12,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "bulletWane": {
+                "waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+                "damageWaneInterval": 0.05, // 伤害衰减周期，每过这么久，进行一次伤害衰减
+                "damageWaneRatio": 0.1, // 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+                "hitLevelWaneInterval": 0.1, // 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+                "hitLevelWaneMin": "Mute", // 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+                "damageWaneMinRatio": 0.1,
+                "elementDurabilityWaneInterval": 0.05,
+                "elementDurabilityWaneRatio": 0.1,
+                "elementDurabilityWaneMinRatio": 0.1,
+              },
+            }
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "NoGrassDamage": 0,
+      },
+    },
+  }, //Bullet_Tighnari_Arrow_NoGrass_Material
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Bullet_Tighnari_Arrow_WithGrass_Material",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "FireEffectModifier",
+        },
+      ],
+      "onAbilityStart": [
+        //先处理碰场景特效
+        {
+          "$type": "FireHitEffect",
+          "hitScene": {
+            "defaultEffect": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Hit",
+            "surfaceEffect": {
+              "Water": "Eff_Arrow_Hit_Water" 
+            },
+          },
+        },
+        //然后计算攻击盒，有草没草效果不同。
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackBox",
+              "triggerType": "TriggerNoRepeat",
+              "size": {
+                "x": 0.1,
+                "y": 0.1,
+                "z": 1.0,
+              },
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": -0.5,
+                }
+              },
+              "checkHitLayerType": "Both",
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack",
+              "attackProperty": {
+                "damagePercentage": "%WithGrassDamage",
+                "strikeType": "Pierce",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 20,
+                "enHeadBreak": 60,
+              },
+              "hitPattern": {
+                "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Hit",
+                "hitImpulseType": "LV2", //Light x200 y0
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "canHitHead": true,
+              "hitHeadPattern": {
+                "onHitEffectName": "Eff_Arrow_Hit_Head_Grass",//"Eff_Arrow_Hit_Head_Grass",//好像没这特效需要确认下有没有
+                "hitImpulseType": "LV5", //Air 480 y600
+                "hitHaltTime": 0.12,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "bulletWane": {
+                "waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+                "damageWaneInterval": 0.05, // 伤害衰减周期，每过这么久，进行一次伤害衰减
+                "damageWaneRatio": 0.1, // 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+                "hitLevelWaneInterval": 0.1, // 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+                "hitLevelWaneMin": "Mute", // 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+                "damageWaneMinRatio": 0.1,
+                "elementDurabilityWaneInterval": 0.05,
+                "elementDurabilityWaneRatio": 0.1,
+                "elementDurabilityWaneMinRatio": 0.1,
+              },
+            }
+          },
+        },
+      ],
+      "modifiers": {
+        "FireEffectModifier": {
+          // "elementType": "Grass",//除了火箭，其实其他箭没有真正有元素。不然半路消耗了会很尴尬。
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Grass",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Grass_Particle",
+            },
+          ]
+        },
+      },
+      "abilitySpecials": {
+        "WithGrassDamage": 0,
+      },
+    },
+  }, //Bullet_Tighnari_Arrow_WithGrass_Material
+
+  ///////////二段蓄力飞行箭慢慢飞行的草团/////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Tighnari_AimingArrow_BeforeFission_Material",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "FireEffectModifier",
+        },
+      ],
+      "onAbilityStart": [
+        {
+          "$type": "FireHitEffect",
+          "hitScene": {
+            "defaultEffect": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_BeforeFission_Hit",
+            "surfaceEffect": {
+              "Water": "Eff_Arrow_Hit_Water" //注意：草命中水不用特殊特效
+            },
+          },
+        },
+        //单个细小的攻击盒处理是否爆头
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackBox",
+              "triggerType": "TriggerNoRepeat",
+              "size": {
+                "x": 0.1,
+                "y": 0.1,
+                "z": 1.0,
+              },
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": -0.5,
+                }
+              },
+              "checkHitLayerType": "Both",
+              "filterByFrame": true,//同帧同名只能命中1个，便于和后面这个区分。
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack", //无衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage",
+                "strikeType": "Pierce",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 30,
+                "enHeadBreak": 60,
+              },
+              "hitPattern": {
+                "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_BeforeFission_Hit",
+                "hitImpulseType": "LV2", //Light x200 y0
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "canHitHead": true,
+              "hitHeadPattern": {
+                "onHitEffectName": "Eff_Arrow_Hit_Head_Grass", 
+                "hitImpulseType": "LV5", //Air 480 y600
+                "hitHaltTime": 0.12,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "bulletWane": {
+                "waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+                "damageWaneInterval": 0.05, // 伤害衰减周期，每过这么久，进行一次伤害衰减
+                "damageWaneRatio": 0.1, // 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+                "hitLevelWaneInterval": 0.1, // 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+                "hitLevelWaneMin": "Mute", // 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+                "damageWaneMinRatio": 0.1,
+                "elementDurabilityWaneInterval": 0.05,
+                "elementDurabilityWaneRatio": 0.1,
+                "elementDurabilityWaneMinRatio": 0.1,
+              },
+            },
+          },
+        },
+        //AOE攻击盒确定范围伤害是否打击到
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",         
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+              "checkHitLayerType": "Both",
+              "filterByFrame": true, //同帧同名只能命中1个，保证和前面的只会命中一个。正好无衰减，不会和前面冲突。
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack", //无衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage",
+                "strikeType": "Pierce",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 30,
+                "enHeadBreak": 60,
+              },
+              "hitPattern": {
+                "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_BeforeFission_Hit",
+                "hitImpulseType": "LV2", //Light x200 y0
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              "bulletWane": {
+                "waneDelay": 0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+                "damageWaneInterval": 0.05, // 伤害衰减周期，每过这么久，进行一次伤害衰减
+                "damageWaneRatio": 0.1, // 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+                "hitLevelWaneInterval": 0.1, // 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+                "hitLevelWaneMin": "Mute", // 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+                "damageWaneMinRatio": 0.1,
+                "elementDurabilityWaneInterval": 0.05,
+                "elementDurabilityWaneRatio": 0.1,
+                "elementDurabilityWaneMinRatio": 0.1,
+              },
+            }
+          },
+        },
+        {//索敌并发射子弹
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H10", //类型必须是Center不然无法向下索敌。半径7.5有点小了战斗中容易歪，beta后增加到10.
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+            "sizeRatio": 1,
+          },
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069014,
+          "propOwnerIs": "OriginOwner", //这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//可能击空就不会有碰撞点，导致无法生成。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",
+              "angleOffset": {
+                "x": -75, //还是度数，得填90
+                "y": -24,
+                "z": -24,
+              },
+            }
+          },
+        },
+        //再索敌，再发子弹
+        {
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H10", //类型必须是Center不然无法向下索敌。
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+            "sizeRatio": 1,
+          },
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069014,
+          "propOwnerIs": "OriginOwner", //这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//可能击空就不会有碰撞点，导致无法生成。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",//需要朝上，不知道法线如何，所以选固定朝上
+              "angleOffset": {
+                "x": -75, //为了视觉效果没有选择90.
+                "y": -8,
+                "z": -8,
+              },
+            }
+          },
+        },
+        //再索敌，再发子弹
+        {
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H10", //类型必须是Center不然无法向下索敌。
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+            "sizeRatio": 1,
+          },
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069014,
+          "propOwnerIs": "OriginOwner", //这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//可能击空就不会有碰撞点，导致无法生成。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",
+              "angleOffset": {
+                "x": -75, //
+                "y": 8,
+                "z": 8,
+              },
+            }
+          },
+        },
+        //再索敌，再发子弹
+        {
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H10", //类型必须是Center不然无法向下索敌。
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            // "sortType": "Random",
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+            "sizeRatio": 1,
+          },
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069014,
+          "propOwnerIs": "OriginOwner", //这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//可能击空就不会有碰撞点，导致无法生成。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",
+              "angleOffset": {
+                "x": -75, 
+                "y": 24,
+                "z": 24,
+              },
+            }
+          },
+        },
+        //再索敌，再发子弹  (命6时)
+        {
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H10", //类型必须是Center不然无法向下索敌。
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            // "sortType": "Random",
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+            "sizeRatio": 1,
+          },
+          "predicates": [
+            {
+              "$type":"ByUnlockTalentParam",
+              "talentParam": "Tighnari_Constellation_6_Param",
+            },
+          ]
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069015,
+          "propOwnerIs": "OriginOwner", //这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//可能击空就不会有碰撞点，导致无法生成。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",
+              "angleOffset": {
+                "x": -75, 
+                "y": 0,
+                "z": 0,
+              },
+            }
+          },
+          "predicates": [
+            {
+              "$type": "ByUnlockTalentParam",
+              "talentParam": "Tighnari_Constellation_6_Param",
+            },
+          ]
+        },
+      ],
+      "modifiers": {
+        "FireEffectModifier": {
+          // "elementType": "Grass",//除了火箭，其实其他箭没有真正有元素。不然半路消耗了会很尴尬。
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_BeforeFission",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_BeforeFission_Particle",
+            },
+          ]
+        },
+      },
+      "abilitySpecials": {
+        "Damage": 0,
+      },
+    },
+  },//Tighnari_AimingArrow_BeforeFission_Material
+  ////////////草团爆炸后炸开的跟踪箭配置//////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Tighnari_AimingArrow_Fission_Material",//目前2段分裂箭并不能继承主箭的阿莫斯计时。但分裂箭实际命中敌人时一般会有4~5层的阿莫斯效果。暂不变动。
+      "onAdded": [
+        {
+          "$type": "SetRandomOverrideMapValue",
+          "overrideMapKey": "RandomTimeRatio",
+          "valueRangeMin": 0.2,//原0.18
+          "valueRangeMax": 0.3,//原0.25
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Timer",
+        },
+      ],
+      "onAbilityStart": [
+        //先处理销毁特效
+        {
+          "$type": "FireEffect", 
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit",//因为可能无法命中scene，所以不用能hitscene
+          // "born": {
+          //   "$type": "ConfigBornByCollisionPoint",//容易让子弹在空中消失，特效还是需要和子弹一起。
+          // },
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",//collision才能保证准确打到怪，不然会误差无法命中怪。
+                // "$type": "ConfigBornBySelf",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack",
+              "attenuationTag": "ExtraAttack", 
+              "attenuationGroup": "Tighnari",//特殊衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage",
+                "strikeType": "Pierce",
+                "attackType": "Range",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 20,
+              },
+              "hitPattern": {
+                "onHitEffectName": "",
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitImpulseType": "LV3",
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              // "canHitHead": false, //瞄准蓄力之外的箭不应爆头
+            },
+          },
+        },
+      ],
+      "modifiers": {
+        "Timer": {
+          "duration": "%RandomTimeRatio",
+          "onRemoved": [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "AngularVelocityUp",
+            },
+            {//在转向时重新锁一遍敌人： //测试过用0.1秒的thinkInterval去处理，发现无法击杀怪后搜到别的怪。估计至少得延迟0.2秒。
+              "$type": "SetBulletTrackTarget",
+              "notDoIfTrackTargetAlive":true,
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR10H20", 
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "sortType": "Nearest",
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+              },
+            },
+          ],
+        },
+        "AngularVelocityUp": {
+          "properties": {
+            "Actor_BulletMoveAngularVelocityRatio": "%VelocityRatio",
+          },
+        },
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Particle",
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "RandomTimeRatio": 0.2,
+        "Damage": 0,
+        "VelocityRatio": 49,//29时会转不过来
+      },
+    },
+  },//Tighnari_AimingArrow_Fission_Material
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Tighnari_AimingArrow_Fission_LifeOver", //目前2段分裂箭并不能继承主箭的阿莫斯计时。但分裂箭实际命中敌人时一般会有4~5层的阿莫斯效果。暂不变动。
+      "onAbilityStart": [
+        //先处理销毁特效
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit", //因为可能无法命中scene，所以不用能hitscene
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                "$type": "ConfigBornBySelf",//这样的话打空可以触发攻击盒。
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack",
+              "attenuationTag": "ExtraAttack",
+              "attenuationGroup": "Tighnari", //特殊衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage",
+                "strikeType": "Pierce",
+                "attackType": "Range",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 20,
+              },
+              "hitPattern": {
+                "onHitEffectName": "",
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitImpulseType": "LV3",
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              // "canHitHead": false, //瞄准蓄力之外的箭不应爆头
+            },
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "Damage": 0,
+      },
+    },
+  }, //Tighnari_AimingArrow_LifeOver_Material
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Tighnari_AimingArrow_Fission_Material_Talent",
+      "onAdded": [
+        {
+          "$type": "SetRandomOverrideMapValue",
+          "overrideMapKey": "RandomTimeRatio",
+          "valueRangeMin": 0.2, //原0.18
+          "valueRangeMax": 0.3, //原0.25
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Timer",
+        },
+      ],
+      "onAbilityStart": [
+        //先处理销毁特效
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit", //因为可能无法命中scene，所以不用能hitscene
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                "$type": "ConfigBornByCollisionPoint",//collision才能保证准确打到怪，不然会误差无法命中怪。
+                // "$type": "ConfigBornBySelf",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack", //不带衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage_Talent",
+                "strikeType": "Pierce",
+                "attackType": "Range",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 20,
+              },
+              "hitPattern": {
+                // "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit",
+                "onHitEffectName": "",
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitImpulseType": "LV3",
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              // "canHitHead": false, //不特意配成不能爆头，这样可以打遗迹、龙兽
+            },
+          },
+        },
+      ],
+      "modifiers": {
+        "Timer": {
+          "duration": "%RandomTimeRatio",
+          "onRemoved": [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "AngularVelocityUp",
+            },
+            { //在转向时重新锁一遍敌人：
+              "$type": "SetBulletTrackTarget",
+              "notDoIfTrackTargetAlive": true,
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR10H20", 
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "sortType": "Nearest",
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+              },
+            },
+          ],
+        },
+        "AngularVelocityUp": {
+          "properties": {
+            "Actor_BulletMoveAngularVelocityRatio": "%VelocityRatio",
+          },
+        },
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Particle",
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "RandomTimeRatio": 0.2,
+        "Damage_Talent": 0,
+        "VelocityRatio": 49, //29时会转不过来
+      },
+    },
+  }, //Tighnari_AimingArrow_Fission_Material_Talent
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Tighnari_AimingArrow_Fission_LifeOver_Talent",
+      "onAbilityStart": [
+        //先处理销毁特效
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit", //因为可能无法命中scene，所以不用能hitscene
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                "$type": "ConfigBornBySelf", //这样的话打空可以触发攻击盒。
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "ExtraAttack", //不带衰减
+              "attackProperty": {
+                "damagePercentage": "%Damage_Talent",
+                "strikeType": "Pierce",
+                "attackType": "Range",
+                "elementType": "Grass",
+                "elementDurability": 25,
+                "enBreak": 20,
+              },
+              "hitPattern": {
+                // "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ExtraAttack_Fission_Hit",
+                "onHitEffectName": "",
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitImpulseType": "LV3",
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.01,
+                "muteHitText": false,
+              },
+              // "canHitHead": false, //不特意配成不能爆头，这样可以打遗迹、龙兽
+            },
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "Damage_Talent": 0,
+      },
+    },
+  }, 
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ElementalArt 
+  //  小技能丢球动作+GV计数
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalArt",
+      "onAdded": [
+        {
+          "$type":"AttachModifier",
+          "modifierName": "Tighnari_Ayato_ElementalArt_DropBall",
+        },
+      ],
+      "abilityMixins": [
+        {
+          "$type":"AttachToNormalizedTimeMixin",
+          "stateID": "ElementalArt",
+          "normalizeEnd": 0.66,
+          "modifierName": "BallOnHand_Modifer", //控制手上球，同时也控制子弹销毁、武器隐藏。
+        },
+        {
+          "$type": "AttachModifierToSelfGlobalValueMixin",//review:这个可能要看一下，mixin是否挂buff上。
+          "globalValueKey": "_ABILITY_Tighnari_QuickAimShoot_Time", //默认会置0
+          "valueSteps": [
+            -0.5,
+            0.5,
+            1.5,
+            2.5,
+            3.5,
+          ],
+          "removeAppliedModifier": true,
+          "modifierNameSteps": [
+            "UNIQUE_Tighnari_QuickAimShoot_Buff0",
+            "UNIQUE_Tighnari_QuickAimShoot_Buff1",
+            "UNIQUE_Tighnari_QuickAimShoot_Buff2",
+            "UNIQUE_Tighnari_QuickAimShoot_Buff3",
+          ],
+        },
+      ],
+      "onAbilityStart": [
+        {
+          "$type": "AvatarSkillStart",
+          "skillID": 10692,
+        },
+        {
+          "$type":"FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Cast",
+        },
+        {
+          "$type": "SetGlobalValue",//次数恢复到3次
+          "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+          "value": 3,
+        },
+        {
+          "$type": "TriggerBullet",//扔出球
+          "bulletID": 41069020,
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": -0.6,
+              "y": 1.4,
+              "z": 0.3,
+            },
+          },
+        },
+        {
+          "$type": "TriggerBullet",//生成跟随buff标记
+          "bulletID": 41069023,
+          "lifeByOwnerIsAlive": true,
+        },
+        {
+          "$type":"TriggerAbility",//让gadget自己去销毁，才能延迟销毁。
+          "otherTargets":{
+            "$type": "SelectTargetsByChildren",
+            "configID": 41069021,
+            "sortType": "Default",
+          },
+          "abilityName": "SkillObj_Tighnari_ElementalArt_CenterGadget_Material",
+        },
+        {
+          "$type":"AttachModifier",//上快速射击buff标记
+          "modifierName": "UNIQUE_Tighnari_ElementalArt_FastCharge",
+        },
+      ],
+      "modifiers": {
+        "BallOnHand_Modifer":{
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_BallOnHand",//手上的球
+            },
+            {
+              "$type": "KillGadget",//干掉身上计数gadget
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+                "sortType": "Default",
+              },
+            },
+          ],
+        },
+        "UNIQUE_Tighnari_ElementalArt_FastCharge":{
+          "isUnique": true,
+          "duration": "%Time",
+          "timeScale": "Level",
+          "modifierMixins": [
+            {
+              "$type": "AttachToStateIDMixin",//跑动时萤火虫会活动范围更大一些，在这部分期间切换萤火虫的动画。
+              "stateIDs": [
+                "SprintBS",
+                "Sprint","Jump","NormalMove","Fly"
+              ],
+              "modifierName": "Tighnari_ArtBuff_Animator_Change",
+            },
+          ],
+          "onReconnect": //传送重连后gadget会消失，重新创建。
+          [
+            {
+              "$type": "TriggerBullet", //生成跟随buff标记
+              "bulletID": 41069023,
+              "lifeByOwnerIsAlive": true,
+              "doOffStage": true,
+              "predicates": [
+                {
+                  "$type": "ByHasChildGadget",
+                  "configIdArray": [
+                    41069023
+                  ],
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                }
+              ],
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type":"KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+                "sortType": "Default",
+              },
+              "doOffStage": true,
+            },
+          ],
+          "onAvatarOut": [//换人不移除效果 此处只处理表现，尽量让角色身上GV不会受影响。
+            {
+              "$type": "SetGlobalValue",//清除表现
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 0,
+              "doOffStage": true,
+            },
+          ],
+          "onAvatarIn": [
+            {
+              "$type":"SetGlobalValueToOverrideMap",
+              "overrideMapKey": "Saved_Time",
+              "globalValueKey": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",//用角色的GV去给gadget重新赋一遍，恢复表现。
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": "%Saved_Time",
+              "doOffStage": true,
+            },
+          ]
+        },
+        "Tighnari_ArtBuff_Animator_Change":{
+          "stacking": "Unique",
+          "onAdded": [
+            {
+              "$type":"SetAnimatorTrigger",//由于目标是gadget无法使用SendEffect系列，只能自己给自己set。
+              "triggerID": "Move",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorTrigger", //由于目标是gadget无法使用SendEffect系列，只能自己给自己set。
+              "triggerID": "Stay",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+            },
+          ]
+        },
+        "UNIQUE_Tighnari_QuickAimShoot_Buff0": { //review：可以考虑优化一下。
+          "isUnique": true,
+          "duration": 0.5,
+          "onAdded": [
+            {
+              "$type": "SetGlobalValue",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 0,
+              "doOffStage": true,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget", //干掉身上计数gadget
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+                "sortType": "Default",
+              },
+            },
+          ]
+        },
+        "UNIQUE_Tighnari_QuickAimShoot_Buff1":{
+          "isUnique": true,
+          "onAdded": [
+            {
+              "$type": "SetGlobalValue",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 1,
+              "doOffStage": true,
+            },
+          ],
+        },
+        "UNIQUE_Tighnari_QuickAimShoot_Buff2": {
+          "isUnique": true,
+          "onAdded": [
+            {
+              "$type": "SetGlobalValue",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 2,
+              "doOffStage": true,
+            },
+          ],
+        },
+        "UNIQUE_Tighnari_QuickAimShoot_Buff3": {
+          "isUnique": true,
+          "onAdded": [
+            {
+              "$type": "SetGlobalValue",
+              "otherTargets": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069023,
+              },
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 3,
+              "doOffStage": true,
+            },
+          ],
+        },
+        "Tighnari_Ayato_ElementalArt_DropBall": {
+          "onAttackLanded": [
+            {
+              "$type": "Predicated",
+              "target": "Target",
+              "doOffStage": true,//要防止丢出去后换人不掉球。
+              "targetPredicates": [
+                {
+                  "$type": "ByAttackTags",
+                  "attackTags": [
+                    "Elemental_Art",
+                  ],
+                },
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+              ],
+              "successActions": [
+                {
+                  "$type": "ApplyModifier",
+                  "doOffStage": true,
+                  "modifierName": "Ball",
+                  "target": "Self",
+                },
+              ],
+            },
+          ]
+        },
+        "Ball": { //3球，50%概率4球
+          "stacking": "Unique",
+          "duration": 0.3,//避免命中多个重复掉，但也避免祭礼弓无法重复掉球
+          "onAdded": [
+            {
+              "$type": "GenerateElemBall",
+              "doOffStage": true,
+              "configID": 2019,
+              "baseEnergy": 9,
+              "ratio": 1,
+              "born": {
+                "$type": "ConfigBornBySelf",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 1.0,
+                },
+              },
+            },
+            {
+              "$type": "Randomed",
+              "doOffStage": true,
+              "chance": 0.5,
+              "successActions": [
+                {
+                  "$type": "GenerateElemBall",
+                  "doOffStage": true,
+                  "configID": 2019,
+                  "baseEnergy": 3,
+                  "ratio": 1,
+                  "born": {
+                    "$type": "ConfigBornBySelf",
+                    "offset": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 1.0,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "Time":0,
+        "Saved_Time":0,
+      }
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Skillobj_Tighnari_ExtraAttack_Count
+  //  角色身边gadget的标记效果
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Skillobj_Tighnari_ExtraAttack_CountBuff", //宵宫是本体控制gv播放特效的。但是提纳里挂特效的时候，gadget估计未生成。建议Gadget控制特效。
+      "abilityMixins": [
+        {
+          "$type": "AttachModifierToSelfGlobalValueMixin",
+          "globalValueKey": "_ABILITY_Tighnari_QuickAimShoot_Time", 
+          "defaultGlobalValueOnCreate": 0,//为了重连可能不会做成3，而是初始化的时候读一次玩家GV
+          "valueSteps": [
+            -0.5,
+            0.5,
+            1.5,
+            2.5,
+            10
+          ], 
+          "modifierNameSteps": [
+            "Tighnari_Gadget_Kill",
+            "Blank",
+            "Blank",
+            "Blank",
+          ], //分别叠加1层，2层和3层特效,0的时候没有特效，并移除gadget
+          "actionQueues": [
+            [
+              {
+                "$type": "RemoveModifier", //保证清空，主要用于换人
+                "modifierName": "Tighnari_Gadget_FX1",
+              },
+              {
+                "$type": "RemoveModifier",
+                "modifierName": "Tighnari_Gadget_FX2",
+              },
+              {
+                "$type": "RemoveModifier",
+                "modifierName": "Tighnari_Gadget_FX3",
+              },
+            ],
+            [
+              {
+                "$type": "AttachModifier",//写满，因为需要从后台回来后恢复标记
+                "modifierName": "Tighnari_Gadget_FX1",
+              },
+              {
+                "$type": "RemoveModifier",
+                "modifierName": "Tighnari_Gadget_FX2",
+              },
+              {
+                "$type": "RemoveModifier",
+                "modifierName": "Tighnari_Gadget_FX3",
+              },
+            ],
+            [
+              {
+                "$type": "AttachModifier",
+                "modifierName": "Tighnari_Gadget_FX1",
+              },
+              {
+                "$type": "AttachModifier",
+                "modifierName": "Tighnari_Gadget_FX2",
+              },
+              {
+                "$type": "RemoveModifier",
+                "modifierName": "Tighnari_Gadget_FX3",
+              },
+            ],
+            [
+              {
+                "$type": "AttachModifier",
+                "modifierName": "Tighnari_Gadget_FX1",
+              },
+              {
+                "$type": "AttachModifier",
+                "modifierName": "Tighnari_Gadget_FX2",
+              },
+              {
+                "$type": "AttachModifier",
+                "modifierName": "Tighnari_Gadget_FX3",
+              },
+            ],
+          ],
+        },
+      ],
+      "onAdded": [
+        {
+          "$type": "AddGlobalValueToTarget", //用角色的GV去给gadget重新赋一遍，恢复表现。(不写死3是为了兼容重连）由于gadget初始化是0，所以用add可以，不用特意写成set。
+          "srcTarget": "OriginOwner",
+          "srcKey": "_ABILITY_Tighnari_QuickAimShoot_Time",
+          "dstTarget": "Self",
+          "dstKey": "_ABILITY_Tighnari_QuickAimShoot_Time",
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Timer",//gadget存在时间
+        },
+      ],
+      "modifiers": {
+        "Blank": {},
+        "Timer": {
+          "duration": "%Time",
+          "onRemoved": [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_ABILITY_Tighnari_QuickAimShoot_Time",
+              "value": 0,
+              "doOffStage": true,
+            },
+          ]
+        },
+        "Tighnari_Gadget_Kill": { //感觉kill的时候并不会跑modifier的onRemove，只能自己再写一遍。
+          // "duration": 0.5, //因为要隐藏，不能干掉了
+          // "onAdded": [
+          //   {
+          //     "$type": "RemoveModifier",
+          //     "modifierName": "Tighnari_Gadget_FX1",
+          //     "doOffStage": true,
+          //   },
+          //   {
+          //     "$type": "RemoveModifier",
+          //     "modifierName": "Tighnari_Gadget_FX2",
+          //     "doOffStage": true,
+          //   },
+          //   {
+          //     "$type": "RemoveModifier",
+          //     "modifierName": "Tighnari_Gadget_FX3",
+          //     "doOffStage": true,
+          //   },
+          // ],
+          // "onRemoved": [
+          //   {
+          //     "$type": "KillSelf",
+          //     "doOffStage": true,
+          //   },
+          // ]
+        },
+        "Tighnari_Gadget_FX1": {//让保证连贯，所以modifier和特效是连续的。
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff1",
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff_Disappear",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointTargetType": "Target",
+                "attachPointName": "Point1",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+        },
+        "Tighnari_Gadget_FX2": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff2",
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff_Disappear",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointTargetType": "Target",
+                "attachPointName": "Point2",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+        },
+        "Tighnari_Gadget_FX3": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff3",
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Buff_Disappear",
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointTargetType": "Target",
+                "attachPointName": "Point3",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "Time": 0,
+      }
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  SkillObj_Tighnari_ElementalArt_Ball_Material
+  //  小技能丢出去的球
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "SkillObj_Tighnari_ElementalArt_Ball_Material",
+      "onAdded": [        
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+      ],
+      "modifiers": {
+        "Bullet_FX":{
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Ball",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_BallTrail",
+            },
+          ]
+        },
+      },
+      "onAbilityStart": [
+        {
+          "$type": "CreateGadget",//试试不用gv传递效果。
+          "target": "OriginOwner",
+          "gadgetID": 41069021,
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "ownerIs": "OriginOwner",//这样可以继承角色
+          "propOwnerIs": "OriginOwner", //这样可以继承角色
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "onGround": true,
+            "onGroundIgnoreWater": false,
+            "onGroundRaycastUpDist": 2,//须弥有房子，容易丢到2层去，经过测试原本参数就ok，不做特殊调整。
+            "direction":{
+              "$type": "ConfigDirectionByEntity", //会选择action的target对应entity的方向             
+            },
+          },
+        },
+        {//造成伤害
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackCircle",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 6,
+              "height": 3,
+              "born": {
+                "$type": "ConfigBornBySelf",//这样的话打空可以触发攻击盒。
+                "offset": {
+                  "x": 0.0,
+                  "y": -1.7, //circle本身离地0.2，需要多下移一些。
+                  "z": 0.0,  //另外这个offset依赖的是bullet的朝向，抛物线球在空中会旋转会导致y轴不垂直，偏移会歪掉。为了修复这个，skillobj中改成球不会旋转。
+                },
+                "onGround": true,
+                "onGroundIgnoreWater": false,
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "Elemental_Art",
+              "attackProperty": {
+                "damagePercentage": "%Damage",
+                "elementType": "Grass",
+                "attackType": "Range",
+                "strikeType": "Default",
+                "elementDurability": 25,
+                "enBreak": 50,
+              },
+              "hitPattern": {
+                "onHitEffectName": "default",
+                "hitImpulseType": "LV2",
+                "retreatType": "ByHitDirection",
+                "canBeDefenceHalt": false,
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.0,
+                "muteHitText": false,
+              },
+            }
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "Damage":0,
+      },
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  SkillObj_Tighnari_ElementalArt_CenterGadget_Material
+  //  中心的烟雾gadget
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "SkillObj_Tighnari_ElementalArt_CenterGadget_Material",
+      "onAdded": [
+        { //放4个嘲讽。
+          "$type": "CreateGadget",
+          "gadgetID": 41069022,
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 2,
+              "y": 0,
+              "z": 2,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByEntity",
+            },
+            "onGround": true,
+            "alongGround": true,
+            "onGroundIgnoreWater": false,
+          },
+        },
+        { 
+          "$type": "CreateGadget",
+          "gadgetID": 41069022,
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": -2,
+              "y": 0,
+              "z": 2,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByEntity",
+            },
+            "onGround": true,
+            "alongGround": true,
+            "onGroundIgnoreWater": false,
+          },
+        },
+        {
+          "$type": "CreateGadget",
+          "gadgetID": 41069022,
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 2,
+              "y": 0,
+              "z": -2,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByEntity",
+            },
+            "onGround": true,
+            "alongGround": true,
+            "onGroundIgnoreWater": false,
+          },
+        },
+        {
+          "$type": "CreateGadget",
+          "gadgetID": 41069022,
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "born": {
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": -2,
+              "y": 0,
+              "z": -2,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByEntity",
+            },
+            "onGround": true,
+            "alongGround": true,
+            "onGroundIgnoreWater": false,
+          },
+        },        
+        {
+          "$type":"AttachModifier",
+          "modifierName": "Timer",//计时干掉自己，gadget会延迟0.5秒销毁
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Gadget_FX", //特效，活到gadget最后。
+        },
+        { 
+          "$type": "AttachModifier",
+          "modifierName": "Constellation_2_Checker",
+          "predicates": [
+            {
+              "$type": "ByUnlockTalentParam",
+              "talentParam": "Tighnari_Constellation_2_Param",
+            },
+          ]
+        },
+      ],
+      "onAbilityStart": [//尝试延迟kill自己。
+        {
+          "$type": "SendEffectTrigger",
+          "parameter": "End",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Circle",
+        },
+        {
+          "$type": "KillSelf",//gadget中配置了dieEndTime延迟0.5秒销毁。
+        },
+      ],
+      "modifiers": {
+        "Gadget_FX":{
+          "onAdded": [
+            {
+              "$type": "AttachEffect", //1、不可绑ability，不然会重连时重播。2、不能放Timer里，Timer会提早死掉导致特效无法收到trigger。所以新建另一个modifier。
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Circle",
+              "born": {
+                "$type": "ConfigBornBySelf", //但是朝向需要重新算，匹配坡度
+                "direction": {
+                  "$type": "ConfigDirectionByGroundNormalRange",
+                  "range": 2,
+                },
+              },
+            },
+          ]
+        },
+        "Timer":{
+          "duration": "%Dura",//播放消散特效
+          "onRemoved": [
+            {
+              "$type": "SendEffectTrigger",
+              "parameter": "End",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalArt_Circle",
+            },
+            {
+              "$type":"KillGadget", //统一回收会比较好
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 41069022,
+                "sortType": "Default",
+              },
+            },
+            {
+              "$type": "KillSelf",
+            },
+          ],
+        },
+        "Constellation_2_Checker":{//只要范围存在怪物就触发效果
+          "thinkInterval": 0.5,
+          "onThinkInterval": [
+            {
+              "$type":"Predicated",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR6H10",
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "sortType": "Random",
+              },
+              "targetPredicates": [], //写在此处的话则已经根据toplimit=1找过怪了，如果没判过就会导致找不到。
+              "predicates": [ //只有predicates可以配置selectByShape，先筛选target。
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+              ],
+              "successActions": [
+                {
+                  "$type":"ApplyModifier",
+                  "target": "OriginOwner",
+                  "modifierName": "Tighnari_Constellation_2_Buff",
+                },
+              ],
+            },
+          ]
+        },
+        "Tighnari_Constellation_2_Buff":
+        { //Review:注意gadget死亡后buff是否还存在
+          "duration": "%Time",
+          "isLimitedProperties": true,
+          "state": "AttackUp",
+          "properties": {
+            "Actor_GrassAddHurtDelta": "%Rate",
+          }
+        },
+      },
+      "onKill": [
+        // {
+        //   "$type": "KillGadget", //统一回收会比较好
+        //   "gadgetInfo": {
+        //     "$type": "SelectTargetsByChildren",
+        //     "configID": 41069022,
+        //     "sortType": "Default",
+        //   },
+        // },
+        {
+          "$type":"RemoveModifier",
+          "modifierName": "Timer",
+        },
+      ],
+      "abilitySpecials": {
+        "Dura":0,//可能要写成-0.5，先看情况
+        "Rate": 0,
+        "Time": 0,
+      },
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  SkillObj_Tighnari_ElementalArt_TauntGadget_Material
+  //  嘲讽的gadget
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "SkillObj_Tighnari_ElementalArt_TauntGadget_Material",
+      "onAdded": [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Taunt",
+        },
+      ],
+      "modifiers": {
+        "Taunt": {
+          "duration": "%Dura+0.2",//尝试多嘲讽1次，因为特效消失较慢
+          "thinkInterval": 0.5,
+          "onAdded": [//生成时先嘲讽一次
+            {
+              "$type": "TriggerTaunt",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR5H10", //加上gadget偏移的2.83米，可以超过特效的半径6米。最远7.8最近6.6米。
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+              ],
+            },
+            {
+              "$type": "AttachModifier",
+              "modifierName": "Taunted_FX",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR5H10", 
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+                {
+                  "$type": "ByNot",
+                  "predicates": [
+                    {
+                      "$type": "ByHasAbilityState",
+                      "abilityState": "MuteTaunt",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          "onThinkInterval": [
+            {
+              "$type": "TriggerTaunt",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR5H10", //加上gadget偏移的2.83米，可以超过特效的半径6米。最远7.8最近6.6米。
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+              ],
+            },
+            {
+              "$type": "AttachModifier",
+              "modifierName": "Taunted_FX",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR5H10", 
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster"
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ANIMAL_ENTITY_TYPE",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                },
+                {
+                  "$type": "ByNot",
+                  "predicates": [
+                    {
+                      "$type": "ByHasAbilityState",
+                      "abilityState": "MuteTaunt",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillSelf",
+            },
+          ],
+        },
+        "Taunted_FX": {
+          "stacking": "Refresh",
+          "duration": 3,
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Tighnari_Dummy_Taunted",
+            },
+          ],
+          "onKill": [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "Taunted_FX",
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "Dura":0,
+      },
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ElementalBurst
+  //  元素爆发
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst",
+      "abilityMixins": [
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "ElementalBurst",
+          ],
+          "modifierName": "ElementalBurst_Protection",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "ElementalBurst",
+          ],
+          "modifierName": "ElementalBurst_TriggerAction", //但是由于播放镜头等等操作必须连续大招时不出错，需要将单次执行的操作放到只attach到burst的modifier里。
+        },
+        {
+          "$type": "AttachToNormalizedTimeMixin",
+          "stateID": "ElementalBurst",
+          "normalizeStart": 0,
+          "normalizeEnd": 0.85,//之前是0.836 //等同镜头转时间。镜头在75帧左右转,比实际发射0.85要早一点点。
+          "modifierName": "ElementalBurst_Effect", //部分需要回收的特效
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "ElementalBurst",
+            "ElementalBurst_AS"
+          ],
+          "modifierName": "Camera_Handler", //可以通过控制镜头长度来提早回到战斗镜头。
+        },
+      ],
+      "onAbilityStart": [
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Cast",
+        },
+        {
+          "$type":"CreateGadget",//先放gadget，然后让Gadget做事。
+          "campID": 1001,
+          "campTargetType": "Enemy",
+          "gadgetID": 41069031,
+          "born":{
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0,
+              "y": 1.3,
+              "z": 1.8,
+            }
+          }
+        },
+      ],
+      "modifiers": {
+        "ElementalBurst_Protection": 
+        { //无敌和推人配置
+          "state": "Invincible",
+          "duration": 3, //加个限定时间，防止摆pose很久了还无敌
+          "onAdded": [
+            {
+              "$type": "AttachAbilityStateResistance",
+              "resistanceListID": 11002,
+            },
+          ],
+          "modifierMixins": [
+            {
+              "$type": "WindZoneMixin",
+              "shapeName": "CircleR3", //R2太近了，试下R3、R4
+              "strength": -3,
+              "attenuation": 2,
+              "born": {
+                "$type": "ConfigBornByTarget",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+              "targetType": "Enemy",
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Grass"
+                  ],
+                },
+                {
+                  "$type": "ByTargetWeight", //WindZoneLevel = 2
+                  "logic": "LesserOrEqual", //WindZoneLevel = 2
+                  "weight": 250.0, //WindZoneLevel = 2
+                },
+              ],
+            },
+          ]
+        },
+        "ElementalBurst_TriggerAction": {
+          "onAdded": [
+            {
+              "$type": "AvatarSkillStart", //先扣能量
+              "skillID": 10695,
+            },
+            {
+              "$type": "Predicated", //判断镜头可否放出。连续放可能不进镜头。所以换个地方，不再挂到as里。
+              "target": "Self",
+              "targetPredicates": [
+                {
+                  "$type": "ByAttackNotHitScene",
+                  "checkWaterLayer": true,
+                  "attackPattern": {
+                    "$type": "ConfigAttackCircle",
+                    "triggerType": "TriggerNoRepeat",
+                    "fanAngle": 360.0,
+                    "radius": 1.0,
+                    "height": 2.0,
+                    "born": {
+                      "$type": "ConfigBornBySelf",
+                      "offset": {
+                        "x": 0.0,
+                        "y": 0.5,
+                        "z": 0.0,
+                      },
+                    },
+                  },
+                },
+                {
+                  "$type": "ByAvatarInWaterDepth",
+                  "compareType": "LessAndEqual",
+                  "depth": 0.5,
+                },
+              ],
+              "successActions": //能放出来镜头
+              [
+                {
+                  "$type": "FireEffect",
+                  "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Camera",
+                },
+                {
+                  "$type": "AvatarEnterCameraShot",
+                  "cameraMoveCfgPath": "Camera_Tighnari_ElementalBurst",
+                },
+                {
+                  "$type": "DungeonFogEffects",
+                  "enable": true,
+                  "muteRemoteAction": true,
+                  "cameraFogEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_CameraFogEffect",
+                  "localOffset": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                  },
+                },           
+              ],
+              "failActions": [
+                {
+                  "$type": "FireEffect",
+                  "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_NoCamera",
+                },
+              ],
+            },
+            {
+              "$type": "TriggerAbility",//命4效果，子弹需要继承精通，得提早上buff
+              "abilityName": "Avatar_Tighnari_Constellation_4",
+              "abilitySpecials": {
+                "Type":1, //说明是施放buff
+              },
+              "predicates": [
+                {
+                  "$type": "ByUnlockTalentParam",
+                  "talentParam": "Tighnari_Constellation_4_Param",
+                },
+              ],
+            },
+          ],
+          "onRemoved": [//目前镜头距离不能在AS再恢复，因为镜头在AS前就会结束，需要提前恢复。
+            {
+              "$type": "AvatarCameraParam",
+              "cameraParam": {
+                "forceRadius": 6,
+                "forceRadiusDuration": 0.6,
+                "shouldKeepForceRadius": true,
+              },
+              "doOffStage": true,
+            },
+          ]
+        },
+        "ElementalBurst_Effect":{
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Arrow", //箭特效
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Arrow01", //箭特效01
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type":"ApplyModifier",
+              "modifierName": "ElementalBurst_PostProcessEffect",
+            },
+          ]
+        },
+        "ElementalBurst_PostProcessEffect":{
+          "duration": 1.2,
+          "onAdded": [
+            {
+              "$type": "ActCameraRadialBlur", //径向模糊效果
+              "cameraRadialBlur": {
+                "power": 1, //小技能用的0.5 七七用的1
+                "blurTime": 0.5,//0.5
+                "fadeTime": 0.15,//0.2
+              },
+            },
+          ],
+          "modifierMixins": [
+            {
+              "$type": "TriggerPostProcessEffectMixin",
+              "postEffectAssetName": "PostEffect_Avatar_Tighnari_ElementalBurst_ScreenEffect",
+              "duration": 1,
+            },
+          ],
+        },
+        "Camera_Handler": {
+          "onAdded": [
+            {
+              "$type": "ControlEmotion",
+              "toggleBlink": false,
+              "toggleEmoSync": false,
+              "toggleEyeKey": false,
+            },
+            {
+              "$type": "EnableHeadControl",
+              "enable": false,
+              "blend": false,
+            },
+          ],
+          "modifierMixins": [
+            {
+              "$type": "TriggerWeatherMixin",
+              "type": "Skill",
+              "weatherPattern": "Weather_Tighnari_ElementalBurst",
+              "transDuration": 1.5,
+              "duration": 3,
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "ElementalBurst_PostProcessEffect",
+              "doOffStage": true,
+            },
+            {
+              "$type": "DungeonFogEffects",
+              "enable": false,
+              "cameraFogEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_CameraFogEffect",
+              "doOffStage": true,
+            },
+            {
+              "$type": "AvatarExitCameraShot",
+              "doOffStage": true,
+            },
+            {
+              "$type": "ControlEmotion",
+              "toggleBlink": true,
+              "toggleEmoSync": true,
+              "toggleEyeKey": true,
+              "doOffStage": true,
+            },
+            {
+              "$type": "EnableHeadControl",
+              "enable": true,
+              "doOffStage": true,
+            },
+          ],
+        },
+      }
+    },
+  }, //Avatar_Tighnari_ElementalBurst
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_ElementalBurst_Trigger
+  //   
+  //  元素爆发发射器
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst_BulletTrigger",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "target": "Self",
+          "modifierName": "Bullet_Trigger_Counter",
+        },
+      ],
+      "abilityMixins": [
+        {
+          "$type": "AttachModifierToSelfGlobalValueMixin",
+          "globalValueKey": "_ABILITY_ElementalBurst_BulletTrigger_Queue",
+          "valueSteps": [
+            0.5,
+            1.5,
+            2.5,
+            3.5,
+            4.5,
+            5.5,
+            6.5
+          ],
+          "removeAppliedModifier": true,
+          "modifierNameSteps": [
+            "TriggerBullet_1",
+            "TriggerBullet_2",
+            "TriggerBullet_3",
+            "TriggerBullet_4",
+            "TriggerBullet_5",
+            "TriggerBullet_6",
+          ],
+        },
+      ],
+      "modifiers": {
+        "Bullet_Trigger_Timer": {
+          "duration": 0.2,
+          "onRemoved": [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "Bullet_Trigger_Counter",
+            },
+          ],
+        },
+        "Bullet_Trigger_Counter": {
+          "onAdded": [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_ElementalBurst_BulletTrigger_Queue",
+              "value": 0,
+              "useLimitRange": true,
+              "maxValue": 0,
+              "minValue": 0,
+            },
+          ],
+          "thinkInterval": 0.03,
+          "onThinkInterval": [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_ElementalBurst_BulletTrigger_Queue",
+              "value": 1,
+              "useLimitRange": true,
+              "maxValue": 6,
+              "minValue": 0,
+            },
+          ],
+        },
+        "TriggerBullet_1": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              // "turnToTargetImmediately": true, //和凝光不同，改成不会转向，但是需要测试下效果哪个好。（特效想要造型固定）
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032, 
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit1",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit1",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+        "TriggerBullet_2": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit2",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit2",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+        "TriggerBullet_3": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit3",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit3",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+        "TriggerBullet_4": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit4",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit4",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+        "TriggerBullet_5": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit5",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit5",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+        "TriggerBullet_6": {
+          "duration": 0.3,
+          "onAdded": [
+            {
+              "$type": "SetSelfAttackTarget",
+              "otherTargets": {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "SectorTighnariShoot",
+                "centerBasedOn": "Owner",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+                "topLimit": 1,
+                "entityTypePriority": [
+                  "Monster",
+                  "Gadget"
+                ],
+                "sortType": "Random",
+              },
+              "predicates": [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": [
+                    "Monster",
+                    "Gadget"
+                  ],
+                },
+              ],
+            },
+            {
+              "$type": "TriggerBullet",
+              "bulletID": 41069032,
+              "born": {
+                "$type": "ConfigBornByAttachPoint",
+                "attachPointName": "Ponit6",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+                "direction": {
+                  "$type": "ConfigDirectionByAttachPoint",
+                  "attachPointName": "Ponit6",
+                  "angleOffset": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                  },
+                },
+              },
+            },
+          ]
+        },
+      },
+    },
+  },
+
+  ////////////////////////////////////////////////////////////////
+  //  Avatar_Tighnari_ElementalBurst_Bullet_Damage1
+  //  元素爆发子弹伤害
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst_Bullet_Damage1",
+      "onAbilityStart": [
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Hit1", //因为可能无法命中scene，所以不用能hitscene
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                // "$type": "ConfigBornByCollisionPoint",
+                "$type": "ConfigBornBySelf",//这样的话打空可以触发攻击盒。
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "Elemental_Burst",
+              "attenuationTag": "Elemental_Burst",
+              "attackProperty": {
+                "damagePercentage": "%ElementalBurst_Bullet_Damage1",
+                "elementType": "Grass",
+                "attackType": "Range",
+                "strikeType": "Pierce",
+                "elementDurability": 25,
+                "enBreak": 30,
+              },
+              "hitPattern": {
+                // "onHitEffectName": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Hit1",
+                "onHitEffectName": "",
+                "hitImpulseType": "LV3", //原LV5
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.0,
+                "muteHitText": false,
+              },
+              "forceCameraShake": false,
+            }
+          },
+        },
+        { //有时候如果没有命中敌人，target会指向自己而报错。这时再搜索周围敌人进行追踪攻击。
+          "$type": "SetSelfAttackTarget",
+          "otherTargets": {
+            "$type": "SelectTargetsByShape",
+            "shapeName": "CircleR10H20", //类型必须是Center不然无法向下索敌。大招的半径得大一些所以10米。
+            "centerBasedOn": "Self",
+            "campTargetType": "Enemy",
+            "campBasedOn": "Self",
+            "topLimit": 1,
+            "sortType": "Nearest",
+            "entityTypePriority": [
+              "Monster",
+              "Gadget"
+            ],
+          },
+          "predicates": [
+            {
+              "$type": "ByEntityTypes",
+              "entityTypes": [
+                "Monster",
+                "Gadget"
+              ],
+            },
+          ],
+        },
+        {
+          "$type":"Randomed", //让子弹左右进行一些随机，防止大招轨迹太单一。
+          "chance": 0.5,
+          "successActions": [
+            {
+              "$type": "SetRandomOverrideMapValue",
+              "overrideMapKey": "YZRandom",
+              "valueRangeMax": 45,
+              "valueRangeMin": 15,
+            },
+          ],
+          "failActions": [
+            {
+              "$type": "SetRandomOverrideMapValue",
+              "overrideMapKey": "YZRandom",
+              "valueRangeMax": -15,
+              "valueRangeMin": -45,
+            },
+          ]
+        },
+        {
+          "$type": "TriggerBullet",
+          "bulletID": 41069033,
+          // "ownerIs": "OriginOwner",//所属给角色，会导致销毁位置不对。
+          "propOwnerIs": "OriginOwner",//这样可以继承角色的buff。
+          "born": {
+            // "$type": "ConfigBornByCollisionPoint",//不行，打空（新的销毁方式）表现不正确。
+            "$type": "ConfigBornBySelf",
+            "offset": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+            },
+            "bornRandom":{  //这个测试用，效果还不错。
+              "$type": "BornRandomFromCenter",
+              "minRandomRange": 0.5,
+              "maxRandomRange": 1.5,
+            },
+            "direction": {
+              "$type": "ConfigDirectionByWorld",
+              "angleOffset": {
+                "x": -90, //还是度数，得填90
+                "y": "%YZRandom",
+                "z": "%YZRandom",
+              },
+            }
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "ElementalBurst_Bullet_Damage1": 0,
+        "YZRandom":0
+      },
+    },
+  },
+  //充能技子弹2伤害
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst_Bullet_Damage2",
+      "onAbilityStart": [
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_Hit2", //因为可能无法命中scene，所以不用能hitscene，也不能放在hitEffect
+        },
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackSphere",
+              "triggerType": "TriggerNoRepeat",
+              "radius": 1,
+              "born": {
+                // "$type": "ConfigBornByCollisionPoint", 
+                "$type": "ConfigBornBySelf",//子弹2无怪时会在空中销毁，得保证出现攻击盒。另外self时也不会丢伤害。
+              },
+            },
+            "attackInfo": {
+              "canBeModifiedBy": "OriginOwner",
+              "attackTag": "Elemental_Burst",
+              "attenuationTag": "Elemental_Burst",
+              "attackProperty": {
+                "damagePercentage": "%ElementalBurst_Bullet_Damage2",
+                "elementType": "Grass",
+                "attackType": "Range",
+                "strikeType": "Pierce",
+                "elementDurability": 25,
+                "enBreak": 30,
+              },
+              "hitPattern": {
+                "onHitEffectName": "",
+                "hitImpulseType": "LV3", //原LV5
+                "retreatType": "ByOriginOwner",
+                "canBeDefenceHalt": false,
+                "hitHaltTime": 0.0,
+                "hitHaltTimeScale": 0.0,
+                "muteHitText": false,
+              },
+              "forceCameraShake": false,
+            }
+          },
+        },
+      ],
+      "abilitySpecials": {
+        "ElementalBurst_Bullet_Damage2": 0,
+      },
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //  Avatar_Tighnari_ElementalBurst_Bullet_1_Material
+  //  元素爆发子弹表现
+  ////////////////////////////////////////////////////////////////
+  //子弹1表现
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst_Bullet_1_Material",
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+        {
+          "$type": "SetRandomOverrideMapValue",
+          "overrideMapKey": "RandomTimeRatio",
+          "valueRangeMin": 0.25,
+          "valueRangeMax": 0.45,
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Timer",
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Tighnari_Constellation_4_Checker",//如果这样的命4很卡，可以考虑优化成只角色监视。。
+          "predicates": [
+            {
+              "$type": "ByUnlockTalentParam",
+              "talentParam": "Tighnari_Constellation_4_Param",
+            },
+          ],
+        },
+      ],
+      "modifiers": {
+        "Tighnari_Constellation_4_Checker":{
+          "modifierMixins": [
+            {
+              "$type": "DoActionByElementReactionMixin",//由于元素反应无法监视tag，所以只能放到子弹上。
+              "range": 2, 
+              "entityTypes": [
+                "Monster",
+              ],
+              "reactionTypes": [
+                "Burning",
+                "Overdose",
+                "OverdoseGrass",
+                "Overgrow",
+              ],
+              "actions": [
+                {
+                  "$type": "TriggerAbility",
+                  "target": "OriginOwner",
+                  "abilityName": "Avatar_Tighnari_Constellation_4",
+                  "abilitySpecials": {
+                    "Type": 2,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        "Timer": {
+          "duration": "%RandomTimeRatio",
+          "onRemoved": [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "AngularVelocityUp",
+            },
+          ],
+        },
+        "AngularVelocityUp": {
+          "properties": {
+            "Actor_BulletMoveAngularVelocityRatio": "%VelocityRatio",
+          },
+        },
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_BulletPhase1",
+            },
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_BulletPhase1_Particle",
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        // "RandomSpeedRatio": 0,
+        "RandomTimeRatio": 0,
+        "VelocityRatio": 29, //上次参数为49，转角可能有点急
+      },
+    },
+  },
+  //子弹2表现
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_ElementalBurst_Bullet_2_Material",
+      "onAdded": [
+        {
+          "$type": "SetRandomOverrideMapValue",
+          "overrideMapKey": "RandomTimeRatio",
+          "valueRangeMin": 0.2, //原参数0.18
+          "valueRangeMax": 0.3, //原参数0.25
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Bullet_FX",
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Timer",
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Tighnari_Constellation_4_Checker", //如果这样的命4很卡，可以考虑优化成只角色监视。。
+          "predicates": [
+            {
+              "$type": "ByUnlockTalentParam",
+              "talentParam": "Tighnari_Constellation_4_Param",
+            },
+          ],
+        },
+      ],
+      "modifiers": {
+        "Tighnari_Constellation_4_Checker": {
+          "modifierMixins": [
+            {
+              "$type": "DoActionByElementReactionMixin",
+              "range": 2, 
+              "entityTypes": [
+                "Monster",
+              ],
+              "reactionTypes": [
+                "Burning",
+                "Overdose",
+                "OverdoseGrass",
+                "Overgrow",
+              ],
+              "actions": [
+                {
+                  "$type": "TriggerAbility",
+                  "target": "OriginOwner",
+                  "abilityName": "Avatar_Tighnari_Constellation_4",
+                  "abilitySpecials": {
+                    "Type": 2,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        "Timer": {
+          "duration": "%RandomTimeRatio",
+          "onRemoved": [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "AngularVelocityUp",
+            },
+          ],
+        },
+        "AngularVelocityUp": {
+          "properties": {
+            "Actor_BulletMoveAngularVelocityRatio": "%VelocityRatio",
+          },
+        },
+        "Bullet_FX": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Boy_Bow_Tighnari_ElementalBurst_BulletPhase2",
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "RandomTimeRatio": 0.1,
+        "VelocityRatio": 29,
+      },
+    },
+  },
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Bullet_Tighnari_ArrowDamage_Handler 普攻伤害调整
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Bullet_Tighnari_ArrowDamage_Handler", //挂子弹上
+      "abilityMixins": [
+        {
+          "$type": "ModifyDamageMixin",
+          "animEventNames": [
+            "Arrow_ATK01"
+          ],
+          "damagePercentage": "%NormalAttack_01_DamagePercentage",
+        },
+        {
+          "$type": "ModifyDamageMixin",
+          "animEventNames": [
+            "Arrow_ATK02"
+          ],
+          "damagePercentage": "%NormalAttack_02_DamagePercentage",
+        },
+        {
+          "$type": "ModifyDamageMixin",
+          "animEventNames": [
+            "Arrow_ATK03"
+          ],
+          "damagePercentage": "%NormalAttack_03_DamagePercentage",
+        },
+        {
+          "$type": "ModifyDamageMixin",
+          "animEventNames": [
+            "Arrow_ATK04"
+          ],
+          "damagePercentage": "%NormalAttack_04_DamagePercentage",
+        },
+      ],
+      "abilitySpecials": {
+        "NormalAttack_01_DamagePercentage": 0,
+        "NormalAttack_02_DamagePercentage": 0,
+        "NormalAttack_03_DamagePercentage": 0,
+        "NormalAttack_04_DamagePercentage": 0,
+      },
+    },
+  },
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_PermanentSkill_1
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_PermanentSkill_1", //可能需要挂子弹上，或者触发时间更早一些//实现困难，还是发射后再获得吧。
+      "onAbilityStart":[
+        {
+          "$type":"AttachModifier",
+          "modifierName":"Tighnari_PermanentSkill_1",
+        },
+      ],
+      "modifiers": {
+        "Tighnari_PermanentSkill_1":{
+          "duration": "%Dura",
+          "state": "AttackUp",
+          "isLimitedProperties": true,
+          "properties": {
+            "Actor_ElemMasteryDelta": "%Value",
+          },
+        },
+      },
+      "abilitySpecials": {
+        "Value":0,
+        "Dura":0,
+      }
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_PermanentSkill_2 精通提高重击和元素爆发伤害
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_PermanentSkill_2", 
+      "onAdded": [
+        {
+          "$type": "SetGlobalValue", //武器有个bug是onAdded时间比overrideMap设置早，角色也注意下。
+          "key": "_ABILITY_Tighnari_PermanentSkill_2_Max",
+          "value": "%MaxDamageUp",
+        },
+        {
+          "$type": "SetGlobalValue",
+          "key": "_ABILITY_Tighnari_PermanentSkill_2_Zero",
+          "value": 0,
+        },
+      ],
+      "abilityMixins": [
+        {
+          "$type": "ModifyDamageMixin",
+          "attackTags": ["ExtraAttack","Elemental_Burst"],
+          "damagePercentageRatio": "%Ratio*%FIGHT_PROP_ELEMENT_MASTERY",//即时的，非快照。
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue", //不能使用ByTargetOverrideMap，因为mixin不支持
+              "target": "Self",
+              "key": "_ABILITY_Tighnari_PermanentSkill_2_Max",
+              "value": "%Ratio*%FIGHT_PROP_ELEMENT_MASTERY", //值必须在0和max之间才会有增益。
+              "compareType": "MoreThan",
+            },
+            {
+              "$type": "ByTargetGlobalValue",
+              "target": "Self",
+              "key": "_ABILITY_Tighnari_PermanentSkill_2_Zero",
+              "value": "%Ratio*%FIGHT_PROP_ELEMENT_MASTERY",
+              "compareType": "LessAndEqual",
+            },
+          ],       
+        },
+        {
+          "$type": "ModifyDamageMixin",
+          "attackTags": ["ExtraAttack", "Elemental_Burst"],
+          "damagePercentageRatio": "%MaxDamageUp", //超过上限时，只增伤到上限
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "target": "Self",
+              "key": "_ABILITY_Tighnari_PermanentSkill_2_Max",
+              "value": "%Ratio*%FIGHT_PROP_ELEMENT_MASTERY",
+              "compareType": "LessAndEqual",
+            },
+          ],
+        },
+      ],
+      "abilitySpecials": {
+        "Ratio":0,
+        "MaxDamageUp":0,
+      }
+    },
+  },
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_Constellation_1 重击暴击率提高
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_Constellation_1", 
+      "abilityMixins": [
+        {
+          "$type": "ModifyDamageMixin",
+          "attackTags": [
+            "ExtraAttack",
+          ],
+          "bonusCritical": "%Rate",
+        },
+      ],
+      "abilitySpecials": {
+        "Rate": 0.0,
+      }
+    },
+  },  
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_Constellation_4 爆发发动，以及触发反应，则给全队加buff。需要来自同一个提纳里，多个提纳里不可叠加。单个提纳里2次施放也不该叠加。
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_Constellation_4",
+      "onAbilityStart": [
+        {
+          "$type": "ApplyModifier", //为了防止频繁命中一直刷buff性能压力，给自己buff来控制时间
+          "modifierName": "Tighnari_ElementalBurst_Constellation_4_Adder",
+          "doOffStage": true,
+        },
+      ],
+      "modifiers": {
+        "Tighnari_ElementalBurst_Constellation_4_Adder":{
+          "stacking": "Unique",
+          "duration": 0.6,
+          "onAdded": [
+            {
+              "$type":"Predicated",
+              "doOffStage": true,
+              "targetPredicates": [
+                {
+                  "$type": "ByTargetOverrideMapValue",
+                  "targetValue": 1,
+                  "targetKey": "Type",
+                  "logic": "LesserOrEqual",//如果是施放buff
+                },
+              ],
+              "successActions": [
+                {
+                  "$type": "ApplyModifier", 
+                  "modifierName": "UNIQUE_Tighnari_ElementalBurst_Constellation_4_Buff1",
+                  "target": "AllPlayerAvatars",
+                  "doOffStage": true,
+                  "predicates": [
+                    {
+                      "$type": "ByTargetPositionToSelfPosition",
+                      "compareType": "XZ",
+                      "value": 40,
+                      "logic": "LesserOrEqual",
+                    },
+                  ],
+                },
+              ],
+              "failActions": [//说明是2段反应发生了。
+                {
+                  "$type": "ApplyModifier", 
+                  "modifierName": "UNIQUE_Tighnari_ElementalBurst_Constellation_4_Buff1",
+                  "target": "AllPlayerAvatars",
+                  "doOffStage": true,
+                  "predicates": [
+                    {
+                      "$type": "ByTargetPositionToSelfPosition",
+                      "compareType": "XZ",
+                      "value": 40,
+                      "logic": "LesserOrEqual",
+                    },
+                  ],
+                },
+                {
+                  "$type": "ApplyModifier", 
+                  "modifierName": "UNIQUE_Tighnari_ElementalBurst_Constellation_4_Buff2",
+                  "target": "AllPlayerAvatars",
+                  "doOffStage": true,
+                  "predicates": [
+                    {
+                      "$type": "ByTargetPositionToSelfPosition",
+                      "compareType": "XZ",
+                      "value": 40,
+                      "logic": "LesserOrEqual",
+                    },
+                  ],
+                },
+              ]
+            },            
+          ],
+        },
+        "UNIQUE_Tighnari_ElementalBurst_Constellation_4_Buff1":
+        {
+          "isUnique": true,
+          "duration": "%Time",
+          "stacking": "RefreshUniqueDurability",//考虑到联机，//写成可以刷新unique的含量，即使发起者不同。
+          "state": "AttackUp",//镜头表现会变得不好看，为了功能还是得有。
+          "isLimitedProperties": true,
+          "properties": {
+            "Actor_ElemMasteryDelta": "%Rate",
+          },
+        },
+        "UNIQUE_Tighnari_ElementalBurst_Constellation_4_Buff2": //得避免被2个提纳里同时大招变成两层，所以是单独buff名。
+        {
+          "isUnique": true,
+          "duration": "%Time",
+          "stacking": "RefreshUniqueDurability", 
+          "state": "AttackUp",
+          "isLimitedProperties": true,
+          "properties": {
+            "Actor_ElemMasteryDelta": "%Rate",
+          },
+        },
+      },
+      "abilitySpecials": {
+        "Rate": 0,
+        "Time": 0,
+        "Type": 1,//用于区分施放时的buff和第二段反应的buff，独立生效。
+      }
+    },
+  },
+
+
+
+  ////////////////////////////////////////////////////////////////
+  //
+  //  Avatar_Tighnari_FallingAnthem  空中攻击
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_FallingAnthem",
+      "abilityMixins": [
+        {
+          "$type": "AvatarChangeSkillMixin",
+          "priority": "AvatarCommon",
+          "jumpSkillID": 5069010,
+          "flySkillID": 5069010,
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS"
+          ],
+          "modifierName": "FallingAnthem_BS_Material",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_Loop"
+          ],
+          "modifierName": "FallingAnthem_Loop_Normal",
+        },
+        {
+          "$type": "AttachToAnimatorStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS_2",
+            "FallingAnthem_Loop",
+            "FallingAnthem_Loop_Low",
+          ],
+          "modifierName": "FallingAnthem_LoopDamage",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS"
+          ],
+          "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS",
+            "FallingAnthem_Loop",
+            "FallingAnthem_AS_1",
+            "FallingAnthem_AS_2"
+          ],
+          "modifierName": "FallingAnthem_Height_Detect",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS",
+            "FallingAnthem_Loop",
+            "FallingAnthem_AS_1",
+            "FallingAnthem_AS_2"
+          ],
+          "modifierName": "FallingAnthem_FallingDamageImmune_01",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS",
+            "FallingAnthem_Loop"
+          ],
+          "modifierName": "Inertia",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS",
+            "FallingAnthem_Loop",
+            "FallingAnthem_AS_1",
+            "FallingAnthem_AS_2"
+          ],
+          "modifierName": "FallingAnthem_OverHead_Camera",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS"
+          ],
+          "modifierName": "FallingAnthem_ClearVelocityForce",
+        },
+        {
+          "$type": "AttachToStateIDMixin",
+          "stateIDs": [
+            "FallingAnthem_BS",
+            "FallingAnthem_Loop",
+          ],
+          "modifierName": "FallingAnthem_AttachEffect_BS_01", //气流效果
+        },
+      ],
+      "onAdded": [],
+      "onAbilityStart": [
+        //普通状态第一段
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackCircle",
+              "triggerType": "TriggerNoRepeat",
+              "height": 2.0,
+              "fanAngle": 360.0,
+              "radius": 3.0,
+              "born": {
+                "$type": "ConfigBornByTarget",
+                "offset": {
+                  "x": 0.0,
+                  "y": -0.5,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "attackTag": "FallingAttack",
+              "attackProperty": {
+                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                "strikeType": "Pierce",
+                "attackType": "Melee",
+                "elementType": "None",
+                "elementDurability": 25,
+                "enBreak": 50,
+              },
+              "hitPattern": {
+                "onHitEffectName": "none",
+                "hitImpulseType": "LV2",
+                "retreatType": "ByAttacker",
+                "canBeDefenceHalt": false,
+                "hitHaltTime": 0,
+                "hitHaltTimeScale": 0.1,
+                "muteHitText": false
+              },
+            },
+          },
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "forceByCaster": true,
+              "value": 0,
+              "compareType": "NoneOrEqual",
+            },
+          ],
+        },
+        //普通状态第二段
+        {
+          "$type": "TriggerAttackEvent",
+          "targetType": "Enemy",
+          "attackEvent": {
+            "attackPattern": {
+              "$type": "ConfigAttackCircle",
+              "triggerType": "TriggerNoRepeat",
+              "height": 2.0,
+              "fanAngle": 360.0,
+              "radius": 3.5,
+              "born": {
+                "$type": "ConfigBornByTarget",
+                "offset": {
+                  "x": 0.0,
+                  "y": -0.5,
+                  "z": 0.0,
+                },
+              },
+            },
+            "attackInfo": {
+              "attackTag": "FallingAttack",
+              "attackProperty": {
+                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                "strikeType": "Pierce",
+                "attackType": "Melee",
+                "elementType": "None",
+                "elementDurability": 25,
+                "enBreak": 100,
+              },
+              "hitPattern": {
+                "onHitEffectName": "none",
+                "hitImpulseType": "LV3",
+                "retreatType": "ByAttacker",
+                "reboundRatio": 0,
+                "canBeDefenceHalt": false,
+                "hitHaltTime": 0,
+                "hitHaltTimeScale": 0.1,
+                "muteHitText": false
+              },
+            },
+          },
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "forceByCaster": true,
+              "value": 1,
+              "compareType": "Equal",
+            },
+          ],
+        },
+        //普通状态第一段
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_01",
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "forceByCaster": true,
+              "value": 0,
+              "compareType": "NoneOrEqual",
+            },
+          ],
+        },
+        //普通状态第二段
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_02",
+          "predicates": [
+            {
+              "$type": "ByTargetGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "forceByCaster": true,
+              "value": 1,
+              "compareType": "Equal",
+            },
+          ],
+        },
+      ],
+      "modifiers": {
+        "FallingAnthem_AttachEffect_BS_01": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS_01",
+            },
+          ],
+        },
+        "FallingAnthem_BS_Material": {
+          "onAdded": [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Avatar_Bow_FallAnthem_BS",
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "ActCameraRadialBlur",
+              "cameraRadialBlur": {
+                "power": 0.3,
+                "blurTime": 0.3,
+                "fadeTime": 0.15,
+              },
+            },
+          ],
+        },
+        "FallingAnthem_BS_VelocityForce_Initialize": {
+          "properties": {
+            "Actor_AddGravityScale": -2,
+          },
+          "onAdded": [
+            {
+              "$type": "RemoveVelocityForce",
+              "forces": [
+                "RushMoveType"
+              ],
+            },
+          ],
+        },
+        "FallingAnthem_LoopDamage": {
+          "thinkInterval": 0.3,
+          "onThinkInterval": [
+            {
+              "$type": "TriggerAttackEvent",
+              "targetType": "Enemy",
+              "attackEvent": {
+                "attackPattern": {
+                  "$type": "ConfigAttackSphere",
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 1.0,
+                  "born": {
+                    "$type": "ConfigBornBySelf",
+                    "offset": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                },
+                "attackInfo": {
+                  "attackTag": "FallingAttack",
+                  "attackProperty": {
+                    "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                    "strikeType": "Pierce",
+                    "attackType": "Melee",
+                    "elementType": "None",
+                    "elementDurability": 0,
+                    "enBreak": 10,
+                  },
+                  "hitPattern": {
+                    "onHitEffectName": "default",
+                    "hitImpulseType": "LV2",
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false
+                  },
+                },
+              },
+            },
+          ],
+        },
+        "FallingAnthem_FallingDamageImmune_01": {
+          "onAdded": [
+            {
+              "$type": "ClearGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+            },
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+              "value": "%FallingAnthem_FallingDamageRatio_Lv0",
+              "useLimitRange": true,
+              "maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+              "minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv0",
+                  "logic": "LesserOrEqual",
+                },
+              ],
+            }, //==================================================================================
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+              "value": "%FallingAnthem_FallingDamageRatio_Lv1",
+              "useLimitRange": true,
+              "maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+              "minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv1",
+                  "logic": "LesserOrEqual",
+                },
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv0",
+                  "logic": "Greater",
+                },
+              ],
+            }, //==================================================================================
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+              "value": "%FallingAnthem_FallingDamageRatio_Lv2",
+              "useLimitRange": true,
+              "maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+              "minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv2",
+                  "logic": "LesserOrEqual",
+                },
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv1",
+                  "logic": "Greater",
+                },
+              ],
+            }, //==================================================================================
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+              "value": "%FallingAnthem_FallingDamageRatio_Lv3",
+              "useLimitRange": true,
+              "maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+              "minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv3",
+                  "logic": "LesserOrEqual",
+                },
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv2",
+                  "logic": "Greater",
+                },
+              ],
+            }, //==================================================================================
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAttack_Altitude",
+              "value": "%FallingAnthem_FallingDamageRatio_Lv4",
+              "useLimitRange": true,
+              "maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+              "minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": "%FallingAnthem_Altitude_Lv3",
+                  "logic": "Greater",
+                },
+              ],
+            }, //==================================================================================
+            {
+              "$type": "AttachModifier",
+              "modifierName": "FallingAnthem_FallingDamageImmune_02",
+            },
+          ],
+        },
+        "FallingAnthem_FallingDamageImmune_02": {
+          "onAdded": [
+            {
+              "$type": "SetGlobalValueToOverrideMap",
+              "globalValueKey": "_ABILITY_FallingAttack_Altitude",
+              "overrideMapKey": "FallingAnthem_FallingDamageRatio",
+            },
+            {
+              "$type": "AttachModifier",
+              "modifierName": "FallingAnthem_FallingDamageImmune_03",
+            },
+          ],
+        },
+        "FallingAnthem_FallingDamageImmune_03": {
+          "properties": {
+            "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+          },
+        },
+        "FallingAnthem_Loop_Normal": {
+          "onAdded": [
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Avatar_Bow_FallAnthem_Loop_02",
+              "predicates": [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "_ABILITY_FallingAnthem_UseCamera",
+                  "forceByCaster": true,
+                  "value": 1,
+                  "compareType": "Equal",
+                },
+              ],
+            },
+          ],
+        },
+        //水平惯性继承
+        "Inertia": {
+          "modifierMixins": [
+            {
+              "$type": "ApplyInertiaVelocityMixin",
+              "damping": 0,
+              "useXZ": false,
+              "useY": false,
+            },
+          ],
+        },
+        "FallingAnthem_Height_Detect": {
+          "onAdded": [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "value": 0,
+              "useLimitRange": true,
+              "maxValue": 0,
+              "minValue": 0,
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": 2.4,
+                  "logic": "LesserOrEqual",
+                },
+              ],
+            },
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "value": 5,
+              "useLimitRange": true,
+              "maxValue": 1,
+              "minValue": 0,
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": 2.4,
+                  "logic": "Greater",
+                },
+              ],
+            },
+            {
+              "$type": "SetAnimatorFloat",
+              "floatID": "FallingAnthem_UseCamera",
+              "value": 0,
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": 2.4,
+                  "logic": "LesserOrEqual",
+                },
+              ],
+            },
+            {
+              "$type": "SetAnimatorFloat",
+              "floatID": "FallingAnthem_UseCamera",
+              "value": 1,
+              "predicates": [
+                {
+                  "$type": "ByTargetAltitude",
+                  "value": 2.4,
+                  "logic": "Greater",
+                },
+              ],
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "SetAnimatorFloat",
+              "floatID": "FallingAnthem_UseCamera",
+              "value": 0,
+            },
+            {
+              "$type": "AddGlobalValue",
+              "key": "_ABILITY_FallingAnthem_UseCamera",
+              "value": 0,
+              "useLimitRange": true,
+              "maxValue": 0,
+              "minValue": 0,
+            },
+          ],
+        },
+        "FallingAnthem_OverHead_Camera": {
+          "onAdded": [
+            {
+              "$type": "AvatarCameraParam",
+              "lockParam": false,
+              "cameraParam": {
+                "forceRadius": 4.5,
+                "forceRadiusDuration": 0.2,
+                "shouldKeepForceRadius": true,
+              },
+              "predicates": [
+                {
+                  "$type": "ByAnimatorFloat",
+                  "parameter": "FallingAnthem_UseCamera",
+                  "value": 1,
+                  "logic": "Equal",
+                },
+              ],
+            },
+          ],
+        },
+        "FallingAnthem_OverHead_Camera_Remover": {
+          "onAdded": [
+            {
+              "doOffStage": true,
+              "$type": "AvatarExitCameraShot",
+            },
+          ],
+        },
+        "FallingAnthem_Landed_Camera": {
+          "onAdded": [
+            {
+              "$type": "AvatarCameraParam",
+              "lockParam": false,
+              "cameraParam": {
+                "forceRadius": 6.0,
+                "forceRadiusDuration": 0.1,
+                "shouldKeepForceRadius": true,
+              },
+              "predicates": [
+                {
+                  "$type": "ByAnimatorFloat",
+                  "parameter": "FallingAnthem_UseCamera",
+                  "value": 1,
+                  "logic": "Equal",
+                },
+              ],
+            },
+          ],
+        },
+        "FallingAnthem_ClearVelocityForce": {
+          "onAdded": [
+            {
+              "$type": "RemoveVelocityForce",
+              "forces": [
+                "RushMoveType",
+                "InertiaType"
+              ],
+            },
+          ],
+        },
+      },
+      "abilitySpecials": {
+        "FallingAnthem_Normal_Loop_Damage": 0,
+        "FallingAnthem_Normal_Rank_1_Damage": 0,
+        "FallingAnthem_Normal_Rank_2_Damage": 0,
+        "FallingAnthem_Altitude_Lv0": 20,
+        "FallingAnthem_Altitude_Lv1": 40,
+        "FallingAnthem_Altitude_Lv2": 60,
+        "FallingAnthem_Altitude_Lv3": 100,
+        "FallingAnthem_Altitude_Lv4": 200,
+        "FallingAnthem_FallingDamageRatio_Lv0": -1,
+        "FallingAnthem_FallingDamageRatio_Lv1": -1,
+        "FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+        "FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+        "FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+        "FallingAnthem_FallingDamageRatio": 0,
+      },
+    },
+  },
+
+  {
+    "Default":
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_Tighnari_Radar_Collectables_Sumeru",
+      "isDynamicAbility":true,
+      "onAdded":
+      [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "Radar_Toggle",
+        },
+      ],
+      "modifiers":
+      {
+        "Radar_Toggle":
+        {
+          "onAdded":
+          [
+            {
+              "$type" : "AddGlobalValue",
+              "key" : "_ABILITY_Radar_Collectables_Sumeru",
+              "value" : 1,
+              "useLimitRange" : true,
+              "maxValue" : 1,
+              "minValue" : 0,
+              "doOffStage": true,
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type" : "AddGlobalValue",
+              "key" : "_ABILITY_Radar_Collectables_Sumeru",
+              "value" : -1,
+              "useLimitRange" : true,
+              "maxValue" : 0,
+              "minValue" : 0,
+              "doOffStage": true,
+            },
+          ],
+        },
+      },
+    },
+  }, 
+
+
+
+]

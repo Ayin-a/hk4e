@@ -1,0 +1,638 @@
+[
+	// 镀金旅团-弩    yiming.liao
+	// Index:
+	//		- Eremite_Crossbow_AnimatorSteer@ 攻击动画旋转
+	//      - Eremite_Crossbow_ProjectileShoot_Load@ 管理抛物线射击装填时的相关表现和逻辑
+	//          - 触发： 计算距离，距离够远，就使用抛物线射击(否则就平射 )
+	//      - Eremite_Crossbow_SingleShoot_Fire@ 开火逻辑，并控制射击次数上限
+	//          - 触发： 开火，发射投射物。 并控制射击次数上限
+	//      - Eremite_Crossbow_RapidShoot_Fire@
+	//          - 触发： 开火，发射更歪的投射物
+	//      - Eremite_Crossbow_Fire_Dendro_Bomb@
+	//          - 触发： 开火，发射角度较大的草元素炸弹
+	//      - Eremite_Crossbow_Fire_Dendro_Bomb_Hov@
+	//          - 触发： 开火，平射的草元素炸弹
+	//      - Eremit_Crossbow_Arrow_Damage@ 单发射击箭矢
+	//      - Eremit_Crossbow_Arrow_Damage_Weak@ 连发射击箭矢(伤害较低)
+	//		- Eremit_Crossbow_Dendro_Bomb_Display@ 草元素炸弹飞行表现
+	//		- Eremit_Crossbow_Dendro_Bomb_Explosion@ 草元素炸弹爆炸处理
+	//		- Eremite_Crossbow_Dendro_Bomb_Infection@ 草元素炸弹在地面形成的伤害区域 相关逻辑
+	//
+	//
+	//
+	//
+	// Figlet约束：
+	//  - P： 抛物线射击
+	//  - S： 普攻射击(单发)
+	//  - R： 连发射击
+	//
+	//
+
+	// .d8888. d888888b d88888b d88888b d8888b.
+	// 88'  YP `~~88~~' 88'     88'     88  `8D
+	// `8bo.      88    88ooooo 88ooooo 88oobY'
+	//   `Y8b.    88    88~~~~~ 88~~~~~ 88`8b
+	// db   8D    88    88.     88.     88 `88.
+	// `8888Y'    YP    Y88888P Y88888P 88   YD
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_AnimatorSteer",
+			"abilityMixins": [
+				// 前摇
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": [
+						"SingleShoot_Aim",
+						"RapidShoot_BS",
+						"ProjectileShoot_Aim01",
+						"ProjectileShoot_Aim02"
+					],
+					"startNormalizedTime": 0.067,
+					"endNormalizedTime": 0.13,
+					"angularSpeed": 10
+				},
+				// 后摇
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": [
+						"SingleShoot_Fire",
+						"RapidShoot_AS",
+						"ProjectileShoot_Fire01",
+						"ProjectileShoot_Fire02"
+					],
+					"startNormalizedTime": 0.725,
+					"endNormalizedTime": 0.8,
+					"angularSpeed": 180
+				},
+				// 提前松手
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["SingleShoot_Exit", "RapidShoot_AS_Loaded"],
+					"startNormalizedTime": 0,
+					"endNormalizedTime": 0.97,
+					"angularSpeed": 160
+				},
+
+				// Alert
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Alert"],
+					"startNormalizedTime": 0.0,
+					"endNormalizedTime": 1.0,
+					"angularSpeed": 270
+				},
+				// Special Alert
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["Crossleg_Alert"],
+					"startNormalizedTime": 0.111,
+					"endNormalizedTime": 0.8,
+					"angularSpeed": 250
+				}
+			]
+		}
+	},
+	// d8888b.                  db       .d88b.   .d8b.  d8888b.
+	// 88  `8D                  88      .8P  Y8. d8' `8b 88  `8D
+	// 88oodD'                  88      88    88 88ooo88 88   88
+	// 88~~~        C8888D      88      88    88 88~~~88 88   88
+	// 88                       88booo. `8b  d8' 88   88 88  .8D
+	// 88                       Y88888P  `Y88P'  YP   YP Y8888D'
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_ProjectileShoot_Load",
+			"onAbilityStart": [
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_ProjectileShoot_WarningLight",
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponR"
+					}
+				},
+				{
+					"$type": "Predicated",
+					"predicates": [
+						{
+							"$type": "ByAny",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"target": "SelfAttackTarget",
+									"compareType": "XZ",
+									"logic": "Greater",
+									"value": 11
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"target": "SelfAttackTarget",
+									"compareType": "Y",
+									"logic": "Greater",
+									"value": 1.2
+								}
+							]
+						}
+					],
+					"successActions": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "ProjectileTrigger",
+							"target": "Self"
+						}
+					]
+				}
+			]
+		}
+	},
+
+	// d8888b.        d88888b d888888b d8888b. d88888b
+	// 88  `8D        88'       `88'   88  `8D 88'
+	// 88oodD'        88ooo      88    88oobY' 88ooooo
+	// 88~~~   C8888D 88~~~      88    88`8b   88~~~~~
+	// 88             88        .88.   88 `88. 88.
+	// 88             YP      Y888888P 88   YD Y88888P
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_Fire_Dendro_Bomb",
+			"onAbilityStart": [
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_ProjectileShoot_Fire"
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42520003,
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponR",
+						"offset": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"direction": {
+							"$type": "ConfigDirectionByAttackTarget",
+							"maxAngle": 12,
+							"maxAngleType": "Horizontal"
+						}
+					}
+				}
+			]
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_Fire_Dendro_Bomb_Hov",
+			"onAbilityStart": [
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_ProjectileShoot_Fire"
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42520004,
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponR",
+						"offset": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"direction": {
+							"$type": "ConfigDirectionByAttackTarget",
+							"maxAngle": 12,
+							"maxAngleType": "Horizontal"
+						}
+					}
+				}
+			]
+		}
+	},
+	// .d8888.                  d88888b d888888b d8888b. d88888b
+	// 88'  YP                  88'       `88'   88  `8D 88'
+	// `8bo.                    88ooo      88    88oobY' 88ooooo
+	//   `Y8b.      C8888D      88~~~      88    88`8b   88~~~~~
+	// db   8D                  88        .88.   88 `88. 88.
+	// `8888Y'                  YP      Y888888P 88   YD Y88888P
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_SingleShoot_Fire",
+			"onAbilityStart": [
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42520001,
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponR",
+						"offset": {
+							"x": 0.2,
+							"y": 0,
+							"z": 0.1
+						},
+						"direction": {
+							"$type": "ConfigDirectionByAttackTarget",
+							"randomAngleHor": 0.2,
+							"randomAngleVer": 0.4,
+							"maxAngle": 40.0
+						}
+					}
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_Crossbow_Shoot_01"
+				}
+			]
+		}
+	},
+
+	// d8888b.                  d88888b d888888b d8888b. d88888b
+	// 88  `8D                  88'       `88'   88  `8D 88'
+	// 88oobY'                  88ooo      88    88oobY' 88ooooo
+	// 88`8b        C8888D      88~~~      88    88`8b   88~~~~~
+	// 88 `88.                  88        .88.   88 `88. 88.
+	// 88   YD                  YP      Y888888P 88   YD Y88888P
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_RapidShoot_Fire",
+			"onAbilityStart": [
+				// 发射子弹
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42520002,
+					"born": {
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "WeaponR",
+						"offset": {
+							"x": 0.2,
+							"y": 0,
+							"z": 0.1
+						},
+						"direction": {
+							"$type": "ConfigDirectionByAttackTarget",
+							"randomAngleHor": 1.4,
+							"randomAngleVer": 0.9,
+							"maxAngle": 30.0
+						}
+					}
+				},
+				// 播放特效
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_Crossbow_Shoot_01"
+				},
+				// 子弹发射控制逻辑:
+				// 设定随机的持续时间 - 持续时间到了后结束循环 - 实际表现上为攻击3~5次
+				{
+					"$type": "SetRandomOverrideMapValue",
+					"overrideMapKey": "shootingDuration",
+					"valueRangeMin": 2,
+					"valueRangeMax": 5
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "In_RapidShooting" // Stacking为Unique，不会覆盖
+				}
+			],
+			"abilitySpecials": {
+				"shootingDuration": 4
+			},
+			"modifiers": {
+				"In_RapidShooting": {
+					// 此Modifier移除时结束连发射击
+					"stacking": "Unique",
+					"duration": "%shootingDuration",
+					"onRemoved": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "RapidShootEndTrigger"
+						}
+					],
+					"onReconnect": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "RapidShootEndTrigger"
+						}
+					]
+				}
+			}
+		}
+	},
+
+	//  d888b   .d8b.  d8888b.  d888b  d88888b d888888b
+	// 88' Y8b d8' `8b 88  `8D 88' Y8b 88'     `~~88~~'
+	// 88      88ooo88 88   88 88      88ooooo    88
+	// 88  ooo 88~~~88 88   88 88  ooo 88~~~~~    88
+	// 88. ~8~ 88   88 88  .8D 88. ~8~ 88.        88
+	//  Y888P  YP   YP Y8888D'  Y888P  Y88888P    YP
+	//
+	// 单发射击
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremit_Crossbow_Arrow_Damage",
+			"onAdded": [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Hili_None_CrossBow_Arrow"
+				}
+			],
+			"onAbilityStart": [
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": {
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0
+							},
+							"born": {
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": -0.5
+								}
+							}
+						},
+						"attackInfo": {
+							"canBeModifiedBy": "OriginOwner",
+							"attackProperty": {
+								"damagePercentage": 1.0,
+								"strikeType": "Pierce",
+								"enBreak": 50.0
+							},
+							"hitPattern": {
+								"onHitEffectName": "default",
+								"hitImpulseType": "LV2",
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake": {
+								"shakeType": "Center",
+								"shakeRange": 0.06,
+								"shakeTime": 0.09,
+								"shakeDistance": 20
+							}
+						}
+					}
+				}
+			]
+		}
+	},
+	// 连发射击：弱
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremit_Crossbow_Arrow_Damage_Weak",
+			"onAdded": [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Hili_None_CrossBow_Arrow"
+				}
+			],
+			"onAbilityStart": [
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": {
+								"x": 0.1,
+								"y": 0.1,
+								"z": 1.0
+							},
+							"born": {
+								"$type": "ConfigBornByCollisionPoint",
+								"offset": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": -0.5
+								}
+							}
+						},
+						"attackInfo": {
+							"canBeModifiedBy": "OriginOwner",
+							"attackProperty": {
+								"damagePercentage": 0.65,
+								"strikeType": "Pierce",
+								"enBreak": 50.0
+							},
+							"hitPattern": {
+								"onHitEffectName": "default",
+								"hitImpulseType": "LV2",
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake": {
+								"shakeType": "Center",
+								"shakeRange": 0.06,
+								"shakeTime": 0.09,
+								"shakeDistance": 20
+							}
+						}
+					}
+				}
+			]
+		}
+	},
+
+	// d8888b. d88888b d8b   db d8888b. d8888b.  .d88b.       d8888b.  .d88b.  .88b  d88. d8888b.
+	// 88  `8D 88'     888o  88 88  `8D 88  `8D .8P  Y8.      88  `8D .8P  Y8. 88'YbdP`88 88  `8D
+	// 88   88 88ooooo 88V8o 88 88   88 88oobY' 88    88      88oooY' 88    88 88  88  88 88oooY'
+	// 88   88 88~~~~~ 88 V8o88 88   88 88`8b   88    88      88~~~b. 88    88 88  88  88 88~~~b.
+	// 88  .8D 88.     88  V888 88  .8D 88 `88. `8b  d8'      88   8D `8b  d8' 88  88  88 88   8D
+	// Y8888D' Y88888P VP   V8P Y8888D' 88   YD  `Y88P'       Y8888P'  `Y88P'  YP  YP  YP Y8888P'
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremit_Crossbow_Dendro_Bomb_Display",
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Dendro_Bomb_Display",
+					"target": "Self"
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Eremite_DendroBomb_Trail"
+				}
+			],
+			"modifiers": {
+				"UNIQUE_Dendro_Bomb_Display": {
+					"isUnique": true,
+					"elementType": "Grass",
+					"elementDurability": 50,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Eremite_DendroBomb"
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremit_Crossbow_Dendro_Bomb_Explosion",
+			"onAbilityStart": [
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Dendro_Bomb_Display"
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Eremite_DendroBomb_Explosion",
+					"born": {
+						"$type": "ConfigBornBySelf",
+						"offset": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"onGround": true,
+						"alongGround": true
+					}
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 2,
+							"born": {
+								"$type": "ConfigBornBySelf",
+								"offset": {
+									"x": 0.0,
+									"y": 0.25,
+									"z": 0.0
+								},
+								"onGround": true,
+								"alongGround": true
+							}
+						},
+						"attackInfo": {
+							"canBeModifiedBy": "OriginOwner",
+							"attackProperty": {
+								"damagePercentage": 0.7,
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 50,
+								"enBreak": 50.0
+							},
+							"hitPattern": {
+								"hitImpulseType": "LV3"
+							},
+							"forceCameraShake": false,
+							"cameraShake": {
+								"shakeType": "Center",
+								"shakeRange": 0.06,
+								"shakeTime": 0.09,
+								"shakeDistance": 20
+							}
+						}
+					}
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 42520005,
+					"campID": 4001,
+					"campTargetType": "Enemy",
+					"born": {
+						"$type": "ConfigBornBySelf",
+						"offset": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"onGround": true,
+						"alongGround": true
+					}
+				}
+			]
+		}
+	},
+
+	// d888888b d8b   db d88888b d88888b  .o88b. d888888b d888888b  .d88b.  d8b   db
+	//   `88'   888o  88 88'     88'     d8P  Y8 `~~88~~'   `88'   .8P  Y8. 888o  88
+	//    88    88V8o 88 88ooo   88ooooo 8P         88       88    88    88 88V8o 88
+	//    88    88 V8o88 88~~~   88~~~~~ 8b         88       88    88    88 88 V8o88
+	//   .88.   88  V888 88      88.     Y8b  d8    88      .88.   `8b  d8' 88  V888
+	// Y888888P VP   V8P YP      Y88888P  `Y88P'    YP    Y888888P  `Y88P'  VP   V8P
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Eremite_Crossbow_Dendro_Bomb_Infection",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Dendro_Bomb_Infection"
+				}
+			],
+			"modifiers": {
+				"Dendro_Bomb_Infection": {
+					"thinkInterval": 0.5,
+					"onThinkInterval": [
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 2.0
+								},
+								"attackInfo": {
+									"canBeModifiedBy": "OriginOwner",
+									"attenuationTag": "Group1",
+									"attenuationGroup": "default",
+									"attackProperty": {
+										"damagePercentage": 0.2,
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 0.0
+									},
+									"hitPattern": {
+										"hitImpulseType": "LV1",
+										"muteHitText": false
+									}
+								}
+							}
+						}
+					],
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Eremite_DendroBomb_Remains_Loop"
+						}
+					]
+				}
+			}
+		}
+	}
+]

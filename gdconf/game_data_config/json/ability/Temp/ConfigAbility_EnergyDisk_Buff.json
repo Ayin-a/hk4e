@@ -1,0 +1,6276 @@
+[
+    {
+    "Default": 
+    {                //队伍中所有角色攻击力提升XX
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Green_AtkUp",
+      "isDynamicAbility":true,
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Green_AtkUp",
+          "target": "AllPlayerAvatars", 
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_EnergyDisk_Green_AtkUp": 
+        {
+          "isUnique":true,
+          "isLimitedProperties": true, //是否受限于属性值区间
+          "state": "AttackUp",        
+          "properties":
+          {
+            "Actor_AttackRatio": 0.2,
+          },
+        },
+      },
+    },
+  },
+//1.角色进行下落攻击时，将释放冲击波，对敌人造成范围伤害。该效果每个角色每8秒至多触发一次。
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Purple_FallingAttack",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        {
+          "$type": "SetSystemValueToOverrideMap", //设置一些系统参数到OverrideMap里
+          "key": "LevelEntity_FallingDot_SystemValue",
+          "type": "ElementLevelCo", //SystemValue类型          
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_EnergyDisk_FallingAttack_Handler",
+        }, 
+      ],
+
+      "modifiers":
+      {
+        "UNIQUE_EnergyDisk_FallingAttack_Handler":
+        {
+          "isUnique":true,
+          "stacking": "Unique",
+          "modifierMixins":
+          [
+            {
+            "$type": "DoActionByStateIDMixin",
+            "stateIDs":
+              [
+                "FallingAnthem_AS_1",
+              ],
+            "exitActions":
+              [
+                {
+                "$type":"ApplyModifier",
+                "modifierName":"EnergyDisk_FallingAttack_CD_Change",
+                "target":"Self",                
+                }
+              ]
+            },
+          ],
+        },
+
+        "EnergyDisk_FallingAttack_CD_Change":
+        {
+          "duration":"%CDTime",//CD时长
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "EnergyDisk_FallingAttack_Delay",
+            },  
+          ],
+        },
+
+        "EnergyDisk_FallingAttack_Delay":
+        {
+          "duration":0.05,//特效播放一定时间后出伤害点
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_FallingAttack",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "EnergyDisk_FallingAttack_SKillEffect",
+            },             
+          ],
+        },
+
+        "EnergyDisk_FallingAttack_SKillEffect": 
+        {
+          "duration":2,
+          "onAdded":
+          [
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "进入技能效果逻辑！",
+            // },
+            {
+              "$type": "TriggerAttackEvent",
+              //"target":"OriginOwner",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackSphere", //攻击球
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 4.0, //半径
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                  }
+                },
+                "attackInfo":
+                {
+                  "canBeModifiedBy":"OriginOwner",
+                  "attackProperty": //攻击伤害
+                  {
+                    //"damagePercentage": "%Purple_FallingAttack_Damage", //伤害百分比
+                    "damageExtra":"%Purple_FallingAttack_Damage*%LevelEntity_FallingDot_SystemValue",
+                    "ignoreAttackerProperty":true,
+                    //"overrideByWeapon": true, //是否根据武器转化元素
+                    "attackType": "Melee",//攻击类型
+                    "elementType": "None", //元素类型
+                    "elementDurability": 0,
+                    "enBreak": 0, //破霸体值
+                  },
+                  "hitPattern"://击中效果
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"LV2",                                   
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false,
+                  },
+                }, 
+              },            
+            },
+
+          ],    
+        },
+        // "UNIQUE_EnergyDisk_FallingAttack_Cd":
+        // {
+        //   "isUnique":true,
+        //   "duration":"%CDTime",  //内置cd
+        //   "onAdded": 
+        //   [
+        //     {
+        //       "$type": "ApplyModifier",
+        //       "modifierName": "EnergyDisk_FallingAttack_Delay", 
+        //     },
+  
+        //   ],
+        //   "onRemoved": 
+        //   [
+        //     {
+        //       "$type": "AddGlobalValue",
+        //       "key": "_Ability_EnergyDisk_FallingAttack_CD",
+        //       "value": 1,
+        //       "useLimitRange": true,
+        //       "maxValue": 0,
+        //       "minValue": 0,
+        //     },
+        //   ],         
+        // },
+      },  
+      "abilitySpecials":
+      {
+        "Purple_FallingAttack_Damage":20, //环境伤害倍率
+        "LevelEntity_FallingDot_SystemValue":1,
+        "CDTime":8,  //内置CD
+      },
+  },
+}, 
+
+//2.队伍中的所有角色处于飞行状态时每隔0.1秒为自身附加一层【轻羽】效果，最多可叠加3层
+//每层提升自身X%的下落攻击伤害。
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Blue_FlyAddFallingDamage",
+      "isDynamicAbility":true,
+      "onAdded":
+      [
+        
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Mixin",
+          //"target":"AllPlayerAvatars",
+        },
+        
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Blue_Falling_Reset_BS",
+          //"target":"AllPlayerAvatars",
+        },
+      ],
+      "modifiers": 
+      {
+        
+        //监控使用下落攻击后清除【轻羽效果】，重置层数
+        "UNIQUE_EnergyDisk_Blue_Falling_Reset_BS":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachToStateIDMixin",
+              "stateIDs":
+              [
+                "FallingAnthem_AS_1", 
+              ],
+              "modifierName":"UNIQUE_EnergyDisk_Blue_Falling_Reset",
+            },
+          ]
+        },
+        "UNIQUE_EnergyDisk_Blue_Falling_Reset":
+        {
+          "isUnique":true,
+          "duration":0.2,  //等伤害触发完之后再清buff
+          "onAdded":[],
+          "onRemoved":
+          [
+            //清除buff            
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff1",
+              "target":"Self",
+            },
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff2",
+              "target":"Self",
+            },
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff3",
+              "target":"Self",
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_ABILITY_FlyTime_BuffLevel",
+              "value": 0,        
+            },
+           
+            // {
+            //   //打印log
+            //   "$type": "DebugLog", 
+            //   "content": "下落攻击后清除【轻羽】效果",
+            // }
+          ]
+        },
+        
+        "UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Mixin":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin",
+              "globalValueKey": "_ABILITY_FlyTime_BuffLevel",
+              "defaultGlobalValueOnCreate":0,
+              "valueSteps" : [-0.5,0.5,1.5,2.5,3.5],
+              "removeAppliedModifier":true,
+              "modifierNameSteps" : [
+              //"UNIQUE_EnergyDisk_FlyTimeResetTimer",
+              "UNIQUE_EnergyDisk_FlyTimeBuff0",
+              "UNIQUE_EnergyDisk_FlyTimeBuff1",
+              "UNIQUE_EnergyDisk_FlyTimeBuff2",
+              "UNIQUE_EnergyDisk_FlyTimeBuff3"],              
+            }
+          ],
+          "onAdded":
+          [
+            {
+              "$type":"ApplyModifier",
+              "modifierName":"UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Handler",
+             },           
+          ]
+        },
+        /*
+        "UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Handler": 
+        {
+          "isUnique": true,
+          "stacking":"Unique",
+          "thinkInterval":1,
+          "onThinkInterval":
+          [
+            {
+              "$type":"AttachModifier",
+              "modifierName":"UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Handler2",              
+            },
+          ],
+        },*/
+        "UNIQUE_EnergyDisk_Blue_FlyAddFallingDamage_Handler":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachToStateIDMixin",
+              "stateIDs":
+              [
+                "FlyStart",
+                "Fly",
+                "Jump",       
+              ],
+              "modifierName":"UNIQUE_ChangeGlobalValue_FlyTime", //退出飞行状态会下掉modifier
+            },
+          ]
+        },
+        
+        "UNIQUE_ChangeGlobalValue_FlyTime":
+        {
+          "isUnique":true,
+          "thinkInterval":0.1,//每0.1秒叠一层buff
+          "onAdded":
+          [],
+          "onThinkInterval":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "target": "Self",
+              "key": "_ABILITY_FlyTime_BuffLevel",
+              "value": 1,
+              "useLimitRange": true,
+              "minValue": 0,
+              "maxValue": 3,
+            },
+          ]
+        },
+        "UNIQUE_EnergyDisk_FlyTimeBuff0":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff1",
+              "target":"Self",
+            },
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff2",
+              "target":"Self",
+            },
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_FlyTimeBuff3",
+              "target":"Self",
+            },         
+          ]                  
+        },
+        
+        "UNIQUE_EnergyDisk_FlyTimeBuff1":
+        {
+          "isUnique":true,
+          "duration":"%Bufftime",
+          "onAdded":
+          [
+            /*
+            {
+              "$type":"AttachEffect",
+              "effectPattern":"Eff_EnergyDisk_AddFallingAttack01",
+            },
+            */
+          ],
+          "onRemoved":
+          [
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type": "ModifyDamageMixin", //下落伤害调整
+              "attackTags": ["FallingAttack"],  
+              "damagePercentageRatio": "%Rate*1", 
+            },
+          ],                 
+        },
+        "UNIQUE_EnergyDisk_FlyTimeBuff2":
+        {
+          "isUnique":true,
+          "duration":"%Bufftime",
+          "onAdded":
+          [
+            /*
+            {
+              "$type":"AttachEffect",
+              "effectPattern":"Eff_EnergyDisk_AddFallingAttack02",
+            },
+            */
+          ],
+          "onRemoved":
+          [
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type": "ModifyDamageMixin", //下落伤害调整
+              "attackTags": ["FallingAttack"],  
+              "damagePercentageRatio": "%Rate*2", 
+            },
+          ],                 
+        },
+        "UNIQUE_EnergyDisk_FlyTimeBuff3":
+        {
+          "isUnique":true,
+          "duration":"%Bufftime",
+          "onAdded":
+          [
+            /*
+            {
+              "$type":"AttachEffect",
+              "effectPattern":"Eff_EnergyDisk_AddFallingAttack03",
+            },
+            */
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_ABILITY_FlyTime_BuffLevel",
+              "value": 0, 
+            }       
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type": "ModifyDamageMixin", //下落伤害调整
+              "attackTags": ["FallingAttack"],  
+              "damagePercentageRatio": "%Rate*3", 
+            },
+          ],                 
+        },
+        
+      },
+      "abilitySpecials":
+      {
+        "Rate":0.35,//每层提升下落攻击伤害倍率
+        "Bufftime":10,//buff持续时长
+      }
+  }  
+},
+
+//3.角色的下落攻击命中敌人后，将产生能回复6点元素能量的元素微粒与击碎后会产生风场的风琥珀。
+//该效果每8秒至多触发一次，队伍中所有角色共享冷却（CD要根据感受重新调）。
+
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Blue_FallingAttack_AddWind",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        //全队共计CD触发器
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Blue_FallingAttack_AddWind_Total",
+          "target":"MPLevel",
+        },
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_AddWind_Handler",
+          "target":"Self",
+        },   
+      ],
+      "modifiers":   
+      {
+        "UNIQUE_EnergyDisk_Blue_FallingAttack_AddWind_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_AddWind_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_AddWind_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{},
+
+
+        "UNIQUE_EnergyDisk_AddWind_Handler":
+        {
+          "isUnique":true,
+          "stacking": "Unique",
+          "modifierMixins":
+          [
+            {
+            "$type": "AttachToStateIDMixin",
+            "stateIDs":
+            [
+              "FallingAnthem_AS_1",
+              "FallingAnthem_AS_2", 
+            ],
+            "modifierName":"UNIQUE_EnergyDisk_AddWind_CD_Change",
+            },
+          ],
+        },
+
+        "UNIQUE_EnergyDisk_AddWind_CD_Change":
+        {
+          "isUnique":true,
+          "onAttackLanded":
+          [
+            {
+            "$type":"Predicated",
+            "target":"Other",              
+            "targetPredicates":
+              [
+                {
+                  "$type": "ByEntityTypes",
+                  "target": "Target",
+                  "entityTypes": [ "Monster", ],
+                },
+              ],
+            "successActions":
+              [
+                  {
+                    "$type":"Predicated",
+                    "target":"MPLevel",
+                    "targetPredicates":
+                    [
+                      {
+                        "$type":"ByTargetGlobalValue",
+                        "key":"_Ability_EnergyDisk_AddWind_CD",
+                        "value":0,
+                        "compareType":"Equal",
+                      },
+                    ],
+                    "successActions":
+                    [
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_AddWind_SKillEffect",
+                      },
+                      // {
+                      //   "$type": "DebugLog", 
+                      //   "content": "可以放技能效果",
+                      // },
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_AddWind_CD_Change_MPLEVEL",
+                        "target":"MPLevel",
+                      },
+                      //进入CD
+                    ]
+                  }  
+              ],
+            }
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_AddWind_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_AddWind_CD",
+                "value": -1,
+                "target":"MPLevel",  //需要共计CD，等功能测试   
+            },
+          ]
+
+        },
+
+        "UNIQUE_EnergyDisk_AddWind_SKillEffect": 
+        {
+          "isUnique":true,
+          "duration":0.3,
+          "onAdded":
+          [
+            {
+              "$type": "GenerateElemBall", 
+              "configID": 2024,
+              "baseEnergy":6,
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": -1,
+                },
+                "bornRandom" :
+                {
+                  "$type": "BornRandomFromCenter",
+                  "minRandomRange":0,
+                  "maxRandomRange":0.5,
+                },
+              },
+            },
+            //生成风琥珀 
+            {
+              "$type":"CreateGadget",
+              "gadgetID":44000304,
+              "campID":5001,
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "onGround": true,
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": -1,
+                },
+                "bornRandom" :
+                {
+                  "$type": "BornRandomFromCenter",
+                  "minRandomRange":0,
+                  "maxRandomRange":0.5,
+                },               
+              },
+            },
+          ],    
+        },
+        "UNIQUE_EnergyDisk_AddWind_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_AddWind_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+      },  
+      "abilitySpecials":
+      {
+        "CDTime":8, //内置CD
+      },
+
+      "onRemoved":
+      [
+        {
+            "$type": "SetGlobalValue",
+            "key": "_Ability_EnergyDisk_AddWind_CD",
+            "value": 0,
+            "target":"MPLevel",  //需要共计CD，等功能测试   
+        },
+      ]
+
+  },
+},
+
+
+//自定义风琥珀gadget(攻击前)
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "EnergyDisk_SkillObj_WindAmber",
+      "onAdded":
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Broken",
+        },
+        {
+          "$type": "AttachAbilityStateResistance",
+          "resistanceListID": 14005,
+        },
+        {
+          "$type": "AttachAbilityStateResistance",
+          "resistanceListID": 14002,
+        },
+        //出现特效
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_EnergyDisk_AddWind",
+        }
+      ],
+      "modifiers":
+      {
+        "Broken":
+        { 
+          "onBeingHit":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "Broken",
+              "predicates":
+              [
+                {
+                  "$type": "ByHitDamage",
+                  "damage": 1,
+                },
+              ],  
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000305,
+              "campID": 1001,
+              "campTargetType": "All",
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Amber_Wind_Hit",
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" : 
+                {
+                  "x": 0.0,
+                  "y" : 0.3,
+                  "z" : 0.0,
+                },
+              },
+            },
+            {
+              "$type": "KillSelf",
+            },
+          ],
+        },
+      },
+    },
+  },
+//自定义风琥珀攻击后
+/////////////////////////////////////////////////////////
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "EnergyDisk_WindAmberField",
+      "onAdded":
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "EnergyDisk_WindAmberField",
+        },
+      ],
+      "modifiers":
+      {
+        "EnergyDisk_WindAmberField":
+        { 
+          "duration": 8,//风场持续时间
+          "onRemoved":
+          [
+            {
+              "$type": "SetAnimatorBool",
+              "boolID": "WindField_Die",
+              "value": true,
+            },
+          ],
+        },
+      },
+    },
+  },
+
+//4.队伍中所有角色下落攻击伤害提升40%
+//绿色上传测
+
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Green_FallingDamage_Add",
+      "isDynamicAbility":true,
+      "onAdded":
+      [],
+      "modifiers": 
+      {},
+      "abilityMixins":
+      [
+        {
+          "$type": "ModifyDamageMixin", //伤害调整
+          "attackTags": ["FallingAttack"],  
+          "damagePercentageRatio":"%DamageUp",       
+        }
+      ],
+      "abilitySpecials":
+      {
+        "DamageUp":0.4,
+      } 
+  }
+},
+
+
+//5.角色通过重击击败敌人后的60秒内，队伍中所有角色的重击造成的伤害提高35%。
+//该效果至多叠加5层，每0.3秒内只能触发一次。
+
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Purple_Onkill_ThumpDamageAdd",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        //全队共计CD
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Onkill_ThumpDamageAdd_Total",
+          "target":"MPLevel",
+        },
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Mixin",
+          "target":"Self",
+        },  
+      ], 
+      "modifiers":
+      {
+        "UNIQUE_EnergyDisk_Purple_Onkill_ThumpDamageAdd_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_Onkill_ThumpDamageAdd_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Cd","Blank"],                                   
+            }
+          ],
+          "onAdded":
+          [
+              {
+                "$type":"SetGlobalValue",
+                "key":"_ABILITY_EnergyDisk_Purple_ExtraAtkKillBuffLevel",
+                "target":"MPLevel",
+                "value":0,             
+              }
+          ]
+        },
+        "Blank":{},        
+
+        "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":0.3,
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_Onkill_ThumpDamageAdd_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ] 
+
+        },
+
+        "UNIQUE_EnergyDisk_ExtraAtkKillOnkill_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":"%Bufftime",
+          "stacking":"Refresh",
+          "onAdded":
+          [
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_ABILITY_EnergyDisk_Purple_ExtraAtkKillBuffLevel",
+              "value": 0,
+              "target":"MPLevel",             
+            }
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Mixin":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "DoActionByKillingMixin",
+              "attackTags": [ "ExtraAttack" ],
+              //算的是此角色最后一击的tag。不一定是击杀那一击（可能是别人击杀的）
+              "detectWindow": 0.6, //这段时间之后击杀都算，但是无论是modifiermixin还是abilitymixin都需要角色在场。  
+              "onKill":
+              [
+                {
+                  "$type": "Predicated", //务必要用这个写法，不然other无法传递给predicate
+                  "target": "Other",
+                  "targetPredicates": [
+                    {
+                      "$type": "ByEntityTypes",
+                      "target": "Target",
+                      "entityTypes": [ "Monster", ],
+                    },
+
+                  ],
+                  "successActions":
+                   [
+                        {
+                        "$type":"Predicated",
+                        "target":"MPLevel",
+                        "targetPredicates":
+                        [
+                          {
+                            "$type":"ByTargetGlobalValue",
+                            "key":"_Ability_EnergyDisk_Onkill_ThumpDamageAdd_CD",
+                            "value":0,
+                            "compareType":"Equal",
+                          },
+                        ],
+                        "successActions":
+                        [
+                          // {
+                          //     "$type": "DebugLog", 
+                          //     "content": "重击击杀触发了",
+                          // },
+                          // {
+                          //   "$type": "ApplyModifier",
+                          //   "modifierName": "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_BuffEffect",
+                          //   "target":"AllPlayerAvatars",
+                          // },
+                          {
+                            "$type":"AttachModifier",
+                            "modifierName":"UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_CD_Change_MPLEVEL",
+                            "target":"MPLevel",
+                          },
+                          {
+                            "$type":"AttachModifier",
+                            "modifierName":"UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Layer_Reset_MPLEVEL",
+                            "target":"MPLevel",
+                          },
+
+                        ],             
+                      },
+                    ]
+                 }
+               ]
+            },
+            //跟据层数不同的处理
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin",
+              "globalValueKey": "_ABILITY_EnergyDisk_Purple_ExtraAtkKillBuffLevel",
+              "globalValueTarget":"MPLevel",
+              "valueSteps" : [-0.5,0.5,1.5,2.5,3.5,4.5,100],
+              //"removeAppliedModifier":true,
+              "modifierNameSteps" : [
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff0",
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff1",
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff2",
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff3",
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff4",
+                "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff5"],
+            }, 
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_Onkill_ThumpDamageAdd_CD",
+                "value": -1,
+                "target":"MPLevel",  //需要共计CD，等功能测试   
+            },
+            {
+              "$type":"AddGlobalValue",
+              "key":"_ABILITY_EnergyDisk_Purple_ExtraAtkKillBuffLevel",
+              "target":"MPLevel",
+              "value":1,
+            },
+            // {
+            //   "$type":"ApplyModifier",
+            //   "modifierName":"UNIQUE_EnergyDisk_ExtraAtkKillOnkill_CD_Change_MPLEVEL",
+            //   "target":"MPLevel",                
+            // },
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Layer_Reset_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "刷新时间",             
+            // },
+            {
+              "$type":"RemoveUniqueModifier",
+              "modifierName":"UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Layer_Reset_MPLEVEL_Time",
+              "target":"MPLevel",
+            },
+            {
+              "$type":"ApplyModifier",
+              "modifierName":"UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Layer_Reset_MPLEVEL_Time",
+              "target":"MPLevel",
+            },
+          ],
+        },
+        "UNIQUE_EnergyDisk_Onkill_ThumpDamageAdd_Layer_Reset_MPLEVEL_Time":
+        {
+          "isUnique":true,
+          "duration":"%Bufftime",
+          "thinkInterval":"%Bufftime",
+          "onThinkInterval":
+          [
+            {
+              "$type":"SetGlobalValue",
+              "key":"_ABILITY_EnergyDisk_Purple_ExtraAtkKillBuffLevel",
+              "target":"MPLevel",
+              "value":0,                        
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "重置为0",            
+            // }
+          ]        
+        },
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff0":
+        {
+          "isUnique":true,
+        },
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff1":
+        {
+          "isUnique":true,
+          "onAdded":
+          [
+            {
+              "$type":"FireEffect",
+              "effectPattern":"Eff_EnergyDisk_ExtraAtkKill01",//特效替换
+              "target":"Self",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "一层",
+            // },
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ExtraAtkKill_Common",//触发时需要播一个闪光特效
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "attackTags":["ExtraAttack"],
+              "damagePercentageRatio":"%Damage*1",
+            },
+          ],
+        },
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff2":
+        {
+          "isUnique":true,
+          "onAdded":
+          [
+            {
+              "$type":"FireEffect",
+              "effectPattern":"Eff_EnergyDisk_ExtraAtkKill02",//特效替换
+              "target":"Self",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "2层",
+            // },
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ExtraAtkKill_Common",//触发时需要播一个闪光特效
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "attackTags":["ExtraAttack"],
+              "damagePercentageRatio":"%Damage*2",
+            },
+          ],
+        },
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff3":
+        {
+          "isUnique":true,
+          "onAdded":
+          [
+            {
+              "$type":"FireEffect",
+              "effectPattern":"Eff_EnergyDisk_ExtraAtkKill03",//特效替换
+              "target":"Self",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "3层",
+            // },
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "attackTags":["ExtraAttack"],
+              "damagePercentageRatio":"%Damage*3",
+            },
+          ],
+        }, 
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff4":
+        {
+          "isUnique":true,
+          "onAdded":
+          [
+            {
+              "$type":"FireEffect",
+              "effectPattern":"Eff_EnergyDisk_ExtraAtkKill04",//特效替换
+              "target":"Self",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+
+            },
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ExtraAtkKill_Common",//触发时需要播一个闪光特效
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "4层",
+            // },
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "attackTags":["ExtraAttack"],
+              "damagePercentageRatio":"%Damage*4",
+            },
+          ],
+        }, 
+        "UNIQUE_EnergyDisk_Purple_ExtraAtkKillBuff5":
+        {
+          "isUnique":true,
+          "onAdded":
+          [
+            {
+              "$type":"FireEffect",
+              "effectPattern":"Eff_EnergyDisk_ExtraAtkKill05",//特效替换
+              "target":"Self",
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ExtraAtkKill_Common",//触发时需要播一个闪光特效
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "5层",
+            // },
+          ],
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "attackTags":["ExtraAttack"],
+              "damagePercentageRatio":"%Damage*5",
+            },
+          ],
+        },
+      },
+      "abilitySpecials":
+      {
+        "Bufftime":60, 
+        "Damage":0.35,
+
+      }
+  },
+},
+
+//6.当前角色若武器类型为弓箭，进行重击并命中弱点时，将获得「刚弓」效果，使普通攻击与重击的暴击率提升50%，持续8秒。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_Bow_AttackGainBuff",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [
+        { 
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Blue_Bow_AttackGainBuff",
+          //"target":"AllPlayerAvatars",
+        },
+      ], 
+    "modifiers":
+    {
+      "UNIQUE_EnergyDisk_Blue_Bow_AttackGainBuff":
+      {
+        "isUnique":true,
+        "onAttackLanded":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Other",
+            "targetPredicates":
+            [
+              {
+                "$type" : "ByAvatarWeaponType",
+                "target":"Self",
+                "weaponTypes" : ["WEAPON_BOW",],
+              },
+              {
+                "$type" : "ByEntityTypes",
+                "entityTypes" : ["Monster"],
+              },
+              {
+                "$type" : "ByAttackTags",
+                "attackTags" : ["ExtraAttack",],
+              },
+              {
+                "$type":"ByHitBoxType",
+                "hitBoxType":"Head",
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type":"ApplyModifier",
+                "target":"Self",
+                "modifierName":"UNIQUE_Bow_AttackGainBuff_Effect",
+              },
+              {
+                "$type": "DebugLog", 
+                "content": "获得弓箭精通效果",
+              }
+            ],
+          },         
+        ]
+      },
+      "UNIQUE_Bow_AttackGainBuff_Effect":
+      {
+        "isUnique":true,
+        "duration": "%Time",
+        "stacking":"Refresh",
+        "state":"AttackUp",
+        "isLimitedProperties": true,
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags": ["NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              "ExtraAttack"],
+            "bonusCritical":"%bonusCritical",
+          }
+        ]
+      },
+    },
+    "abilitySpecials":
+    {
+      "bonusCritical":0.5,//暴击率提升
+      "Time":8,//持续时间
+    }
+  },
+
+},
+
+//7.角色通过重击击败敌人时，会在敌人的位置产生真空场，牵引周围的敌人
+//并基于该角色攻击力的500%造成伤害。
+//该效果每2秒至多触发一次，队伍中所有角色共享冷却。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_ExtraAtkKill_Attract",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      //全队共计CD
+      {
+        "$type":"AttachModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Blue_ExtraAtkKill_Attract_Total",
+        "target":"MPLevel",
+      },
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_ExtraAtkKill_Attract_Handler",
+          "target":"Self",
+        }, 
+    ], 
+    "modifiers":
+    {
+        "UNIQUE_EnergyDisk_Blue_ExtraAtkKill_Attract_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_ExtraAtkKill_Attract_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_ExtraAtkKill_Attract_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{}, 
+        
+        "UNIQUE_EnergyDisk_ExtraAtkKill_Attract_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_ExtraAtkKill_Attract_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+
+        "UNIQUE_EnergyDisk_ExtraAtkKill_Attract_Handler":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "DoActionByKillingMixin",
+              "attackTags": [ "ExtraAttack" ],
+              //算的是此角色最后一击的tag。不一定是击杀那一击（可能是别人击杀的）
+              "detectWindow": 0.6, //这段时间之后击杀都算，但是无论是modifiermixin还是abilitymixin都需要角色在场。  
+              "onKill":
+              [
+                {
+                  "$type": "Predicated", //务必要用这个写法，不然other无法传递给predicate
+                  "target": "Other",
+                  "targetPredicates": [
+                    {
+                      "$type": "ByEntityTypes",
+                      "target": "Target",
+                      "entityTypes": [ "Monster", ],
+                    },
+                  ],
+                  "successActions":
+                   [
+                    {
+                      "$type": "DebugLog", 
+                      "content": "重击击杀触发",
+                    },
+                    {
+                    "$type":"Predicated",
+                    "target":"MPLevel",
+                    "targetPredicates":
+                    [
+                      {
+                        "$type":"ByTargetGlobalValue",
+                        "key":"_Ability_EnergyDisk_ExtraAtkKill_Attract_CD",
+                        "value":0,
+                        "compareType":"Equal",
+                      },
+                    ],
+                    "successActions":
+                    [
+                      {
+                        "$type":"ApplyModifier",
+                        "target":"Self",
+                        "modifierName":"UNIQUE_EnergyDisk_Blue_ExtraAtkKill_Attract_CreateGadget",
+                      }, 
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_ExtraAtkKill_Attract_CD_Change_MPLEVEL",
+                        "target":"MPLevel",
+                      }, 
+                    ]
+                  }              
+                  ]
+                }
+              ]       
+            }            
+          ]
+        },     
+      "UNIQUE_EnergyDisk_ExtraAtkKill_Attract_CD_Change_MPLEVEL":
+      {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_ExtraAtkKill_Attract_CD",
+                "value": -1,
+                "target":"MPLevel",  //需要共计CD，等功能测试   
+            },
+          ]        
+      },
+
+      "UNIQUE_EnergyDisk_Blue_ExtraAtkKill_Attract_CreateGadget":
+      {
+        "isUnique":true,
+        "stacking":"Unique",
+        "duration":0.3,
+        "onAdded":
+        [
+          {
+            "$type": "CreateGadget",
+            "gadgetID":44000303,
+            "campID": 1001,
+            "campTargetType": "Enemy",
+            "born":
+            {
+              "$type": "ConfigBornBySelf",
+              "offset":
+              {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 5.0,
+              },
+              "onGround": true,
+            },
+          },
+        ]
+      }
+    },
+
+    "abilitySpecials":
+    {
+      "CDTime":2,
+    }   
+  }
+},
+
+//重击击杀的gadget
+{
+    "Default":
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "Avatar_EnergyDisk_WindBlackHole_Gadget",
+      "onAdded":
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "WindBlackHole_Gadget_Pre",
+          "target": "Self",
+        },
+
+      ],
+      "modifiers":
+      {
+        "WindBlackHole_Gadget_Pre":
+        {
+          "duration": 0.34, //特效播放到一定时间后再出伤害
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_EnergyDisk_ExtraAtkAttract",
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "WindBlackHole_Gadget_Handler",
+              "target": "Self",
+            },
+          ],
+        },
+        "WindBlackHole_Gadget_Handler":
+        {
+          "onAdded":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "WindBlackHole_Gadget_WindZone",
+              "target": "Self",
+            },
+            {
+              "$type": "TriggerAttackEvent",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackCircle",
+                  "triggerType": "TriggerNoRepeat",
+                  "fanAngle": 360.0,
+                  "height": 6,
+                  "radius": 6,
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                    "offset":
+                    {
+                      "x" : 0.0,
+                      "y" : -3.0,
+                      "z" : 0.0,
+                    },
+                  },
+                },
+                "attackInfo":
+                {
+                  "attackProperty":
+                  {
+                    "damagePercentage": "%BlackHole_Gadget_Damage",
+                    "elementType": "None",
+                    "elementDurability": 0,
+                    "strikeType": "Default",
+                    "enBreak": 150,
+                  },
+                  "hitPattern":
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"LV7",
+                    "reboundRatio": 0,
+                    "retreatType": "ByHitDirectionInverse",
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0.0,
+                    "hitHaltTimeScale": 0.05,
+                    "muteHitText": false,
+                  },
+                }
+              },
+            },
+          ],
+        },
+        "WindBlackHole_Gadget_WindZone":
+        {
+          "duration": 0.3,
+          "modifierMixins":
+          [
+            {
+              "$type": "WindZoneMixin",
+              "shapeName": "CircleR6",
+              "innerRadius": 1.0,
+              "strength": 4,
+              "attenuation": 2,
+              "born":
+              {
+                "$type": "ConfigBornBySelf",
+                "offset":
+                {
+                  "x": 0.0,
+                  "y": 1.0,
+                  "z": 0.0,
+                },
+              },
+              "targetType": "All",
+              "predicates":
+              [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": ["Avatar"],
+                  "reject": true,
+                },
+              ],
+            },
+          ],
+        },
+      },
+      "abilitySpecials":
+      {
+        "BlackHole_Gadget_Damage": 5, //X%攻击力伤害
+        //"LevelEntity_BlackHoleDot_SystemValue":3,
+      },
+    },
+},
+
+//8.队中所有角色的重击伤害提升X%
+//绿色直接上传测
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Green_ThumpDamageUp",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Green_ThumpDamageUp",
+          //"target": "AllPlayerAvatars", 
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_EnergyDisk_Green_ThumpDamageUp": 
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "isLimitedProperties": true, //是否受限于属性值区间        
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "damagePercentageRatio":0.3,
+              "attackTags":["ExtraAttack"],
+            },
+          ],
+        },
+      },
+      "abilitySpecials":
+      {
+        "Rate":0.3,
+      },
+  },    
+},
+
+//9.使用重击时的体力消耗降低50%
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Green_ThumpCostDown",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Green_ThumpCostDown",
+          //"target": "AllTeams", 
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_EnergyDisk_Green_ThumpCostDown": 
+        {
+          "isUnique":true,      
+          "modifierMixins":
+          [
+            {
+              "$type":"AttachToStateIDMixin",
+              "stateIDs": 
+              [
+                "ExtraAttack",
+                "ExtraAttack1",
+                "ExtraAttack2",
+                "ExtraAttack3",
+                //
+                "Attack01",
+                "Attack02",
+                "Attack03",
+                "Attack04",
+                "Attack05",
+                "Attack06",
+                "ExtraAttack_BS",
+                "ExtraAttack_Charge",
+                //
+                "Gandalfr_Attack01",
+                "Gandalfr_Attack02",
+                "Gandalfr_Attack03",
+                "Gandalfr_Attack04",
+                "Gandalfr_Attack05",
+                "Gandalfr_Attack06",
+                "Gandalfr_ExtraAttack",
+                //
+                "Katana_Attack01",
+                "Katana_Attack02",
+                "Katana_Attack03",
+                "Katana_Attack04",
+                "Katana_Attack05",
+                "Katana_Attack06",
+                "Katana_ExtraAttack"
+              ],
+              "modifierName" : "Stamina_ExtraAttack_EnergyDisk_Sub",
+            },
+          ],
+        },
+
+        "Stamina_ExtraAttack_EnergyDisk_Sub":
+        {
+          "isLimitedProperties": true,
+          "onAdded":
+          [
+            {
+              "$type": "DebugLog", 
+              "content": "触发Buff效果",//这里走到了
+            },
+          ],
+          "properties":
+          {
+            "Actor_CostStaminaRatio":"%Rate",
+          },         
+        }
+      },
+      "abilitySpecials":
+      {
+        "Rate":-0.5,
+      },
+  },    
+},
+
+//10.角色拥有5层「剑舞」效果，每层剑舞效果会使角色的普通攻击造成的伤害提高15%。
+//拥有5层效果时，普通攻击速度提高15%。角色受到伤害时，会失去1层剑舞，每秒最多因此失去1层剑舞。
+//角色在场上时，每10秒会获得一层剑舞，直到拥有5层剑舞为止。每个角色单独计算剑舞效果的层数与获得间隔时间。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_Berserker",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Berserker",
+        },
+
+        //随时间恢复层数
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Berserker_RecoveryLayers",
+          //"target":"AllPlayerAvatars",
+        } 
+             
+      ], 
+    "abilityMixins":
+    [
+      //iscombat再触发
+    ],
+    "modifiers":
+    {
+    "UNIQUE_EnergyDisk_Purple_Berserker_RecoveryLayers":
+    {
+      "isUnique":true,
+      //"doOffStage":false,   在后台时是否恢复，待定
+      "thinkInterval":"%ReviveTime",
+      "onThinkInterval":
+      [
+        {
+            "$type":"AddGlobalValue",
+            "key":"_ABILITY_EnergyDisk_Purple_AttackBuffLevel",
+            "value":1,
+            "useLimitRange":true,
+            "maxValue":5,          
+        }
+      ]
+    },
+
+    "UNIQUE_EnergyDisk_Purple_Berserker": 
+    {
+      "isUnique":true,
+      //"duration":1,
+      "modifierMixins":
+      [
+        {
+          "$type": "AttachModifierToSelfGlobalValueMixin",
+          "globalValueKey": "_ABILITY_EnergyDisk_Purple_AttackBuffLevel",
+          "defaultGlobalValueOnCreate":5,
+          "valueSteps" : [-1.5,-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+          "removeAppliedModifier":true,
+          "modifierNameSteps" : [
+            "UNIQUE_EnergyDisk_Purple_Berserker_ResetTimer",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff0",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff1",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff2",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff3",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff4",
+            "UNIQUE_EnergyDisk_Purple_BerserkerBuff5"],
+        },                  
+      ],
+      "onAdded":
+      [
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Berserker_Handler",
+          "target":"Self",
+        }, 
+      ],
+    },
+
+      "UNIQUE_EnergyDisk_Purple_Berserker_Handler":
+      {
+        "isUnique":true,
+        "onBeingHit":
+        [
+          {
+              "$type":"ApplyModifier",
+              "modifierName":"UNIQUE_EnergyDisk_Purple_Berserker_ResetCD",
+              "target":"Self",
+              "predicates":
+              [
+                {
+                  "$type":"ByHitDamage",
+                  "damage":0,
+                  "logic":"Greater",
+                },
+              ],            
+          }
+        ]
+      },
+      "UNIQUE_EnergyDisk_Purple_Berserker_ResetCD":
+      {
+        "duration":1, //1秒内不会掉层
+        "isUnique":true,
+        "stacking":"Unique",
+        "onAdded":
+        [
+          {
+            "$type":"AddGlobalValue",
+            "key":"_ABILITY_EnergyDisk_Purple_AttackBuffLevel",
+            "value" : -1,
+            "useLimitRange" : true,
+            "maxValue" : 5,
+            "minValue" : -1,//需要保证一直受击的话永远不会开始计时。
+          },
+          {
+            "$type": "DebugLog", 
+            "content": "受击触发globalvalue变更",
+          },
+        ]
+      },
+      "UNIQUE_EnergyDisk_Purple_Berserker_ResetTimer"://每次受击后执行
+      {
+        "isUnique":true,
+        "thinkInterval":0.3,
+        "onThinkInterval":
+        [
+          /*
+          {
+            "$type":"AddGlobalValue",
+            "key":"_ABILITY_EnergyDisk_Purple_AttackBuffLevel",
+            "value":1,
+            "useLimitRange":true,
+            "maxValue":5,
+          },*/
+        ]
+      },
+
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff0":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+              "$type":"SetGlobalValue",
+              "key":"_ABILITY_EnergyDisk_Purple_AttackBuffLevel",
+              "value":0,         
+          }
+        ]
+      },
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff1":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill01",//特效替换
+            "target":"Self",
+          }
+        ],
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":[
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              ],
+            "damagePercentageRatio":"%Rate*1",
+          },
+        ]
+      }, 
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff2":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill02",//特效替换
+            "target":"Self",
+          }
+        ],
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":[
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              ],
+            "damagePercentageRatio":"%Rate*2",
+          },
+        ]
+      },
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff3":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill03",//特效替换
+            "target":"Self",
+          },
+
+        ],
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":[
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              ],
+            "damagePercentageRatio":"%Rate*3",
+          },
+        ]
+      },     
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff4":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill04",//特效替换
+            "target":"Self",
+          }
+        ],
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":[
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              ],
+            "damagePercentageRatio":"%Rate*4",
+          },
+        ]
+      },     
+      "UNIQUE_EnergyDisk_Purple_BerserkerBuff5":
+      {
+        "isUnique":true,
+        //"state":"AttackUp",
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill05",//特效替换
+            "target":"Self",
+          },
+          /*
+          {
+            "$type":"AttachEffect",
+            "effectPattern":"Eff_EnergyDisk_ExtraAtkKill05_Full",//特效替换
+            //"target":"Self",
+          },
+          */
+        ],
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":[
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              ],
+            "damagePercentageRatio":"%Rate*5",
+          },
+        ],
+        "isLimitedProperties": true,
+        "properties":
+        {
+          "Animator_AttackSpeedRatio":"%AttackSpeed_Rate",
+        }
+      }, 
+    },
+
+    "abilitySpecials":
+    {
+      "Rate":0.15, //普攻伤害提升
+      "AttackSpeed_Rate":0.15,//满层时攻击速度提升
+      "ReviveTime":10,//每X秒恢复一层
+    }
+  },
+},
+
+//11.角色处于护盾庇护下时，普通攻击命中敌人时，攻击力将提高10%。该效果最多叠加5层，持续8秒。
+//该效果叠加的层数与持续时间对每个角色单独计算。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_HasShield_NormalAtkUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [  
+      ], 
+    "abilityMixins":
+      [
+        {
+          "$type": "AttachModifierToPredicateMixin",
+          "type": "Current",
+          "modifierName": "UNIQUE_EnergyDisk_HasShield_NormalAtkUp",
+          "predicates":
+          [
+            {
+              "$type": "ByHasShield",
+              "type": "All", 
+            },
+          ],
+        },          
+      ], 
+    "modifiers":
+    {
+      "UNIQUE_EnergyDisk_HasShield_NormalAtkUp":
+      {
+        "isUnique":true,
+        "onAttackLanded":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Target",
+            "targetPredicates":
+            [
+              {
+                "$type":"ByEntityTypes",
+                "entityTypes":["Monster"],                
+              },
+              {
+                "$type":"ByAttackTags",
+                "attackTags":
+                  [
+                    "NormalAttack_01",
+                    "NormalAttack_02",
+                    "NormalAttack_03",
+                    "NormalAttack_04",
+                    "NormalAttack_05",
+                    "NormalAttack_06",
+                  ],                
+              }
+            ],
+            "successActions":
+            [
+              {
+                "$type": "ApplyModifier",
+                "target": "Self",
+                "modifierName": "UNIQUE_EnergyDisk_HasShield_NormalAtkUp_Effect",
+              }
+            ],
+
+          },
+        ]
+      },
+      //具体上的Buff效果
+      "UNIQUE_EnergyDisk_HasShield_NormalAtkUp_Effect":
+      {
+        "isUnique":true,
+        "duration":"%Bufftime",
+        "stacking":"MultipleRefresh",
+        "stackingOption":
+          {
+            "maxModifierNumForMultipleType": 5,
+          },
+        "onAdded":
+        [
+          {
+            "$type": "DebugLog", 
+            "content": "有护盾时的普攻命中后的buff效果层",
+          },
+        ],
+        "isLimitedProperties": true,
+        "properties":
+        {
+          "Actor_AttackRatio": "%Rate",
+        }    
+      },
+    },
+
+    "abilitySpecials":
+    {
+      "Bufftime":8,//buff持续时间
+      "Rate":0.1,//攻击力提升
+    }
+  },
+},
+
+//12.元素爆发命中后的20秒内，施放该元素爆发的角色普通攻击造成的伤害提高40%。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_ElementBurst_NormalAtkUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Blue_ElementBurst_NormalAtkUp",
+          //"target":"AllPlayerAvatars",
+        },
+      ], 
+    "modifiers":
+    {
+      "UNIQUE_EnergyDisk_Blue_ElementBurst_NormalAtkUp":
+      {
+        "isUnique":true,
+        "onAttackLanded":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Target", //有条件的在BeingHit/success等事件中指向target
+            "targetPredicates":
+            [
+              {
+                "$type":"ByAttackTags",
+                "attackTags":["Elemental_Burst"],
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type":"AttachModifier",
+                "target":"Self",
+                "modifierName":"UNIQUE_EnergyDisk_NormalAttackUp",
+              },
+              {
+                "$type": "DebugLog", 
+                "content": "元素爆发命中后触发了",
+              }
+            ],
+          },
+        ]
+      },
+
+      "UNIQUE_EnergyDisk_NormalAttackUp":
+      {
+        "isUnique":true,
+        "duration":"%time",
+        "stacking":"Refresh",
+        "state":"AttackUp",
+        "modifierMixins":
+        [
+          {
+            "$type":"ModifyDamageMixin",
+            "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"],
+            "damagePercentageRatio":"%Rate",
+          },
+        ],
+      },
+    },
+    "abilitySpecials":
+    {
+      "time":20,   //buff时长
+      "Rate":0.4, //普攻伤害提升
+    }
+  }, 
+
+},
+
+//13.队伍中所有角色普通攻击造成的伤害提升30%。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_ExtraAtkUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [],
+    "abilityMixins":
+    [
+      {
+        "$type":"ModifyDamageMixin",
+        "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"],
+        "damagePercentageRatio":"%Rate",
+      },        
+
+    ], 
+    "modifiers":
+    {},
+    "abilitySpecials":
+    {
+      "Rate":0.3,
+    }
+  }
+
+},
+
+//14.队伍中任意角色施放元素爆发后，将产生「元素圆舞」效果，使队伍中所有角色的元素精通提高100点。
+//该效果持续20秒，至多叠加3次。叠加3次后在持续期间内，若再次产生该效果，将释放冲击波，造成范围伤害。
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_ElementBurst_Count3Wave",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type":"SetGlobalValue",
+        "target":"MPLevel",    
+        "key":"_ABILITY_ElementBurst_Layer",
+        "value":0,         
+      },
+      //BUFF层数记在MPLevel上
+      {
+        "$type": "SetSystemValueToOverrideMap", //设置一些系统参数到OverrideMap里
+        "key": "LevelEntity_Count3Wave_SystemValue",
+        "type": "ElementLevelCo", //SystemValue类型          
+      },
+      {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_Purple_ElementBurst_Count3Wave_Handler",       
+      },
+      // {
+      //     "$type":"ApplyModifier",
+      //     "modifierName":"UNIQUE_Purple_ElementBurst_Count3Wave_Mixin",
+      //     "target":"MPLevel",       
+      // },
+           
+    ], 
+    "modifiers":
+    {
+      "UNIQUE_Purple_ElementBurst_Count3Wave_Handler":
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type":"OnAvatarUseSkillMixin",
+            "clearSkillIdDelay": 0.2,
+            "onTriggerUltimateSkill":
+            [
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_EnergyDisk_ElementBurst_AddLayer",
+                "target":"MPLevel",
+              },
+
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_EnergyDisk_ElementBurst_Layer_Reset_MPLEVEL",
+                "target":"MPLevel",
+              },
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_ABILITY_ElementBurst_Layer",
+                    "value":4,
+                    "compareType":"MoreThanAndEqual",
+                  },
+                ],
+                "successActions":
+                [
+                  //满层触发效果
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_ElementBurst_Count3Wave_3_Extra_Effect",
+                    "target":"Self",
+                  },         
+                ],             
+              },
+            ],            
+          },
+
+          {
+            "$type": "AttachModifierToSelfGlobalValueMixin",
+            "globalValueKey": "_ABILITY_ElementBurst_Layer",
+            "globalValueTarget":"MPLevel",
+            "valueSteps":[-0.5,0.5,1.5,2.5,100],
+            "removeAppliedModifier": true,//这个置为false好像不管用
+            "modifierNameSteps":
+            [
+              "UNIQUE_ElementBurst_Count3Wave_0",
+              "UNIQUE_UNIQUE_ElementBurst_Count3Wave_1_Effect",
+              "UNIQUE_UNIQUE_ElementBurst_Count3Wave_2_Effect",
+              "UNIQUE_UNIQUE_ElementBurst_Count3Wave_3_Effect",
+              //"UNIQUE_UNIQUE_ElementBurst_Count3Wave_3_Effect",
+            ],
+          //统一管理，由layer层数决定buff
+      }, 
+        ]
+
+      },
+
+      "UNIQUE_ElementBurst_Count3Wave_0":
+      {
+        "isUnique":true,
+      },
+
+      "UNIQUE_UNIQUE_ElementBurst_Count3Wave_1_Effect":
+      {
+        "isUnique":true,
+        "isLimitedProperties":true,
+        "properties":
+        {
+            "Actor_ElemMasteryDelta":"%Delta*1",
+        },
+      },
+      "UNIQUE_UNIQUE_ElementBurst_Count3Wave_2_Effect":
+      {
+        "isUnique":true,
+        "isLimitedProperties":true,
+        "properties":
+        {
+            "Actor_ElemMasteryDelta":"%Delta*2",
+        },
+
+      },      
+      "UNIQUE_UNIQUE_ElementBurst_Count3Wave_3_Effect":
+      {
+        "isUnique":true,
+        "isLimitedProperties":true,
+        "properties":
+        {
+            "Actor_ElemMasteryDelta":"%Delta*3",
+        },
+      }, 
+
+      "UNIQUE_ElementBurst_Count3Wave_3_Extra_Effect":
+      {
+        "isUnique":true,
+        "duration":0.3,
+        "onAdded":
+        [
+          {
+            "$type": "DebugLog", 
+            "content": "进入冲击波技能效果逻辑！",
+          },
+          {
+            "$type": "FireEffect", 
+            "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+            "target":"Self",    
+          },
+          {
+            "$type": "TriggerAttackEvent",
+            "targetType": "Enemy",
+            "attackEvent":
+            {
+              "attackPattern":
+              {
+                "$type": "ConfigAttackSphere", //攻击球
+                "triggerType": "TriggerNoRepeat",
+                "radius": 4.0, //半径
+                "born":
+                {
+                  "$type": "ConfigBornBySelf",
+                }
+              },
+              "attackInfo":
+              {
+                "canBeModifiedBy":"OriginOwner",
+                "attackProperty": //攻击伤害
+                {
+                  "damageExtra": "%ElementBurst_Wave_Damage*%LevelEntity_Count3Wave_SystemValue", //伤害百分比
+                  "ignoreAttackerProperty": true,
+                  "attackType": "Melee",//攻击类型
+                  "elementType": "None", //元素类型
+                  "elementDurability": 0,
+                  "enBreak": 25, //破霸体值
+                },
+                "hitPattern"://击中效果
+                {
+                  "onHitEffectName": "default",
+                  "hitImpulseType":"LV2",                                   
+                  "reboundRatio": 0,
+                  "canBeDefenceHalt": false,
+                  "hitHaltTime": 0,
+                  "hitHaltTimeScale": 0.02,
+                  "muteHitText": false,
+                },
+              }, 
+            },            
+          },
+          // {
+          //   "$type":"AddGlobalValue",
+          //   "key":"_ABILITY_ElementBurst_BurstTrigger",
+          //   "target":"MPLevel",
+          //   "value":1,
+          //   "useLimitRange":true,
+          //   "maxValue":1,
+          //   "minValue":1,
+          // }, 
+        ]
+      },
+      "UNIQUE_EnergyDisk_ElementBurst_AddLayer":
+      {
+        "stacking":"Unique",
+        "duration":0.1,
+        "isUnique":true,
+        "onAdded":
+        [
+
+          {
+            "$type": "AddGlobalValue",
+            "key":"_ABILITY_ElementBurst_Layer",
+            "target":"MPLevel",
+            "value":1,               
+          },
+        ] 
+      },
+
+      "UNIQUE_EnergyDisk_ElementBurst_Layer_Reset_MPLEVEL":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "onAdded":
+        [
+          {
+            "$type": "DebugLog", 
+            "content": "刷新时间",             
+          },
+          {
+            "$type":"RemoveUniqueModifier",
+            "modifierName":"UNIQUE_EnergyDisk_ElementBurst_Layer_Reset_MPLEVEL_Time",
+            "target":"MPLevel",
+          },
+          {
+            "$type":"ApplyModifier",
+            "modifierName":"UNIQUE_EnergyDisk_ElementBurst_Layer_Reset_MPLEVEL_Time",
+            "target":"MPLevel",
+          },
+        ],
+      },
+
+      "UNIQUE_EnergyDisk_ElementBurst_Layer_Reset_MPLEVEL_Time":
+      {
+        "isUnique":true,
+        "thinkInterval":"%Bufftime",
+        "onThinkInterval":
+        [
+          {
+            "$type":"SetGlobalValue",
+            "key":"_ABILITY_ElementBurst_Layer",
+            "target":"MPLevel",
+            "value":0,                        
+          },
+          {
+            "$type": "DebugLog", 
+            "content": "重置为0",            
+          }
+        ]        
+      },
+      // "UNIQUE_EnergyDisk_ElementBurst_Layer_MPLEVEL":
+      // {
+      //   "isUnique":true,
+      //   "duration":0.1,
+      //   "onAdded":
+      //   [
+      //     {
+      //       "$type": "AddGlobalValue",
+      //       "key":"_ABILITY_ElementBurst_Layer",
+      //       "target":"MPLevel",
+      //       "value":1,               
+      //     },
+      //   ]
+      // }
+    },
+    "abilitySpecials":
+    {
+      "Bufftime":20,
+      "Delta":100,
+      "ElementBurst_Wave_Damage":5,
+      "LevelEntity_Count3Wave_SystemValue":1,
+    }
+  }
+
+},
+
+//15.//当前场上的角色元素充能效率降低25%；
+//此外，普通攻击命中后，有50%几率为自己恢复5点元素能量。该效果每个角色每4秒至多触发一次。
+
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_NormalAtk_Energy",
+    "isDynamicAbility":true,
+    "onAdded": 
+      [
+        {
+          "$type":"AttachModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Blue_NormalAtk_Energy",
+          //"target":"CurLocalAvatar", 
+        }       
+      ], 
+    "modifiers":
+    {
+      "UNIQUE_EnergyDisk_Blue_NormalAtk_Energy":
+      {
+        "isUnique":true,
+        // "properties":
+        // {
+        //   "Actor_ChargeEfficiencyDelta":-0.25,
+        // },
+        "onAttackLanded":
+        [
+          {
+            "$type": "Predicated",
+            "target": "Target",
+            "targetPredicates":
+            [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes":
+                [
+                  "Monster"
+                ],
+              },
+              {
+                "$type": "ByAttackTags",
+                "attackTags":
+                [
+                  "NormalAttack_01",
+                  "NormalAttack_02",
+                  "NormalAttack_03",
+                  "NormalAttack_04",
+                  "NormalAttack_05",
+                  "NormalAttack_06",
+                  //"ExtraAttack"
+                ],
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type":"Randomed",
+                "chance":"%chance",
+                "target":"Self",
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_Blue_NormalAtk_Energy_Effect",
+                    "target":"Self"                
+                  }, 
+                ]
+              }
+            ],
+          }
+        ]
+      },
+      "UNIQUE_EnergyDisk_Blue_NormalAtk_Energy_Effect":
+      {
+        "isUnique":true,
+        "duration":4,
+        "stacking":"Unique",
+        "onAdded":
+        [
+          {
+            "$type":"ReviveElemEnergy", 
+            "value":"%Energy",
+          },
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_Weapon_ExtraElementBall",
+            "target":"Self"
+          },
+          {
+            "$type": "DebugLog", 
+            "content": "回复能量",
+          }, 
+        ]
+      }
+    },
+    "abilitySpecials":
+    {
+      // "EfficiencyDelta":-0.25,//充能效率降低
+      "chance":0.5,//概率
+      "Energy":5,//回复能量
+    }
+  }
+},
+
+//16.角色施放元素爆发后的8秒内，普通攻击命中时有50%几率产生一个能恢复2点元素能量的元素微粒。
+//通过这种方式，每个角色每1.7秒只能产生一个元素晶球。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_GenerateBall_AfterBurst",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+    ],
+    "abilityMixins":
+    [
+      {
+        "$type":"OnAvatarUseSkillMixin", 
+        "clearSkillIdDelay": 0.2,
+        "onTriggerUltimateSkill": //监听充能技能释放
+        [
+          {
+            "$type":"AttachModifier",
+            "modifierName":"UNIQUE_EnergyDisk_Blue_OnAtkGenerateBall",
+            "target":"Self",
+          },
+        ],            
+      }      
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_OnAtkGenerateBall":
+      {
+        "isUnique":true,
+        "duration":"%bufftime",
+        "onAttackLanded":
+        [
+          {
+            "$type":"Randomed",
+            "chance":"%ChanceProb",
+            "target":"Target",
+            "successActions":
+            [         
+              {
+                "$type": "Predicated",
+                "target": "Other",
+                "targetPredicates":
+                [
+                  {
+                    "$type": "ByEntityTypes",
+                    "entityTypes":
+                    [
+                      "Monster"
+                    ],
+                  },
+                  {
+                    "$type": "ByAttackTags",
+                    "attackTags":
+                    [
+                      "NormalAttack_01",
+                      "NormalAttack_02",
+                      "NormalAttack_03",
+                      "NormalAttack_04",
+                      "NormalAttack_05",
+                      "NormalAttack_06",
+                      //"ExtraAttack"
+                    ],
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_Blue_OnAtkGenerateBall_Effect",
+                    "target":"Self"                
+                  },    
+                ],
+              },
+            ]
+          }
+        ],
+      },
+      "UNIQUE_EnergyDisk_Blue_OnAtkGenerateBall_Effect":
+      {
+        "isUnique":true,
+        "duration":1.7,
+        "stacking":"Unique",
+        "onAdded":
+        [
+          {
+            "$type": "GenerateElemBall",
+            "configID": 2024,
+            "baseEnergy":2,
+            "ratio": 1,
+            "born":
+            {
+              "$type": "ConfigBornByTarget",
+              "offset" :
+              {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -1,
+              },
+              "bornRandom" :
+              {
+                "$type": "BornRandomFromCenter",
+                "minRandomRange":0,
+                "maxRandomRange":0.5,
+              },
+            },
+          },
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_Weapon_ExtraElementBall",
+            "target":"Self"
+          }, 
+          {
+            "$type": "DebugLog", 
+            "content": "额外产生能量",
+          }
+        ]
+      }
+    },
+    "abilitySpecials":
+    {
+      "bufftime":8,
+      "ChanceProb":0.5,
+    }
+  },  
+},
+
+
+//17.队伍中所有角色元素爆发造成的伤害提升X%
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Green_BurstDamageUp",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "UNIQUE_EnergyDisk_Green_BurstDamageUp",
+          //"target": "AllPlayerAvatars", 
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_EnergyDisk_Green_BurstDamageUp": 
+        {
+          "isUnique":true,
+          "isLimitedProperties": true, //是否受限于属性值区间        
+          "modifierMixins":
+          [
+            {
+              "$type":"ModifyDamageMixin",
+              "damagePercentageRatio":"%Rate",
+              "attackTags":["Elemental_Burst"],
+            },
+          ],
+        },
+      },
+      "abilitySpecials":
+      {
+        "Rate":0.3,
+      },
+  },      
+},
+
+//18.施放元素爆发后，场上所有角色都将各自释放一次冲击波，基于施放元素爆发的角色【其实是自己】攻击力的600%，对附近的敌人造成伤害。
+//该效果每2秒至多触发一次，队伍中所有角色共享冷却。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_ElementBurstTriggerWave",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Handler",
+
+      },
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_ElementBurstTriggerWave_FireEffect",        
+      },
+      //全队共计CD触发器
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Purple_ElementBurstTriggerWave_Total",
+        "target":"MPLevel",
+      },
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Purple_ElementBurstTriggerWave_Trigger",      
+      }
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Purple_ElementBurstTriggerWave_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_ElementBurstTriggerWave_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_ElementBurstTriggerWave_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{},
+
+        "UNIQUE_EnergyDisk_Purple_ElementBurstTriggerWave_Trigger":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_ElementBurstTriggerWave_Trigger", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-0.5,0.5,1.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["Blank","UNIQUE_EnergyDisk_ElementBurstTriggerWave_Effect"],                                   
+            }
+          ]
+        },
+
+      "UNIQUE_EnergyDisk_ElementBurstTriggerWave_FireEffect":
+      {
+        "isUnique":true,
+        "thinkInterval": 0.5,
+          "onThinkInterval": [
+            {
+              "$type": "Predicated",
+              "target": "Self",
+              "targetPredicates": [
+                {
+                  "$type": "ByIsCombat",
+                },
+              ],
+              "successActions": [
+                {
+                  "$type": "AttachModifier",
+                  "modifierName": "UNIQUE_EnergyDisk_ElementBurstTriggerWave_FireEffect_Effect",
+                },
+              ],
+              "failActions": [
+                {
+                  "$type": "RemoveUniqueModifier",
+                  "modifierName": "UNIQUE_EnergyDisk_ElementBurstTriggerWave_FireEffect_Effect",
+                },
+              ],
+            },
+          ],
+      },
+
+      "UNIQUE_EnergyDisk_ElementBurstTriggerWave_FireEffect_Effect":
+      {
+        "isUnique":true,
+        "Stacking":"Unique",
+        "onAdded":
+        [
+          {
+            "$type":"AttachEffect",
+            "effectPattern":"Eff_EnergyDisk_ElementalBurst_Trigger",
+            "target":"Self",
+            "born":
+            {
+              "$type": "ConfigBornByTarget",
+              "offset" :
+              {
+                "x": 0.0,
+                "y": 2.0,
+                "z": 0.0,
+              },
+            }
+          },
+        ],
+      },
+
+      "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Handler": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type":"OnAvatarUseSkillMixin", 
+            "clearSkillIdDelay": 0.2,
+            "onTriggerUltimateSkill": //监听充能技能释放
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_EnergyDisk_ElementBurstTriggerWave_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  // {
+                  //   "$type":"ApplyModifier",
+                  //   "modifierName":"UNIQUE_EnergyDisk_ElementBurstTriggerWave_Effect_Delay",
+                  // },
+                  {
+                    "$type": "DebugLog", 
+                    "content": "执行元素爆发效果",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_ElementBurstTriggerWave_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_ElementBurstTriggerWave_Trigger_MPLEVEL",
+                    "target":"MPLevel",                    
+                  },
+                  //通过改MPLEVEL的方式通知所有角色放冲击波
+                  //触发完之后置回0
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_ElementBurstTriggerWave_Trigger_Reset",
+                    "target":"MPLevel",                     
+                  }
+                ]
+              },  
+            ],            
+          }
+        ]
+      },
+        "UNIQUE_EnergyDisk_ElementBurstTriggerWave_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_ElementBurstTriggerWave_CD",
+                "value": -1,
+                "target":"MPLevel",    
+            },
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Trigger_Reset":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_ElementBurstTriggerWave_Trigger",
+                "value": 0,
+                "target":"MPLevel",    
+            },
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Trigger_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_ElementBurstTriggerWave_Trigger",
+                "value": 1,
+                "target":"MPLevel",    
+            },
+          ]
+        },
+
+      // "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Effect_Delay":
+      // {
+      //   "isUnique":true,
+      //   "duration":"%CDTime", //内置CD
+      //   "onAdded":
+      //   [
+      //     {
+      //        "$type": "DebugLog", 
+      //        "content": "监控释放了充能技", 
+      //     },
+      //     {
+      //       "$type":"ApplyModifier",
+      //       "modifierName":"UNIQUE_EnergyDisk_ElementBurstTriggerWave_Effect",
+      //       "Target":"AllPlayerAvatars",       
+      //     }
+      //   ]
+      // },
+      "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Effect":
+      {
+        "isUnique":true,
+        "duration":0.2,
+        //"stacking":"Refresh",
+        "onAdded":
+        [
+            {
+              "$type": "DebugLog", 
+              "content": "进入技能效果逻辑！",
+            },
+            {
+              "$type": "TriggerAttackEvent",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackSphere", //攻击球
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 4.0, //半径
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                  }
+                },
+                "attackInfo":
+                {
+                  "attackProperty": //攻击伤害
+                  {
+                    "damagePercentage": "%Purple_FallingAttack_Damage", //伤害百分比
+                    //"overrideByWeapon": true, //是否根据武器转化元素
+                    "attackType": "Melee",//攻击类型
+                    "elementType": "None", //元素类型
+                    "elementDurability": 0,
+                    "enBreak": 25, //破霸体值
+                  },
+                  "hitPattern"://击中效果
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"LV2",                                   
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false,
+                  },
+                }, 
+              },            
+            }, 
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+              "target":"Self",              
+            }         
+        ],
+      },
+
+      "UNIQUE_EnergyDisk_ElementBurstTriggerWave_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_ElementBurstTriggerWave_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+    }, 
+    "abilitySpecials":
+    {
+      "Purple_FallingAttack_Damage":6,//攻击力X%的伤害
+      "CDTime":2,
+    }
+  },   
+},
+
+//19.队伍内所有角色的元素爆发等级 +1 ，至多提升至15级。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_AddElementBurstLevel",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_AddElementBurstLevel",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_AddElementBurstLevel": 
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+        ]
+      }
+    }, 
+  }, 
+},
+
+
+//20.角色施放元素战技后，将会恢复8点元素能量。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_GenerateBall_AfterSkill",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_GenerateBall_AfterSkill",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_GenerateBall_AfterSkill":
+      {     
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type":"OnAvatarUseSkillMixin", 
+            "clearSkillIdDelay": 0.2,
+            "onTriggerSkill": //监听小技能释放
+            [
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_EnergyDisk_Blue_GenerateBall",
+              },
+            ],            
+          }
+        ]
+      },
+
+      "UNIQUE_EnergyDisk_Blue_GenerateBall": //产能量球
+      {
+        "isUnique":true,
+        "duration":0.3,
+        "onAdded":
+        [
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_Weapon_ExtraElementBall",
+            "target":"Self",
+          }, 
+          {
+            "$type": "DebugLog", 
+            "content": "额外产能量球",
+          },
+          { 
+            "$type":"ReviveElemEnergy", 
+            "value":"%Energy",
+          }
+        ]
+      }
+    },
+    "abilitySpecials":
+    {
+      "Energy":8,
+    }
+  },  
+},
+
+
+
+//21.队伍中所有角色的元素充能效率提升30%。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_ChargeEfficiencyDelta",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "EnergyDisk_Green_ChargeEfficiencyDelta",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+
+    "modifiers": 
+    {
+      "EnergyDisk_Green_ChargeEfficiencyDelta":
+      {
+        "reduceDurablityIgnoreTimeScale" : true,
+        "properties":
+        {
+          "Actor_ChargeEfficiencyDelta": 0.3,
+        },
+      },
+    },
+  },
+},
+
+//22.角色使敌人感电时，有50%几率引发落雷，基于触发感电效果的角色的攻击力的500%造成伤害。
+//并敌人的雷元素抗性降低25%。
+//该效果每5秒至多触发一次，队伍中所有角色共享冷却。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_ShockTriggerThunder",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+          "$type": "SetGlobalValue",
+          "key": "_Ability_EnergyDisk_ShockTriggerThunder_CD",
+          "value": 0,
+          "target":"MPLevel",  
+      },
+      //全队共计CD触发器
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_ShockTriggerThunder_CD_Total",
+        "target":"MPLevel",
+      },
+
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Purple_ShockTriggerThunder",
+        "target":"Self",
+      },
+    ],
+
+    "modifiers": 
+    {
+        "UNIQUE_EnergyDisk_ShockTriggerThunder_CD_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.
+              "globalValueKey": "_Ability_EnergyDisk_ShockTriggerThunder_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_Purple_ShockTriggerThunder_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{},
+
+      "UNIQUE_EnergyDisk_Purple_ShockTriggerThunder":
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type":"DoActionByElementReactionMixin",
+            "range":20,//这个就是默认值，反应发生的范围
+            "entityTypes":["Monster",],
+            "reactionTypes":["Shock",],
+            "actions":
+            [
+              {
+                "$type": "DebugLog", 
+                "content": "触发了感电",
+              },
+              {
+                "$type":"Randomed",
+                "target":"Target",
+                "chance":0.5,
+                "successActions":
+                [
+                      {
+                        "$type": "DebugLog", 
+                        "content": "感电触发技能效果",
+                      },   
+                      {
+                        "$type":"SetGlobalPos",
+                        "key":"_ABILITY_EnergyDisk_Thunder_Pos",
+                        "target":"Target",
+                        "born":
+                        {
+                          "$type":"ConfigBornByHitPoint",
+                          "offset":
+                          {
+                            "x":0,
+                            "y":0,
+                            "z":0,
+                          },
+                        },
+                        "setTarget":false,
+                      },
+                      {
+                        "$type":"CreateGadget",
+                        "gadgetID":44000300,   
+                        "campID":1001,
+                        "campTargetType":"Enemy",
+                        "born":
+                        {
+                          "$type":"ConfigBornByGlobalValue",                    
+                          "positionKey": "_ABILITY_EnergyDisk_Thunder_Pos",
+                        },
+                      },
+                          //进入CD
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_ShockTriggerThunder_CD_Change_MPLEVEL",
+                        "target":"MPLevel",
+                      },
+                    ]
+                   }
+
+            ]
+          },                  
+         ],
+      },  //检测感电反应Mixin
+
+      "UNIQUE_EnergyDisk_ShockTriggerThunder_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_ShockTriggerThunder_CD",
+                "value": -1,
+                "target":"MPLevel",  //需要共计CD，等功能测试   
+            },
+          ]
+
+        },
+
+      "UNIQUE_EnergyDisk_Purple_ShockTriggerThunder_Cd":
+      {
+        "isUnique":true,
+        "thinkInterval":"%CDTime",
+        "onThinkInterval":
+        [
+          {
+            "$type": "SetGlobalValue",
+            "key": "_Ability_EnergyDisk_ShockTriggerThunder_CD",
+            "target":"MPLevel",
+            "value": 0,
+          },
+        ]
+      },
+
+    },
+
+    "abilitySpecials":
+    {
+      "ChanceProb":0.5, //概率
+      "CDTime":5,
+      //PS:该buff伤害在下面gadget配置中
+    }
+  },
+},
+//22落雷的gadget配置
+{
+    "Default":
+    {
+      "$type":"ConfigAbility",
+      "abilityName":"EnergyDisk_ShockTriggerThunder_Gadget",
+      "onAdded":
+      [
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"ShockTriggerThunder_Appear",
+        },
+        {
+          "$type": "DebugLog", 
+          "content": "落雷gadget被创建了",
+        }
+      ],
+      "modifiers":
+      {
+        "ShockTriggerThunder_Appear":
+        {
+          "duration": 0.1,
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_EnergyDisk_Thunder",
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+          ],
+          "onRemoved":
+          [
+            //造成伤害
+            {
+              "$type": "TriggerAttackEvent",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackCircle",
+                  "triggerType": "TriggerNoRepeat",
+                  "targetType":"Enemy",
+                  "fanAngle": 360.0,
+                  "height": 4,
+                  "radius": 2,
+                  "born":
+                  {
+                    "$type":"ConfigBornBySelf",
+                    "offset":
+                    {
+                      "x": 0.0,
+                      "y": -1, //circle是向上扩展的，拉回来
+                      "z": 0.0,
+                    },
+                  },
+                },
+                "attackInfo":
+                {
+                  "canBeModifiedBy":"OriginOwner",
+                  "attackProperty":
+                  {
+                    "damagePercentage": "%DamageRate",
+                    "elementType": "None",
+                    "attackType": "Range",
+                    "elementDurability": 0,
+                    "enBreak": 20,
+                  },
+                  "hitPattern":
+                  {
+                    "hitImpulseType":"LV4",
+                    "overrideHitImpulse":
+                    {
+                      "hitLevel":"Heavy",
+                      "hitImpulseX": 500,
+                      "hitImpulseY": 0,
+                    },
+                    "retreatType": "ByHitDirection",
+                    "canBeDefenceHalt" : false,
+                    "hitHaltTime" : 0.0,
+                    "hitHaltTimeScale" : 0.01,
+                    "muteHitText" : false,
+                  },
+
+                },
+              },
+            },
+            {
+              "$type": "DebugLog", 
+              "content": "落雷gadget所做事情",
+            },
+            {
+            "$type":"ApplyModifier",
+            "modifierName":"ShockTriggerThunder_ElectricResistance",
+            "otherTargets": {
+              "$type": "SelectTargetsByShape",
+              "shapeName": "CircleR2H4",
+              "centerBasedOn": "Self",
+              "campTargetType": "All",
+              "campBasedOn": "Self",
+            },
+            "predicates": 
+            [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes": [ "Monster" ],
+              },
+            ],
+          },
+          ],
+        },
+        "ShockTriggerThunder_ElectricResistance":
+        {
+          "duration":"%Bufftime",
+          "stacking":"Refresh",
+          "isLimitedProperties": true,
+          "properties":
+          {
+            "Actor_ElecSubHurtDelta": "%ElecSubHurtDelta", //雷元素抗性降低
+          },
+          "onAdded":
+          [
+            {
+              "$type": "DebugLog", 
+              "content": "雷元素抗性降低了",
+            }
+          ]
+        }
+
+      },
+      "abilitySpecials":
+      {
+        "DamageRate":5,
+        "ElecSubHurtDelta":-0.25,//雷元素抗性降低
+        "Bufftime":10,//持续时间
+      },
+    },
+},
+
+
+
+//23.角色的元素爆发命中敌人后，将会产生一个击碎后会造成局部降雨的水琥珀。
+//该效果每6秒至多触发一次，队伍中所有角色共享冷却。
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_EnergyDisk_Blue_ElementBurst_AddWater",
+      "isDynamicAbility":true,
+      "onAdded": 
+      [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_EnergyDisk_AddWater_Handler",
+        },
+        //全队共计CD触发器
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Blue_FallingAttack_AddWater_Total",
+          "target":"MPLevel",
+        },                
+      ],
+      "modifiers":   
+      {
+        "UNIQUE_EnergyDisk_Blue_FallingAttack_AddWater_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_EnergyDisk_AddWater_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_AddWater_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{},        
+
+
+        "UNIQUE_EnergyDisk_AddWater_Handler":
+        {
+          "isUnique":true,
+          "stacking": "Unique",
+          "onAttackLanded":
+          [
+            {
+              "$type":"Predicated",
+              "target":"Target", //有条件的在BeingHit/success等事件中指向target
+              "targetPredicates":
+              [
+                {
+                  "$type":"ByAttackTags",
+                  "attackTags":["Elemental_Burst"],
+                },
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes":
+                  [
+                    "Monster",
+                  ],
+                },
+              ],
+              "successActions":
+              [
+                  {
+                    "$type":"Predicated",
+                    "target":"MPLevel",
+                    "targetPredicates":
+                    [
+                      {
+                        "$type":"ByTargetGlobalValue",
+                        "key":"_Ability_EnergyDisk_AddWater_CD",
+                        "value":0,
+                        "compareType":"Equal",
+                      },
+                    ],
+                    "successActions":
+                    [
+                      {
+                        "$type":"ApplyModifier",
+                        "target":"Self",
+                        "modifierName":"UNIQUE_EnergyDisk_AddWater_SKillEffect",
+                      },
+                      {
+                        "$type": "DebugLog", 
+                        "content": "元素爆发命中后触发了",
+                      },
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_AddWater_CD_Change_MPLEVEL",
+                        "target":"MPLevel",
+                      },
+                    ],
+                  }
+              ],
+            }
+          ]
+        },
+
+        "UNIQUE_EnergyDisk_AddWater_CD_Change_MPLEVEL":
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_EnergyDisk_AddWater_CD",
+                "value": -1,
+                "target":"MPLevel",    
+            },
+          ]
+        },        
+
+
+        "UNIQUE_EnergyDisk_AddWater_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_AddWater_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+
+        "UNIQUE_EnergyDisk_AddWater_SKillEffect": 
+        {
+          "isUnique":true,
+          "duration":0.3,
+          "onAdded":
+          [
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "进入技能效果逻辑！",
+            // },
+            //生成水琥珀 
+            {
+              "$type":"CreateGadget",
+              "gadgetID":44000307,
+              "campID":5001,
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 1,
+                },
+                "bornRandom" :
+                {
+                  "$type": "BornRandomFromCenter",
+                  "minRandomRange":0,
+                  "maxRandomRange":0.5,
+                },               
+              },
+            },
+          ],    
+        },
+
+      },  
+      "abilitySpecials":
+      {
+        "CDTime":6,
+      },
+  },
+
+},
+
+//自定义水琥珀gadget(攻击前)
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "EnergyDisk_SkillObj_WaterAmber",
+      "onAdded":
+      [
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "Broken",
+        },
+        {
+          "$type": "AttachAbilityStateResistance",
+          "resistanceListID": 14005,
+        },
+        {
+          "$type": "AttachAbilityStateResistance",
+          "resistanceListID": 14002,
+        },
+        //出现特效
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_EnergyDisk_AddWater",
+        }
+      ],
+      "modifiers":
+      {
+        "Broken":
+        { 
+          "elementType": "Water",
+          "elementDurability": 50,
+          "onBeingHit":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "Broken",
+              "predicates":
+              [
+                {
+                  "$type": "ByHitDamage",
+                  "damage": 1,
+                },
+              ],  
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 70270002,
+              "campID": 5001,
+              "campTargetType": "All",
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" :
+                {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              },
+            },
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_SceneObj_Amber_Water_Hit",
+              "born":
+              {
+                "$type": "ConfigBornByTarget",
+                "offset" : 
+                {
+                  "x": 0.0,
+                  "y" : 0.3,
+                  "z" : 0.0,
+                },
+              },
+            },
+            {
+              "$type": "KillSelf",
+            },
+          ],
+        },
+      },
+    },
+  },
+
+
+
+//24.队伍内所有角色元素精通提高100点
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_ElemMasteryDeltaUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "EnergyDisk_Green_ElemMasteryDeltaUp",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "EnergyDisk_Green_ElemMasteryDeltaUp":
+      {
+        "reduceDurablityIgnoreTimeScale" : true,
+        "properties":
+        {
+          "Actor_ElemMasteryDelta": 100,
+        },
+      },
+    },
+  },
+},
+
+//25.角色使敌人超导时，有50%几率降下冰锥，基于触发超导效果的角色的攻击力的500%造成伤害。
+//并敌人的物理抗性降低25%。该效果每5秒至多触发一次，队伍中所有角色共享冷却。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_Superconductor_Damage",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+        //全队共计CD触发器
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Superconductor_Total",
+          "target":"MPLevel",
+        },
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_Superconductor_Damage",
+          "target":"Self",
+        },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Purple_Superconductor_Total":
+      {
+        "isUnique":true,
+        "stacking":"Unique",
+        "modifierMixins":
+        [
+          {
+            "$type": "AttachModifierToSelfGlobalValueMixin", 
+            "globalValueKey": "_Ability_EnergyDisk_Superconductor_CD", 
+            "globalValueTarget":"MPLevel",
+            "valueSteps":[-1.5,-0.5,0.5],
+            "removeAppliedModifier": true,
+            "modifierNameSteps":["UNIQUE_EnergyDisk_Purple_SuperconductorTrigger_Cd","Blank"],                                   
+          }
+        ]
+      },
+      "Blank":{},
+
+
+      "UNIQUE_EnergyDisk_Purple_Superconductor_Damage":
+      {
+        "isUnique":true,
+        "modifierMixins":
+          [
+            {
+              "$type": "DoActionByElementReactionMixin",
+              "range": 20, 
+              "entityTypes":["Monster",],
+              "reactionTypes":["Superconductor"], 
+              "actions":
+              [
+                  // {
+                  //   "$type":"Predicated",
+                  //   "target":"MPLevel",
+                  //   "targetPredicates":
+                  //   [
+                  //     {
+                  //       "$type":"ByTargetGlobalValue",
+                  //       "key":"_Ability_EnergyDisk_Superconductor_CD",
+                  //       "value":0,
+                  //       "compareType":"Equal",
+                  //     },
+                  // //   ],
+                  //   "successActions":
+                  //   [
+                      {
+                        "$type":"Randomed",
+                        "target":"Target",
+                        "chance":"%ChanceProb",
+                        "successActions":
+                        [
+                          {
+                            "$type":"SetGlobalPos",
+                            "key":"_ABILITY_EnergyDisk_Superconductor_Pos",
+                            "target":"Target",
+                            "born":
+                            {
+                              "$type":"ConfigBornByHitPoint",
+                              "offset":
+                              {
+                                "x":0,
+                                "y":0,
+                                "z":0,
+                              },
+                            },
+                            "setTarget":false,
+                          },
+                          {
+                            "$type":"CreateGadget",
+                            "gadgetID":44000301,
+                            "campID":1001,
+                            "campTargetType":"Enemy",
+                            "born":
+                            {
+                              "$type":"ConfigBornByGlobalValue",                    
+                              "positionKey": "_ABILITY_EnergyDisk_Superconductor_Pos",
+                            },
+                          },
+                          // {
+                          //   "$type": "DebugLog", 
+                          //    "content": "超导触发反应",
+                          // },
+                        ],
+                      },
+                      {
+                        "$type":"ApplyModifier",
+                        "modifierName":"UNIQUE_EnergyDisk_Superconductor_CD_Change_MPLEVEL",
+                        "target":"MPLevel",
+                      },
+                  //   ]
+                  // }                 
+
+              ],
+            }, 
+           ],        
+        
+      },
+      "UNIQUE_EnergyDisk_Superconductor_CD_Change_MPLEVEL":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "onAdded":
+        [
+          {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_Superconductor_CD",
+              "value": -1,
+              "target":"MPLevel",    
+          },
+        ]
+      },
+
+
+      "UNIQUE_EnergyDisk_Purple_SuperconductorTrigger_Cd":
+      {
+        "isUnique":true,
+        "thinkInterval":"%CDTime",
+        "onThinkInterval":
+        [
+          {
+            "$type": "SetGlobalValue",
+            "key": "_Ability_EnergyDisk_Superconductor_CD",
+            "target":"MPLevel",
+            "value": 0,
+          },
+        ]
+      },
+    },
+    "abilitySpecials":
+    {
+      "time":10,//持续时长
+      "ChanceProb":0.5,//概率
+      "CDTime":5,
+    }
+  },
+},
+
+
+//25碎冰的gadget配置
+{
+  "Default":
+  {
+    "$type":"ConfigAbility",
+    "abilityName":"EnergyDisk_Superconductor_Damage_Gadget",
+    "onAdded":
+    [
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"EnergyDisk_SuperconductorGadget_Appear",
+      },
+      // {
+      //   "$type": "DebugLog", 
+      //   "content": "创建了碎冰的gadget",
+      // }
+    ],
+    "modifiers":
+    {
+      "EnergyDisk_SuperconductorGadget_Appear":
+      {
+        "duration": 0.15,
+        "onAdded":
+        [
+          {
+            "$type": "FireEffect",
+            "effectPattern": "Eff_EnergyDisk_Dragonfell_Gadget",
+            "born":
+            {
+              "$type": "ConfigBornByTarget",
+              "offset" :
+              {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+              },
+            },
+          },
+        ],
+        "onRemoved":
+        [
+          {
+            "$type": "TriggerAttackEvent",
+            "targetType": "Enemy",
+            "attackEvent":
+            {
+              "attackPattern":
+              {
+                "$type": "ConfigAttackCircle",
+                "triggerType": "TriggerNoRepeat",
+                "targetType":"Enemy",
+                "fanAngle": 360.0,
+                "height": 3,
+                "radius": 4,
+                "born":
+                {
+                  "$type":"ConfigBornBySelf",
+                  "offset":
+                  {
+                    "x": 0.0,
+                    "y": -1, //circle是向上扩展的，拉回来
+                    "z": 0.0,
+                  },
+                },
+              },
+              "attackInfo":
+              {
+                "canBeModifiedBy":"OriginOwner",
+                "attackProperty":
+                {
+                  "damagePercentage": "%DamageRate",
+                  "elementType": "None",
+                  "attackType": "Range",
+                  "elementDurability": 0,
+                  "enBreak": 20,
+                },
+                "hitPattern":
+                {
+                  "hitImpulseType":"LV4",
+                  "overrideHitImpulse":
+                  {
+                    "hitLevel":"Heavy",
+                    "hitImpulseX": 500,
+                    "hitImpulseY": 0,
+                  },
+                  "retreatType": "ByHitDirection",
+                  "canBeDefenceHalt" : false,
+                  "hitHaltTime" : 0.0,
+                  "hitHaltTimeScale" : 0.01,
+                  "muteHitText" : false,
+                },
+              },
+            },
+          },
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "碎冰gadget所做事件",
+
+          // },
+          {
+            "$type":"ApplyModifier",
+            "modifierName":"UNIQUE_EnergyDisk_Superconductor_Debuff_Effect",
+            "otherTargets": {
+              "$type": "SelectTargetsByShape",
+              "shapeName": "CircleR4",
+              "centerBasedOn": "Self",
+              "campTargetType": "Enemy",
+              "campBasedOn": "Self",
+            },
+            "predicates": 
+            [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes": [ "Monster" ],
+              },
+            ],
+          },
+        ],
+      },
+      "UNIQUE_EnergyDisk_Superconductor_Debuff_Effect":
+      {
+        "isUnique":true,
+        "duration":"%time",
+        "stacking":"Refresh",
+        "properties":
+        {
+          "Actor_PhysicalSubHurtDelta":"%PhysicalSubHurt", //物理抗性降低
+        },
+        "onAdded":
+        [
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "物理抗性降低了",
+          // }
+        ]     
+      }
+    },
+    "abilitySpecials":
+    {
+      "DamageRate":5,
+      "time":10,
+      "PhysicalSubHurt":-0.25,//物理抗性降低
+    },
+  },  
+
+},
+
+
+//26.角色的普通攻击与重击对受到冰元素影响的敌人造成的伤害提高30%。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_IceAndFrozen_AtkUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_IceAndFrozen_AtkUp",
+        "target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_IceAndFrozen_AtkUp": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type": "ModifyDamageMixin",
+            "ignoreEventInfo": true, 
+            "damagePercentageRatio": "%Rate",
+            "attackTags":
+            [
+              "NormalAttack_01",
+              "NormalAttack_02",
+              "NormalAttack_03",
+              "NormalAttack_04",
+              "NormalAttack_05",
+              "NormalAttack_06",
+              "ExtraAttack"
+            ],
+            "predicates":
+            [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes":
+                [
+                  "Monster",
+                ],
+              },
+              {
+                "$type": "ByAny",
+                "predicates":
+                [
+                  {
+                    "$type": "ByHasElement", 
+                    "element": "Ice",
+                  },
+                  {
+                    "$type": "ByHasElement", 
+                    "element": "Frozen",
+                  },
+                ],
+              }
+            ]
+          },
+        ]
+      },
+    },
+    "abilitySpecials":
+    {
+      "Rate":0.3,
+    }
+  },  
+},
+
+//27.队伍内所有角色物理伤害提升30%
+//绿色直接上传测试
+{
+  "Default": 
+  {               
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_PhysicalHurtUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "EnergyDisk_Green_PhysicalHurtUp",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "EnergyDisk_Green_PhysicalHurtUp": 
+      {
+        "isLimitedProperties": true, 
+        "properties":
+        {
+          "Actor_PhysicalAddHurtDelta": 0.3, 
+        },
+      },
+    },
+  },
+},
+
+//28.角色获得岩元素反应产生的晶片时，会释放小型冲击波，基于该角色的攻击力的500%对周围的敌人造成伤害。
+//此外，触发该效果后的10秒内，队伍中所有角色获得40%岩元素伤害加成。
+//该效果每5秒至多触发一次，队伍中所有角色共享冷却。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_PickupTriggerAOE",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+        //全队共计CD触发器
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Total",
+          "target":"MPLevel",
+        },
+        {
+          "$type":"ApplyModifier",
+          "modifierName":"UNIQUE_EnergyDisk_Purple_PickupTriggerAOE",
+          "target":"Self",
+        },
+    ],
+    "modifiers": 
+    {
+        "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_PickupTriggerAOE_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_PickupTriggerAOE_Cd","Blank"],                                   
+            }
+          ]
+        },
+        "Blank":{},
+
+       "UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL":
+       {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+                "$type": "SetGlobalValue",
+                "key": "_Ability_PickupTriggerAOE_CD",
+                "value": -1,
+                "target":"MPLevel",    
+            },
+          ]
+       },
+
+      "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          //因为没有针对元素结晶的Predicate，只能在Mixin当中遍历结晶的元素类型
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Fire"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }                 
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Water"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Grass"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }              
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Electric"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }                
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Ice"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }              
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Wind"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Rock"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_PickupTriggerAOE_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect", 
+                    "target":"Self",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_PickupTriggerAOE_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }                
+            ]            
+          },            
+        ]
+      },
+      "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_Effect":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "onAdded":
+        [
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "进入拾取后效果逻辑！",
+          // },
+          {
+            "$type": "FireEffect", 
+            "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+            "target":"Self",
+          },
+
+        ], 
+        "onRemoved":
+        [
+          {
+            "$type": "TriggerAttackEvent",
+            "targetType": "Enemy",
+            "attackEvent":
+            {
+              "attackPattern":
+              {
+                "$type": "ConfigAttackSphere", //攻击球
+                "triggerType": "TriggerNoRepeat",
+                "radius": 4.0, //半径
+                "born":
+                {
+                  "$type": "ConfigBornBySelf",
+                }
+              },
+              "attackInfo":
+              {
+                "attackProperty": //攻击伤害
+                {
+                  "damagePercentage": "%DamageRate", //伤害百分比
+                  "strikeType": "Slash",  //打击类型——挥砍
+                  //"overrideByWeapon": true, //是否根据武器转化元素
+                  "attackType": "Melee",//攻击类型
+                  "elementType": "None", //元素类型
+                  "elementDurability": 0,
+                  "enBreak": 25, //破霸体值
+                },
+                "hitPattern"://击中效果
+                {
+                  "onHitEffectName": "default",
+                  "hitImpulseType":"LV2",                                   
+                  "reboundRatio": 0,
+                  "canBeDefenceHalt": false,
+                  "hitHaltTime": 0,
+                  "hitHaltTimeScale": 0.02,
+                  "muteHitText": false,
+                },
+              }, 
+            },            
+          },
+          {
+            "$type":"ApplyModifier",
+            "modifierName":"UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_BuffAvatarEffect",
+            "target":"AllPlayerAvatars",
+          }
+
+        ]   
+      },
+      //队友BUFF提升岩元素伤害
+      "UNIQUE_EnergyDisk_Purple_PickupTriggerAOE_BuffAvatarEffect":
+      {
+        "isUnique":true,
+        "stacking":"Refresh",
+        "duration":"%Bufftime",
+        "properties": 
+        {
+          "Actor_RockAddHurtDelta":"%RockAddHurt",
+        },
+      },
+      "UNIQUE_EnergyDisk_PickupTriggerAOE_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_PickupTriggerAOE_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+    },
+    "abilitySpecials":
+    {
+      "DamageRate":5.0,//攻击倍率
+      "CDTime":5,
+      "RockAddHurt":0.4,//岩元素伤害加成
+      "Bufftime":10,//伤害加成时长
+    }
+  },    
+},
+
+//29.队伍内的所有角色获得结晶盾时，提高自身30%全元素伤害加成，持续10秒，持续时间内拾取将刷新Buff时长。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_ElementDmgUpAfterCrystalShield",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_ElementDmgUpAfterCrystalShield",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_ElementDmgUpAfterCrystalShield": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          //因为没有针对元素结晶的Predicate，只能在Mixin当中遍历结晶的元素类型
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Fire"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Water"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Grass"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Electric"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Ice"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Wind"],
+            "actions":
+            [
+              {
+                "$type":"AttachModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Rock"],
+            "actions":
+            [
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect",
+                "target":"Self",
+              },              
+            ]            
+          },            
+        ]
+      },
+      "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_BuffEffect":
+      {
+        "isUnique":true,
+        "duration":"%time",
+        "stacking":"Refresh",
+        "state":"AttackUp",
+        "properties":
+        {
+          "Actor_FireAddHurtDelta":"%Rate",
+          "Actor_WaterAddHurtDelta":"%Rate",
+          "Actor_GrassAddHurtDelta":"%Rate",
+          "Actor_ElecAddHurtDelta":"%Rate",
+          "Actor_IceAddHurtDelta":"%Rate",
+          "Actor_WindAddHurtDelta":"%Rate",
+          "Actor_RockAddHurtDelta":"%Rate",
+        }
+      }
+    },
+    "abilitySpecials":
+    {
+      "time":10,
+      "Rate":0.3,
+    }
+  },  
+},
+
+//30.队伍内的所有角色拾取结晶球时，全队角色获得X点元素能量
+//X秒内只能触发一次，全队共计CD
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_BuffAfterCrystalShield",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      //全队共计CD触发器
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Purple_BuffAfterCrystalShield_Total",
+        "target":"MPLevel",
+      },
+      // {
+      //   "$type": "DebugLog", 
+      //    "content": "????",
+      // },
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_BuffAfterCrystalShield",
+        
+      },
+    ],
+    "modifiers": 
+    {
+        "UNIQUE_EnergyDisk_Purple_BuffAfterCrystalShield_Total":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin", 
+              "globalValueKey": "_Ability_BuffAfterCrystalShield_CD", 
+              "globalValueTarget":"MPLevel",
+              "valueSteps":[-1.5,-0.5,0.5],
+              "removeAppliedModifier": true,
+              "modifierNameSteps":["UNIQUE_EnergyDisk_BuffAfterCrystalShield_Cd","Blank"],                                   
+            }
+          ],
+          "onAdded":
+          [
+            // {
+            //     "$type": "DebugLog", 
+            //     "content": "为什么MPLEVEL的值加不上",
+            // }
+          ]
+        },
+        "Blank":{},      
+
+      "UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "onAdded":
+        [
+          {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_BuffAfterCrystalShield_CD",
+              "value": -1,
+              "target":"MPLevel",    
+          },
+        ]
+      },
+
+
+      "UNIQUE_EnergyDisk_Blue_BuffAfterCrystalShield": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          //因为没有针对元素结晶的Predicate，只能在Mixin当中遍历结晶的元素类型
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Fire"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Water"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }                
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Grass"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                   {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Electric"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          },
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Ice"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }               
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Wind"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }                
+            ]            
+          }, 
+          {
+            "$type":"DoActionByGainCrystalSeedMixin",
+            "elementTypes":["Rock"],
+            "actions":
+            [
+              {
+                "$type":"Predicated",
+                "target":"MPLevel",
+                "targetPredicates":
+                [
+                  {
+                    "$type":"ByTargetGlobalValue",
+                    "key":"_Ability_BuffAfterCrystalShield_CD",
+                    "value":0,
+                    "compareType":"Equal",
+                  },
+                ],
+                "successActions":
+                [
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_BuffAfterCrystalShield_BuffEffect",
+                    "target":"AllPlayerAvatars",
+                  },
+                  {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_EnergyDisk_BuffAfterCrystalShield_CD_Change_MPLEVEL",
+                    "target":"MPLevel",
+                  },
+                  //进入CD
+                ]
+              }              
+            ]            
+          },            
+        ]
+      },
+      "UNIQUE_BuffAfterCrystalShield_BuffEffect":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "stacking":"Unique",
+        "onAdded":
+        [
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "恢复能量",
+          // },
+          {
+            "$type":"FireEffect",
+            "effectPattern":"Eff_Weapon_ExtraElementBall",//考虑了下，在自己身上播特效比较容易看到。
+          },
+          {
+            "$type":"ReviveElemEnergy", 
+            "value":2,
+            "doOffStage":true,
+          }
+        ],
+      },
+
+      "UNIQUE_EnergyDisk_BuffAfterCrystalShield_Cd":
+      {
+        "isUnique":true,
+        "thinkInterval":"%time",
+        "onThinkInterval":
+        [
+          {
+            "$type": "SetGlobalValue",
+            "key": "_Ability_BuffAfterCrystalShield_CD",
+            "target":"MPLevel",
+            "value": 0,
+          },
+        ]        
+      },
+    },
+    "abilitySpecials":
+    {
+      "time":2,
+    }
+  }, 
+},
+
+//31.队伍中所有角色护盾强效提升X%
+//绿色直接上传测试
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_DefUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Green_DefUp",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Green_DefUp": 
+      {
+        "isUnique":true,
+        "isLimitedProperties": true, 
+        "properties":
+        {
+          "Actor_ShieldCostMinusRatio": 0.35,
+        },
+      },
+    },
+  },
+},
+
+//32
+//每5秒最多一次，攻击命中后造成环境伤害倍率=8×（角色当前血量百分比）的伤害。
+//如果角色当前血量高于99%，则造成环境倍率=15的伤害。每10秒最多触发一次。
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Purple_HealthyDamage",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage",
+        //"target": "AllPlayerAvatars", 
+      },
+      {
+        "$type": "SetSystemValueToOverrideMap",
+        "doOffStage": true,
+        "key": "DamageSystemValue",
+        "type": "ElementLevelCo",
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage":
+      {
+        "isUnique":true,
+        "onAttackLanded":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Target",
+            "targetPredicates":
+            [
+              {
+                "$type" : "ByEntityTypes",
+                "entityTypes" : ["Monster"],
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type": "AttachModifier",
+                "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage_Predicate",
+                "target": "Self",             
+              } 
+            ]
+          }          
+        ],
+      },
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage_Predicate":
+      {
+        "isUnique":true,
+        "stacking":"Unique",
+        "duration":"%CDTime",
+        "onAdded":
+        [
+          {
+            "$type": "ApplyModifier",
+            "target": "Self",
+            "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_LowHp_delay",
+            "predicates": 
+            [
+              {
+                "$type": "ByTargetHPRatio",
+                "HPRatio":0.99,
+                "logic": "Lesser",
+              },
+            ],              
+          },
+          {
+            "$type": "ApplyModifier",
+            "target": "Self",
+            "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_HighHp_delay",
+            "predicates": 
+            [
+              {
+                "$type": "ByTargetHPRatio",
+                "HPRatio":0.99,
+                "logic": "GreaterOrEqual",
+              },
+            ],              
+          },      
+        ],
+      },
+      
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_HighHp_delay":
+      {
+        "isUnique":true,
+          "duration":0.1, //先播特效，延迟一定时间后出伤害点
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",//替换特效
+              "target":"Self",
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_HighHp",
+            },             
+          ],
+      },
+
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_HighHp": 
+      {
+          "isUnique":true,
+          "duration":2,
+          "onAdded":
+          [
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "进入技能效果逻辑！",
+            // },
+            {
+              "$type": "TriggerAttackEvent",
+              //"target":"OriginOwner",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackSphere", //攻击球
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 4.0, //半径
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                  }
+                },
+                "attackInfo":
+                {
+                  "canBeModifiedBy":"OriginOwner",
+                  "attackProperty": //攻击伤害
+                  {
+                    //"damagePercentage": "%Purple_FallingAttack_Damage", //伤害百分比
+                    "damageExtra":"%DamageHigh*%DamageSystemValue",
+                    "ignoreAttackerProperty":true,
+                    //"overrideByWeapon": true, //是否根据武器转化元素
+                    "attackType": "Melee",//攻击类型
+                    "elementType": "None", //元素类型
+                    "elementDurability": 0,
+                    "enBreak": 0, //破霸体值
+                  },
+                  "hitPattern"://击中效果
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"LV2",                                   
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false,
+                  },
+                }, 
+              },            
+            },
+
+          ],    
+      },
+
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_LowHp_delay":
+      {
+        "isUnique":true,
+          "duration":0.1, //先播特效，延迟一定时间后出伤害点
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect", 
+              "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",//替换特效
+              "target":"Self",
+            },
+          ],
+          "onRemoved":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_LowHp",
+            },             
+          ],
+      },
+
+      "UNIQUE_EnergyDisk_Purple_HealthyDamage_AOE_LowHp": 
+      {
+          "isUnique":true,
+          "duration":2,
+          "onAdded":
+          [
+            // {
+            //   "$type": "DebugLog", 
+            //   "content": "进入技能效果逻辑！",
+            // },
+            {
+              "$type": "TriggerAttackEvent",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackSphere", //攻击球
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 4.0, //半径
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                  }
+                },
+                "attackInfo":
+                {
+                  "canBeModifiedBy":"OriginOwner",
+                  "attackProperty": //攻击伤害
+                  {
+                    //"damagePercentage": "%Purple_FallingAttack_Damage", //伤害百分比
+                    "damageExtra":"%DamageLow*%DamageSystemValue",
+                    "ignoreAttackerProperty":true,
+                    //"overrideByWeapon": true, //是否根据武器转化元素
+                    "elementType": "None", //元素类型
+                    "elementDurability": 0,
+                    "enBreak": 0, //破霸体值
+                  },
+                  "hitPattern"://击中效果
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"LV2",                                   
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false,
+                  },
+                }, 
+              },            
+            },
+            /*
+            {
+              "$type": "Randomed",
+              "chance": "%FIGHT_PROP_CUR_HP/%FIGHT_PROP_MAX_HP*0.35",
+              "successActions":
+              [
+                {
+                  "$type": "DebugLog", 
+                  "content": "成功触发",
+                },
+              ],
+            },
+            */
+            
+          ],    
+      }, 
+            
+    
+    },
+    "abilitySpecials":
+    {
+      "DamageLow":10,
+      "DamageHigh":20,
+      "DamageSystemValue":1,
+      "CDTime":5,
+    }
+  },
+},
+
+//33.队伍内的所有角色处于护盾庇护下时，受到治疗效果提升X%
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_HasShieldBeHealthUp",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_HasShield_Handler",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_HasShield_Handler":
+      {
+        //给角色上modifier不断检测自身是否有护盾
+        "isUnique": true,
+        "thinkInterval":1.0,
+        "onThinkInterval":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Self",
+            "targetPredicates":
+            [
+              {
+                "$type":"ByHasShield",
+                "type":"All",
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type":"SetGlobalValue",
+                "key":"_Ability_ShieldEnhanceHeal_Check",
+                "value":1,
+              },
+              // {
+              //   "$type": "DebugLog", 
+              //   "content": "我有盾了！",
+              // },
+            ],
+            "failActions":
+            [
+              {
+                "$type":"SetGlobalValue",
+                "key":"_Ability_ShieldEnhanceHeal_Check",
+                "value":0,
+              },
+              // {
+              //   "$type": "DebugLog", 
+              //   "content": "我没盾了！",
+              // }
+            ]            
+          }
+        ],
+      },
+      "UNIQUE_ShieldEnhanceHeal_HasBuff":
+      {
+        "isUnique":true,
+        "isLimitedProperties": true, 
+        "properties":
+        {
+          "Actor_HealedAddDelta":"%HealedAddDelta",
+        },
+      },
+      "UNIQUE_ShieldEnhanceHeal_NoBuff":
+      {
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"RemoveUniqueModifier",
+            "modifierName":"UNIQUE_ShieldEnhanceHeal_HasBuff",
+          },
+        ],
+      }
+    },
+    "abilityMixins":
+    [
+      {
+        "$type":"AttachModifierToSelfGlobalValueMixin",
+        "globalValueKey":"_Ability_ShieldEnhanceHeal_Check",
+        "removeAppliedModifier":true,
+        "valueSteps":[-0.5,0.5,1.5],
+        "modifierNameSteps":
+        [
+          "UNIQUE_ShieldEnhanceHeal_NoBuff",
+          "UNIQUE_ShieldEnhanceHeal_HasBuff",
+        ],                   
+      }
+    ],
+    "abilitySpecials":
+    {
+      "HealedAddDelta":0.4,
+    }
+  },
+},
+//34.队伍内所有角色造成的治疗效果提升X%
+//绿色直接上传测
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Green_HealAddDelta",
+    "isDynamicAbility":true,
+    "onAdded": [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Green_HealAddDelta",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Green_HealAddDelta":
+      {
+        "isUnique":true,
+        "reduceDurablityIgnoreTimeScale" : true,
+        "properties":
+        {
+          "Actor_HealAddDelta": 0.25,
+        },
+      },
+    },
+  },
+},
+
+
+//35.角色的重击命中生命值低于30%的敌人时，会降下处刑的剑气，造成大量伤害。
+//该效果每10秒至多触发一次，队伍中所有角色共享冷却。
+
+{
+  "Default": 
+  {                
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_ExtraAtkKillMonster",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "SetSystemValueToOverrideMap",
+        "doOffStage": true,
+        "key": "DamageSystemValue",
+        "type": "ElementLevelCo",
+      },
+      //全队共计CD触发器
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Blue_ExtraAtkKillMonster_Total",
+        "target":"MPLevel",
+      },
+      {
+        "$type":"ApplyModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Blue_ExtraAtkKillMonster_Handler",
+        "target":"Self",
+      },
+    ],
+
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_ExtraAtkKillMonster_Total":
+      {
+        "isUnique":true,
+        "stacking":"Unique",
+        "modifierMixins":
+        [
+          {
+            "$type": "AttachModifierToSelfGlobalValueMixin", 
+            "globalValueKey": "_Ability_EnergyDisk_ExtraAtkKillMonster_CD", 
+            "globalValueTarget":"MPLevel",
+            "valueSteps":[-1.5,-0.5,0.5],
+            "removeAppliedModifier": true,
+            "modifierNameSteps":["UNIQUE_EnergyDisk_ExtraAtkKillMonster_Cd","Blank"],                                   
+          }
+        ]
+      },
+      "Blank":{},
+
+      "UNIQUE_EnergyDisk_Blue_ExtraAtkKillMonster_Handler": 
+      {
+        "isUnique":true,
+        "onAttackLanded":
+        [
+          {
+            "$type": "Predicated",
+            "target": "Other",
+            "targetPredicates":
+            [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes":
+                ["Monster",],
+              },
+              
+              {
+                "$type": "ByAttackTags",
+                "attackTags":["ExtraAttack"],               
+              },
+              {
+                "$type":"ByTargetHPRatio",
+                "HPRatio": "%HPRatio",             
+                "logic": "Lesser",
+              }
+            ],
+            "successActions":
+            [
+              // {
+              //    "$type": "DebugLog", 
+              //   "content": "重击命中了血量低于30%的目标",
+              // },
+              //给怪上modifier,让怪自己伤害自己
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"EnergyDisk_ExtraAtkKillMonster_Monster",
+                "target":"Target",
+              },
+            ]
+          }
+        ]
+      },
+
+      "EnergyDisk_ExtraAtkKillMonster_Monster":
+      {
+        //"isUnique":true,
+        "stacking":"MultipleRefresh",
+        "duration":0.1, 
+        "onAdded":
+        [
+          {
+            "$type":"Predicated",
+            "target":"MPLevel",
+            "targetPredicates":
+            [
+              {
+                "$type":"ByTargetGlobalValue",
+                "key":"_Ability_EnergyDisk_ExtraAtkKillMonster_CD",
+                "value":0,
+                "compareType":"Equal",
+              },
+            ],
+            "successActions":
+            [
+              // {
+              //   "$type": "DebugLog", 
+              //   "content": "重击应该落下大剑",
+              // },
+              {
+                "$type": "FireEffect",
+                "target": "Self",
+                "born":
+                {
+                  "$type": "ConfigBornByTarget",
+                },
+                "effectPattern": "Eff_EnergyDisk_ExtraAtkWave",
+              },
+              {
+                "$type": "DamageByAttackValue",
+                "target": "Self",
+                "attackInfo":
+                {
+                  "attackProperty":
+                  {
+                    "damageExtra":"%Damage*%DamageSystemValue",
+                    "elementType": "None",
+                    "strikeType": "Default",
+                    "enBreak": 50,
+                  },
+                  "hitPattern":
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType":"Default",
+                    "reboundRatio": 0,
+                    "hitHaltTime": 0.0,
+                    "hitHaltTimeScale": 0.01,
+                    "muteHitText": false,
+                  },
+                },
+              },
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_EnergyDisk_ExtraAtkKill_CD_Change_MPLEVEL",
+                "target":"MPLevel",
+              },
+            ],
+            "failActions":
+            [
+              // {
+              //   "$type": "DebugLog", 
+              //   "content": "处于CD中，不能触发",                
+              // }
+            ]         
+          }
+        ]
+      },
+
+      "UNIQUE_EnergyDisk_ExtraAtkKill_CD_Change_MPLEVEL":
+      {
+        "isUnique":true,
+        "duration":0.1,
+        "onAdded":
+        [
+          {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_ExtraAtkKillMonster_CD",
+              "value": -1,
+              "target":"MPLevel",    
+          },
+        ]
+      },      
+
+      "UNIQUE_EnergyDisk_ExtraAtkKillMonster_Cd":
+        {
+          "isUnique":true,
+          "thinkInterval":"%CDTime",
+          "onThinkInterval":
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "_Ability_EnergyDisk_ExtraAtkKillMonster_CD",
+              "target":"MPLevel",
+              "value": 0,
+            },
+          ]        
+        },
+
+    },
+    "abilitySpecials":
+    {
+      "Damage":10,//环境伤害倍率
+      "DamageSystemValue":1,
+      "CDTime":10,
+      "HPRatio":0.3//生命值低于一定值
+    }
+  },
+
+},
+
+//36.敌人被击败时，会释放冲击波，对其他敌人造成范围伤害。
+{
+  "Default": 
+  { 
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_KillAOEMonster",
+    "isDynamicAbility":true,
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_EnergyDisk_Blue_KillAOEMonster",
+        //"target": "AllPlayerAvatars", 
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_EnergyDisk_Blue_KillAOEMonster": 
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type":"DoActionByKillingMixin",
+            "detectWindow":0.6, 
+            "onKill":
+            [
+              {
+                "$type": "Predicated",
+                "target": "Other", 
+                "targetPredicates":
+                [
+                  {
+                    "$type": "ByEntityTypes",
+                    "entityTypes":
+                    ["Monster",],
+                  },
+                ],
+                "successActions":
+                [ 
+                  //如何根据地城等级造成伤害，参考下面的gaeget去做
+                  {
+                    "$type": "CreateGadget",
+                    "target": "Other",
+                    "gadgetID": 44000302,
+                    "campID": 1001,
+                    "campTargetType": "Enemy",
+                    "born": {
+                      "$type": "ConfigBornByTarget",
+                    },
+                  },
+                ]
+              },
+            ]          
+          }
+        ]
+      },
+    },
+  }
+},
+
+//怪物死亡gadget
+{
+  "Default": {
+    "$type": "ConfigAbility",
+    "abilityName": "EnergyDisk_KillAOEMonster_Gadget",
+    "isDynamicAbility": true,
+    "onAdded": [
+      {
+        "$type": "ApplyModifier",
+        "modifierName": "SprintAreaAttack",
+      },
+      {
+        "$type": "SetSystemValueToOverrideMap",
+        "doOffStage": true,
+        "key": "DamageSystemValue",
+        "type": "ElementLevelCo",
+      },
+    ],
+    "modifiers": {
+      "SprintAreaAttack": {
+        "duration": "%Delay",
+        "onAdded": [
+          {
+            "$type": "AttachEffect",
+            "effectPattern": "Eff_Stages_GainWave_Stay",
+            "born": {
+              "$type": "ConfigBornByTarget",
+            },
+          },
+        ],
+        "onRemoved": [
+          {
+            "$type": "FireEffect",
+            "effectPattern": "Eff_Stages_GainWave_01",
+            "born": {
+              "$type": "ConfigBornByTarget",
+            },
+          },
+          {
+            "$type": "TriggerAttackEvent",
+            "target": "OriginOwner",
+            "targetType": "Enemy",
+            "attackEvent": {
+              "attackPattern": {
+                "$type": "ConfigAttackSphere",
+                "triggerType": "TriggerNoRepeat",
+                "radius": 4,
+                "born": {
+                  "$type": "ConfigBornBySelf",
+                },
+              },
+              "attackInfo": {
+                "attackProperty": {
+                  "damageExtra": "%Damage*%DamageSystemValue",
+                  "ignoreAttackerProperty": true,
+                },
+                "hitPattern": {
+                  "onHitEffectName": "",
+                  "hitImpulseType": "LV2", //Light x200 y0
+                  "reboundRatio": 0,
+                  "hitHaltTime": 0.0,
+                  "hitHaltTimeScale": 0.05,
+                  "muteHitText": false,
+                },
+                "forceCameraShake": false,
+                "cameraShake": {
+                },
+              }
+            },
+          },
+        ],
+      },
+    },
+    "abilitySpecials": {
+      "Delay": 1,
+      "Damage": 10,//环境伤害
+      "DamageSystemValue":1,
+    },
+  },
+}, 
+
+//37.角色附近的敌人数量不多于2个时，攻击力提高20%，防御力提高20%。
+
+{
+  "Default":
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "ActivityAbility_EnergyDisk_Blue_MonsterNumAtkDefUp",
+    "isDynamicAbility":true,
+    "onAdded":
+    [
+      {
+        "$type":"AttachModifier",
+        "modifierName":"UNIQUE_EnergyDisk_Blue_MonsterNumAtkDefUp",
+      },
+      {
+        "$type":"AttachModifier",
+        "modifierName":"EnergyDisk_Blue_MonsterNumAtkDefUp_Mixin",        
+      },
+      {
+          "$type":"SetGlobalValue",
+          "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy",
+          "value":0,
+          "doOffStage":true,            
+      },
+      {
+          "$type":"SetGlobalValue",
+          "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy_Count",
+          "value":0,
+          "doOffStage":true,            
+      }
+    ],
+
+    "modifiers":
+    {
+      "UNIQUE_EnergyDisk_Blue_MonsterNumAtkDefUp":
+      {
+        "isUnique":true,
+        "thinkInterval":2,
+        "onThinkInterval":
+        [
+          {
+            "$type":"Predicated",
+            "target":"Self",
+             "targetPredicates":
+            [
+              {
+               "$type":"ByIsCombat",
+              },
+            ],
+            "successActions":
+            [
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"UNIQUE_EnergyDisk_Count_Timer",
+              },
+              {
+                "$type":"SetGlobalValue",
+                "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy_Count",
+                "value":0,
+              },
+
+              {
+                "$type":"ApplyModifier",
+                "modifierName":"MonsterNumAtkDefUp_CountAdd",
+                "otherTargets":
+                {
+                  "$type":"SelectTargetsByShape",
+                  "shapeName": "CircleR8",  //判断半径
+                  "centerBasedOn": "Self",
+                  "campTargetType": "Enemy",
+                  "campBasedOn": "Self",
+                  "sortType": "Nearest", //从近开始选
+                },
+                "predicates":
+                [
+                  {
+                    "$type":"ByEntityTypes",
+                    "entityTypes":["Monster"],
+                  },
+                ],
+              },
+
+            ],
+            "failActions":
+            [
+              {
+                  "$type":"SetGlobalValue",
+                  "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy",
+                  "value":0,
+                  "doOffStage":true,            
+              }
+            ]
+          },
+        ],
+      },
+
+      "MonsterNumAtkDefUp_CountAdd": 
+      {
+        "duration":0.1,
+        "onAdded":
+        [
+          {
+            "$type":"ApplyModifier",
+            "modifierName":"MonsterNumAtkDefUp_CountAdd_Effect",
+            "target":"Caster",
+          },
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "给caster上modifier",
+          // }
+        ],
+      },
+
+      "MonsterNumAtkDefUp_CountAdd_Effect": 
+      {
+        "duration":0.01,
+        "stacking":"MultipleRefresh",
+        "onAdded":
+        [
+          {
+            "$type":"AddGlobalValue",
+            "target":"Self",
+            "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy_Count",
+            "value":1,
+          },
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "改GV值",            
+          // }
+        ],
+      },
+      "UNIQUE_EnergyDisk_Count_Timer":
+      {
+        "duration":0.1,
+        "isUnique":true,
+        "onAdded":
+        [
+          {
+            "$type":"SetGlobalValueToOverrideMap",
+            "globalValueKey":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy_Count",
+            "overrideMapKey":"Now_Count", //目前记录的数值
+            "doOffStage":true,
+          },
+          {
+              "$type":"SetGlobalValue",
+              "key":"_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy",
+              "value":"%Now_Count",
+              "doOffStage":true,            
+          }
+        ],
+      },
+
+      "MonsterNumAtkDefUp_BuffEffect":
+      {
+        //"isUnique":true,
+        "state":"AttackUp",
+        //"duration":2,
+        "stacking":"Refresh",
+        "properties":
+        {
+          "Actor_AttackRatio":"%Atk",
+          "Actor_DefenceRatio":"%Def",
+        },
+        "onAdded":
+        [
+          // {
+          //   "$type": "DebugLog", 
+          //   "content": "执行到了buff效果",
+
+          // }
+        ]
+      },
+
+      "UNIQUE_MonsterNumAtkDefUp_MoveBuff":
+      {
+        "isUnique":true,
+        "duration":0.3,
+        "onAdded":
+        [
+            {
+              "$type":"RemoveModifier",
+              "modifierName":"MonsterNumAtkDefUp_BuffEffect",
+              "target":"Self",
+            },
+        ]     
+      },
+
+      "EnergyDisk_Blue_MonsterNumAtkDefUp_Mixin":
+      {
+        "modifierMixins":
+        [
+          {
+            "$type": "AttachModifierToSelfGlobalValueMixin",
+            "globalValueKey": "_ABILITY_EnergyDisk_MonsterNumAtkDefUp_Enemy",
+            "target":"Self",
+            "valueSteps":
+            [
+                0.5,
+                2.5,
+                999
+            ],
+            "removeAppliedModifier": true,
+            "modifierNameSteps":
+            ["MonsterNumAtkDefUp_BuffEffect","UNIQUE_MonsterNumAtkDefUp_MoveBuff"],         
+          }  
+        ]
+
+      }
+    },
+
+    "abilitySpecials":
+    {
+      "Count":0,
+      "Rate":0.0,
+      "Atk":0.2,
+      "Def":0.2,
+      "Now_Count":0,
+    },
+  },
+},
+
+]

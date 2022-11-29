@@ -1,0 +1,7665 @@
+[
+
+//ABILITY 索引
+
+//Avatar_Nilou_ExtraAttack  普攻按钮功能，其中EA连段中A施展什么攻击也通过各种GV的断言整合在其中了
+// Avatar_Nilou_Attack_01_Spec
+//Avatar_Nilou_Attack_02_Spec  元素战技期间两次A连段的伤害事件
+
+//Avatar_Nilou_ElementalDance  元素战技E1
+//通过GV控制切换元素战技按钮绑定的技能，并且根据释放处理计数器特效，产球等逻辑，主要由一个核心controller modifier控制
+//Avatar_Nilou_ElementalDanceFake 原本六命用的一个无CD的E1，暂时保留一下
+//Avatar_Nilou_Spec_Attack_Count_Add1 用来给连招数量GV加1的ability，在E连段中打普攻通过eventpattern调用
+//Avatar_Nilou_Spec_E_2 元素战技E2，处理伤害和GV
+//Avatar_Nilou_Spec_E_3 元素战技E3，处理伤害和GV
+//Avatar_Nilou_Spec_Attack_Over A连段终结一击，发射子弹逻辑，并结束计数器特效
+//Avatar_Nilou_Spec_EArt_Over E连段终结一击，触发全队水环，并结束计数器特效
+//Avatar_Nilou_ElementalArt_Buff_Controller 丰收之曲（突1）效果，打出终结一击时判断队伍元素，然后给全队上buff
+//命2和突2的效果也整合在Avatar_Nilou_ElementalArt_Buff_Controller中
+//Avatar_Nilou_SpecE_Energy_Revive 命4的终结一击命中回能和大招伤害提升
+//Avatar_Nilou_Water_Bubble_Bullet 妮露A终结一击打出的子弹，这一击的掉球和命四回能逻辑都整合在一起
+
+//Avatar_Nilou_ElementalBurst_Camera 元素爆发ability 处理镜头等逻辑，并创建子弹
+//Avatar_Nilou_Burst_Attacker 妮露大招是用子弹实现的，给子弹K了动画，在原地膨胀，和特效对齐
+
+//Avatar_Nilou_MaxHP_Trans_Crit 命六最大生命值转双爆
+
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10701,
+					"chargeTime": 0.12,//
+					"secondChargeTime": 0.2,//
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							 					
+						},
+						//原版命六效果，暂留一下
+						// {
+						// 	"$type": "SetAnimatorInt",   //满足条件就打虚假的第一击
+						// 	"intID": "SkillID",
+						// 	"value": 23,
+						// 	"predicates": 
+						// 	[
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 0
+						// 		},								
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"compareType": "Equal",
+						// 			"target": "Caster",
+						// 			"key": "_ABILITY_Nilou_Fake_Dance_Mark",
+						// 			"value": 1
+						// 		},
+						// 		{
+						// 			"$type": "ByUnlockTalentParam",
+						// 			"talentParam": "Nilou_Talent_6",
+						// 		},//_ABILITY_Nilou_AOver_Buff_Mark
+						// 	]
+						// },
+						// {
+						// 	"$type": "SetAnimatorInt",   //Aplus连段后的特殊普攻APLUS
+						// 	"intID": "SkillID",
+						// 	"value": 21,
+						// 	"predicates": 
+						// 	[
+						// 		{  //在Aplus后的祷月效果中计数到2打Aplus
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 2,
+						// 		},
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+						// 			"compareType": "Equal",
+						// 			"value": 1,
+						// 		}
+						// 	]
+						// },
+						// {   //在元素战技连段中计数到3打Aplus
+						// 	"$type": "SetAnimatorInt",   //满足舞蹈第四击条件就触发特殊普攻APLUS
+						// 	"intID": "SkillID",
+						// 	"value": 21,
+						// 	"predicates": 
+						// 	[
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 3
+						// 		},
+						// 	]
+						// },
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+							"predicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[//把需要打APLUS的情况排除
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_NilouDance_All_Count",
+											"compareType": "Equal",
+											"value": 3
+										},										
+									]
+								},	
+								{  //老版命六用的，不影响现在的逻辑
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"compareType": "Equal",
+											"target": "Caster",
+											"key": "_ABILITY_Nilou_Fake_Dance_Mark",
+											"value": 1
+										},
+									]
+								},							
+								{   
+									"$type" : "ByAny",
+									"predicates" :
+									[
+										{
+											"$type" : "ByAnimatorInt",
+											"value" : 0,
+											"parameter" : "ComboCount",
+											"logic" : "Equal",
+										},
+										{
+											"$type" : "ByAnimatorInt",
+											"value" : 3,
+											"parameter" : "ComboCount",
+											"logic" : "Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 98,
+							"predicates":
+							[       //在元素战技连段中如果打过第一击，移动后再按普攻直接打Attack02
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_NilouDance_All_Count",
+									"compareType": "Equal",
+									"value": 2
+								},
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 1,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":   
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"compareType": "Equal",
+											"target": "Caster",
+											"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+											"value": 1
+										},
+									]
+								},																							
+									
+							]							
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 98,
+							"predicates":
+							[       //在祷月状态下，移动后再按普攻直接打Attack02
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_NilouDance_All_Count",
+									"compareType": "Equal",
+									"value": 1
+								},
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 1,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								}	,
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "Equal",
+									"target": "Caster",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 1
+								},																		
+									
+							]							
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",//不在A连段后的buff中，allcount小于3就打常规普攻
+							"value": 1,
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_NilouDance_All_Count",
+											"compareType": "Equal",
+											"value": 3
+										},
+									]
+								},
+								{
+									"$type": "ByNot",
+									"predicates":   
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"compareType": "Equal",
+											"target": "Caster",
+											"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+											"value": 1
+										},
+									]
+								},																	
+							]
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1, //在A连段后的buff中，allcount小于2就打常规普攻
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_NilouDance_All_Count",
+											"compareType": "Equal",
+											"value": 2
+										},
+									]
+								},
+								{
+									
+									"$type": "ByTargetGlobalValue",
+									"compareType": "Equal",
+									"target": "Caster",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 1									
+								},																	
+							]
+						},
+						// {
+						// 	"$type": "SetAnimatorInt",    //判断当前舞步段数，如果正确就触发特殊普攻
+						// 	"intID": "SkillID",
+						// 	"value": 21,
+						// 	"predicates": 
+						// 	[
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 3
+						// 		},
+					
+						// 	]
+						// },
+						// {
+						// 	"$type": "SetAnimatorInt",    //如果在A连段后的buff中，allcount=2就打特殊普攻
+						// 	"intID": "SkillID",
+						// 	"value": 21,
+						// 	"predicates": 
+						// 	[
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 2
+						// 		},
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"compareType": "Equal",
+						// 			"target": "Caster",
+						// 			"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+						// 			"value": 1
+						// 		},
+						// 	]
+						// },
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,//元素战技连段中没到计数就打常规普攻
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_NilouDance_All_Count",
+											"compareType": "Equal",
+											"value": 3
+										},										
+									]
+								},	
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "NoneOrEqual",
+									"target": "Self",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 0
+								},				
+							]
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1, //在A连段后的buff中，allcount小于2就打常规普攻
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_NilouDance_All_Count",
+											"compareType": "Equal",
+											"value": 2
+										},
+									]
+								},
+								{
+									
+									"$type": "ByTargetGlobalValue",
+									"compareType": "Equal",
+									"target": "Caster",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 1									
+								},																	
+							]
+						},
+						// {
+						// 	"$type": "SetAnimatorInt",    //判断当前舞步段数，如果正确就触发特殊普攻
+						// 	"intID": "SkillID",
+						// 	"value": 21,
+						// 	"predicates": 
+						// 	[
+						// 		{
+						// 			"$type": "ByTargetGlobalValue",
+						// 			"target": "Self",
+						// 			"key": "_ABILITY_NilouDance_All_Count",
+						// 			"compareType": "Equal",
+						// 			"value": 3
+						// 		},
+					
+						// 	]
+						// },
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+								{//不在连段中才打重击，在连段中直接略过
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Nilou_In_ComboState",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "NoneOrEqual",
+									"target": "Self",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 0
+								},
+							],
+						},
+						{
+							
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+							"predicates": 
+							[
+								{
+									"$type": "ByAny",
+									"predicates":  //在正常连段或者Aover连段后长按普攻键打普攻而不是打重击
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_Nilou_In_ComboState",
+											"value": 1,
+											"compareType": "Equal"
+										},
+										{
+											"$type": "ByTargetGlobalValue",
+											"compareType": "Equal",
+											"target": "Caster",
+											"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+											"value": 1
+										},
+									]
+								},
+								
+							]
+						},						
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Nilou_In_ComboState",
+									"value": 0,
+									"compareType": "NoneOrEqual"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"compareType": "NoneOrEqual",
+									"target": "Self",
+									"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+									"value": 0
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseSecondCharged":
+					[
+
+					],
+					"chargeStateIDs": ["Attack01","Attack02","Attack03","Run"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+				// {
+				// 	"$type": "AttachToNormalizedTimeMixin",
+
+				// 	"stateID": "ExtraAttack_AS", //重击后摇武器隐藏
+				// 	"modifierName": "Nilou_ExtraAttack_WeaponHide",
+				// 	"normalizeStart": 0
+				// },
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10001,
+							"costStaminaRatio":"%ExtraAttack_Sword_Stamina_Cost"
+						},
+					],
+				},
+				"Nilou_ExtraAttack_WeaponHide":
+				{
+					"modifierMixins": 
+					[
+						{
+							"$type": "AttachActionToModifierMixin",
+							"onAdded": 
+							[
+								{
+									"$type": "TriggerHideWeapon",
+									"visible": false,
+									"partNames": ["equip01", "equip02", "sheathPoint"],
+									"canBeHandledOnRecover": true,
+								}
+							],
+							"onRemoved": 
+							[
+								{
+									"$type": "TriggerHideWeapon",
+									"visible": true,
+									"doOffStage": true,
+									"partNames": ["equip01", "equip02", "sheathPoint"],    
+									"canBeHandledOnRecover": true,                      
+								}
+							]
+						}
+					],
+				
+				}
+			},
+			"abilitySpecials":
+			{
+				//故意少判了一点点体力，为了顾及一部分网络延迟
+				"ExtraAttack_Sword_Stamina_Cost": 0,
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_Attack_01_Spec", //元素战技中强化普攻攻击1
+			"onAbilityStart": 
+			[
+				{
+					"$type": "ResetAnimatorTrigger",
+					"triggerID": "DoSkill",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_ABILITY_Avatar_Nilou_Recombo_Mark", //在祷月状态下打出普攻说明后面的攻击都不能回能和产球
+					"value": 1,
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+							"compareType": "Equal",
+							"value": 1,
+						}
+					]
+				},	
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+					"doOffStage": true,
+					"value": 1
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+
+						"attackPattern":
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size":
+							{
+								"x":1.75,
+								"y":2,//X 和y 都是在中心。z在底面
+								"z":2.2,
+							},
+							
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0,
+									"y": 1.1,
+									"z": 0,
+								}
+							},
+							// "ignoreMassive":true,
+							// "checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Art",  
+							"attenuationTag": "Elemental_Art",                          
+							"attackProperty":
+							{
+								"damageExtra": "%FIGHT_PROP_MAX_HP*%ExtraAttack_MaxHP_Percentage",
+								"strikeType": "Slash",
+								"attackType": "Melee",
+								"elementType": "Water",
+								"elementDurability": 25,    
+								"overrideByWeapon": false,                           
+								"elementRank": 1,
+								"enBreak":52.64,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",								
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.02,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.08,
+								"shakeTime": 0.06,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":0,
+									"z":-1
+								},
+							},
+						}
+					},
+					
+				},
+				
+			],
+			"abilitySpecials": 
+			{
+				"ExtraAttack_MaxHP_Percentage": 0,
+			}
+		}
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_Attack_02_Spec", //强化普攻攻击2
+			"onAbilityStart": 
+			[
+				{
+					"$type": "ResetAnimatorTrigger",
+					"triggerID": "DoSkill",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_ABILITY_Avatar_Nilou_Recombo_Mark", //在祷月状态下打出普攻说明后面的攻击都不能回能和产球
+					"value": 1,
+					"predicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+							"compareType": "Equal",
+							"value": 1,
+						}
+					]
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+					"doOffStage": true,
+					"value": 1
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 1.6,
+							"radius": 1.8,
+					
+							
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0,
+									"y": 0,
+									"z": 0.5,
+								}
+							},
+							// "ignoreMassive":true,
+							// "checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Art",  
+							"attenuationTag": "Elemental_Art",                          
+							"attackProperty":
+							{
+								"damageExtra": "%FIGHT_PROP_MAX_HP*%ExtraAttack_MaxHP_Percentage",
+								"strikeType": "Slash",
+								"attackType": "Melee",
+								"elementType": "Water",
+								"elementDurability": 25,    
+								"overrideByWeapon": false,                           
+								"elementRank": 1,
+								"enBreak": 47.55,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",								
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.02,
+								"muteHitText": false,
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.08,
+								"shakeTime": 0.06,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									
+									"x": -0.5,
+									"y": -0.5,
+									"z": 0
+								},
+							},
+						}
+					},
+					
+				},
+				
+			],
+			"abilitySpecials": 
+			{
+				"ExtraAttack_MaxHP_Percentage": 0,
+			}
+		}
+	},
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  小技能  ElementalArt
+//  
+//
+////////////////////////////////////////////////////////////////
+
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_ElementalDance",
+		"onAdded": 
+		[		
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_E_Count",  //记录E连击的变量，主要用来切换三段E技能
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_All_Count",  //记录E和普攻的变量，第四击触发特殊攻击
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_ComboOver_Mark",
+				"value": 0,				
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_In_ComboState",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Avatar_Nilou_Recombo_Mark",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+				"value": 0,	
+				"doOffStage": true			
+			},
+			{
+				"$type": "AttachModifier",
+				"target": "Self",
+				"modifierName": "Avatar_Nilou_Elemental_Art_ElemBall_Handler",
+			}
+		],
+		"abilityMixins": 
+		[
+			
+			
+			// {
+			// 	"$type": "AttachToNormalizedTimeMixin",//原版六命用，废弃
+			// 	"stateID": "NilouDance1Fake",
+			// 	"normalizeStart": 0.6,
+			// 	"normalizeEnd": 1,
+			// 	"modifierName": "Nilou_Set_E_Count1",
+			// },
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NilouDance2",
+				"normalizeStart": 0.01,
+				"normalizeEnd": 1,
+				"modifierName": "Nilou_Set_E_Count2",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NilouDance2",
+				"normalizeStart": 0,
+				"normalizeEnd": 0.26,
+				"modifierName": "Nilou_EArt_HideWeapon",
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NilouDance3",
+				"normalizeStart": 0.01,
+				"normalizeEnd": 1,
+				"modifierName": "Nilou_Set_E_Count3",
+			},
+			{
+				"$type": "AttachToStateIDMixin",   //在普攻连段中加个标记，后面退出E技能状态的时候就不重置comboCount了
+				"stateIDs": ["Attack01","Attack02","Attack03"],
+				"modifierName": "Avatar_Nilou_In_NormalAttack_Mark"
+			},	
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["NilouDance1","NilouDance1A","NilouDance1Fake","NilouDance1FakeA"],
+				"modifierName": "Nilou_EArt_HideWeapon_2"
+			},
+			{
+				"$type": "AttachToStateIDMixin", //在连段动画过程中增加抗打断能力
+				"stateIDs": 
+				[					
+					"NilouDance1",
+					"NilouDance1A",
+					"NilouDance1Fake",
+					"NilouDance1FakeA",
+					"NilouDance2",
+					"NilouDance2A",
+					"NilouDance3",
+					"NilouDance3A",
+					"NilouDanceSpecA",
+					"NilouDanceSpecE",
+					"NilouDanceSpecEA"
+				],
+				"modifierName": "Nilou_EArt_Endure",
+				"isCheckOnAttach": true,
+
+			},		
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10702,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},
+			{
+				"$type": "ClearEndura",//开E1的时候清一下破霸体值				
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark", //重置上一次的连击完成情况
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_E_Count",  //记录E连击的变量，主要用来切换三段E技能
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 
+			},
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_All_Count",  //记录E和普攻的变量，第四击触发特殊攻击
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+			},	
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Nilou_Set_E_Count1"
+			},	
+			{				
+				"$type": "ApplyModifier",
+				"target": "Self",
+				"modifierName": "UNIQUE_NilouDance_Duration_Controller",
+			},
+			{
+				"$type": "ApplyModifier",
+				"target": "Self",
+				"modifierName": "UNIQUE_Avatar_Nilou_Keep_Attack_Combo_Handler", //开启E后不重置普攻段数
+			},
+			{
+				"$type": "TriggerAttackEvent",//负责命中敌人的攻击事件
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius":2.5,						
+						"height": 3,
+						
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.5,
+								"z": 0,
+							}
+						},
+						// "ignoreMassive":true,
+						// "checkHitLayerType": "Both",
+					},
+					"attackInfo":
+					{
+						"attackTag": "Elemental_Art",        
+						"attenuationTag": "Elemental_Art",                    
+						"attackProperty":
+						{
+							"damageExtra":"%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+							"strikeType": "Default",							
+							"attackType": "Melee",
+							"elementType": "Water",
+							"elementDurability": 25,                               
+							"elementRank": 1,
+							"enBreak": 55.64,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV3",
+							"reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.02,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.36,
+							"shakeTime": 0.12,
+							"shakeDistance": 30,
+						},
+					}
+				}
+			},
+		],
+		"modifiers": 
+		{
+			"Blank":{},
+			"UNIQUE_NilouDance_Duration_Controller":   //控制E技能持续时间，时间结束或者下场或者打完第四击就结束，然后重置全局变量
+			{
+				"isUnique": true,
+				"duration": "%Duration",
+				"stacking": "Refresh",
+				"modifierMixins":
+				[
+					{
+						"$type": "AttachModifierToGlobalValueMixin",
+						"globalValueTarget": "Self",
+						"globalValueKey": "_ABILITY_NilouDance_All_Count",  //当ALLCount被加到3时改变E技能映射到特殊攻击 
+						"valueSteps": [-0.5,0.5,1.5,2.5,3.5],
+						"modifierNameSteps": 
+						["Blank","Avatar_NilouAllCount_1","Avatar_NilouAllCount_2","Avatar_Nilou_Change_ECount_To_4"]
+					},
+					{
+						"$type": "AttachModifierToGlobalValueMixin",
+						"globalValueKey": "_ABILITY_NilouDance_E_Count",
+						"valueSteps": [-0.5,0.5,1.5,2.5,3.5,4.5],
+						//"removeAppliedModifier": false,
+						"modifierNameSteps": ["Nilou_Switch_0","NilouDance_SwitchTo2","NilouDance_SwitchTo3","NilouDance_SwitchToSpec","NilouDance_SwitchToSpec"]
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack01",
+						"normalizeStart": 0.01,
+						"normalizeEnd": 0.5,
+						"modifierName": "Nilou_Set_A_Eff_Set_1",
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack02",
+						"normalizeStart": 0.01,
+						"normalizeEnd": 0.5,
+						"modifierName": "Nilou_Set_A_Eff_Set_2",
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack01",
+						"normalizeStart": 0.04,
+						"normalizeEnd": 0.09,
+						"modifierName": "Nilou_Ban_E_Art",  //在普攻产生攻击和合理的衔接点之间把元素战技拦住
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack02",
+						"normalizeStart": 0.03,
+						"normalizeEnd": 0.11,
+						"modifierName": "Nilou_Ban_E_Art", //在普攻产生攻击和合理的衔接点之间把元素战技拦住
+					},
+					{
+						"$type": "AttachToStateIDMixin", //在连段动画过程中增加抗打断能力
+						"stateIDs": 
+						[
+							"Attack01",
+							"Attack02",							
+						],
+						"modifierName": "Nilou_EArt_Attack_Endure",
+						"isCheckOnAttach": true,
+
+					},
+				],
+
+				"onAdded": 
+				[
+
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_ComboOver_Mark", 
+						"value": 0,	
+						"doOffStage": true			
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"key": "_ABILITY_Avatar_Nilou_Recombo_Mark", 
+						"value": 0,
+					},
+
+					// {
+					// 	"$type": "RemoveUniqueModifier",
+					// 	"doOffStage": true,
+					// 	"modifierName": "UNIQUE_Avatar_Nilou_AOver_Dance_Buff" //把Aplus后的特殊状态取消
+					// },
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"value": 1,	
+						"doOffStage": true			
+					},
+					{
+						"$type": "ClearEndura",  //清除自身破霸体值						
+						"target": "Self",
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouDanceMark",//通过状态机参数把重击ban了
+						"value": 1,
+						"doOffStage": true
+					},
+					//原版命六效果，暂留在注释里
+					// {
+					// 	"$type": "AttachModifier",
+					// 	"modifierName": "UNIQUE_Nilou_Elemental_Art_DamageUp",
+					// 	"predicates": 
+					// 	[
+					// 		{
+					// 			"$type": "ByUnlockTalentParam",
+					// 			"talentParam": "Nilou_Talent_6"
+					// 		}
+					// 	]
+					// }
+				],
+				"onAvatarOut": 
+				[
+												
+					{
+						"$type": "RemoveModifier",
+						"target": "Self",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_NilouDance_Duration_Controller"
+					},
+					
+				],
+				"onKill": 
+				[
+																		
+					{
+						"$type": "RemoveModifier",
+						"target": "Self",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_NilouDance_Duration_Controller"
+					},
+					
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"FireEffect",  //如果不是连击完成而是时间到了/下场/死亡导致的remove的话就直接卸载计数器并播消失特效
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count_Disappear",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+								"compareType": "NoneOrEqual",
+								"value": 0,
+							}
+						]
+					},
+					{
+						"$type": "RemoveModifier",
+						"target": "Self",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_Avatar_Nilou_Keep_Attack_Combo_Handler"
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"value": 0,	
+						"doOffStage": true			
+					},
+					// {
+					// 	"$type": "SetGlobalValue",
+					// 	"target": "Self",
+					// 	"key": "_ABILITY_Avatar_Nilou_Recombo_Mark", 
+					// 	"value": 0,
+					// 	"doOffStage": true	
+					// },
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouDanceMark",
+						"value": 0,
+						"doOffStage": true
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "UNIQUE_Nilou_ElementalArt_Count_Eff",
+						"doOffStage": true,	
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+								"compareType": "NoneOrEqual",
+								"value": 0,
+							}
+						]
+					},
+					
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_NilouDance_E_Count",
+						"value": 0,
+						"useLimitRange":true,
+						"maxValue": 4,
+						"minValue": 0, 
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_NilouDance_All_Count",
+						"value": 0,
+						"useLimitRange":true,
+						"maxValue": 3,
+						"minValue": 0, 
+					},
+
+					{
+						"$type": "ApplyModifier",  //如果是连击完成的情况的话就延迟1.5s销毁计数器特效并且不播消失特效
+						"modifierName": "Nilou_ElementalArt_Eff_Remover_Delay",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+								"compareType": "Equal",
+								"value": 1,
+							}
+						]
+
+					}
+					
+				],
+				
+			},
+			"UNIQUE_Nilou_Elemental_Art_DamageUp":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"modifierMixins": 
+				[
+					{
+						"$type": "ModifyDamageMixin",
+						"attackTags": ["Elemental_Art"],
+						"damagePercentageRatio": "%Elemental_Art_DamageUp_Ratio"
+					}
+				]
+			},
+			"UNIQUE_Nilou_ElementalArt_Count_Eff":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						
+					},	
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count"
+							}
+						}
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"value": 2,
+						"doOffStage": true,
+						"canBeHandledOnRecover": true,
+						"type": "Int",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",	
+						"value": 3,					
+						"canBeHandledOnRecover": true,
+						"doOffStage": true,
+						"type": "Int",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},		
+		
+				],				
+			},
+			
+			"Nilou_ElementalArt_Eff_Remover_Delay":
+			{
+				"duration": 1,
+				"onRemoved": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_Nilou_ElementalArt_Count_Eff",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+								"compareType": "Equal",
+								"value": 1,
+							}
+						]
+					}
+				]
+			},
+			"UNIQUE_Avatar_Nilou_Keep_Attack_Combo_Handler":  //用来控制3段E的释放，每次放完E后替换成下一个E
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"duration": "%Duration",
+				"modifierMixins": 
+				[
+					{
+						"$type": "ReplaceEventPatternMixin",
+						"oldPatterns": 
+						[
+							"SetComboCount1",
+							"SetComboCount2",
+							"SetComboCount3",
+							"Nilou_Attack01",
+							"Nilou_Attack02",
+							"Nilou_Attack03",
+							"Emo_Girl_Sword_Nilou_NormalAttack01",
+							"Emo_Girl_Sword_Nilou_NormalAttack02"						
+						],
+						"newPatterns": 
+						[
+							"SetComboCount1_Nilou",
+							"SetComboCount2_Nilou",
+							"SetComboCount3_Nilou",
+							"Nilou_Attack01_Spec",
+							"Nilou_Attack02_Spec",
+							"Nilou_Attack03_Spec",		
+							"Emo_Girl_Sword_Nilou_NormalAttack01_In_Dance",
+							"Emo_Girl_Sword_Nilou_NormalAttack02_In_Dance"						
+						]						
+					},
+	
+				],
+				"onAdded":
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "ComboCount",
+						"doOffStage":true,
+						"value": 0,
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "ComboCount",
+						"doOffStage":true,
+						"value": 0,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+								"value": 0,
+							}
+						]
+					}
+				],
+
+			},
+			"Nilou_Switch_0":
+			{
+				"onAdded": 
+				[
+					//原版命六效果，暂留
+					// {
+					// 	"$type": "AttachModifier",
+					// 	"modifierName": "Nilou_Switch_0_Sub",	
+					// 	"predicates": 
+					// 	[
+					// 		{
+					// 			"$type": "ByTargetGlobalValue",
+					// 			"compareType": "MoreThanAndEqual",
+					// 			"target": "Caster",
+					// 			"key": "_ABILITY_Nilou_ComboOver_Mark",
+					// 			"value": 1
+					// 		},
+					// 		{
+					// 			"$type": "ByTargetGlobalValue",
+					// 			"compareType": "Equal",
+					// 			"target": "Caster",
+					// 			"key": "_ABILITY_Nilou_In_ComboState",
+					// 			"value": 1
+					// 		},
+					// 		{
+					// 			"$type": "ByUnlockTalentParam",
+					// 			"talentParam": "Nilou_Talent_6",
+					// 		}
+					// 	]				
+					// }
+				]
+			},
+			"Nilou_Switch_0_Sub":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_Fake_Dance_Mark",
+						"value": 1,
+						"doOffStage": true,
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_Fake_Dance_Mark",
+						"value": 0,
+						"doOffStage": true,
+					}
+				],
+
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 1,
+						"skillID": 10708,
+					},	
+					{
+						"$type": "DoActionOnGlobalValueChangeMixin",
+						"globalValueKey": "_ABILITY_Nilou_In_ComboState",
+						"actions": 
+						[
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Nilou_Switch_0_Sub"
+							}
+						]
+					},				
+				]
+			},
+			"NilouDance_SwitchTo2":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Nilou_Switch_0"
+					},
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 1,
+						"skillID": 10703,
+					},
+					{
+						"$type": "SwitchSkillIconMixin",
+						"skillID": 10701,
+						"skillIcon": "Skill_S_Nilou_03"
+					}
+				]
+			},
+			"NilouDance_SwitchTo3":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "NilouDance_SwitchTo2"
+					},
+					
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 1,
+						"skillID": 10704,
+					},
+					{
+						"$type": "SwitchSkillIconMixin",
+						"skillID": 10701,
+						"skillIcon": "Skill_S_Nilou_03"
+					}
+				]
+			},
+			"NilouDance_SwitchTo0":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "NilouDance_SwitchTo3"
+					},					
+				],
+
+			},
+			"NilouDance_SwitchToSpec":    //切换技能到特殊攻击段
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "NilouDance_SwitchTo2"
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "NilouDance_SwitchTo3"
+					},
+					
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 1,
+						"skillID": 10707,
+					},
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 0,
+						"skillID": 10706,
+					},
+					// {
+					// 	"$type": "SwitchSkillIconMixin",
+					// 	"skillID": 10701,
+					// 	"skillIcon": "Skill_S_Nilou_04"
+					// }
+				]
+			},
+			"Nilou_Set_E_Count1":
+			{
+				"duration": 0.15,
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark", //重置上一次的连击完成情况
+						"value": 0,
+					},
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "UNIQUE_Nilou_ElementalArt_Count_Eff"
+					},
+
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Nilou_ElementalArt_Count_Eff"
+					},					
+					{
+						"$type": "SetGlobalValue",
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_NilouDance_E_Count",
+						"value": 1,
+						"useLimitRange":true,
+						"maxValue": 4,
+						"minValue": 0, 
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+					}
+				]
+			},
+			"Nilou_Set_E_Count2":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_point"
+							}
+						}
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			},
+			"Nilou_Set_E_Count3":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_point"
+							}
+						}
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},				
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			},
+			"Nilou_Set_A_Eff_Set_1":
+			{
+				
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_point"
+							}
+						}
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			},
+			"Nilou_Set_A_Eff_Set_2":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_point"
+							}
+						}
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			},
+			"Avatar_NilouAllCount_1"://预留做连击一段的时候的表现
+			{
+				"onAdded": 
+				[
+					// {
+					// 	"$type": "AttachEffect",
+					// 	"effectPattern": "Eff_Lisa_StaticElec_Number1"
+					// }
+				
+				]
+			},
+			"Avatar_NilouAllCount_2":
+			{
+				//预留做连击二段的时候的表现
+				"onAdded": 
+				[
+					// {
+					// 	"$type": "AttachEffect",
+					// 	"effectPattern": "Eff_Lisa_StaticElec_Number2"
+					// }
+					// {
+					// 	"$type": "SendEffectTrigger",
+					// 	"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+					// 	"parameter": "setCount_2",
+					// 	"type": "Trigger"
+					// }
+				]
+			},
+			"Avatar_Nilou_Change_ECount_To_4":
+			{
+				"onAdded": 
+				[
+					// {
+					// 	"$type": "AttachEffect",
+					// 	"effectPattern": "Eff_Lisa_StaticElec_Number3"
+					// },
+					// {
+					// 	"$type": "SendEffectTrigger",
+					// 	"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+					// 	"parameter": "setCount_3",
+					// 	"type": "Trigger"
+					// },
+					{
+						"$type": "SetGlobalValue",               //如果3段E没用完就把下一次E变成特殊E，否则不处理
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_NilouDance_E_Count",
+						"value": 4,
+						"useLimitRange":true,
+						"maxValue": 4,
+						"minValue": 0, 
+						"predicates": 
+						[
+							// {
+							// 	"$type": "ByNot",
+							// 	"predicates": 
+							// 	[
+							// 		{
+							// 			"$type": "ByTargetGlobalValue",
+							// 			"target": "Self",
+							// 			"key": "_ABILITY_NilouDance_E_Count",
+							// 			"value": 3,
+							// 			"compareType": "Equal"
+							// 		}
+							// 	]
+							// }
+						]
+					},				
+				]
+			},
+			
+			"Avatar_Nilou_In_NormalAttack_Mark":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+						"value": 1,
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+						"value": 0,
+					}
+				]
+			},
+			"Avatar_Nilou_Elemental_Art_ElemBall_Handler":
+			{
+				"stacking": "Unique",
+				"onAttackLanded": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Elemental_Art"],
+							},
+							{
+								"$type": "ByHitStrikeType",//根据striketype判断是E1还是E其他攻击
+								"strikeType": "Default"//判断是E1
+							},
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Nilou_Water_ElemBall_1",
+								"target": "Self",
+								"predicates": 
+								[
+									{   //必须是在常规的四连击之内才回能，A连段后的额外攻击不回能
+										"$type": "ByTargetGlobalValue",
+										"target": "Caster",
+										"key": "_ABILITY_Avatar_Nilou_Recombo_Mark",
+										"compareType": "NoneOrEqual",
+										"value": 0,
+									}
+								]
+							},
+						   
+						],
+
+					},
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Elemental_Art"],
+							},
+							{
+								"$type": "ByHitStrikeType",//根据striketype判断是E1还是E其他攻击
+								"strikeType": "Slash", //判断是E2E3E4A1A2
+							},
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Nilou_Water_ElemBall_2",
+								"target": "Self",
+								"predicates": 
+								[
+									{   //必须是在常规的四连击之内才回能，A连段后的额外攻击不回能
+										"$type": "ByTargetGlobalValue",
+										"target": "Caster",
+										"key": "_ABILITY_Avatar_Nilou_Recombo_Mark",
+										"compareType": "NoneOrEqual",
+										"value": 0,
+									}
+								]
+							},
+						   
+						],
+
+					},
+				]
+			},
+			"Nilou_Water_ElemBall_1":
+			{
+				"duration": 0.1,
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "GenerateElemBall",
+						"configID": 2018,
+						"baseEnergy": 3,
+						"ratio": 1,
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 1.0,
+							},
+						},
+					},
+					{
+						"$type": "Randomed",
+						"chance": 0.5,
+						"successActions":
+						[
+							{
+								"$type": "GenerateElemBall",
+								"configID": 2018,
+								"baseEnergy": 3,
+								"ratio": 1,
+								"born":
+								{
+									"$type": "ConfigBornByTarget",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 1.0,
+									},
+								},
+							},
+						],
+					},
+				],	
+			},
+			"Nilou_Water_ElemBall_2":
+			{
+				"duration": 0.1,
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "GenerateElemBall",
+						"configID": 2018,
+						"baseEnergy": 3,
+						"ratio": 1,
+						"born":
+						{
+							"$type": "ConfigBornByTarget",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 1.0,
+							},
+						},
+					},					
+				],	
+			},
+			"Nilou_Ban_E_Art":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouBanEArt",
+						"value": 1
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouBanEArt",
+						"value": 0
+					}
+				]
+			},
+			"Nilou_EArt_HideWeapon":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "AttachActionToModifierMixin",
+						"onAdded": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": false,
+								"partNames": ["equip01", "equip02", "sheathPoint"],
+								"canBeHandledOnRecover": true,
+							}
+						],
+						"onRemoved": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": true,
+								"doOffStage": true,
+								"partNames": ["equip01", "equip02", "sheathPoint"],       
+								"canBeHandledOnRecover": true,                   
+							}
+						]
+					}
+				],
+				
+			},
+			"Nilou_EArt_HideWeapon_2":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "AttachActionToModifierMixin",
+						"onAdded": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": false,
+								"partNames": ["equip01", "equip02", "sheathPoint"],
+								"canBeHandledOnRecover": true,
+							}
+						],
+						"onRemoved": 
+						[
+							{
+								"$type": "TriggerHideWeapon",
+								"visible": true,
+								"doOffStage": true,
+								"partNames": ["equip01", "equip02", "sheathPoint"],     
+								"canBeHandledOnRecover": true,                     
+							}
+						]
+					}
+				],
+				
+			},
+			"Nilou_EArt_Endure":
+			{
+				"properties":
+                    {
+                        "Actor_EndureDelta": 0.5,
+                    }       
+			},
+			"Nilou_EArt_Attack_Endure":
+			{
+				"properties":
+                    {
+                        "Actor_EndureDelta": 0.5,
+                    }       
+			}
+		},
+		
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0,
+			"Elemental_Art_DamageUp_Ratio":0,
+			"Duration":0
+		}
+	}
+},
+
+{
+	"Default":  //原六命用的无CD的E1，现在已经没有调用
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_ElementalDanceFake",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10702,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark", //重置上一次的连击完成情况
+				"value": 0,
+			},
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill",
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_E_Count",  //记录E连击的变量，主要用来切换三段E技能
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_NilouDance_All_Count",  //记录E和普攻的变量，第四击触发特殊攻击
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_ABILITY_Avatar_Nilou_Recombo_Mark", //标记打了这一击以后后续都是六命后额外攻击
+				"value": 1,
+			},		
+			{
+				"$type": "TriggerAttackEvent",//负责命中敌人的攻击事件
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius":2.5,						
+						"height": 3,
+						
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.5,
+								"z": 0,
+							}
+						},
+						// "ignoreMassive":true,
+						// "checkHitLayerType": "Both",
+					},
+					"attackInfo":
+					{
+						"attackTag": "Elemental_Art",   
+						"attenuationTag": "Elemental_Art",                         
+						"attackProperty":
+						{
+							"damageExtra":"%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+							"strikeType": "Default",
+							"attackType": "Melee",
+							"elementType": "Water",
+							"elementDurability": 25,                               
+							"elementRank": 1,
+							"enBreak": 55.64,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV3",
+							"reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.02,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.36,
+							"shakeTime": 0.12,
+							"shakeDistance": 30,
+						},
+					}
+				},
+				
+			},
+			
+		],
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",   //E状态下打普攻给ALL count全局变量+1
+		"abilityName": "Avatar_Nilou_Spec_Attack_Count_Add1",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AddGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_All_Count",
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 	
+				"predicates": 
+				[
+					{
+						"$type": "ByAny",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",//要在连击状态的时候才+1，避免连击状态结束后又setGV
+								"key": "_ABILITY_Nilou_In_ComboState",
+								"compareType": "Equal",
+								"value": 1
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					
+				]								
+			}
+		]
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_Spec_E_2",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10703,
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"doOffStage": true,
+				"key": "_ABILITY_NilouDance_E_Count",
+				"value": 2,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",//要在连击状态的时候才+1，避免连击状态结束后又setGV
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"compareType": "Equal",
+						"value": 1
+					}
+				]					
+			},
+			{
+				"$type": "AddGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_All_Count",
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",//要在连击状态的时候才+1，避免连击状态结束后又setGV
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"compareType": "Equal",
+						"value": 1
+					}
+				]					
+			},
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill",
+			},
+			{
+				"$type": "TriggerAttackEvent",//负责命中敌人的攻击事件
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius":2.7,						
+						"height": 3,
+						
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.5,
+								"z": 0.3,
+							}
+						},
+						// "ignoreMassive":true,
+						// "checkHitLayerType": "Both",
+					},
+					"attackInfo":
+					{
+						"attackTag": "Elemental_Art",  
+						"attenuationTag": "Elemental_Art",                          
+						"attackProperty":
+						{
+							"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+							"strikeType": "Slash",
+							"attackType": "Melee",
+							"elementType": "Water",
+							"elementDurability": 25,                               
+							"elementRank": 1,
+							"enBreak": 54.64,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV3",
+							"reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.02,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.36,
+							"shakeTime": 0.12,
+							"shakeDistance": 30,
+						},
+					}
+				}
+			},
+		],
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_Spec_E_3",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10704,
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"doOffStage": true,
+				"key": "_ABILITY_NilouDance_E_Count",
+				"value": 3,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",//要在连击状态的时候才+1，避免连击状态结束后又setGV
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"compareType": "Equal",
+						"value": 1
+					}
+				]					
+			},
+			{
+				"$type": "AddGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_All_Count",
+				"value": 1,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",//要在连击状态的时候才+1，避免连击状态结束后又setGV
+						"key": "_ABILITY_Nilou_In_ComboState",
+						"compareType": "Equal",
+						"value": 1
+					}
+				]					
+			},	
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill",
+			},	
+			{
+				"$type": "TriggerAttackEvent",//负责命中敌人的攻击事件
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius":2.7,						
+						"height": 3,
+						
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.0,
+								"y": -0.5,
+								"z": 0.6,
+							}
+						},
+						// "ignoreMassive":true,
+						// "checkHitLayerType": "Both",
+					},
+					"attackInfo":
+					{
+						"attackTag": "Elemental_Art", 
+						"attenuationTag": "Elemental_Art",                           
+						"attackProperty":
+						{
+							"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+							"strikeType": "Slash",
+							"attackType": "Melee",
+							"elementType": "Water",
+							"elementDurability": 25,                               
+							"elementRank": 1,
+							"enBreak": 66.43,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV3",
+							"reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.02,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.36,
+							"shakeTime": 0.12,
+							"shakeDistance": 30,
+						},
+					}
+				}
+			},
+		],
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",   //
+		"abilityName": "Avatar_Nilou_Spec_Attack_Over",
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+				"value": 0,
+				"doOffStage": true
+			},
+		],
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Katana_Attack01",
+				"normalizeStart": 0.01,
+				"normalizeEnd": 0.5,
+				"modifierName": "Nilou_Set_A_Over_Eff",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10706,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill"
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+				"value": 1,
+			},		
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 41070016,
+				"born":
+				{
+					"$type": "ConfigBornBySelf",
+					"offset":
+					{
+						"x": 0,
+						"y": 1.5,
+						"z": 0.5,
+					},
+					"direction":
+					{
+						"$type": "ConfigDirectionByDefault",
+						"angleOffset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				}
+			},		
+						
+			{
+				"$type": "TriggerAbility",
+				"abilityName": "Avatar_Nilou_ElementalArt_Buff_Controller",	
+				"predicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Nilou_PermanentSkill_1"
+					},
+					{//翩转期间才触发
+						"$type": "ByTargetGlobalValue",
+						"key": "_ABILITY_Avatar_Nilou_Recombo_Mark",
+						"compareType": "NoneOrEqual",
+						"value": 0,
+					}
+				]	
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_All_Count",
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 									
+			},
+			{
+				"$type": "SetGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_E_Count",
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 									
+			},
+			{
+				"$type": "SetAnimatorInt",
+				"intID": "ComboCount",
+				"value": 0,
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_NilouDance_Duration_Controller",
+				"target": "Self",
+				"doOffStage": true,
+				"predicates": 
+				[
+					//原版命六效果，暂留
+					// {
+					// 	"$type": "ByNot",
+					// 	"predicates": 
+					// 	[
+					// 		{
+					// 			"$type": "ByUnlockTalentParam",
+					// 			"talentParam": "Nilou_Talent_6",
+					// 		}
+					// 	]
+					// }
+				]
+			},	
+			{
+				"$type": "ApplyModifier",
+				"target": "Caster",
+				"modifierName": "UNIQUE_Avatar_Nilou_AOver_Dance_Buff",
+				"predicates": 
+				[
+					{//只有在第一次连段没打完的时候才加这个buff，后面额外的攻击不触发buff
+						"$type": "ByTargetGlobalValue",
+						"key": "_ABILITY_Nilou_ComboOver_Mark",
+						"target": "Caster",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					}
+				]
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_ComboOver_Mark",   //表示妮露用普攻打出终结一击，决定触发哪种buff
+				"value": 1,
+			},			
+
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Avatar_Nilou_AOver_Dance_Buff":  //持续X秒的状态，可以一直打A1 A2 Aplus，造成水元素伤害
+			{
+				"isUnique": true,
+				"duration":"%DanceDuration",
+				"onAdded": 
+				[
+					{
+						"$type":"FireEffect",
+						"effectPattern":"Eff_Avatar_Girl_Sword_Nilou_Constellation_6_Watch",
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Avatar_Girl_Sword_Nilou_Constellation_6_WatchTrail",						
+					}	
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "AttachModifierToGlobalValueMixin",	//带了祭礼剑的话会和E技能连段冲突，在此期间屏蔽这个效果							
+						"globalValueKey": "_ABILITY_Nilou_In_ComboState",
+						"valueSteps": [-0.5,0.5],
+						"modifierNameSteps": 
+						[
+							"Avatar_Nilou_AOver_Dance_Buff_Driver"
+						]
+					}
+				]
+				
+			},
+			"Avatar_Nilou_AOver_Dance_Buff_Driver":
+			{
+				"onAdded": 
+				[		
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_NilouDance_All_Count",  
+						"value": 0,
+						"useLimitRange":true,
+						"maxValue": 3,
+						"minValue": 0, 
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+						"value": 1,
+						"doOffStage": true
+					},	
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouDanceMark",//通过状态机参数把重击ban了
+						"value": 1,
+						"doOffStage": true
+					},		
+										
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "ReplaceEventPatternMixin",
+						"oldPatterns": 
+						[
+							"SetComboCount1",
+							"SetComboCount2",
+							"SetComboCount3",
+							"Nilou_Attack01",
+							"Nilou_Attack02",
+							"Nilou_Attack03",	
+							"Emo_Girl_Sword_Nilou_NormalAttack01",
+							"Emo_Girl_Sword_Nilou_NormalAttack02"								
+						],
+						"newPatterns": 
+						[
+							"SetComboCount1_Nilou",
+							"SetComboCount2_Nilou",
+							"SetComboCount3_Nilou",
+							"Nilou_Attack01_Spec",
+							"Nilou_Attack02_Spec",
+							"Nilou_Attack03_Spec",	
+							"Emo_Girl_Sword_Nilou_NormalAttack01_In_Dance",
+							"Emo_Girl_Sword_Nilou_NormalAttack02_In_Dance"								
+						]						
+					},	
+					{
+						"$type": "AttachModifierToGlobalValueMixin",
+						"globalValueTarget": "Self",
+						"globalValueKey": "_ABILITY_NilouDance_All_Count",  //当ALLCount被加到2时改变A技能映射到特殊攻击 
+						"valueSteps": [1.5,2.5],
+						"modifierNameSteps": 
+						["Nilou_AOver_Dance_Switch_Skill"]
+					},
+					{
+						"$type": "AttachToStateIDMixin", //在连段动画过程中增加抗打断能力
+						"stateIDs": 
+						[
+							"Attack01",
+							"Attack02",							
+						],
+						"modifierName": "Nilou_Dance_Buff_Endure",
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack01",
+						"normalizeStart": 0.04,
+						"normalizeEnd": 0.09,
+						"modifierName": "Nilou_Ban_E_Art",  //在普攻产生攻击和合理的衔接点之间把元素战技拦住
+					},
+					{
+						"$type": "AttachToNormalizedTimeMixin",
+						"stateID": "Attack02",
+						"normalizeStart": 0.03,
+						"normalizeEnd": 0.11,
+						"modifierName": "Nilou_Ban_E_Art", //在普攻产生攻击和合理的衔接点之间把元素战技拦住
+					},
+					
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "ComboCount",
+						"value": 0,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_In_NormalAttack_Mark",
+								"value": 0,
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_AOver_Buff_Mark",
+						"value": 0,
+						"doOffStage": true
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouDanceMark",//通过状态机参数把重击ban了
+						"value": 0,
+						"doOffStage": true
+					},	
+				],
+				"onAvatarOut": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_Avatar_Nilou_AOver_Dance_Buff"
+					}
+				],
+				"onKill": 
+				[
+					{
+						"$type": "RemoveUniqueModifier",
+						"doOffStage": true,
+						"modifierName": "UNIQUE_Avatar_Nilou_AOver_Dance_Buff"
+					}
+				]
+			},
+			"Nilou_AOver_Dance_Switch_Skill":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "SwitchSkillIDMixin",
+						"priority": "AvatarSpecial",
+						"skillIndex": 0,
+						"skillID": 10706,
+					},
+				]
+			},
+			"Nilou_Dance_Buff_Endure":
+			{
+				"properties":
+                    {
+                        "Actor_EndureDelta": 0.5,
+                    }       
+			},
+			"Nilou_Set_A_Over_Eff":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 4,
+					},
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_full"
+							}
+						}
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			},
+			"Nilou_Ban_E_Art":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouBanEArt",
+						"value": 1
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "NilouBanEArt",
+						"value": 0
+					}
+				]
+			},
+		},
+		"abilitySpecials": 
+		{
+			"DanceDuration":0,
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",   //
+		"abilityName": "Avatar_Nilou_Spec_EArt_Over",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NilouDanceSpecE",
+				"normalizeStart": 0.01,
+				"normalizeEnd": 1,
+				"modifierName": "Nilou_Set_E_Over_Eff",
+			},		
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "AvatarSkillStart",
+				"skillID": 10707,
+			},	
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",//标记这一击已经完成了
+				"doOffStage": true,
+				"value": 1
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Self",
+				"key": "_ABILITY_Avatar_Nilou_Combo_Complete_Mark",
+				"value": 1,
+			},
+			{
+				"$type": "ResetAnimatorTrigger",
+				"triggerID": "DoSkill",
+			},		
+			{
+				"$type": "TriggerAttackEvent",//负责命中敌人的攻击事件
+				"targetType": "Enemy",
+				"attackEvent":
+				{
+
+					"attackPattern":
+					{
+						"$type": "ConfigAttackBox",
+						"triggerType": "TriggerNoRepeat",
+						"size": 
+						{
+							"x": 2.7,
+							"y": 4,
+							"z": 5.2
+						},
+						
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0.2,
+								"y": 1,
+								"z": -2.0,
+							},
+						},						
+					},
+					"attackInfo":
+					{
+						"attackTag": "Elemental_Art",  
+						"attenuationTag": "Elemental_Art",                          
+						"attackProperty":
+						{
+							"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+							"strikeType": "Slash",
+							"attackType": "Melee",
+							"elementType": "Water",
+							"elementDurability": 25,                               
+							"elementRank": 1,
+							"enBreak": 85,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV4",
+							"reboundRatio": 0,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.02,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+						"cameraShake":
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.36,
+							"shakeTime": 0.12,
+							"shakeDistance": 30,
+						},
+					}
+				}
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_ComboOver_Mark",//表示妮露用E打出终结一击，决定触发哪种表现buff
+				"value": 2,  //现在buff只有一种，1和2已经没有区别了
+			},
+			{
+				"$type": "SetGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_All_Count",
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 3,
+				"minValue": 0, 									
+			},
+			{
+				"$type": "SetGlobalValue",
+				"doOffStage": true,
+				"target": "Self",
+				"key": "_ABILITY_NilouDance_E_Count",
+				"value": 0,
+				"useLimitRange":true,
+				"maxValue": 4,
+				"minValue": 0, 									
+			},
+			{
+				"$type": "SetAnimatorInt",
+				"intID": "ComboCount",
+				"value": 0,
+			},
+			{
+				"$type": "RemoveUniqueModifier",
+				"modifierName": "UNIQUE_NilouDance_Duration_Controller",
+				"target": "Self",
+				"doOffStage": true,
+				"predicates": 
+				[
+					//原版命六效果，暂留
+					// {
+					// 	"$type": "ByNot",
+					// 	"predicates": 
+					// 	[
+					// 		{
+					// 			"$type": "ByUnlockTalentParam",
+					// 			"talentParam": "Nilou_Talent_6",
+					// 		}
+					// 	]
+					// }
+				]
+			},
+			
+			{
+				"$type": "TriggerAbility",
+				"abilityName": "Avatar_Nilou_ElementalArt_Buff_Controller",	
+				"predicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Nilou_PermanentSkill_1"
+					}
+				]		
+			},
+			{
+				"$type": "RemoveModifier",
+				"modifierName": "UNIQUE_Nilou_Sustained_Water",
+				"target": "Caster",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Nilou_Sustained_Water",
+				"target": "Caster",				
+			},							
+		],
+		"modifiers": 
+		{
+
+			"UNIQUE_Nilou_Sustained_Water":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"duration": "%Water_Ring_Duration",
+				"elementType": "None",
+				"elementDurability": "%Water_Ring_Duration",
+				"onAdded": 
+				[				
+					{
+						"$type": "ApplyModifier",
+						"target": "CurLocalAvatar",
+						"modifierName": "Nilou_Sustained_Water_Attacker",
+						"doOffStage": true
+					},
+					{
+						"$type": "AttachModifier",
+						"target": "Team",
+						"modifierName": "UNIQUE_NiLou_Sustained_Water_EFF",
+						"doOffStage": true,						
+					},									
+				],
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "ApplyModifier",
+						"target": "CurLocalAvatar",
+						"modifierName": "Nilou_Sustained_Water_Attacker",
+						"doOffStage": true
+					},
+				],
+				"onKill": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "UNIQUE_Nilou_Sustained_Water",
+						"doOffStage": true
+					}
+				]
+			},
+			"Nilou_Sustained_Water_Attacker":
+			{
+				"duration": 0.7,
+				"stacking": "Multiple",
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerAttackEvent",//用攻击事件上水
+						"targetType": "Enemy",
+						"target": "Caster",
+						"doOffStage": true,
+						"attackEvent":
+						{
+		
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"radius":2.5,						
+								"height": 3,
+								
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x": 0.0,
+										"y": -0.5,
+										"z": 0,
+									}
+								},
+								"entityAttackFilter": "IgnoreSceneProp"//不打灌木丛
+								// "ignoreMassive":true,
+								// "checkHitLayerType": "Both",
+							},
+							"attackInfo":
+							{
+								// "attackTag": "Elemental_Art",   
+								"attenuationTag": "Nilou_Sustained_Water",
+								"attenuationGroup": "Nilou_Sustained_Water",	  								                       
+								"attackProperty":
+								{
+									"damagePercentage": 0,									
+									"strikeType": "Default",
+									"attackType": "Melee",
+									"elementType": "Water",
+									"elementDurability": 25,                               
+									"elementRank": 1,
+									"enBreak": 0,
+								},
+								"hitPattern":
+								{
+									"onHitEffectName": "none",									
+									"muteHitText": false,													          	
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0,
+									"hitHaltTimeScale": 0.01,
+									"hitImpulseType": "LV0"
+								},
+								"forceCameraShake": false,
+								// "cameraShake":
+								// {
+								// 	"shakeType": "Center",
+								// 	"shakeRange": 0.36,
+								// 	"shakeTime": 0.12,
+								// 	"shakeDistance": 30,
+								// },
+							}
+						},						
+					},
+				]
+
+			},
+			"UNIQUE_NiLou_Sustained_Water_EFF":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Water_Ring",
+						"doOffStage":true, 
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Water_Ring_Dispear",
+						"doOffStage": true
+					}
+				]
+			},
+			"Nilou_Set_E_Over_Eff":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+						"doOffStage": true,
+						"value": 0
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 5
+					},	
+					{
+						"$type": "TriggerAudio",
+						"responder": "Caster",
+						"operation":
+						{
+							"$type": "ConfigAudioEventOp",
+							"operation": 
+							{
+								"text": "Play_sfx_char_nilou_elementalArt_count_full"
+							}
+						}
+					},		
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 1,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 1
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 2,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 2
+							}
+						]
+					},
+					{
+						"$type": "SendEffectTrigger",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+						"parameter": "Count",
+						"type": "Int",
+						"value": 3,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Nilou_EArt_Attack_Complete_Mark",
+								"value": 0
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_ABILITY_NilouDance_All_Count",
+								"compareType": "Equal",
+								"value": 3
+							}
+						]
+					},
+				]
+			}
+		},
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0,
+			"Water_Ring_Duration":0,
+		}
+	}
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_ElementalArt_Buff_Controller",  //打完终结一击后触发全队buff
+		
+		"onAdded": 
+		[
+			
+			{
+				"$type": "SetGlobalValue",//重置标记
+				"target": "Self",
+				"doOffStage": true,
+				"key": "_ABILITY_Nilou_Overgrow_Buff_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_Max_HP_Cache",
+				"value": 0,
+				"doOffStage": true,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_Overgrow_Damage_Up_Limit",
+				"value": 0
+			},
+			{
+				"$type": "SetGlobalValue",
+				"key": "_ABILITY_Nilou_MaxHP_Lower_Limit",
+				"value": 0
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou",
+				"doOffStage": true,
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Rock_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Fire_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Water_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Ice_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Electric_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Wind_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Grass_Char_Mark",
+				"value": 0,
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Rock_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Rock",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Fire_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Fire",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Water_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Water",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Ice_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Ice",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Electric_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Electric",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Wind_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Wind",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "SetGlobalValue",
+				"target": "Team",
+				"key": "_Nilou_Team_Grass_Char_Mark",
+				"value": 1,
+				"predicates":
+				[
+					{
+						"$type": "ByBigTeamHasElementType",
+						"elementType": "Grass",
+						"number": 1,
+						"logic": "GreaterOrEqual",
+					},
+				],
+			},
+			{
+				"$type": "Predicated", //满足水草队伍就上buff
+				"doOffStage": true,
+				"target": "Caster",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Rock_Char_Mark",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Fire_Char_Mark",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Wind_Char_Mark",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Electric_Char_Mark",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Ice_Char_Mark",
+						"value": 0,
+						"compareType": "NoneOrEqual"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Grass_Char_Mark",
+						"value": 1,
+						"compareType": "Equal"
+					},
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Team",
+						"key": "_Nilou_Team_Water_Char_Mark",
+						"value": 1,
+						"compareType": "Equal"
+					},
+				],
+				"successActions": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_Is_In_ElementalArt_Buff",
+						"doOffStage": true,
+						"value": 1,
+					},
+					// {
+					// 	"$type": "AttachModifier",
+					// 	"target": "Team",
+					// 	"modifierName": "UNIQUE_Nilou_Buff_Eff"
+					// },
+					{
+						"$type": "SetGlobalValue",
+						"key": "_ABILITY_Nilou_Max_HP_Cache",
+						"value": "%FIGHT_PROP_MAX_HP",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Nilou_PermanentSkill_2"
+							}
+						]
+					},
+					{
+						"$type": "AttachModifier",
+						"target": "Caster",
+						"modifierName": "UNIQUE_Avatar_Nilou_Max_HP_Refresh",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Nilou_PermanentSkill_2"
+							}
+						]
+					},
+					{
+						"$type": "Predicated",  //先计算突二生命值的转化，高于上限就用上限值，低于上限就用计算值
+						"target": "Caster",
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Nilou_PermanentSkill_2"
+							}
+						],
+						"successActions": 
+						[
+							{
+								"$type": "SetGlobalValue",
+								"key": "_ABILITY_Nilou_Overgrow_Damage_Up_Limit",
+								"value": "%Max_Overgrow_Damage_Ratio",
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_ABILITY_Nilou_MaxHP_Lower_Limit",
+								"value": "%MaxHP_Lower_Limit",
+							},
+							{
+								"$type": "SetOverrideMapValue",    //超过上限用上限，在上下限之内用计算值，低于上限用0
+								"overrideMapKey":"OvergrowDamageUpCache", 
+								"value": "%Max_Overgrow_Damage_Ratio"
+							},
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey": "OvergrowDamageUpCache",
+								"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_To_Overgrow_Ratio*0.001-%MaxHP_Lower_Limit*%MaxHP_Trans_To_Overgrow_Ratio*0.001",
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Caster",
+										"key": "_ABILITY_Nilou_Overgrow_Damage_Up_Limit",
+										"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_To_Overgrow_Ratio*0.001-%MaxHP_Lower_Limit*%MaxHP_Trans_To_Overgrow_Ratio*0.001",
+										"compareType": "MoreThanAndEqual",
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Caster",
+										"key": "_ABILITY_Nilou_MaxHP_Lower_Limit",
+										"value": "%FIGHT_PROP_MAX_HP",
+										"compareType": "LessAndEqual",
+									}
+								]
+							},
+							{
+								"$type": "SetOverrideMapValue",
+								"overrideMapKey":"OvergrowDamageUpCache", 
+								"value": 0,
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Caster",
+										"key": "_ABILITY_Nilou_MaxHP_Lower_Limit",
+										"value": "%FIGHT_PROP_MAX_HP",
+										"compareType": "MoreThan",
+									}
+								]
+							},
+						]
+					},					
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver",//先移除后加
+						"target": "AllPlayerAvatars",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+								"compareType": "XZ",
+								"value": 40,
+								"logic": "LesserOrEqual",
+							},
+						]
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver",//突一效果
+						"target": "AllPlayerAvatars",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+								"compareType": "XZ",
+								"value": 40,
+								"logic": "LesserOrEqual",
+							},
+						]
+					},					
+				]
+			},
+			// {
+			// 	"$type": "ApplyModifier",
+			// 	"modifierName": "Nilou_Buff_Team_Checker",
+			// 	"doOffStage": true,
+			// },
+			// {
+			// 	"$type": "RemoveModifier",   
+			// 	"target": "Caster",
+			// 	"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou",
+			// 	"doOffStage": true
+			// },
+
+		],
+
+		"abilityMixins": 
+		[
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Avatar_ElementalArt_Buff_Nilou"://检测队伍变化的时候把周围人的buff下掉
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"modifierMixins": 
+				[
+					{
+						"$type": "DoActionByTeamStatusMixin", //在队伍角色变化的时候判断
+						"runPostRecover": true,               //如果不满足水草条件了就把自己下掉
+						"waitForBigteam": true,"waitTime": 20,
+						"actions": 
+						[
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Rock_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Fire_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Water_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Ice_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Electric_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Wind_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Grass_Char_Mark",
+								"value": 0,
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Rock_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Rock",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Fire_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Fire",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Water_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Water",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Ice_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Ice",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Electric_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Electric",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Wind_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Wind",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "SetGlobalValue",
+								"target": "Team",
+								"doOffStage": true,
+								"key": "_Nilou_Team_Grass_Char_Mark",
+								"value": 1,
+								"predicates":
+								[
+									{
+										"$type": "ByBigTeamHasElementType",
+										"elementType": "Grass",
+										"number": 1,
+										"logic": "GreaterOrEqual",
+									},
+								],
+							},
+							{
+								"$type": "Predicated",
+								"target": "Self",
+								"doOffStage": true,
+								"targetPredicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Rock_Char_Mark",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Fire_Char_Mark",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Wind_Char_Mark",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Electric_Char_Mark",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Ice_Char_Mark",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Grass_Char_Mark",
+										"value": 1,
+										"compareType": "Equal"
+									},
+									{
+										"$type": "ByTargetGlobalValue",
+										"target": "Team",
+										"key": "_Nilou_Team_Water_Char_Mark",
+										"value": 1,
+										"compareType": "Equal"
+									},
+								],
+								"failActions": 
+								[
+									{
+										"$type": "RemoveUniqueModifier", //不满足队伍中只有水草就把队友buff卸载
+										"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver",
+										"target": "AllPlayerAvatars",
+										"doOffStage": true,
+									}
+								]
+
+							},
+							// {
+							// 	"$type": "RemoveUniqueModifier", //不满足队伍中只有水草就把队友buff卸载
+							// 	"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver",
+							// 	"target": "AllPlayerAvatars",
+							// 	"doOffStage": true,
+							// 	"predicates": 
+							// 	[
+							// 		{
+							// 			"$type": "ByNot",
+							// 			"predicates": 
+							// 			[
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Rock_Char_Mark",
+							// 					"value": 0,
+							// 					"compareType": "NoneOrEqual"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Fire_Char_Mark",
+							// 					"value": 0,
+							// 					"compareType": "NoneOrEqual"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Wind_Char_Mark",
+							// 					"value": 0,
+							// 					"compareType": "NoneOrEqual"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Electric_Char_Mark",
+							// 					"value": 0,
+							// 					"compareType": "NoneOrEqual"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Ice_Char_Mark",
+							// 					"value": 0,
+							// 					"compareType": "NoneOrEqual"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Grass_Char_Mark",
+							// 					"value": 1,
+							// 					"compareType": "Equal"
+							// 				},
+							// 				{
+							// 					"$type": "ByTargetGlobalValue",
+							// 					"target": "Team",
+							// 					"key": "_Nilou_Team_Water_Char_Mark",
+							// 					"value": 1,
+							// 					"compareType": "Equal"
+							// 				},
+							// 			]
+							// 		}
+							// 	]
+							// }
+						]
+					}
+				],
+				"thinkInterval": 2,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Rock_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Fire_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Water_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Ice_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Electric_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Wind_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Grass_Char_Mark",
+						"value": 0,
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Rock_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Rock",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Fire_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Fire",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Water_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Water",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Ice_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Ice",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Electric_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Electric",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Wind_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Wind",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "SetGlobalValue",
+						"target": "Team",
+						"doOffStage": true,
+						"key": "_Nilou_Team_Grass_Char_Mark",
+						"value": 1,
+						"predicates":
+						[
+							{
+								"$type": "ByBigTeamHasElementType",
+								"elementType": "Grass",
+								"number": 1,
+								"logic": "GreaterOrEqual",
+							},
+						],
+					},
+					{
+						"$type": "Predicated",
+						"target": "Self",
+						"doOffStage": true,
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Rock_Char_Mark",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Fire_Char_Mark",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Wind_Char_Mark",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Electric_Char_Mark",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Ice_Char_Mark",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Grass_Char_Mark",
+								"value": 1,
+								"compareType": "Equal"
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Team",
+								"key": "_Nilou_Team_Water_Char_Mark",
+								"value": 1,
+								"compareType": "Equal"
+							},
+						],
+						"failActions": 
+						[
+							{
+								"$type": "RemoveUniqueModifier", //不满足队伍中只有水草就把队友buff卸载
+								"modifierName": "UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver",
+								"target": "AllPlayerAvatars",
+								"doOffStage": true,
+							}
+						]
+
+					},
+				],
+				"onAdded": 
+				[
+					
+				],
+				"onRemoved": 
+				[
+
+				]
+			},
+			"Blank":{},
+			"UNIQUE_Avatar_ElementalArt_Buff_Nilou_Driver":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",	
+				"duration": "%Duration",
+				"state": "OvergrowVariation",	//这个状态下触发绽放产生的是异化草原核								
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_FertileField",
+						"doOffStage": true
+					},
+					{
+						"$type": "SetGlobalValue",//标记角色当前处于丰收之曲状态中
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_Nilou_Overgrow_Buff_Mark",
+						"value": 1,
+					},
+					{
+						"$type": "AttachModifier",  //命2效果在这里
+						"modifierName": "UNIQUE_Avatar_Nilou_Resistance_Reduce_Avatar",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Nilou_Talent_2"
+							}
+						]
+					},
+					{
+						"$type": "AttachModifier", //突2效果在这里
+						"modifierName": "UNIQUE_Avatar_Nilou_Overgrow_Damage_Up",
+						"doOffStage": true,
+						"predicates": 
+						[
+							{
+								"$type": "ByUnlockTalentParam",
+								"talentParam": "Nilou_PermanentSkill_2"
+							}
+						]
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",//重置标记
+						"target": "Self",
+						"doOffStage": true,
+						"key": "_ABILITY_Nilou_Overgrow_Buff_Mark",
+						"value": 0,
+					},
+				],
+				"onBeingHit":  //被草元素伤害命中的时候给周围所有丰收之曲影响的队友加精通
+				[	
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Nilou_Hit_By_Grass_Mastery_Up",
+						"target": "AllPlayerAvatars",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+								"compareType": "XZ",
+								"value": 40,
+								"logic": "LesserOrEqual",
+							},
+							{
+								"$type": "ByHitElement",
+								"element": "Grass"
+							},
+						]
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "UNIQUE_Nilou_Hit_By_Grass_Mastery_Up",
+						"target": "AllPlayerAvatars",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+								"compareType": "XZ",
+								"value": 40,
+								"logic": "LesserOrEqual",
+							},
+							{
+								"$type": "ByHitElement",
+								"element": "Grass"
+							},
+						]
+					},
+				]
+			},
+			"UNIQUE_Nilou_Hit_By_Grass_Mastery_Up":
+			{
+				"isUnique": true,
+				"duration": "%MasteryUpDuration",
+				"stacking": "Refresh",
+				"isLimitedProperties": true,
+				"properties": 
+				{
+					"Actor_ElemMasteryDelta":"%MasteryUp"
+				}
+			},
+			"UNIQUE_Avatar_Nilou_Resistance_Reduce_Avatar":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				// "duration": 1.0,				
+				"onAttackLanded": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Other",
+						"doOffStage": true,
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByHitElement",
+								"element": "Water",
+							},
+							{
+								"$type": "ByHitDamage",
+								"logic": "Greater",
+								"damage": 0,
+							},
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+								
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "UNIQUE_Nilou_Water_Resistance_Reduce",
+								"target": "Other",
+								"doOffStage": true,								
+							},
+						]
+					},
+					{
+						"$type": "Predicated",
+						"target": "Other",
+						"doOffStage": true,
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByAny",
+								"predicates": 
+								[									
+									{
+										"$type": "ByAttackTags",
+										"attackTags": ["OverGrowDamage"]
+									},
+									{
+										"$type": "ByAttackTags",
+										"attackTags": ["OverGrow_Alter_Damage"]
+									},
+									// {//根据描述，只限一阶绽放比较准确
+									// 	"$type": "ByAttackTags",
+									// 	"attackTags": ["OverGrow_Fire_Damage"]
+									// },
+									// {
+									// 	"$type": "ByAttackTags",
+									// 	"attackTags": ["OverGrow_Electric_Damage"]
+									// },
+								]
+							},	
+							{
+								"$type": "ByHitDamage",
+								"logic": "Greater",
+								"damage": 0,
+							},						
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "UNIQUE_Nilou_Grass_Resistance_Reduce",
+								"target": "Other",
+								"doOffStage": true,								
+							},
+						]
+					},
+				]
+			},
+			"UNIQUE_Nilou_Water_Resistance_Reduce":
+			{
+				"isUnique": true,
+				"duration": "%DefenseDownDuration",
+				"stacking": "RefreshUniqueDurability", //两个妮露的时候摁刷新时间
+				"state": "DefenseDown",
+				"isLimitedProperties": true,
+				"properties": 
+				{
+					"Actor_WaterSubHurtDelta": "0-%Water_DefenseDown",
+				}
+			},
+			"UNIQUE_Nilou_Grass_Resistance_Reduce":
+			{
+				"isUnique": true,
+				"duration": "%DefenseDownDuration",
+				"stacking": "RefreshUniqueDurability",
+				"state": "DefenseDown",
+				"isLimitedProperties": true,
+				"properties": 
+				{
+					"Actor_GrassSubHurtDelta": "0-%Grass_DefenseDown",
+				}
+			},
+			"UNIQUE_Avatar_Nilou_Overgrow_Damage_Up":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",			
+				"isLimitedProperties": true,
+				"properties": 
+				{  //专门提升异化草原核的伤害属性
+					"Actor_ElemReactOvergrowVariationExtraDelta":"%OvergrowDamageUpCache" ,//直接用前面算好的值					
+				},
+
+			},
+			"UNIQUE_Avatar_Nilou_Max_HP_Refresh":
+			{
+				"isUnique": true,
+				"stacking": "Refresh",
+				"onAdded": 
+				[
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"doOffStage": true,
+						"globalValueKey": "_ABILITY_Nilou_Max_HP_Cache",
+						"overrideMapKey": "MaxHPCache",
+					}
+				],
+				"thinkInterval": 0.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Self",
+						"doOffStage": true,
+						"targetPredicates": 
+						[
+							{
+								"$type": "ByNot",
+								"predicates": 
+								[
+									{
+										"$type": "ByTargetGlobalValue",
+                                        "key": "_ABILITY_Nilou_Max_HP_Cache",
+                                        "value": "%FIGHT_PROP_MAX_HP"
+									}
+								]
+							}
+						],
+						"successActions": 
+						[
+							{
+								"$type": "SetGlobalValue",
+								"key": "_ABILITY_Nilou_Max_HP_Cache",
+								"doOffStage": true,
+								"value": "%FIGHT_PROP_MAX_HP",
+							},
+							{
+								"$type": "SetGlobalValueToOverrideMap",
+								"doOffStage": true,
+								"globalValueKey": "_ABILITY_Nilou_Max_HP_Cache",
+								"overrideMapKey": "MaxHPCache",
+							}
+						]
+					}
+				]
+			},
+			"UNIQUE_Nilou_Buff_Eff":
+			{
+				"isUnique": true,
+				"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_FertileField",
+							"doOffStage": true,
+						},
+					],
+			},
+		},
+		"abilitySpecials": 
+		{
+			"Duration":0,
+			"Water_DefenseDown":0,
+			"Grass_DefenseDown":0,
+			"DefenseDownDuration":0,
+			"MaxHPCache":0,
+			"MaxHP_Trans_To_Overgrow_Ratio":0,
+			"MaxHP_Trans_To_Overgrow_Fire_Ratio":0,
+			"MaxHP_Trans_To_Overgrow_Electric_Ratio":0,
+			"MasteryUpDuration":0,
+			"MasteryUp":0,
+			"MaxHP_Lower_Limit":0,
+			"Max_Overgrow_Damage_Ratio":0,
+			"OvergrowDamageUpCache":0,
+		}
+		
+	},
+},
+//元素战技终结一击命四回能
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"isDynamicAbility": true,
+		"abilityName": "Avatar_Nilou_SpecE_Energy_Revive",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "NilouDanceSpecE",
+				"normalizeStart": 0.01,
+				"normalizeEnd": 1,
+				"modifierName": "Nilou_Talent_4_Energy_Revive",
+			}
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Nilou_Talent_4_EOver_Revive_Energy",
+				"doOffStage": true,
+				"target": "Caster",				
+			},	
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "UNIQUE_Nilou_ElementBurst_DamageUp",
+				"doOffStage": true,
+				"target": "Caster",				
+			},							
+		],
+		"modifiers": 
+		{
+			"Nilou_Talent_4_Energy_Revive":
+			{
+
+				"onHittingOther": 
+				[	
+					{
+						"$type" : "Predicated",
+						"target" : "Target",
+						"targetPredicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+							{
+			                	"$type": "ByTargetGlobalValue",
+			                	"key": "_ANIMAL_ENTITY_TYPE",
+			                	"value": 0,
+			                	"compareType": "NoneOrEqual",
+			                },
+			                {
+			                	"$type":"ByAttackTags",
+			                	"attackTags":["Elemental_Art"],
+			                },
+							{
+								"$type": "ByTargetGlobalValue",  //确保是常规状态的终结一击
+								"target": "Caster",
+								"key": "_ABILITY_Avatar_Nilou_Recombo_Mark",
+								"compareType": "NoneOrEqual",
+								"value": 0,
+							}
+						],
+
+						"successActions":
+						[
+							{
+								"$type": "TriggerAbility",
+								"abilityName": "Avatar_Nilou_SpecE_Energy_Revive",
+								"doOffStage": true
+							}		
+						],
+					},
+
+				]
+			},
+			"Nilou_Talent_4_EOver_Revive_Energy":
+			{
+				"stacking": "Unique",
+				"duration": 0.3,
+				"onAdded": 
+				[
+					{
+						"$type": "ReviveElemEnergy",
+						"doOffStage": true,
+						"target": "Caster",
+						"value": "%ReviveEnergy",
+					}
+				]
+			},
+			"UNIQUE_Nilou_ElementBurst_DamageUp":
+			{
+				"isUnique": true,
+				"duration": "%Duration",
+				"stacking": "Refresh",
+				"state": "AttackUp",
+				"modifierMixins": 
+				[
+					{
+						"$type": "ModifyDamageMixin",
+						"attackTags": ["Elemental_Burst"],
+						"damagePercentageRatio": "%BurstDamageUpRatio"
+					}
+				]
+
+			},
+			
+		},
+		"abilitySpecials": 
+		{
+			"ReviveEnergy":0,
+			"Duration":0,
+			"BurstDamageUpRatio":0
+		}
+	}
+},
+//
+//   妮露普攻终结一击打出的水波
+//
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Nilou_Water_Bubble_Bullet",		
+		"onAdded": 
+		[
+			{
+				"$type": "SetGlobalValue",//判断是否是第一次终结一击打出来的子弹，如果不是的话后面就不回能也不触发命四
+					//就是把人身上的recombo状态在创建子弹的一瞬间存在子弹身上
+				"key": "_ABILITY_Avatar_Nilou_Recombo_Mark_Bullet",
+				"value": 1,
+				"target": "Self",
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "OriginOwner",
+						"compareType": "MoreThanAndEqual",
+						"value": 1,
+						"key": "_ABILITY_Avatar_Nilou_Recombo_Mark"
+					}
+				],
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Nilou_Bubble_Bullet_Water_DamageUp",//命1加水伤
+				"predicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Nilou_Talent_1"
+					}
+				]
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Nilou_Water_Bubble_Bullet_Effect"
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Nilow_Talent_4_Bullet_Revive_Energy_Handler",
+				"predicates": 
+				[
+					{
+						"$type": "ByUnlockTalentParam",
+						"talentParam": "Nilou_Talent_4",
+					},
+				]
+			},
+			{
+				"$type": "AttachModifier",
+				"modifierName": "Nilou_Bullet_ElemBall_Handler"
+			}
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Nilou_Bullet_Hit_Shake",
+				"target": "OriginOwner"
+			},
+			{
+				"$type": "DamageByAttackValue",//
+				"target": "Target",
+				"born":
+				{
+					"$type": "ConfigBornByCollisionPoint",
+					"offset": 
+					{
+						"x": 0,
+						"y": 0,
+						"z": 0,
+					}
+				},
+				"attackInfo": 
+				{
+					"canBeModifiedBy": "OriginOwner",
+					"attackTag": "Elemental_Art",
+					"attenuationTag": "Elemental_Art",
+
+					"attackProperty":
+					{
+						"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+						"strikeType": "Pierce",
+						"elementType": "Water",
+						"elementDurability": 25,
+						"attackType": "Range",
+						"enBreak" : 90.31,
+				  },
+				  
+				  "hitPattern":
+				  {
+						"onHitEffectName": "default",
+						"hitImpulseType":"LV3",					          	
+					 	"canBeDefenceHalt": false,
+						"hitHaltTime": 0,
+						"hitHaltTimeScale": 0.01,
+						"muteHitText": false,
+				  },
+				  
+				},
+			},	
+			// {
+			// 	"$type": "Predicated",
+			// 	"target": "Target",
+			// 	"targetPredicates":
+			// 	[
+			// 		{
+			// 			"$type": "ByEntityTypes",
+			// 			"entityTypes": ["MonsterEquip"],
+			// 		},
+			// 	],
+			// 	"successActions":
+			// 	[
+			// 		{
+			// 			"$type":"DamageByAttackValue",  //打到盾牌用这个
+			// 			"target":"Target",
+			// 			"attackInfo":
+			// 			{
+			// 				"canBeModifiedBy": "OriginOwner",
+			// 				"attackTag": "Elemental_Art",
+			// 				"attenuationTag": "Elemental_Art",
+			// 				"attackProperty":
+			// 				{
+			// 					"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+			// 					"strikeType": "Pierce",
+			// 					"elementType": "Water",
+			// 					"elementDurability": 25,
+			// 					"attackType": "Range",
+			// 					"enBreak" : 90.31,
+			// 				},
+			// 				"hitPattern" :
+			// 				{
+			// 					"onHitEffectName": "default",
+			// 					"hitImpulseType":"LV3",					          	
+			// 					"canBeDefenceHalt": false,
+			// 					"hitHaltTime": 0,
+			// 					"hitHaltTimeScale": 0.01,
+			// 					"muteHitText": false,
+			// 				},
+			// 			},                      
+			// 		},                         
+			// 	],
+			// 	"failActions":
+			// 	[
+			// 		{
+			// 			"$type": "TriggerAttackEvent",
+			// 			"targetType": "Enemy",
+			// 			"attackEvent": 
+			// 			{
+			// 				"attackPattern": 
+			// 				{
+			// 					"$type": "ConfigAttackBox",
+			// 					"triggerType": "TriggerNoRepeat",
+			// 					"size": 
+			// 					{
+			// 						"x": 0.1,
+			// 						"y": 0.1,
+			// 						"z": 0.6,
+			// 					},
+			// 					"born": 
+			// 					{
+			// 						"$type": "ConfigBornByCollisionPoint",
+			// 						"offset": 
+			// 						{
+			// 							"x": 0.0,
+			// 							"y": 0.0,
+			// 							"z": 0.0,
+			// 						},
+			// 					},
+			// 					// "checkHitLayerType": "Both",
+			// 				},
+			// 				"attackInfo": 
+			// 				{
+			// 					"canBeModifiedBy": "OriginOwner",
+			// 					"attackTag": "Elemental_Art",
+			// 					"attenuationTag": "Elemental_Art",
+			// 					"attackProperty": 
+			// 					{
+			// 						"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage",
+			// 						"strikeType": "Pierce",
+			// 						"elementType": "Water",
+			// 						"elementDurability": 25,
+			// 						"attackType": "Range",
+			// 						"enBreak" : 90.31,
+			// 					},
+			// 					"hitPattern": 
+			// 					{
+			// 						"onHitEffectName": "default",
+			// 						"hitImpulseType":"LV3",					          	
+			// 						"canBeDefenceHalt": false,
+			// 						"hitHaltTime": 0,
+			// 						"hitHaltTimeScale": 0.01,
+			// 						"muteHitText": false,
+			// 					},
+			// 				}
+			// 			},
+			// 		},                           
+			// 	],                    
+			// },   											
+		],
+		"modifiers": 
+		{
+			"Nilou_Water_Bubble_Bullet_Effect":
+			{
+				"duration": 3,
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Bullet_Blade"
+					}
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "KillSelf"
+					}
+				],
+				"onKill": 
+				[
+					{
+						"$type": "RemoveModifier",
+						"modifierName": "Nilou_Water_Bubble_Bullet_Effect"
+
+					}
+				]
+			},
+			"Nilow_Talent_4_Bullet_Revive_Energy_Handler":
+			{
+				"stacking": "Unique",
+				"onAttackLanded": 
+				[
+					{
+						"$type" : "Predicated",
+						"target" : "Target",
+						"targetPredicates":
+						[
+							{
+								"$type" : "ByEntityTypes",
+								"entityTypes" : ["Monster"],
+							},
+							{
+			                	"$type": "ByTargetGlobalValue",
+			                	"key": "_ANIMAL_ENTITY_TYPE",
+			                	"value": 0,
+			                	"compareType": "NoneOrEqual",
+			                },
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Caster",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Avatar_Nilou_Recombo_Mark_Bullet",
+								"value": 0,
+							}
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Nilou_Talent_4_Bullet_Trigger"
+							}
+						],
+					},
+				],				
+			},
+			"Nilou_Talent_4_Bullet_Trigger":
+			{
+				"duration": 10,//保证一个子弹只会触发一次
+				"stacking": "Unique",
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerAbility",
+						"abilityName": "Avatar_Nilou_SpecE_Energy_Revive",
+						"target": "OriginOwner"
+					},
+				]
+			},
+			"Nilou_Bullet_ElemBall_Handler":
+			{
+				"stacking": "Unique",
+				"onAttackLanded": 
+				[
+					{
+						"$type": "Predicated",
+						"target": "Target",
+						"targetPredicates":
+						[
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Elemental_Art"],
+							},
+							{
+								"$type": "ByAttackType",
+								"attackType": "Range"
+							},
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+							{
+								 "$type": "ByTargetGlobalValue",
+								 "key": "_ANIMAL_ENTITY_TYPE",
+								 "value": 0,
+								 "compareType": "NoneOrEqual",
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Caster",
+								"compareType": "NoneOrEqual",
+								"key": "_ABILITY_Avatar_Nilou_Recombo_Mark_Bullet",
+								"value": 0,
+							}
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Nilou_Bullet_Water_ElemBall",
+								"target": "Self",
+							},
+						   
+						],
+
+					},
+				]
+			},
+			"Nilou_Bullet_Water_ElemBall":
+			{				
+				"stacking": "Unique",
+				"onAdded":
+				[
+					{
+						"$type": "GenerateElemBall",
+						"configID": 2018,
+						"baseEnergy": 3,
+						"ratio": 1,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+					},					
+				],	
+			},
+			"Nilou_Bullet_Hit_Shake":
+			{
+				"stacking": "Unique",
+				"duration": 1.5,
+				"onAdded": 
+				[
+					{
+						"$type": "ActCameraShake",
+						"cameraShake": 
+						{
+							"shakeType": "Center",
+							"shakeRange": 0.15,
+							"shakeTime": 0.1,							
+							"shakeDistance": 30,
+						}
+					}
+				]
+			},
+			"Nilou_Bubble_Bullet_Water_DamageUp":
+			{
+				// "isLimitedProperties": true,
+				// "properties": 
+				// {
+				// 	"Actor_WaterAddHurtDelta":"%Water_Damage_Up"
+				// },
+				"modifierMixins": 
+				[
+					{
+						"$type": "ModifyDamageMixin",
+						"damagePercentageRatio": "%Water_Damage_Up",
+						"attackTags": ["Elemental_Art"],
+					}
+				]
+			}
+		},
+		"abilitySpecials": 
+		{
+			"Damage_MaxHP_Percentage":0,
+			"Water_Damage_Up":0,
+		}
+	}
+},
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  充能技  ELementalburst
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_ElementalBurst_Camera",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nilou_ElementalBurst",], //开大无敌
+					"modifierName":"ElementalBurst_Protection",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nilou_ElementalBurst",], //相机控制
+					"modifierName":"Nilou_ElementalBurst_CameraShot",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nilou_ElementalBurst","Nilou_ElementalBurst_AS"], //天气控制
+					"modifierName":"UNIQUE_Nilou_ElementalBurst_Weather",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nilou_ElementalBurst","Nilou_ElementalBurst_AS"], //表演完整性
+					"modifierName":"Nilou_ElementalBurst_Emotion",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Nilou_ElementalBurst","Nilou_ElementalBurst_AS"], //隐藏武器
+					"modifierName":"Nilou_ElementalBurst_Weaponhide",
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nilou_ElementalBurst",
+					"modifierName": "Nilou_ElementalBurst_End",	//真正的伤害时刻
+					"normalizeEnd": 0.64,
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nilou_ElementalBurst",
+					"modifierName": "Nilou_ElementalBurst_End_Perform",	//blur表现的时间点
+					"normalizeEnd": 0.78,
+				},
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Nilou_ElementalBurst",
+					"modifierName": "Nilou_ElementalBurst_End_Shake",	//震屏表现的时间点
+					"normalizeEnd": 0.78,
+				},
+
+			],
+			"onAdded": 
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Nilou_BurstCine_Mark",	//进相机标记
+					"value": 0,
+				},
+			],
+			"onAbilityStart": 
+			[
+				
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "Nilou_ElementalBurst_Start",
+
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Nilou_ElementalBurst_Start",
+				}
+				
+			],
+			"onKill": 
+			[
+				{
+					"$type": "KillGadget",//死亡的时候把子弹干掉
+					"gadgetInfo": 
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41070014,
+					},
+					"doOffStage": true,
+				}
+			],
+			"modifiers": 
+			{
+				"Nilou_ElementalBurst_Start":
+				{
+					"duration": 2.0,
+					"modifierMixins": 
+					[
+						{
+                            "$type": "WindZoneMixin",
+                            "shapeName": "CircleR3",
+                            "strength" : -3,
+                            "attenuation" : 2,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                            },
+                            "targetType": "Enemy",
+                            "predicates":
+                            [
+                                {
+                                    "$type" : "ByEntityTypes",
+                                    "entityTypes" : ["Monster","Grass"],
+                                },
+                                {
+                                    "$type" : "ByTargetWeight", //WindZoneLevel = 2
+                                    "logic" : "LesserOrEqual",  //WindZoneLevel = 2
+                                    "weight" : 250.0,   //WindZoneLevel = 2
+                                },
+                            ],
+                        },
+					],
+					"onAdded": 
+					[						
+
+						{
+							"$type": "TriggerAttackEvent",	//开幕推人
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 4.0,
+									"fanAngle": 360.0,
+									"radius": 3.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": -2.0,
+											"z": 0.0,
+										},
+										"direction":
+										{
+											"$type": "ConfigDirectionByDefault",
+											"angleOffset":
+											{
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0,
+											},
+										},
+										// "alongGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"enBreak": 400,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",	//hitlevel = sp
+											"hitImpulseX": 800,	//hitlevel = sp
+											"hitImpulseY": 0,	//hitlevel = sp
+										},
+										"retreatType": "ByHitDirection",
+										"canBeDefenceHalt" : false,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.0,
+										"muteHitText" : false,
+									},
+									"forceCameraShake": false,
+								}
+							},
+						},
+						{
+							"$type": "Predicated",	//镜头能放出来吗？会被挡住吗？
+							"target": "Self",  
+							"targetPredicates":
+							[
+								//妮露镜头有点高，这里检测不会检测高度，是个圆片，所以用两个检测保证头顶没遮挡
+								{
+									"$type": "ByAttackNotHitScene",
+									"checkWaterLayer": true,
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"fanAngle": 360.0,
+										"radius": 1.8,
+										"height": 4,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 1.5,
+												"z": 0.0,
+											},
+										},
+									},
+								},
+								{
+									"$type": "ByAttackNotHitScene",
+									"checkWaterLayer": true,
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"fanAngle": 360.0,
+										"radius": 1.8,
+										"height": 2,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x": 0.0,
+												"y": 3.5,
+												"z": 0.0,
+											},
+										},
+									},
+								},
+								{
+									"$type": "ByAvatarInWaterDepth",
+									"compareType": "LessAndEqual",
+									"depth": 0.5,
+								},
+							],
+							"successActions": 	//能放出来镜头
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",	//进相机标记
+									"value": 1,
+								},
+								{
+									"$type": "AvatarEnterCameraShot",
+									"cameraMoveCfgPath": "Camera_Nilou_ElementalBurst",
+								},
+																			
+								{
+									"$type": "AttachModifier",	//计数特效控制
+									"modifierName": "Nilou_ElementalBurst_CountEffect_Handler",
+								},								
+							],
+							"failActions":
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",	//进相机标记
+									"value": 0,
+								},
+								 //没进相机专用特效走这里
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Floor_Thirdparty"
+								},
+							],
+						},
+					]	
+				},
+				"ElementalBurst_Protection":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"Nilou_ElementalBurst_Weaponhide":
+				{
+					"modifierMixins": 
+					[
+						{
+							"$type": "AttachActionToModifierMixin",
+							"onAdded": 
+							[
+								{
+									"$type": "TriggerHideWeapon",
+									"visible": false,
+									"partNames": ["equip01", "equip02", "sheathPoint"],
+									"canBeHandledOnRecover": true,
+								}
+							],
+							"onRemoved": 
+							[
+								{
+									"$type": "TriggerHideWeapon",
+									"visible": true,
+									"doOffStage": true,
+									"partNames": ["equip01", "equip02", "sheathPoint"],        
+									"canBeHandledOnRecover": true,                  
+								}
+							]
+						}
+					],
+				
+				},
+				"Nilou_ElementalBurst_CameraShot":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AvatarSkillStart",  //开大瞬间就进CD
+							"skillID": 10705
+						},
+						{
+							"$type": "FireEffect",//开大瞬间挂接眼睛特效
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_EyeL"
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_EyeR"
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 0,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type": "AvatarExitCameraShot",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nilou_BurstCine_Mark",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"onAvatarOut": 
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 0,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type": "AvatarExitCameraShot",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Nilou_BurstCine_Mark",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nilou_BurstCine_Mark",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Nilou_ElementalBurst_Weather":
+				{
+					"isUnique": true,
+					"modifierMixins": 
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type": "Skill",
+							"weatherPattern": "Weather_Nilou_ElementalBurst",
+							"transDuration": 0.3,
+							"duration": 2.75,
+						},
+					]
+				},
+				"Nilou_ElementalBurst_Emotion":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEmoSync" : false,
+							"toggleEyeKey" : false,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+							"blend" : false,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEmoSync" : true,
+							"toggleEyeKey" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+							"doOffStage": true,
+						},
+					]
+				},
+				"Nilou_ElementalBurst_End":
+				{					
+					"onRemoved": 
+					[
+						
+						{
+							"$type": "TriggerBullet",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 0,
+									"y": 1,
+									"z": 0
+								}
+							},
+							"bulletID": 41070014,					
+		
+						}
+					]
+				},
+				"Nilou_ElementalBurst_End_Perform":
+				{
+					"onRemoved": 
+					[
+						{
+							"$type": "ActCameraRadialBlur",
+							"cameraRadialBlur":
+							{
+								"power": 1.5,
+								"blurTime": 0.2,
+								"fadeTime": 0.2,
+							},
+						},
+						
+					]
+				},
+				"Nilou_ElementalBurst_End_Shake":
+				{
+					"onRemoved": 
+					[
+						// {
+						// 	"$type": "ActCameraShake",
+						// 	"born":
+						// 	{
+						// 		"$type": "ConfigBornBySelf",								
+						// 	},
+						// 	"cameraShake": 
+						// 	{
+						// 		"shakeType": "CustomVector",
+						// 		"shakeRange": 0.33,
+						// 		"shakeTime": 0.2,
+						// 		"shakeDistance": 40,
+						// 		"shakeDir": 
+						// 		{
+						// 			"x": 0,
+						// 			"y": -0.5,
+						// 			"z": 1,
+						// 		},
+						// 		"extension":
+						// 		{
+						// 			"baseOnCamera": true,
+						// 			"baseCycle": 0.15,
+						// 			"rangeAttenuation": 0.5
+						// 		},
+						// 	},
+						// },
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Nilou_Burst_PostEffect"
+						}
+					]
+				},
+				"Nilou_ElementalBurst_CountEffect_Handler":
+				{
+					"modifierMixins": 
+					[
+						{
+							"$type": "AttachToNormalizedTimeMixin",   //镜头期间隐藏计数特效，小手表特效
+							"modifierName": "Nilou_Count_Hide",
+							"stateID": "Nilou_ElementalBurst",
+							"normalizeStart": 0.0,
+							"normalizeEnd": 0.8
+						},
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target": "Team",
+							"startDuration": 0,
+							"endDuration": 0.8
+						}
+					],
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Floor",
+							
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Floor_Invisible",
+							"muteRemoteAction": true,//联机队友不要看见这个特效
+						},
+					]
+				},
+				"Nilou_Burst_PostEffect":
+				{
+					"duration": 0.3,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerPostProcessEffectMixin",
+							"postEffectAssetName": "PostEffect_Avatar_Nilou_ElementalBurst_ScreenEffect",
+							"duration": 0.3,
+						},
+					],
+				},
+				"Nilou_Count_Hide":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+							"parameter": "SetHide",
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Constellation_6_WatchTrail",
+							"parameter": "Watch_Dissapear",
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Count",
+							"parameter": "SetNormal",
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_Constellation_6_WatchTrail",
+							"parameter": "Watch_Appear",
+						}
+					]
+				}
+			}
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_Burst_Attacker", //妮露大招扩散的子弹
+			"onAdded": 
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Blast"
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Nilou_Burst_Attacker_Lifetime"
+				}
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "DamageByAttackValue",//
+					"target": "Target",
+					"born":
+					{
+						"$type": "ConfigBornByCollisionPoint",
+						"offset": 
+						{
+							"x": 0,
+							"y": 0,
+							"z": 0,
+						}
+					},
+					"attackInfo": 
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackTag": "Elemental_Burst",
+						"attackProperty":
+						{
+							"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage1",
+							"strikeType": "Slash",
+							"elementType": "Water",
+							"elementDurability": 25,
+							"attackType": "Melee",
+							"enBreak" : 150,
+					  },
+					  
+					  "hitPattern":
+					  {
+							"onHitEffectName": "none",
+							"hitImpulseType":"LV3",					          	
+						  "canBeDefenceHalt": false,
+							"hitHaltTime": 0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+					  },			
+					}
+					
+				},
+				// {
+                //     "$type": "Predicated",
+                //     "target": "Target",
+                //     "targetPredicates":
+                //     [
+                //         {
+                //             "$type": "ByEntityTypes",
+                //             "entityTypes": ["MonsterEquip"],
+                //         },
+                //     ],
+                //     "successActions":
+                //     [
+                //         {
+                //             "$type":"DamageByAttackValue",  
+                //             "target":"Target",
+                //             "attackInfo":
+                //             {
+                //                 "canBeModifiedBy": "OriginOwner",
+                //                 "attackTag": "Elemental_Burst",                              
+                //                 "attackProperty":
+                //                 {
+				// 					"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage1",
+				// 					"strikeType": "Slash",
+				// 					"elementType": "Water",
+				// 					"elementDurability": 25,
+				// 					"attackType": "Melee",
+				// 					"enBreak" : 150,
+                //                 },
+                //                 "hitPattern" :
+                //                 {
+                //                     "onHitEffectName": "none",
+				// 					"hitImpulseType":"LV3",					          	
+				// 					"canBeDefenceHalt": false,
+				// 					"hitHaltTime": 0,
+				// 					"hitHaltTimeScale": 0.01,
+				// 					"muteHitText": false,
+                //                 },
+                //             },                      
+                //         },                         
+                //     ],
+                //     "failActions":
+                //     [
+                //         {
+                //             "$type": "TriggerAttackEvent",
+                //             "targetType": "Enemy",
+                //             "attackEvent": 
+                //             {
+                //                 "attackPattern": 
+                //                 {
+                //                     "$type": "ConfigAttackBox",
+                //                     "triggerType": "TriggerNoRepeat",
+                //                     "size": 
+                //                     {
+                //                         "x": 0.1,
+                //                         "y": 0.1,
+                //                         "z": 0.6,
+                //                     },
+                //                     "born": 
+                //                     {
+                //                         "$type": "ConfigBornByCollisionPoint",
+                //                         "offset": 
+                //                         {
+                //                             "x": 0.0,
+                //                             "y": 0.0,
+                //                             "z": 0.0,
+                //                         }
+                //                     },
+                //                     "checkHitLayerType": "Both",
+                //                 },
+                //                 "attackInfo": 
+                //                 {
+                //                     "canBeModifiedBy": "OriginOwner",
+                //                 	"attackTag": "Elemental_Burst", 
+                //                     "attackProperty": 
+                //                     {
+                //                         "damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage1",
+				// 						"strikeType": "Slash",
+				// 						"elementType": "Water",
+				// 						"elementDurability": 25,
+				// 						"attackType": "Melee",
+				// 						"enBreak" : 150,
+                //                     },
+                //                     "hitPattern": 
+                //                     {
+                //                         "onHitEffectName": "none",
+				// 						"hitImpulseType":"LV3",					          	
+				// 						"canBeDefenceHalt": false,
+				// 						"hitHaltTime": 0,
+				// 						"hitHaltTimeScale": 0.01,
+				// 						"muteHitText": false,
+                //                     },
+                //                 }
+                //             },
+                //         },                           
+                //     ],                    
+                // },     
+				{
+					"$type": "AttachModifier",
+					"target": "Target",
+					"modifierName": "Avatar_Nilou_Burst_Delay_Attacker",
+					"predicates": 
+					[						
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Monster"],
+						},
+						{
+							 "$type": "ByTargetGlobalValue",
+							 "key": "_ANIMAL_ENTITY_TYPE",
+							 "value": 0,
+							 "compareType": "NoneOrEqual",
+						},
+					]
+				}
+			],
+			"modifiers": 
+			{
+				"Avatar_Nilou_Burst_Delay_Attacker":
+				{
+					"duration": 2,					
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Hit_00"
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "DamageByAttackValue",//
+							"target": "Target",	
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "Fx_ChestNode",
+							},						
+							"attackInfo": 
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "Elemental_Burst",								
+								"attackProperty":
+								{
+									"damageExtra": "%FIGHT_PROP_MAX_HP*%Damage_MaxHP_Percentage2",
+									"strikeType": "Default",
+									"elementType": "Water",
+									"elementDurability": 25,
+									"attackType": "Melee",
+									"enBreak" : 100,
+							  },
+							  "hitPattern":
+							  {
+									"onHitEffectName": "none",
+									"hitImpulseType":"LV3",					          	
+								  "canBeDefenceHalt": false,
+									"hitHaltTime": 0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false
+							  },			
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByEntityIsAlive",									
+								},
+								{
+									"$type": "ByEntityIsAlive",
+									"target": "Caster"
+								}
+							]							
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Girl_Sword_Nilou_ElementalBurst_Hit_01",
+							"predicates": 
+							[
+								{
+									"$type": "ByEntityIsAlive",									
+								},
+								{
+									"$type": "ByEntityIsAlive",
+									"target": "Caster"
+								}
+							]
+						}
+					],
+					"onKill": 
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Avatar_Nilou_Burst_Delay_Attacker"
+						}
+					]
+				},
+				"Nilou_Burst_Attacker_Lifetime":  
+				{
+					"duration": 1,
+					"onRemoved": 
+					[
+						{
+							"$type": "EnableBulletCollisionPluginTrigger",
+							"setEnable": false
+						}
+					]
+				},
+
+			},
+			"abilitySpecials": 
+			{
+				"Damage_MaxHP_Percentage1":0,
+				"Damage_MaxHP_Percentage2":0
+			}
+		}
+	},
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  以下为技能升级相关Ability
+//
+////////////////////////////////////////////////////////////////
+
+
+
+////普攻重击伤害替换
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_NormalAttack_DamageHandler",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%Attack_01",
+				},				
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01_Spec"],
+					"damagePercentage": "%Attack_01",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%Attack_02",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%Attack_03",
+				},				
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_1"],
+					"damagePercentage":"%ExtraAttack1",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_2"],
+					"damagePercentage":"%ExtraAttack2",
+				},
+			],
+			"abilitySpecials":
+			{
+				"Attack_01": 0,
+				"Attack_02": 0,
+				"Attack_03": 0,				
+				"ExtraAttack1": 0,
+				"ExtraAttack2": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  以下为命之座相关Ability
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Nilou_MaxHP_Trans_Crit",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				
+
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Avatar_Nilou_Talent_MaxHP_Trans_Crit_Handler",
+					"doOffStage": true
+				},
+				
+			],
+			"modifiers": 
+			{
+				"Avatar_Nilou_Talent_MaxHP_Trans_Crit_Handler":
+				{
+					"modifierMixins": 
+					[
+						{
+							"$type": "DoActionByEventMixin",
+							"type": "Both",
+							"onEvent": "HP",
+							"actions": 
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Talent_6_MaxHP_Cache",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"doOffStage": true,									
+								},
+								
+								{   //如果计算值低于上限就用计算值，否则就用上限值
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Rate_Cache",
+									"doOffStage": true,
+									"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Rate*0.001",
+									
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Damage_Cache",
+									"doOffStage": true,
+									"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Damage*0.001",
+									
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Rate_Cache",
+									"value": "%Max_Critical_Rate",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"compareType": "LessAndEqual",
+											"key": "_ABILITY_Nilou_Talent_Max_Critical_Rate",
+											"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Rate*0.001"
+										}
+									]
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Damage_Cache",
+									"value": "%Max_Critical_Damage",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"compareType": "LessAndEqual",
+											"key": "_ABILITY_Nilou_Talent_Max_Critical_Damage",
+											"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Damage*0.001"
+										}
+									]
+								},
+								
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_Nilou_MaxHP_Trans_Crit",
+									"target": "Self"
+								},
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_Nilou_MaxHP_Trans_Crit",
+									"target": "Self"
+								}
+							],
+							"predicates": 
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Talent_6_MaxHP_Cache",
+											"value": "%FIGHT_PROP_MAX_HP",
+											"compareType": "Equal",
+										}
+									]
+								}
+							]
+						}
+					],
+					"onAdded": 
+					[	
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Talent_6_MaxHP_Cache",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nilou_Talent_Max_Critical_Rate",
+							"value": "%Max_Critical_Rate",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Nilou_Talent_Max_Critical_Damage",
+							"value": "%Max_Critical_Damage",
+							"doOffStage": true,
+						},						
+					],
+					"thinkInterval": 1,
+					"onThinkInterval": 
+					[
+						{
+							"$type": "Predicated",
+							"doOffStage": true,
+							"target": "Caster",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByNot",
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Talent_6_MaxHP_Cache",
+											"value": "%FIGHT_PROP_MAX_HP",
+											"compareType": "Equal",
+										}
+									]
+								}
+							],
+							"successActions": 
+							[
+								
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Talent_6_MaxHP_Cache",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"doOffStage": true,									
+								},
+								
+								{   //如果计算值低于上限就用计算值，否则就用上限值
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Rate_Cache",
+									"doOffStage": true,
+									"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Rate*0.001",
+									
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Damage_Cache",
+									"doOffStage": true,
+									"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Damage*0.001",
+									
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Rate_Cache",
+									"value": "%Max_Critical_Rate",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"compareType": "LessAndEqual",
+											"key": "_ABILITY_Nilou_Talent_Max_Critical_Rate",
+											"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Rate*0.001"
+										}
+									]
+								},
+								{
+									"$type": "SetOverrideMapValue",
+									"overrideMapKey": "Critical_Damage_Cache",
+									"value": "%Max_Critical_Damage",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Self",
+											"compareType": "LessAndEqual",
+											"key": "_ABILITY_Nilou_Talent_Max_Critical_Damage",
+											"value": "%FIGHT_PROP_MAX_HP*%MaxHP_Trans_Critical_Damage*0.001"
+										}
+									]
+								},
+								
+								{
+									"$type": "RemoveUniqueModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_Nilou_MaxHP_Trans_Crit",
+									"target": "Self"
+								},
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_Nilou_MaxHP_Trans_Crit",
+									"target": "Self"
+								}
+							]
+						}
+					]
+				},
+				"UNIQUE_Nilou_MaxHP_Trans_Crit":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_CriticalExtraDelta":"%Critical_Rate_Cache",
+						"Actor_CriticalHurtExtraDelta":"%Critical_Damage_Cache"
+					}
+				}
+			},
+			"abilitySpecials": 
+			{
+				"MaxHP_Trans_Critical_Rate":0,
+				"MaxHP_Trans_Critical_Damage":0,
+				"Max_Critical_Rate":0,
+				"Max_Critical_Damage":0,
+				"Critical_Rate_Cache":0,
+				"Critical_Damage_Cache":0,
+			}
+		}
+	},
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Nilou_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5070010,
+                    "flySkillID": 5070010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce_AS",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_AttachWeaponEffect",
+                },
+    			{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,	
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachWeaponEffect":
+                {
+                    "onAdded":
+                    [
+	                    {
+	                    	"$type":"AttachEffect",
+	                    	"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+	                    },
+                    ],
+                },
+                "FallingAnthem_CameraRadialBlur":
+                {
+					"duration":0.23,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                               			"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce_AS":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+
+]

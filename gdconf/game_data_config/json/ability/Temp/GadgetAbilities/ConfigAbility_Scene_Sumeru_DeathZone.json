@@ -1,0 +1,2530 @@
+[
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Create By Mazijun
+//	该文件收纳须弥常见物件
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域核心(地上型)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZoneCore_01_Ability",
+			"abilityMixins":
+			[
+				{//状态0时,就是很老实的状态
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "IdleState",
+				},
+				{//状态1时,主要是处理喷雾
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 1,
+					"modifierName": "AppearState",
+				},	
+				{//201时玩家与其交互,或者攻击。物件死亡演出,同时向Group发ServerLuaCall通知状态改变
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "CoreState",
+				},
+				{//202,死核死亡
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "DeathState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["KeepClose"],
+					"modifierName": "CoreClose",
+				},
+				{//与其交互时
+		            "$type": "WidgetMpSupportMixin",
+		            "succActions":
+	                [
+						{
+							"$type" : "ApplyModifier",
+							"target": "Self",
+							"modifierName" : "CoreInteeEffect",
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 201,
+	                            },
+							]
+						},
+	                ],
+		        },
+			],
+			"modifiers": 
+			{
+				"CoreClose":
+				{//核心关闭时的表现（在0和1状态时）
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Idle",
+						},
+					],
+				},
+				"CoreInteeEffect":
+				{//交互后附加的Modifier
+					"stacking": "Unique",
+					"duration":0.5,
+					"onAdded":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_CallCamera",
+						},						
+					],
+					"onRemoved":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_CoreDie",
+						},
+					],
+				},
+				"IdleState":
+				{//待机模式
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"AppearState":
+				{//吐烟模式
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_WhiteMist_01",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"CoreState":
+				{//交互可用。攻击时也可触发
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":true
+						},						
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 1,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Unlock",
+						},
+					],
+				},
+				"DeathState":
+				{
+					"duration":2.6,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Disappear",
+						},						
+						{//根消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1,
+						},
+						{//核心消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.15,
+						},
+						{//花消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Flower",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.8,
+						},	
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type":"KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },			
+					],
+				},
+				"DisableIntee":
+				{//不可交互功能封装
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":false,
+						},						
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域核心(空中型)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZoneCore_02_Ability",
+			"abilityMixins":
+			[
+				{//状态0时,就是很老实的状态
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "IdleState",
+				},
+				{//状态1时,主要是处理喷雾
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 1,
+					"modifierName": "AppearState",
+				},	
+				{//201时玩家与其交互,或者攻击。物件死亡演出,同时向Group发ServerLuaCall通知状态改变
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "CoreState",
+				},
+				{//202,死核死亡
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "DeathState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["KeepClose"],
+					"modifierName": "CoreClose",
+				},
+				{//与其交互时
+		            "$type": "WidgetMpSupportMixin",
+		            "succActions":
+	                [
+						{
+							"$type" : "ApplyModifier",
+							"target": "Self",
+							"modifierName" : "CoreInteeEffect",
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 201,
+	                            },
+							]
+						},
+	                ],
+		        },
+			],
+			"modifiers": 
+			{
+				"CoreClose":
+				{//核心关闭时的表现（在0和1状态时）
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Idle",
+						},
+					],
+				},
+				"CoreInteeEffect":
+				{//交互后附加的Modifier
+					"stacking": "Unique",
+					"duration":0.5,
+					"onAdded":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_CallCamera",
+						},						
+					],
+					"onRemoved":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_CoreDie",
+						},
+					],
+				},
+				"IdleState":
+				{//待机模式
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"AppearState":
+				{//吐烟模式
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_WhiteMist_02",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 0,
+							"MPTriggerOnRemote": true,
+						},
+					],
+				},
+				"CoreState":
+				{//交互可用。攻击时也可触发
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":true
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "IsOpen",
+							"value": 1,
+							"MPTriggerOnRemote": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Unlock",
+						},
+					],
+				},
+				"DeathState":
+				{
+					"duration":2.6,
+					"onAdded":
+					[
+						{
+							"$type" : "AttachModifier",
+							"target": "Self",
+							"modifierName" : "DisableIntee",
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Disappear",
+						},
+						{//根消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.8,
+						},
+						{//核心消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.15,
+						},
+						{//花消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Flower",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.8,
+						},	
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type":"KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },			
+					],
+				},
+				"DisableIntee":
+				{//不可交互功能封装
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":false,
+						},						
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域核心幼虫期(地上型)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZoneCoreLarva_01_Ability",
+			"abilityMixins":
+			[
+				{//状态0时,就是很老实的状态
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "UnlockState",
+				},
+				{//状态201时,主要是处理喷雾,上锁中
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "LockState",
+				},
+				{//状态202时表示死亡
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "DeathState",
+				},
+				{//与其交互时
+		            "$type": "WidgetMpSupportMixin",
+		            "succActions":
+	                [
+						{
+							"$type": "ChangeGadgetState",
+							"state": 202,
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 0,
+	                            },
+							]
+						},
+	                ],
+		        },
+			],
+			"modifiers": 
+			{
+				"UnlockState":
+				{//核心关闭时的表现（在0和1状态时）
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Unlock",
+						},
+					],
+				},
+				"LockState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Idle",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_BlackMist_01",
+						},
+					],
+				},
+				"DeathState":
+				{
+					"duration":2.6,
+					"onAdded":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_LarvaDie",
+						},
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":false,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_01_Disappear",
+						},
+						{//根消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1,
+						},
+						{//核心消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.15,
+						},
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type":"KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },			
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域核心幼虫期(空中型)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZoneCoreLarva_02_Ability",
+			"abilityMixins":
+			[
+				{//状态0时,就是很老实的状态
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "UnlockState",
+				},
+				{//状态1时,主要是处理喷雾
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "LockState",
+				},
+				{//状态1时,主要是处理喷雾
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "DeathState",
+				},
+				{//与其交互时
+		            "$type": "WidgetMpSupportMixin",
+		            "succActions":
+	                [
+						{
+							"$type": "ChangeGadgetState",
+							"state": 202,
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 0,
+	                            },
+							]
+						},
+	                ],
+		        },
+			],
+			"modifiers": 
+			{
+				"UnlockState":
+				{//核心关闭时的表现（在0和1状态时）
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Unlock",
+						},
+					],
+				},
+				"LockState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Idle",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_BlackMist_02",
+						},
+					],
+				},
+				"DeathState":
+				{
+					"duration":2.6,
+					"onAdded":
+					[
+						{//Trigger
+							"$type": "ServerLuaTriggerEvent",
+							"luaCallType": "FromGroup",
+							"sourceName": "DF_LarvaDie",
+						},
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+						{
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":false,
+						},	
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MaranaCore_02_Disappear",
+						},
+						{//根消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.8,
+						},
+						{//核心消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2.5,
+							"lerpCurveIndex": 0,
+							"value": 1.15,
+						},	
+					],
+					"onRemoved":
+					[
+						{
+	                        "$type":"KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },			
+					],
+				},
+			},
+		},
+	},			
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域节点
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZonePoint_01_Ability",
+			"onAdded":
+			[
+				{//Load时立刻死亡
+					"$type" : "KillSelf",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGadgetState",
+							"gadgetState": 202
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "Alive",
+				},
+				{//接收到来自GrassSeedChecker_Destory的GV
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"SelfDestory",
+				  "valueSteps":[0.5,1.5],
+				  "modifierNameSteps":["DeathCall"],
+				},
+				{//测试用
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 901,
+					"modifierName": "SetSummonTo1",
+				},
+				{//测试用
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 902,
+					"modifierName": "SetSummonTo2",
+				},
+				{//测试用
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 903,
+					"modifierName": "SetSummonTo3",
+				},
+			],
+			"modifiers":
+			{
+				"Alive":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaNexus_Idle",
+						},
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"value": 0,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"value": 0,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "SelfDestory",
+							"value": 0,
+						},
+					],
+				},
+				"DeathCall":
+				{//亡语必须保持很晚消失，给AttackLanded留时间
+					"onAdded":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"DistanceSummon",
+						},
+						{//死域节点切状态到202
+							"$type": "ChangeGadgetState",
+							"state": 202,
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+				"DistanceSummon":
+				{//生效时获取玩家与节点之间的位置，然后根据位置信息处理不同亡语效果
+					"onAdded":
+					[	
+						{
+							"$type":"SetSelfAttackTarget",
+							"otherTargets":
+                            {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR50",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit":1,
+                                "sortType": "Nearest", 
+                            },
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+						},
+						//获取最近目标的位置
+						{
+							"$type" : "Predicated",
+							"targetPredicates" :
+							[
+								{
+		                            "$type": "ByHasAttackTarget",
+		                        },
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"target": "SelfAttackTarget",
+									"compareType": "XZ",
+									"value": 5,
+									"logic": "LesserOrEqual",
+								},
+							],
+							"successActions" :
+							[
+								{
+					              "$type": "DebugLog",
+					              "content": "DeathZonePoint Trigger DeathCry_01 !!!",
+					            },
+								{
+									"$type":"AttachModifier",
+									"modifierName":"DeathCry_01",
+								},
+							],
+							"failActions" :
+							[
+								{
+									"$type" : "Predicated",
+									"targetPredicates" :
+									[
+										{
+				                            "$type": "ByHasAttackTarget",
+				                        },
+										{
+											"$type": "ByTargetPositionToSelfPosition",
+											"target": "SelfAttackTarget",
+											"compareType": "XZ",
+											"value": 8,
+											"logic": "LesserOrEqual",
+										},
+									],
+									"successActions" :
+									[
+										{
+							              "$type": "DebugLog",
+							              "content": "DeathZonePoint Trigger DeathCry_02 !!!",
+							            },
+										{
+											"$type":"AttachModifier",
+											"modifierName":"DeathCry_02",
+										},
+									],
+									"failActions" :
+									[
+										{
+							              "$type": "DebugLog",
+							              "content": "DeathZonePoint Trigger DeathCry_03 !!!",
+							            },
+										{
+											"$type":"AttachModifier",
+											"modifierName":"DeathCry_03",
+										},	
+									],
+								},
+							],
+						},
+					],
+				},
+				"KillSelf":
+				{
+					"onAdded":
+					[
+						{//根消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Root",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":3,
+							"lerpCurveIndex": 1,
+							"value": 2,
+						},
+						{//核心消失
+							"$type": "SetMaterialParamFloatByTransform",
+							"matName":"Core",
+							"patternName": "_DissolveVal",
+							"useCurve": true,
+							"lerpTime":2,
+							"lerpCurveIndex": 1,
+							"value": 1.2,
+						},
+						{//关闭受击盒
+							"$type":"EnableHitBoxByName",
+							"hitBoxNames":["HitBox"],
+							"setEnable":false
+						},
+						{//播放特效
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_MaranaNexus_Hit",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "CorePoint",
+							},
+						},						
+						{
+	                        "$type": "KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },
+					],
+					"onReconnect":
+					[
+						{
+	                        "$type": "KillSelf",
+	                        "predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+	                    },
+					],
+				},
+				"DeathCry_01":
+				{
+					"duration":1.6,
+					"onAdded":
+					[
+						{
+							"$type":"CreateGadget",
+							"gadgetID":70310211,//70310211
+							"campID": 5001,
+							"campTargetType": "Enemy",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+						},
+					],
+				},
+				"DeathCry_02":
+				{
+					"duration":1.6,
+					"onAdded":
+					[
+						{
+							"$type":"CreateGadget",
+							"gadgetID":70310212,//70310212
+							"campID": 5001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+										"$type": "BornRandomFromCenter",
+										"minRandomRange": 2,
+										"maxRandomRange": 10,
+								},
+								"onGround":true,
+							},
+						},
+						{
+							"$type":"CreateGadget",
+							"gadgetID":70310212,//70310212
+							"campID": 5001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+										"$type": "BornRandomFromCenter",
+										"minRandomRange": 2,
+										"maxRandomRange": 10,
+								},
+								"onGround":true,
+							},
+						},
+						{
+							"$type":"CreateGadget",
+							"gadgetID":70310212,//70310212
+							"campID": 5001,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+										"$type": "BornRandomFromCenter",
+										"minRandomRange": 2,
+										"maxRandomRange": 10,
+								},
+								"onGround":true,
+							},
+						},	
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+						},
+					],
+				},
+				"DeathCry_03":
+				{	
+					"duration":0.2,
+					"onAdded":
+					[
+						{//随机选择范围内合法攻击目标
+							"$type" : "SetSelfAttackTarget",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR50",
+								"campTargetType": "Enemy",
+                                "topLimit":1,
+                                "sortType": "Nearest",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+								{
+                                    "$type": "ByEntityIsAlive",
+                                    "target": "Target"
+                                 },
+							],
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 70310213,//参考子弹41022004
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+								"direction":
+								{
+									"$type":"ConfigDirectionByAttackTarget",
+									"angleOffsetCorrect": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 70310213,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+								"direction":
+								{
+									"$type":"ConfigDirectionByAttackTarget",
+									"angleOffsetCorrect": 
+									{
+										"x": 0.0,
+										"y": 5.0,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 70310213,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "ShootPoint",
+								"direction":
+								{
+									"$type":"ConfigDirectionByAttackTarget",
+									"angleOffsetCorrect": 
+									{
+										"x": 0.0,
+										"y": -5.0,
+										"z": 0.0,
+									},
+								},
+							},
+						},						
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"KillSelf",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGadgetState",
+									"gadgetState": 202
+								},
+							],
+						},
+					],
+				},
+				//---测试用Modifier----//
+				"SetSummonTo1":
+				{//亡语1测试
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_RandomSummon",
+							"value": 0.5,
+						},
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 0,
+                        },
+					],
+				},
+				"SetSummonTo2":
+				{//亡语2测试
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_RandomSummon",
+							"value": 1.5,
+						},
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 0,
+                        },
+					],
+				},
+				"SetSummonTo3":
+				{//亡语3测试
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_RandomSummon",
+							"value": 2.5,
+						},
+						{
+                            "$type": "ChangeGadgetState",
+                            "state": 0,
+                        },
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域节点_亡语1
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZonePointCry_01_Ability",
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":3.0,
+				"AlertTime":1.6,
+			},
+			"onAdded":
+			[
+		      	{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "doOffStage": true,
+			        "key": "ElementLevelCo",
+			        "type": "ElementLevelCo",
+		      	},
+		      	{
+					"$type":"ApplyModifier",
+					"modifierName":"Alert",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"HitWatcher",
+				}
+			],
+			"modifiers":
+			{
+				"HitWatcher":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+							[
+								{
+					              "$type": "ByEntityTypes",
+					              "entityTypes": [ "Avatar"],
+					            },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+				                    "modifierName"  : "DeathZone_ExtraDamage",
+				                    "target": "Other",
+								},
+							],
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+				"Alert":
+				{
+					"duration":"%AlertTime",
+					"onAdded":
+					[
+						{
+		                    "$type": "AttachEffect",
+		                    "effectPattern": "Eff_SceneObj_MaranaNexus_Alert_01",
+		                },
+					],
+					"onRemoved":
+					[
+						{
+		                    "$type": "FireEffect",
+		                    "effectPattern": "Eff_SceneObj_MaranaNexus_Skill_01",
+		                },
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"entityTypes": ["Avatar"],
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"damageExtra": "%ElementLevelCo*%DamageRatio",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"enBreak": 50.0,
+										"ignoreAttackerProperty": true,
+										"trueDamage":true,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV5"
+									},
+								},
+							},
+						},	
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域节点_亡语2
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_DeathZonePointCry_02_Ability",
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":3.0,
+				"AlertTime":1.6,
+			},
+			"onAdded":
+			[
+		      	{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "doOffStage": true,
+			        "key": "ElementLevelCo",
+			        "type": "ElementLevelCo",
+		      	},
+		      	{
+					"$type":"ApplyModifier",
+					"modifierName":"HitWatcher",
+				},
+		      	{
+					"$type":"ApplyModifier",
+					"modifierName":"Alert",
+				},
+			],
+			"modifiers":
+			{
+				"Alert":
+				{
+					"duration":"%AlertTime",
+					"onAdded":
+					[
+						{
+		                    "$type": "FireEffect",
+		                    "effectPattern": "Eff_SceneObj_MaranaNexus_Alert_02",
+		                },
+					],
+					"onRemoved":
+					[
+						{
+		                    "$type": "FireEffect",
+		                    "effectPattern": "Eff_SceneObj_MaranaNexus_Skill_02",
+		                },
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"entityTypes": ["Avatar"],
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 2.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0,
+										"damageExtra": "%ElementLevelCo*%DamageRatio",
+										"strikeType": "Default",
+										"attackType": "Range",
+										"enBreak": 30.0,
+										"ignoreAttackerProperty": true,
+										"trueDamage":true,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV4"
+									},
+								},
+							},
+						},	
+					],
+				},
+				"HitWatcher":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+							[
+								{
+					              "$type": "ByEntityTypes",
+					              "entityTypes": [ "Avatar"],
+					            },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+				                    "modifierName"  : "DeathZone_ExtraDamage",
+				                    "target": "Other",
+								},
+							],
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域节点_亡语3 子弹
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"SceneObj_Area_Xm_Property_Ani_Prop_DeathZonePointCry_03_Ability",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"BulletEffect"
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"HitWatcher",
+				},
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "doOffStage": true,
+			        "key": "ElementLevelCo",
+			        "type": "ElementLevelCo",
+		      	},
+			],
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":3.0,
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type":"ConfigAttackSphere",
+							"radius":1,
+							"triggerType":"TriggerNoRepeat",
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",//子弹限定
+							}
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damageExtra": "%ElementLevelCo*%DamageRatio",
+								"strikeType": "Pierce",
+								"attackType": "Melee",
+								"enBreak": 25.0,
+								"ignoreAttackerProperty": true,
+								"trueDamage":true,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3"
+							},
+						},
+					}
+				},
+				{
+					"$type" : "KillSelf",
+				},
+			],
+			"modifiers":
+			{
+				"BulletEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_SceneObj_MaranaNexus_Skill_03_Bullet"
+						},
+					]
+				},
+				"HitWatcher":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+							[
+								{
+					              "$type": "ByEntityTypes",
+					              "entityTypes": [ "Avatar"],
+					            },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+				                    "modifierName"  : "DeathZone_ExtraDamage",
+				                    "target": "Other",
+								},
+							],
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+			}
+		}
+	},		
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// 死域玩法_死域黑泥(0的时候会因为草种子攻击被摧毁,201的时候则不会)
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_MaranaPus_01_Ability",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMutexMixin",
+					"gadgetStates": [0, 201],
+					"modifierNames": [["DestoryBySeed"], ["NotDestoryBySeed"]],
+				},
+			],
+			"modifiers": 
+			{
+				"DestoryBySeed":
+				{
+					"onAdded":
+					[
+						{
+                            "$type": "SetGlobalValue",
+                            "key": "CanDestoryBySeed",
+                            "value": 1,
+                        },
+	                    {
+	                        "$type": "AttachEffect",
+	                        "effectPattern": "Eff_SceneObj_TowerTrap_01",
+	                    }
+					],
+				},
+				"NotDestoryBySeed":
+				{
+					"onAdded":
+					[
+						{
+                            "$type": "SetGlobalValue",
+                            "key": "CanDestoryBySeed",
+                            "value": 0,
+                        },
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_死域飞弹发射器
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{//子弹发射逻辑
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_MaranaMissle_01_Ability",
+			"abilitySpecials":
+			{
+				"SkillCD": 5,
+				"FireRate":0.5,
+			},
+			"onAdded":
+			[
+				{//时间到,技能CD结束
+					"$type": "SetGlobalValue",
+					"key": "_MaranaMissle_CD",
+					"value": 0,
+				},
+				{//球常驻显示
+					"$type" : "AttachModifier",
+					"modifierName":"ShowBall",	
+				},
+			],
+			"onAbilityStart":
+			[
+				{//仅当有Team在范围内,会尝试发射
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{//CD已结束
+							"$type": "ByTargetGlobalValue",
+							"key": "_MaranaMissle_CD",
+							"value": 1,
+							"compareType": "Equal",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "MaranaMissle_OnFiled",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+					],
+					"successActions":
+					[
+						{//随机选择范围内合法攻击目标
+							"$type" : "SetSelfAttackTarget",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByLCTrigger",
+								"campTargetType": "Enemy",
+								"sortType": "Random",
+								"topLimit": 1,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+								},
+							],
+						},
+						{//根据Field随机选择1个目标发射70310221子弹
+							"$type": "TriggerBullet",
+							"bulletID": 70310221,//死域专属飞弹
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+								"offset": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByHasAttackTarget",
+								},
+							],
+						},
+						{
+							"$type":"EnableSceneTransformByName",
+							"transformNames":["core"],
+							"setEnable":false,
+						},
+						{//子弹发射成功,CD重新计
+							"$type": "SetGlobalValue",
+							"key": "_MaranaMissle_CD",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByHasAttackTarget",
+								},
+							],
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "FieldEntityCountChangeMixin",
+					"simpleCountGlobaValueKey": "MaranaMissle_OnFiled",
+					"simpleCountUseLimitRange":true,
+					"simpleCountMaxValue":4,
+					"simpleCountMinValue":0,
+					"campTargetType": "All",
+					"targetPredicates" : 
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{//CD监视Mxin
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_MaranaMissle_CD",
+					"valueSteps" : [-0.5,0.8,1.5],
+					"modifierNameSteps" : ["ShootingCD","IntervalShooting"],
+				},
+				{//接收到来自GrassSeedChecker_Destory的GV
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"SelfDestory",
+				  "valueSteps":[0.5,1.5],
+				  "modifierNameSteps":["DeathCall"],
+				},
+			],
+			"modifiers":
+			{
+				"ShootingCD":
+				{//CD重新计时
+					"thinkInterval":"%SkillCD/2",
+					"onThinkInterval":
+					[
+						{//时间到,技能CD结束
+							"$type": "AddGlobalValue",
+							"key": "_MaranaMissle_CD",
+							"value": 0.5,
+						},
+
+					],
+				},
+				"ShowBall":
+				{//显示能量球特效
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_MaranaMissle_Idle",
+						},					
+					],
+				},
+				"IntervalShooting":
+				{//每{FireRate}秒尝试发射死域飞弹
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_MaranaMissle_01_Ability",
+							"target": "Self",
+						},
+					],
+					"modifierMixins":
+					[
+						{//ThinkInterval性能优化
+							"$type":"ThinkIntervalMixin",
+							"thinkInterval":"%FireRate",
+							"onThinkInterval":
+							[
+								{
+									"$type": "TriggerAbility",
+									"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_MaranaMissle_01_Ability",
+									"target": "Self",
+								},
+							],
+						},						
+					],
+				},
+				"DeathCall":
+				{//草种子攻击造成的死亡
+					"onAdded":
+					[
+						{
+							"$type" : "KillSelf",
+						},
+						{
+	                        "$type": "RemoveModifier",
+	                        "modifierName": "ShowBall"
+	                    },
+						{
+							"$type":"SetMaterialParamFloatByTransform",
+							"matName":"Mat",
+							"patternName":"_DissolveValue",
+							"value":1,
+							"canBeHandledOnRecover": true,
+							"useCurve": true,
+							"lerpTime":2,
+							"lerpCurveIndex": 0,
+						},	
+					],
+				},
+			},
+		},
+	},	
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_死域飞弹_子弹 70310221
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{//子弹触发逻辑
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_MaranaMissle_01_Bullet_Ability",
+			"abilitySpecials":
+			{
+				"ElementLevelCo":1,
+				"DamageRatio":1.5,
+			},
+			"onAdded":
+			[
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "doOffStage": true,
+			        "key": "ElementLevelCo",
+			        "type": "ElementLevelCo",
+		      	},
+		      	{
+					"$type":"ApplyModifier",
+					"modifierName":"HitWatcher",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName"  : "MaranaMissle_BulletEffect",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect" : "Eff_SceneObj_MaranaNexus_Skill_Hit",
+					},
+				},
+				{//击中时的攻击事件
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"entityTypes": ["Avatar"],
+					"attackEvent": 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius": 0.5,
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",//子弹限定
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damageExtra": "%ElementLevelCo*%DamageRatio",
+								"strikeType": "Pierce",
+								"attackType": "Range",
+								"enBreak": 50.0,
+								"ignoreAttackerProperty": true,
+								"trueDamage":true,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV4"
+							},
+						},
+					},
+				},
+				{
+					"$type" : "RemoveModifier",
+					"modifierName"  : "MaranaMissle_BulletEffect",
+				},
+				{
+					"$type" : "KillSelf",
+				},
+			],
+			"modifiers":
+			{
+				"MaranaMissle_BulletEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern"  : "Eff_SceneObj_MaranaMissle_Bullet",
+						},
+					],
+				},
+				"HitWatcher":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Other",
+							"targetPredicates": 
+							[
+								{
+					              "$type": "ByEntityTypes",
+					              "entityTypes": [ "Avatar"],
+					            },
+							],
+							"successActions":
+							[
+								{
+									"$type" : "ApplyModifier",
+				                    "modifierName"  : "DeathZone_ExtraDamage",
+				                    "target": "Other",
+								},
+							],
+						},
+					],
+				},
+				"DeathZone_ExtraDamage":
+				{//死域重击效果=>此处应激发玩家ability
+					"duration":0.1,
+					"onAdded":
+					[
+						{//角色身上特殊特效表现
+				        	"$type": "SetGlobalValue",
+                            "key": "DeathZoneGV_ExtraAttack",
+                            "target":"Team",
+                            "value": 1,                           
+				        },
+					],
+				},
+			},
+		},
+	},	
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_游离源质
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_LifePuddle_01_Ability",
+		"onFieldEnter": 
+		[
+			{
+				"$type": "Predicated",
+				"target": "Target",
+				"predicates": 
+				[
+					{//只能在激活的时候
+						"$type": "ByTargetGadgetState", 
+						"target":"Self",
+						"gadgetState": 201,
+					},
+				],
+				"successActions": 
+				[
+					{//进202
+						"$type": "ChangeGadgetState",
+						"target":"Self",
+						"state": 202,
+					},
+					{//进入范围的角色
+						"$type": "ApplyModifier",
+						"target": "Target",
+						"modifierName": "UNIQUE_LifePointBuff_Instant",
+						"predicates": 
+						[
+							{
+								"$type":"ByEntityTypes",
+								"entityTypes":["Avatar"],
+							},
+						],
+					},
+				],
+			},
+		],
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToGadgetStateMixin",
+				"gadgetState": 0,
+				"modifierName": "EmptyState",
+			},
+			{
+				"$type": "AttachToGadgetStateMixin",
+				"gadgetState": 201,
+				"modifierName": "ActiveState",
+			},	
+			{
+				"$type": "AttachToGadgetStateMixin",
+				"gadgetState": 202,
+				"modifierName": "InactiveState",
+			},	
+		],
+		"modifiers":
+		{
+			"EmptyState":
+			{
+				"onAdded": 
+				[
+					{
+                        "$type": "ChangeGadgetState",
+                        "state": 201,
+                    },
+				],
+			},
+			"ActiveState":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_SceneObj_LifePuddle_03_Idle",
+						"born": 
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "AttachPoint",
+						},
+					},
+					{
+						"$type": "ChangeTag",
+						"isAdd": true,
+						"tag": "IS_Life_Point_Instant",
+					},
+					{//保底显示材质
+						"$type": "SetMaterialParamFloatByTransform",
+						"matName":"dissolveMat",
+						"patternName": "_DissolveVal",
+						"value": 0.3,
+					},
+					// {//保底显示模型
+					// 	"$type":"EnableSceneTransformByName",
+					// 	"transformNames":["Obj"],
+					// 	"setEnable":true,
+					// },
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ChangeTag",
+						"isAdd": false,
+						"tag": "IS_Life_Point_Instant",
+					},
+				],
+			},
+			"InactiveState":
+			{
+				"onAdded":
+				[
+					{//消失
+						"$type": "SetMaterialParamFloatByTransform",
+						"matName":"dissolveMat",
+						"patternName": "_DissolveVal",
+						"useCurve": true,
+						"lerpTime":2.5,
+						"lerpCurveIndex": 1,
+						"value": 1.15,
+					},
+					// {//不显示模型
+					// 	"$type":"EnableSceneTransformByName",
+					// 	"transformNames":["Obj"],
+					// 	"setEnable":false,
+					// },
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_SceneObj_LifePuddle_03_Disappear",
+						"born": 
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "AttachPoint",
+						},
+					},
+				],
+			},
+			"UNIQUE_LifePointBuff_Instant":
+			{//游离源质效果
+				"duration":1,
+				"isUnique":true,
+				"stacking": "Refresh",
+				"onAdded":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "DeathZoneGV_ExtraHeal",
+						"target": "Team",
+						"value": 1,
+					},
+				],
+			},
+		},
+	},
+},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_隐藏生命源质
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_LifeFountainHideHide_01_Ability",
+			"onAdded":
+			[
+				{
+                    "$type": "ChangeTag",
+                    "isAdd": true,
+                    "tag": "IS_Life_Point",
+                },	
+			],
+		},
+	},	
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_生命源质
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Ani_Prop_LifeFountain_01_Ability",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["IdleEffect"],
+					"modifierName": "Effect",
+					"isCheckOnAttach":true
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Warm","IdleEffect"],
+					"modifierName": "Active",
+					"isCheckOnAttach":true
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Lock"],
+					"modifierName": "LockEffect",
+					"isCheckOnAttach":true
+				},
+				{
+					"$type": "AttachToGadgetStateMutexMixin",
+					"gadgetStates": [0, 201, 202],
+					"modifierNames": [["Intee_On"], ["Intee_Off"], ["Intee_Off"]],
+				},
+				{//与其交互时
+		            "$type": "WidgetMpSupportMixin",
+		            "succActions":
+	                [
+						{
+							"$type" : "ChangeGadgetState",
+							"state":201,
+							"predicates":
+							[
+	                            {
+	                                "$type": "ByTargetGadgetState",
+	                                "target": "Self",
+	                                "gadgetState": 0,
+	                            },
+							]
+						},
+	                ],
+		        },
+			],
+			"modifiers":
+			{
+				"Intee_On":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": true,
+						},
+					],
+				},
+				"Intee_Off":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnableGadgetInteeMp",
+							"enable": false,
+						},
+					],
+				},
+				
+				"Active":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_LifePuddle_Active",
+						},
+						{
+                            "$type": "ChangeTag",
+                            "isAdd": true,
+                            "tag": "IS_Life_Point",
+                        },
+					],
+					"onRemoved":
+					[
+						{
+                            "$type": "ChangeTag",
+                            "isAdd": false,
+                            "tag": "IS_Life_Point",
+                        },
+					],
+				},
+				"Effect":
+				{
+					
+				},
+				"LockEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_SpecialTreasureBox_LockIdle_Little",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Item_SpecialTreasureBox_Unlock_Little",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "AttachPoint",
+							},
+						},
+					],
+				},	
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_死域指示特效
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Prop_MaranaLink_01_Ability",
+			"abilityMixins":
+			[
+				{///死域共生物共通逻辑，当死域解除时，将自己干掉
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"SGV_DeathZoneState",
+				  "valueSteps":[-0.5,0.5],
+				  "modifierNameSteps":["ExitDeathZone"],
+				},
+			],
+			"modifiers": 
+			{
+				"ExitDeathZone":
+				{
+					"duration":3,
+					"modifierMixins":
+					[
+						{//因Trigger而死
+		                	"$type":"DeathZoneMixin",
+		                	"disactiveHaloTrigger":
+		                	[
+								{
+									"$type" : "KillSelf",
+								},
+		                	],
+		                },	
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "KillSelf",
+						},
+					],
+				},			
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_死域核心光源
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Light_DeathzoneLight_01_Ability",
+			"abilityMixins":
+			[
+				{///死域共生物共通逻辑，当死域解除时，将自己干掉
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"SGV_DeathZoneState",
+				  "valueSteps":[-0.5,0.5],
+				  "modifierNameSteps":["ExitDeathZone"],
+				},
+			],
+			"modifiers": 
+			{
+				"ExitDeathZone":
+				{
+					"duration":2,
+					"modifierMixins":
+					[
+						{//因Trigger而死
+		                	"$type":"DeathZoneMixin",
+		                	"disactiveHaloTrigger":
+		                	[
+								 {
+		                            "$type": "SendEffectTrigger",
+		                            "parameter": "Disappear",
+		                            "effectPattern": "Eff_ScenObj_DeathzoneLight_01",
+		                        }
+		                	],
+		                },	
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "KillSelf",
+						},
+					],
+				},			
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	死域玩法_死域节点光源//
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Xm_Property_Light_DeathzoneLight_02_Ability",
+			"onAdded":
+			[
+				{//ControlPageContext 关联该Tag
+			      "$type": "ChangeTag",
+			      "isAdd": true,
+			      "tag": "DeathZonePoint",
+			    },
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Disappear",
+				},
+				{///死域共生物共通逻辑，当死域解除时，将自己干掉
+				  "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+				  "globalValueKey":"SGV_DeathZoneState",
+				  "valueSteps":[-0.5,0.5],
+				  "modifierNameSteps":["ExitDeathZone"],
+				},
+			],
+			"modifiers": 
+			{
+				"Disappear":
+				{
+					"duration":2,
+					"onAdded":
+					[
+						{
+                            "$type": "SendEffectTrigger",
+                            "parameter": "Disappear",
+                            "effectPattern": "Eff_ScenObj_DeathzoneLight_02",
+                        },
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "KillSelf",
+						},
+					],
+				},
+				"ExitDeathZone":
+				{
+					"duration":3,
+					"modifierMixins":
+					[
+						{//因Trigger而死
+		                	"$type":"DeathZoneMixin",
+		                	"disactiveHaloTrigger":
+		                	[
+								{
+		                            "$type": "SendEffectTrigger",
+		                            "parameter": "Disappear",
+		                            "effectPattern": "Eff_ScenObj_DeathzoneLight_02",
+		                        },
+		                	],
+		                },	
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "KillSelf",
+						},
+					],
+				},			
+			},
+		},
+	},		
+]

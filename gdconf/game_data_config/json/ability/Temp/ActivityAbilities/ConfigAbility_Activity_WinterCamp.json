@@ -1,0 +1,647 @@
+[
+  //2.3雪山冬令营 跑酷部分
+  //开挑战挂Ability 由物件通知效果激活
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "Activity_WinterCamp_TeamAbility",
+      "onAdded": 
+      [
+        {//超级跳开关
+          "$type": "SetGlobalValue",
+          "key": "WinterCamp_RocketJump",
+          "value": 0,
+        },
+        {//带球撞人开关
+          "$type": "SetGlobalValue",
+          "key": "WinterCamp_Shield",
+          "value": 0,
+        },
+        {//体力球开关
+          "$type": "SetGlobalValue",
+          "key": "WinterCamp_Stamina",
+          "value": 0,
+        },
+        /*{
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_WinterCamp_CameraFix",
+        },*/
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "UNIQUE_WinterCamp_CameraFixDelay",
+        },
+      ],
+      "abilityMixins":
+      [
+          {
+              "$type":"AttachModifierToSelfGlobalValueMixin",
+              "globalValueKey":"WinterCamp_RocketJump",
+              "valueSteps":[-0.5, 0.5, 1.5],
+              "modifierNameSteps":["Blank","UNIQUE_WinterCamp_RocketJump"],
+          },
+          {
+              "$type":"AttachModifierToSelfGlobalValueMixin",
+              "globalValueKey":"WinterCamp_Shield",
+              "valueSteps":[-0.5, 0.5, 1.5],
+              "modifierNameSteps":["Blank","UNIQUE_WinterCamp_Shield"],
+          },
+      ],
+      "onRemoved":
+      [
+        {
+          "$type":"RemoveModifier",
+          "modifierName":"UNIQUE_WinterCamp_CameraFix",
+        }
+      ],
+      "modifiers":
+      {
+        "Blank":
+        {
+
+        },
+        "UNIQUE_WinterCamp_CameraFixDelay":
+        {
+          "isUnique": true,
+          "stacking": "Unique",
+          "duration": 2.25,
+          "onRemoved":
+          [
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_WinterCamp_CameraFix",
+            },
+          ],
+        },
+        "UNIQUE_WinterCamp_CameraFix":
+        {
+          "isUnique": true,
+          "stacking": "Unique",
+          "modifierMixins":
+          [
+            {
+              "$type": "ModifyCameraMaxDistanceMixin",
+              "MaxDistance": 10,
+              "ResetToMaxOnStart": true,
+              "LerpInDuration": 0.5,
+              "LerpOutDuration": 2.0,
+            },
+          ],
+        },
+        "UNIQUE_WinterCamp_RocketJump":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {//随前场角色转移Modifier
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "WinterCamp_RocketJump_Avator",
+            },
+          ],
+        },
+        "UNIQUE_WinterCamp_Shield":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {//随前场角色转移Modifier
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "WinterCamp_Shield_Avator",
+            },
+          ],
+        },
+        "WinterCamp_RocketJump_Avator":
+        {
+          "onAdded":
+          [
+            {
+              "$type": "EnableRocketJump",
+              "canBeHandledOnRecover": true,
+              "type": "DungeonJump",
+              "enable": true,
+              "uiEffect": true,
+              "extention":
+              {
+                "xzMultiplier": 2.3,
+                "yMultiplier": 5.0,
+              }
+            },
+            {//超级跳特效
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_SceneObj_JumpUp_01_Buff",
+            },
+            {
+              "$type": "ChangePlayMode",
+              "muteRemoteAction": true,
+              "doOffStage": true,
+              "toPlayMode": "WinterCampRace",
+            }
+          ],
+          "onRemoved":
+          [
+            {
+              "doOffStage" : true,
+              "$type": "EnableRocketJump",
+              "canBeHandledOnRecover": true,
+              "type": "DungeonJump",
+              "enable": false,
+              "uiEffect": true,
+            },
+            {
+              "$type": "ChangePlayMode",
+              "muteRemoteAction": true,
+              "toPlayMode": "Normal",
+              "doOffStage": true,
+            },
+          ],
+        },
+        "WinterCamp_DenyShield_Attack"://怪物受击的CD
+        {
+          "duration":1,
+          "onAdded": 
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "WinterCamp_Deny_Hit",
+              "value": 1,
+            }
+          ],
+          "onRemoved": 
+          [
+            {
+              "$type": "SetGlobalValue",
+              "key": "WinterCamp_Deny_Hit",
+              "value": 0,
+            }
+          ]
+        },
+        "WinterCamp_Shield_Avator":// 9/14迭代 不要撞飞效果和无敌效果了
+        {
+          //"state": "Invincible",//无敌Buff
+          "onAdded": 
+          [
+            {//护盾特效
+              "$type": "AttachEffect",
+              "doOffStage": true,
+              "effectPattern": "Eff_SceneObj_ShieldPower_01_Buff",
+            },
+            /*{//状态免疫大礼包
+              "$type" : "AttachAbilityStateResistance",
+              "resistanceListID": 11002,
+            },*/
+          ],
+          //碰到怪-击飞；碰到跑酷障碍物-击碎（迭代：怪不要击飞了，只对物件有效）
+          "thinkInterval": 0.1,
+          "onThinkInterval": 
+          [
+            
+            {
+              "$type": "Predicated",
+              "otherTargets": 
+              {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR2H8",
+                "centerBasedOn": "Self",
+                "campTargetType": "Enemy",
+                "campBasedOn": "Self",
+              },
+              "targetPredicates": 
+              [
+                {
+                  "$type": "ByEntityTypes",
+                  "entityTypes": ["Monster"],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "WinterCamp_Deny_Hit",
+                  "value": 0,
+                  "compareType": "NoneOrEqual",
+                }
+              ],
+              "successActions": 
+              [
+                /*{
+                  "$type": "ApplyModifier",
+                  "target": "Other",
+                  "modifierName": "WinterCamp_DenyShield_Attack",
+                },
+                {
+                  "$type" : "DamageByAttackValue",
+                  "target": "Other",
+                  "attackInfo":
+                  {
+                    "attackProperty":   
+                    {
+                      "damagePercentage": 0,
+                      "elementType" : "None",
+                      "elementDurability" : 0,
+                      "strikeType": "Default",
+                      "enBreak": 800,
+                      "ignoreLevelDiff": true,
+                    },
+                    "hitPattern": 
+                    {
+                      "onHitEffectName": "none",                    
+                      "hitImpulseType":"LV6",
+                      "canBeDefenceHalt": false,
+                      "hitHaltTime": 0.0,
+                      "hitHaltTimeScale": 0.01,
+                      "muteHitText": true,
+                    },  
+                  },
+                },*/
+              ],
+              "failActions": 
+              [
+                {
+                  "$type": "Predicated",
+                  "target":"Other",
+                  "targetPredicates":
+                  [
+                    {
+                      "$type":"ByTargetGlobalValue",
+                      "key":"_IS_PARKOUR_BREAKABLE",
+                      "value": 1,
+                      "compareType": "Equal",
+                    }
+                  ],
+                  "successActions":
+                  [
+                    {//发个Hit过去
+                      "$type" : "DamageByAttackValue",
+                      "target": "Other",
+                      "attackInfo":
+                      {
+                        "attackTag":"WinterCamp_ShieldAttack",
+                        "attackProperty":   
+                        {
+                          "damagePercentage": 0,
+                          "elementType" : "None",
+                          "elementDurability" : 0,
+                          "strikeType": "Default",
+                          "enBreak": 800,
+                          "ignoreLevelDiff": true,
+                        },
+                        "hitPattern": 
+                        {
+                          "onHitEffectName": "none",                    
+                          "hitImpulseType":"LV0",
+                          "canBeDefenceHalt": false,
+                          "hitHaltTime": 0.0,
+                          "hitHaltTimeScale": 0.01,
+                          "muteHitText": true,
+                        },  
+                      },
+                    },
+                  ]
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  },
+  //2.3雪山冬令营 战斗营地
+  //(迭代废弃)触发融化反应，放一个火焰冲击波，半径10米，环境反应系数10.65，火元素含量25，内置CD 8秒
+  //持有龙血结晶Buff时，攻击造成冲击波,半径10米,环境反应系数15.36，火元素含量25
+  //前台角色每秒恢复2.5能量
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "Activity_WinterCamp_BattleCampTeam",
+      "isDynamicAbility": true,
+      "onAdded": 
+      [
+        {
+          "$type": "SetGlobalValue",
+          "key": "_ActivityAbility_WinterCamp_BattleCamp_CD",
+          "target":"Team",
+          "value": 0,
+        },
+        /*{
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_ActivityAbility_WinterCamp_Energy",
+        },*/
+        /*{
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_ActivityAbility_WinterCamp_BattleCamp",
+        },*/
+      ],
+      "abilityMixins": 
+      [
+        {
+          "$type":"AttachModifierToSelfGlobalValueMixin",
+          "globalValueKey":"SGV_WinterCamp_PlayerBuff",
+          "valueSteps":[0.5, 1.5],
+          "modifierNameSteps":["UNIQUE_ActivityAbility_WinterCamp_BattleCamp"],
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_ActivityAbility_WinterCamp_BattleCamp":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {//随前场角色转移Modifier
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "ActivityAbility_WinterCamp_AvatarBuff_Explode",
+            },
+            {//随前场角色转移Modifier
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "ActivityAbility_WinterCamp_AvatarBuff_Energy",
+            },
+          ],
+        },
+        /*"UNIQUE_ActivityAbility_WinterCamp_Energy":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "modifierMixins":
+          [
+            {//随前场角色转移Modifier
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "ActivityAbility_WinterCamp_AvatarBuff_Energy",
+            },
+          ],
+        },*/
+        "ActivityAbility_WinterCamp_AvatarBuff_Energy":
+        {
+          "thinkInterval":1,
+          "onThinkInterval":
+          [
+            {
+              "$type":"ReviveElemEnergy",
+              "value":"%ReviveEnergy",
+              "target":"Self",
+              "doOffStage":true,
+            },
+          ]
+        },
+        "ActivityAbility_WinterCamp_Monster_SendPos":
+        {
+          "onAdded":
+          [
+            {
+              "$type": "Predicated",
+              "target": "Other",
+              "otherTargets":
+              {
+                "$type": "SelectTargetsByShape",
+                "campBasedOn": "Self",
+                "shapeName": "CircleR40",
+                "centerBasedOn": "Self",
+                "campTargetType": "AllExceptSelf",
+              },
+              "predicates": 
+              [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "IS_MAIN_DEVICE",
+                  "value": 1,
+                  "compareType": "Equal",
+                }
+              ],
+              "successActions": 
+              [
+                {
+                  "$type": "SetGlobalPos",
+                  "key": "_Ability_WinterCamp_AoePos_Final",
+                  "target": "Other",
+                  "born": {
+                    "$type": "ConfigBornBySelf",             
+                    "onGround": true,
+                    "offset": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                    },
+                  },
+                  "setTarget":true,
+                },
+                {//使物件发出攻击 Avator攻击会有元素精通
+                  "$type": "TriggerAbility",
+                  "target": "Other",
+                  "abilityName": "LjxsCampMainDevice_01_Explode",
+                  "abilitySpecials": 
+                  {
+                    "LevelEntity_AvatarDot_SystemValue": "%LevelEntity_AvatarDot_SystemValue",
+                  }
+                },
+                {
+                  "$type": "RemoveModifier",
+                  "modifierName": "ActivityAbility_WinterCamp_Monster_SendPos",
+                  "target": "Self",
+                }
+              ],
+            },
+          ]
+        },
+        "ActivityAbility_WinterCamp_AvatarBuff_Explode": 
+        {
+          "isLimitedProperties": true,
+          "onAdded":
+          [
+            {
+              "$type": "SetSystemValueToOverrideMap",
+              "key": "LevelEntity_AvatarDot_SystemValue",
+              "type": "ElementLevelCo",
+            },
+          ],
+          "onAttackLanded":
+          [
+            {
+              "$type": "Predicated",
+              "target":"Other",
+              "targetPredicates":
+              [
+                {
+                  "$type": "ByAny",
+                  "predicates":
+                  [
+                    {//1.2雪山活动词缀掉落的龙血结晶
+                      "$type": "ByTargetGlobalValue",
+                      "key": "HAS_BLOOD_BUFF_MARK",
+                      "value": 1,
+                      "compareType": "Equal",
+                      "target": "CurLocalAvatar",
+                    },
+                    {//大世界常规龙血结晶
+                      "$type": "ByTargetGlobalValue",
+                      "key": "HAS_BLOOD_BUFF_MARK_NORMAL",
+                      "value": 1,
+                      "compareType": "Equal",
+                      "target": "CurLocalAvatar",
+                    },
+                  ],
+                },
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "Can_Trigger_Aoe",
+                  "value": 1,
+                  "target": "Team",
+                  "compareType": "Equal",
+                },
+                {
+                  "$type":"ByEntityTypes",
+                  "entityTypes":["Monster"]
+                },
+                {
+                  "$type":"ByAttackTags",
+                  "attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack","Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+                },
+              ],
+              "successActions":
+              [
+                {
+                    "$type" : "ApplyModifier",
+                    "modifierName"  : "ActivityAbility_WinterCamp_Monster_SendPos",
+                    "target"  : "Other",         
+                },
+                {
+                  "$type":"SetGlobalValue",
+                  "key": "Can_Trigger_Aoe",
+                  "target": "Team",
+                  "value": 0,
+                },
+              ],
+            },
+                     
+          ]
+          /*"properties": 
+          {
+            "Actor_AttackRatio": "%Value_Attack",
+          },*/
+        },
+      },
+      "abilitySpecials": 
+      {
+        //"Value_Attack": 0.5,
+        "ReviveEnergy": 2.5,//前台角色每秒回能
+        "DamagePercentage": 23.5,//冲击波环境反应系数
+        "LevelEntity_AvatarDot_SystemValue": 1,
+      },
+    },
+  },
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "Activity_WinterCamp_BattleCampAvatar",
+      "isDynamicAbility": true,
+      "abilityMixins": 
+      [
+        {
+          "$type":"AttachModifierToSelfGlobalValueMixin",
+          "globalValueKey":"HAS_BLOOD_BUFF_MARK_NORMAL",//辅助判断。只用龙血Buff的话onAttackLanded打多个目标会打出多个冲击波
+          "valueSteps":[-0.5, 0.5, 1.5],
+          "modifierNameSteps":["MuteTriggerAoe","CanTriggerAoe"],
+        },
+      ],
+      "modifiers": 
+      {
+        "MuteTriggerAoe":
+        {
+          /*"onAdded":
+          [
+            {
+              "$type":"SetGlobalValue",
+              "key": "Can_Trigger_Aoe",
+              "target": "Team",
+              "value": 0,
+            },
+          ]*/
+        },
+        "CanTriggerAoe":
+        {
+          "onAdded":
+          [
+            {
+              "$type":"SetGlobalValue",
+              "key": "Can_Trigger_Aoe",
+              "target": "Team",
+              "value": 1,
+            },
+          ]
+        },
+      },
+    
+    },
+  },
+  //2.3雪山冬令营 骗骗花Boss战
+  //ScenePlay挂ability，处理watcher
+   {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_WinterCampMimik_WatcherHandler_BrokenFruitKick",
+      "isDynamicAbility": true,
+      "onAdded": 
+      [
+
+      ],
+
+      "modifiers": 
+      {
+         /*
+         //玩家击回果实时
+         "":
+         {
+          "$type":"ServerLuaCall",
+          "luaCallType":"CurScenePlay",
+          "funcName":"SLC_Player_HitBack"
+         },
+         //玩家拾取能量结晶
+         "":
+         {
+          "$type":"ServerLuaCall",
+          "luaCallType":"CurScenePlay",
+          "funcName":"SLC_Player_PickUp"
+         },
+         */
+
+      },
+    
+    },
+  },
+  {
+    "Default": 
+    {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_WinterCampMimik_WatcherHandler_EnergyChitInteract",
+      "isDynamicAbility": true,
+      "onAdded": 
+      [
+
+      ],
+
+      "modifiers": 
+      {
+         /*
+         //玩家击回果实时
+         "":
+         {
+          "$type":"ServerLuaCall",
+          "luaCallType":"CurScenePlay",
+          "funcName":"SLC_Player_HitBack"
+         },
+         //玩家拾取能量结晶
+         "":
+         {
+          "$type":"ServerLuaCall",
+          "luaCallType":"CurScenePlay",
+          "funcName":"SLC_Player_PickUp"
+         },
+         */
+
+      },
+    
+    },
+  },
+
+]

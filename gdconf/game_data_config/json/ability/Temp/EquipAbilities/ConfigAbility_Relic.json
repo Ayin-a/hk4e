@@ -1,0 +1,7087 @@
+[
+///触发字典：
+///	  能量堆满
+///	  能量获得
+///	  血量比例
+///	  元素
+///   攻击命中
+///   受击
+///   攻击次数/技能次数   堆叠
+///   某行为之后
+///   内置cd
+///   上下场
+///   缓慢获得
+
+
+///效果字典：
+///   回血
+///   全队回血
+///   攻击/防御/速度提升
+///   受治疗提升
+///   治疗效果提升
+///   伤害减轻
+///   能量获得率提升
+///   获得能量
+///   获得护盾/元素盾
+///   攻击提升（堆叠
+///   全伤提升
+///   属性伤害提升（类似朱丹圣痕
+///   体力恢复加快
+///   技能冷却减少（-20%这种，不是每次-1s这种）
+///   攻击附带伤害
+///   给敌人debuff
+///	  爬山速度提高？
+///	  重攻击消耗体力减少（大剑）
+///
+///	  如果类似fgo，dnf的数值维度。至少应该有
+///	  攻击力，暴击，爆伤，
+///	  伤害增加（黄字）
+///	  宝具威力增加（技能攻击力）
+///	  某属性伤害增加（属强，红魔放）
+///
+///	  招个特效卖卖萌，实际还是上buff。
+///
+///
+
+///设计手段：
+///	  积累一个效果，当xxx时消耗并触发效果
+
+
+///圣遗物效果：
+/// 触发以受击、血量触发为主
+/// 探索中发动。战斗类：探索/辅助/防御=2:8，
+/// buff为主，数值变化。不太会有打击向。
+/// 有套路的效果。   普攻+100%，技能伤害-50%。
+/// Build：
+/// 自身回血时，对周围敌人造成伤害。
+/// 特效套，攻击附带特效技能。
+/// 强化某种单属性伤害。
+///
+///负面效果：
+///	  速度下降
+///	  cd变长
+///	  受伤增加等
+
+
+///橙装字典：
+///	  将敌人弹开
+///	  持续伤害敌人
+///	  能量/血量缓慢恢复
+///	  增加箭的伤害（大概可行
+///
+
+//PS：武器的ability是加在角色身上的。可以考虑从天赋里拿创意到武器
+
+
+//代码规范：
+//1、attachmodifier。自己加的modifier需要在换武器的时候回收。
+//2、不得在remove时添加modifier，会导致武器卸下后重新上modifier。（不得modifier之间循环调用；A添加B，B添加A需要避免）
+//3、武器技能cd用EquipAffixStart和ByEquipAffixReady管理。圣遗物套不记录cd。
+//4、实在难以移除的modifier可以在ability的onRemoved中移除。
+
+
+//cd检测中
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_FighterAttackUp_Lv5",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_FighterAttackUp_Lv5",
+					"predicates":
+					[
+						{
+							"$type":"ByAvatarWeaponType",
+							"weaponTypes":["WEAPON_SWORD_ONE_HAND","WEAPON_CLAYMORE","WEAPON_POLE"], //这个是判断角色定义的所用武器的，角色实际装备了什么不影响判定。
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_FighterAttackUp_Lv5":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%AttackRatio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"AttackRatio":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_RangerAttackUp_Lv5",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_RangerAttackUp_Lv5",
+					"predicates":
+					[
+						{
+							"$type":"ByAvatarWeaponType",
+							"weaponTypes":["WEAPON_CATALYST","WEAPON_BOW"], //这个是判断角色定义的所用武器的，角色实际装备了什么不影响判定。
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_RangerAttackUp_Lv5":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%AttackRatio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"AttackRatio":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ElementDamageUpWhenChangeChar_Lv5",
+			"isDynamicAbility":true,
+			"onAvatarIn":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ElementDamageUpWhenChangeChar_Lv5",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ElementDamageUpWhenChangeChar_Lv5":
+				{
+					"duration":10,
+					"state":"AttackUp",
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta" : "%ElementDamageUp",
+						"Actor_WaterAddHurtDelta" : "%ElementDamageUp",
+						"Actor_GrassAddHurtDelta" : "%ElementDamageUp",
+						"Actor_IceAddHurtDelta" : "%ElementDamageUp",
+						"Actor_RockAddHurtDelta" : "%ElementDamageUp",
+						"Actor_ElecAddHurtDelta" : "%ElementDamageUp",
+						"Actor_WindAddHurtDelta" : "%ElementDamageUp",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ElementDamageUp":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AttackUpAfterElementBall_Lv5",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByEnergyChangeMixin",
+					"elementTypes":["Electric","Fire","Water","Grass","Ice","Wind","Rock","None"],
+					// "type":"Current",
+					"doWhenEnergyMax":true,
+					"onGainEnergyByBall":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName":"UNIQUE_Relic_AttackUpAfterElementBall_Lv5",
+						},
+					],
+				},
+			],
+			// "onAbilityStart":
+			// [
+			// 	{
+			// 		"$type": "FireEffect",
+			// 		"effectPattern":"Eff_Diluc_FireCross_Aoe",
+			// 	},
+			// 	{
+			// 		"$type": "AttachModifier",
+			// 		"modifierName":"UNIQUE_Relic_AttackUpAfterElementBall_Lv5",
+			// 	},
+			// ],
+			"modifiers":
+			{
+				"UNIQUE_Relic_AttackUpAfterElementBall_Lv5":
+				{
+					"duration":10,
+					"isUnique":true,
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%AttackRatio",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"AttackRatio":0,
+			},
+		},
+	},
+
+///上面是内部测试用ability，应该可以删 2021.5.14 HTC
+
+
+////////////////////////////////////////////////////////////////
+//
+//  210001
+//
+//  行者之心 4件
+//
+//  套装ID：51
+//
+//  Relic_ExtraAtkCritUp
+//
+//  重击的暴击率提高X%。
+//
+////////////////////////////////////////////////////////////////
+	{
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_ExtraAtkCritUp",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_ExtraAtkCritUp",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_ExtraAtkCritUp":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "bonusCritical": "%CritRate",
+             				"attackTags": ["ExtraAttack"],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "CritRate": 0,
+            },
+        },
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210002
+//
+//  勇士之心 4件
+//
+//  套装ID：52
+//
+//  Relic_GiantKiller
+//
+//  对生命值高于X%的敌人，造成的伤害增加Y%。
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_GiantKiller",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_GiantKiller_Handler",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_GiantKiller_Handler":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            // "bonusCritical":"%Rate",
+                            "damagePercentageRatio": "%Rate",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetHPRatio",
+									"target" : "Target",
+									"HPRatio":"%HPRatio",
+									"logic": "GreaterOrEqual",
+                                }
+                            ],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "Rate": 0,
+                "HPRatio":0,
+            },
+        },
+    },
+
+///////////////////////////////////////////////////////////////
+//
+//  210003
+//
+//  守护之心 4件
+//
+//  套装ID： 53
+//
+//  Relic_AbsorbTeamElemResist
+//
+//  队伍中每有一种元素类型的角色，自身获得20%相应元素抗性。
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AbsorbTeamElemResist",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByTeamStatusMixin",
+					"actions":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_ElementAllDefUp",
+							"doOffStage":true,
+						},
+						{//重置抗性
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementFireDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementWaterDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementWindDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementElecDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementIceDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementRockDefUp",
+							"doOffStage":true,
+						},
+						{
+
+							"$type":"SetOverrideMapValue",
+							"value":0,
+							"overrideMapKey":"ElementGrassDefUp",
+							"doOffStage":true,
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementFireDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Fire",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementWaterDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Water",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementWindDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Wind",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementElecDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Electric",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementIceDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Ice",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementRockDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Rock",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"SetOverrideMapValue",
+							"value":1,
+							"overrideMapKey":"ElementGrassDefUp",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByCurTeamHasElementType",
+									"elementType":"Grass",
+									"number":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_ElementAllDefUp",
+							"doOffStage":true,
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_ElementAllDefUp":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireSubHurtDelta":"%ElementFireDefUp*%ResistUp",
+						"Actor_WaterSubHurtDelta":"%ElementWaterDefUp*%ResistUp",
+						"Actor_WindSubHurtDelta":"%ElementWindDefUp*%ResistUp",
+						"Actor_ElecSubHurtDelta":"%ElementElecDefUp*%ResistUp",
+						"Actor_IceSubHurtDelta":"%ElementIceDefUp*%ResistUp",
+						"Actor_RockSubHurtDelta":"%ElementRockDefUp*%ResistUp",
+						"Actor_GrassSubHurtDelta":"%ElementGrassDefUp*%ResistUp",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ResistUp":0,
+				"ElementFireDefUp":0,
+				"ElementWaterDefUp":0,
+				"ElementWindDefUp":0,
+				"ElementElecDefUp":0,
+				"ElementIceDefUp":0,
+				"ElementRockDefUp":0,
+				"ElementGrassDefUp":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210004
+//
+//  奇迹 2件
+//
+//  ID：54
+//
+//  Relic_AllElemResistUp
+//
+//  全元素抗性提高20%。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AllElemResistUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName":"UNIQUE_Relic_AllElemResistUp",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_AllElemResistUp":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireSubHurtDelta":"%ResistUp",
+						"Actor_WaterSubHurtDelta":"%ResistUp",
+						"Actor_WindSubHurtDelta":"%ResistUp",
+						"Actor_ElecSubHurtDelta":"%ResistUp",
+						"Actor_IceSubHurtDelta":"%ResistUp",
+						"Actor_RockSubHurtDelta":"%ResistUp",
+						"Actor_GrassSubHurtDelta":"%ResistUp"
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ResistUp":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  210004
+//
+//  奇迹 4件
+//
+//  套装ID： 54
+//
+//  Relic_ElemDmgEnhanceElemResist
+//
+//  受到某元素类型伤害后，相应抗性提升25%，持续10秒 冷却时间xx
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ElemDmgEnhanceElemResist",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_ElemDmgEnhanceElemResist",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Relic_ElemDmgEnhanceElemResist_CD","UNIQUE_Relic_ElemDmgEnhanceElemResist_Handler",],
+				},
+			],
+			"modifiers":
+			{
+
+				"UNIQUE_Relic_ElemDmgEnhanceElemResist_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onBeingHit":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"None",
+										},
+									],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementFireDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Fire",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementWaterDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Water",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementGrassDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Grass",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementElecDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Electric",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementIceDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Ice",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementWindDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Wind",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementRockDefUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Rock",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_ElemDmgEnhanceElemResist_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onAdded":
+					[
+						/*{
+							"$type":"AvatarSkillStart",
+							"skillID":10101,
+							"cdRatio":"%CDTime*0.1",
+						},*/ //圣遗物不记录cd
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":10,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+
+				},
+				"UNIQUE_ElementFireDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementWaterDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_WaterSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementWindDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_WindSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementElecDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElecSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementIceDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_IceSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementRockDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_RockSubHurtDelta":"%ResistUp"
+					},
+				},
+				"UNIQUE_ElementGrassDefUp":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ElemDmgEnhanceElemResist",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_GrassSubHurtDelta":"%ResistUp"
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementFireDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementWaterDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementElecDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementIceDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementWindDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementRockDefUp"
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementGrassDefUp"
+				},
+			],
+			"abilitySpecials":
+			{
+				"ResistUp":0,
+				"Dura":0,
+				"CDTime":0.01,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210005
+//
+//  战狂 4件
+//
+//  ID：55
+//
+//  Relic_LowHPGainExtraCritRate
+//
+//  生命值低于X%时，暴击率额外提升Y%。
+//
+////////////////////////////////////////////////////////////////
+
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_LowHPGainExtraCritRate",
+            "isDynamicAbility":true,
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachModifierToPredicateMixin",
+                    "modifierName": "UNIQUE_Relic_LowHPGainExtraCritRate",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetHPRatio",
+                            "HPRatio": "%HPRatio",
+                            "logic": "LesserOrEqual",
+                        },
+                    ],
+                },
+            ],
+            "onAdded":
+            [
+
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_LowHPGainExtraCritRate": //控制一下效果触发的周期
+                {
+                    "stacking": "Unique",
+                    "isUnique": true,
+                    "elementType": "None",
+                    "isLimitedProperties": true,
+                    "properties":
+                    {
+                        "Actor_CriticalDelta": "%CritRate",
+                    },
+                },
+            },
+            "abilitySpecials":
+            {
+                "CritRate": 0,
+                "HPRatio": 0,
+            },
+        },
+    },
+
+////////////////////////////////////////////////////////////////
+//
+//  210006
+//
+//  武人 2件
+//
+//  ID：56
+//
+//  Relic_AtkAndExtraAtkUp
+//
+//  角色造成普攻和重击伤害提高20%。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AtkAndExtraAtkUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_AtkAndExtraAtkUp",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_AtkAndExtraAtkUp":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+							"damagePercentageRatio":"%DmgRate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"DmgRate":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210006
+//
+//  武人 4件
+//
+//  ID：56
+//
+//  Relic_SkillEnhanceNormalAtkAndExtraAtk
+//
+//  施放元素战技后，普通攻击和重击造成的伤害提高X%。该效果持续Y秒
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_SkillEnhanceNormalAtkAndExtraAtk",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_SkillEnhanceNormalAtkAndExtraAtk_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_SkillEnhanceNormalAtkAndExtraAtk_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerSkill":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_SkillEnhanceNormalAtkAndExtraAtk",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_SkillEnhanceNormalAtkAndExtraAtk":
+				{
+					"duration":"%duration",
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":"%stack",
+					},
+					"state":"AttackUp",
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+							"damagePercentageRatio":"%DmgRate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"duration":0,
+				"stack":0,
+				"DmgRate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//	210007
+//
+//  教官  4件
+//
+//  ID： 57
+//
+//  Relic_ReactionGainExtraElemMasteryForTeam
+//
+//  触发元素反应后，队伍中所有角色的元素精通提高30点，持续7秒。   【3.0修正：添加了草元素相关反应】
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ReactionGainExtraElemMasteryForTeam",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionGainExtraElemMasteryForTeam_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ReactionGainExtraElemMasteryForTeam_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce","CrystallizeFire","CrystallizeWater","CrystallizeElectric","CrystallizeIce","Overdose","OverdoseElectric","OverdoseGrass","Overgrow","OvergrowMushroomFire","OvergrowMushroomElectric"],
+							"actions":
+							[
+								{
+									"$type":"RemoveUniqueModifier",
+									"modifierName":"UNIQUE_ReactionGainExtraElemMasteryForTeam",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_ReactionGainExtraElemMasteryForTeam",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_ReactionGainExtraElemMasteryForTeam":
+				{
+					"duration":"%duration",
+					"isUnique":true,
+					"state":"AttackUp",
+					"stacking" : "Refresh",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta":"%ElemMastery",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"duration":0,
+				"ElemMastery":0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//	210008
+//	赌徒  2件
+//	ID： 58
+//	Relic_SkillDamageUp
+//  元素战技伤害提升。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_SkillDamageUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_SkillDamageUp_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_SkillDamageUp_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags":["Elemental_Art"],
+							"damagePercentageRatio":"%DamagePer",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"DamagePer":0,
+			},
+		}
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//	210008
+//	赌徒  4件
+//	ID： 58
+//  击杀敌人时，有25%概率使元素战技立即完成冷却，每15秒只能触发1次。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_KillingRefreshSkill",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_KillingRefreshSkill",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Relic_KillingRefreshSkill_CD","UNIQUE_Relic_KillingRefreshSkill_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_KillingRefreshSkill_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByKillingMixin",
+							"detectWindow":0.6,
+							"onKill":
+							[
+								{
+									"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+									"target":"Other",
+									"targetPredicates":
+									[
+										{
+											"$type":"ByEntityTypes",
+											"target":"Target",
+											"entityTypes":["Monster",],
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type":"Randomed",
+											"chance":"%Rate",
+											"successActions":
+											[
+												{
+													"$type":"ApplyModifier",
+													"modifierName":"UNIQUE_Relic_KillingRefreshSkill",
+												},
+												{
+													"$type":"AddGlobalValue",
+													"key":"_ABILITY_Relic_KillingRefreshSkill",
+													"value":-1,
+													"useLimitRange":true,
+													"maxValue":-1,
+													"minValue":-1,
+												},
+											]
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_KillingRefreshSkill_CD":
+				{
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_KillingRefreshSkill",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Relic_KillingRefreshSkill",
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Relic_KillingRefreshSkill":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"ModifyAvatarSkillCD",
+							"skillSlot":[2],
+							"cdRatio":-1,
+						},
+						// {
+						// 	"$type":"AddGlobalValue",
+						// 	"key":"_Ability_Relic_CDCount", //圣遗物不记录cd
+						// 	"value":1,
+						// }
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"CDTime":0,
+				"Rate":0,
+			},
+		}
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//	210009
+//
+//	流放者  4件
+//
+//	ID： 59
+//
+//	Relic_UltGainEnergyForTeam
+//
+//  每次使用元素爆发后，每2秒为队伍中其他成员恢复2点能量，持续6秒，重复触发刷新时间。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_UltGainEnergyForTeam",//可以考虑加给team，然后每2秒给成员回复。
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_UltGainEnergyForTeam_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_UltGainEnergyForTeam_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerUltimateSkill":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target": "AllPlayerAvatars",
+									"modifierName":"UNIQUE_Relic_UltGainEnergyForTeam",
+									"predicates":
+									[
+										{
+										    "$type": "ByTargetType",
+										    "targetType":"Self",
+										    "isTarget":false,
+										},
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+								{
+									"$type":"AddElementDurability",  //如果之前存在modifier，那么必然上不去（因为UNIQUE需要caster和ability都是上的那个）
+									"value":100,
+									"useLimitRange":true,
+									"maxValue":100,
+									"modifierName":"UNIQUE_Relic_UltGainEnergyForTeam",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+										    "$type": "ByTargetType",
+										    "targetType":"Self",
+										    "isTarget":false,
+										},
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_UltGainEnergyForTeam": //不同ability的UNIQUE无法叠加。（卒）考虑先干掉再上吧。
+				{
+					"duration":6.5,
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ReviveElemEnergyMixin",
+							"type":"Both",
+							"period":2,
+							"baseEnergy":"%EnergyAmount",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"EnergyAmount":0, //测试数据，记得干掉。
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210010
+//
+//  冒险家  4件
+//
+//	ID： 60
+//
+//  Relic_ChestHealSelf
+//
+//  开启宝箱时，在X秒内恢复自身Y%生命值。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ChestHealSelf",
+			"isDynamicAbility":true,
+			"abilityMixins" :
+			[
+				{
+					"$type":"DoActionByEventMixin",
+					"type" : "Current",
+					"onEvent":"ChestOpen",
+					"actions" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName":"UNIQUE_Relic_ChestHealSelf",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ChestHealSelf" : //这个也没法unique
+				{
+					"duration" : "%HealDuration+%Dura_Delay",
+					"isUnique":true,
+					"stacking" : "Refresh",
+					"thinkInterval":"%HealInterval",
+					"onThinkInterval" :
+					[
+						{
+							"$type" : "HealHP",
+							"amountByTargetMaxHPRatio" : "%HealRatio",
+							"target":"Self",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"HealDuration":0,
+				"HealInterval":0,
+				"HealRatio":0,
+				"Dura_Delay":0.5,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  210011
+//
+//  幸运儿 4件
+//
+//  ID：61
+//
+//  Relic_CoinHealSelf
+//
+//  每次拾取金币时，立即恢复X点生命值。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_CoinHealSelf",
+			"isDynamicAbility":true,
+			"abilityMixins" :
+			[
+				{
+					"$type":"DoActionByEventMixin",
+					"type" : "Current",
+					"onEvent":"PickItem",
+					"pickItemConfigIDs":[70590011],
+					"actions" :
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName":"UNIQUE_Relic_CoinHealSelf",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_CoinHealSelf":
+				{
+					"duration":1,
+					"isUnique":true,
+					"stacking":"Unique",
+					"onAdded":
+					[
+                        {
+                            "$type": "HealHP",
+                            "amount": "%HealAmount",
+                            "target":"Self",
+                        },
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"HealAmount":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  210012
+//
+//  学士 4件
+//
+//  ID： 62
+//
+//  Relic_RestoreEnergyGainExtraEnergyForTeam
+//
+//  每当获得元素能量时，队伍中弓箭和法器类角色额外获得3点能量。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_RestoreEnergyGainExtraEnergyForTeam",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_RestoreEnergyGainExtraEnergyForTeam_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_RestoreEnergyGainExtraEnergyForTeam_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByEnergyChangeMixin",
+							"elementTypes":["Electric","Fire","Water","Grass","Ice","Wind","Rock"],
+							"doWhenEnergyMax":true,
+							"onGainEnergyByBall":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_CheckBoworMage",
+									"target": "AllPlayerAvatars",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_CheckBoworMage":
+				{
+					"isUnique":true,
+					"duration":3,
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"doOffStage":true,
+							"modifierName": "RestoreEnergyGainExtraEnergyForTeam",
+							"predicates":
+							[
+								{
+									"$type":"ByAvatarWeaponType",
+									"weaponTypes":["WEAPON_CATALYST","WEAPON_BOW"],
+								},
+							],
+						}
+					],
+				},
+				"RestoreEnergyGainExtraEnergyForTeam":
+				{
+					"duration":0.15,
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":"%EnergyAmount",
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"EnergyAmount":0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  210013
+//
+//  游医  4件
+//
+//  ID：63
+//
+//  Relic_UltHealSelf
+//
+//  每次使用元素爆发后，立即恢复X%生命值。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_UltHealSelf",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_UltHealSelf_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_UltHealSelf_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerUltimateSkill":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_UltHealSelf",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_UltHealSelf":
+				{
+					"duration":1,
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAdded":
+					[
+                        {
+                            "$type": "HealHP",
+                            "amountByTargetMaxHPRatio": "%HealRatio",
+                            "target":"Self",
+                        },
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"HealRatio":0,
+			},
+		},
+	},
+
+
+///////////////////////////////////////////////////////////////
+//
+//  214001 征服寒冬的勇士 4件
+//
+//  ID：71
+//
+//  对受到寒冷、冻结效果影响的敌人，造成暴击率提高，对冰冻暴击率再额外提高。
+//
+///////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_CriticUpAgainstIceAndFrozen",
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_CriticUpAgainstIceAndFrozen_Handler",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_CriticUpAgainstIceAndFrozen_Handler":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "bonusCritical": "%Rate1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByHasElement", //包括冰附着
+                                            "element": "Ice",
+                                        },
+										{
+                                            "$type": "ByHasElement", //冰史莱姆冰深渊,和冻结
+                                            "element": "Frozen",
+                                        },
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "bonusCritical": "%Rate2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+		                        {
+		                            "$type": "ByHasAbilityState",
+		                            "abilityState": "ElementFreeze",//冻结,注意和haselement=Frozen是重合的，所以冻结会被算2次。
+		                        },
+                            ],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "Rate1": 0,
+                "Rate2": 0,
+            },
+        },
+    },
+
+///////////////////////////////////////////////////////////////
+//
+//  214002
+//
+//  平息雷鸣的尊者  4件
+//
+//  ID：72
+//
+//  对受到雷元素附着效果影响的敌人，伤害提升35%。
+//
+///////////////////////////////////////////////////////////////
+
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_DamageUpAgainstElectric",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_DamageUpAgainstElectric_Handler",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_DamageUpAgainstElectric_Handler":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "damagePercentageRatio": "%Rate",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+                                            "element": "Electric",
+                                        },
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "Rate": 0,
+            },
+        },
+    },
+
+///////////////////////////////////////////////////////////////
+//
+//  214003
+//
+//  渡过烈火的贤人 4件
+//
+//  ID：73
+//
+//  对受到火元素附着、点燃效果影响的敌人，伤害提升35%。
+//
+///////////////////////////////////////////////////////////////
+
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_DamageUpAgainstFireAndBurning",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Relic_DamageUpAgainstFireAndBurning_Handler",
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_DamageUpAgainstFireAndBurning_Handler":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ModifyDamageMixin",
+                            "ignoreEventInfo": true,
+                            "damagePercentageRatio": "%Rate",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes":
+                                    [
+                                        "Monster",
+                                    ],
+                                },
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+                                            "element": "Fire",
+                                        },
+										{
+											"$type" : "ByHasAbilityState",
+											"abilityState" : "ElementBurning",
+										},
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                    "isUnique": true,
+                },
+            },
+            "abilitySpecials":
+            {
+                "Rate": 0,
+            },
+        },
+    },
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  214004 被怜爱的少女套 4件
+//
+//  ID：74
+//
+//  释放小技能和充能技时，全队获得XX%治疗加成
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_SkillEnhanceCured",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Relic_SkillEnhanceCured",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Relic_SkillEnhanceCured",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+					"onTriggerSkill":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Relic_SkillEnhanceCured",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Relic_SkillEnhanceCured",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_SkillEnhanceCured":
+				{
+					"duration":"%Dura",
+					"isUnique":true,//这样会导致不能叠加。需要注意是否设定。
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_HealedAddDelta":"%HealUp",
+					},
+				},
+			},
+			"abilitySpecials" :
+			{
+				"HealUp": 0,
+				"Dura":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215001 角斗士的终幕礼 4件
+//
+//  ID：75
+//
+//  近战武器角色，普攻伤害提升20%
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_MeleeAttackUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_MeleeAttackUp",
+					"predicates":
+					[
+						{
+							"$type":"ByAvatarWeaponType",
+							"weaponTypes":["WEAPON_SWORD_ONE_HAND","WEAPON_CLAYMORE","WEAPON_POLE"], //这个是判断角色定义的所用武器的，角色实际装备了什么不影响判定。
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_MeleeAttackUp":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06"],
+							"damagePercentageRatio":"%DmgRate",
+							/*"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],*/
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"DmgRate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215002  翠绿之影 4件
+//
+//  ID 76
+//
+//  造成的扩散反应伤害提升X%。扩散会同时削弱敌人对应的元素抗性X%，持续x秒。
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ReactionWindEnhance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionWindEnhance_Handler"
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ReactionWindEnhance_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["SwirlFire"],
+							"actions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target":"Other",
+									"modifierName":"UNIQUE_Relic_ElementFireDefDown",
+								},
+								// {
+								// 	"$type":"FireEffect",
+								// 	"target":"Other",
+								// 	"effectPattern":"Eff_Weapon_Blast_R30",
+								// },
+							],
+						},	//一个检测发生了元素反应的mixin
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["SwirlWater",],
+							"actions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target":"Other",
+									"modifierName":"UNIQUE_Relic_ElementWaterDefDown",
+								},
+								// {
+								// 	"$type":"FireEffect",
+								// 	"target":"Other",
+								// 	"effectPattern":"Eff_Weapon_Blast_R30",
+								// },
+							],
+						},	//一个检测发生了元素反应的mixin
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["SwirlElectric",],
+							"actions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target":"Other",
+									"modifierName":"UNIQUE_Relic_ElementElecDefDown",
+								},
+								// {
+								// 	"$type":"FireEffect",
+								// 	"target":"Other",
+								// 	"effectPattern":"Eff_Weapon_Blast_R30",
+								// },
+							],
+						},	//一个检测发生了元素反应的mixin
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["SwirlIce"],
+							"actions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target":"Other",
+									"modifierName":"UNIQUE_Relic_ElementIceDefDown",
+								},
+								// {
+								// 	"$type":"FireEffect",
+								// 	"target":"Other",
+								// 	"effectPattern":"Eff_Weapon_Blast_R30",
+								// },
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Swirl_FireDamage","Swirl_WaterDamage","Swirl_ElectricDamage","Swirl_IceDamage","Self_Swirl_FireDamage","Self_Swirl_WaterDamage","Self_Swirl_ElectricDamage","Self_Swirl_IceDamage"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target":"Target",
+									"modifierName":"UNIQUE_Relic_ElementFireDefDown",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Fire",
+										},
+										{
+											"$type" : "ByEntityTypes",
+											"entityTypes" : ["Monster"],
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"target":"Target",
+									"modifierName":"UNIQUE_Relic_ElementWaterDefDown",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Water",
+										},
+										{
+											"$type" : "ByEntityTypes",
+											"entityTypes" : ["Monster"],
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"target":"Target",
+									"modifierName":"UNIQUE_Relic_ElementElecDefDown",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Electric",
+										},
+										{
+											"$type" : "ByEntityTypes",
+											"entityTypes" : ["Monster"],
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"target":"Target",
+									"modifierName":"UNIQUE_Relic_ElementIceDefDown",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Ice",
+										},
+										{
+											"$type" : "ByEntityTypes",
+											"entityTypes" : ["Monster"],
+										},
+									],
+								},
+								// {
+								// 	"$type":"ApplyModifier",
+								// 	"target":"Target",
+								// 	"modifierName":"UNIQUE_Relic_ElementWindDefDown",
+								// 	"predicates":
+								// 	[
+								// 		{
+								// 			"$type":"ByHitElement",
+								// 			"element":"Wind",
+								// 		},
+								// 		{
+								// 			"$type" : "ByEntityTypes",
+								// 			"entityTypes" : ["Monster"],
+								// 		},
+								// 	],
+								// },
+							],
+						},
+					],
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemReactSwirlFireDelta":"%ReactionUp",
+						"Actor_ElemReactSwirlWaterDelta":"%ReactionUp",
+						"Actor_ElemReactSwirlIceDelta":"%ReactionUp",
+						"Actor_ElemReactSwirlElectricDelta":"%ReactionUp",
+					},
+				},
+				"UNIQUE_Relic_ElementFireDefDown":
+				{
+					"isUnique":true,
+					"duration":"%Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireSubHurtDelta":"%ResistDown*%Minus"
+					},
+				},
+				"UNIQUE_Relic_ElementWaterDefDown":
+				{
+					"isUnique":true,
+					"duration":"%Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_WaterSubHurtDelta":"%ResistDown*%Minus"
+					},
+				},
+				"UNIQUE_Relic_ElementIceDefDown":
+				{
+					"isUnique":true,
+					"duration":"%Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_IceSubHurtDelta":"%ResistDown*%Minus"
+					},
+				},
+				"UNIQUE_Relic_ElementElecDefDown":
+				{
+					"isUnique":true,
+					"duration":"%Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElecSubHurtDelta":"%ResistDown*%Minus"
+					},
+				},
+				// "UNIQUE_Relic_ElementWindDefDown":
+				// {
+				// 	"isUnique":true,
+				// 	"duration":"%Dura",
+				// 	"state":"DefenseDown",
+				// 	"isLimitedProperties":true,
+				// 	"properties":
+				// 	{
+				// 		"Actor_WindSubHurtDelta":"%ResistDown*%Minus"
+				// 	},
+				// },
+			},
+			"abilitySpecials":
+			{
+				"ReactionUp":0,
+				"ResistDown":0,
+				"Dura":0,
+				"Minus":-1,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215003
+//
+//  流浪的大地乐团 4件
+//
+//  ID：77
+//
+//  远程武器角色，普攻伤害提升20%
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relci_RangerAttackUp",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relci_RangerAttackUp",
+					"predicates":
+					[
+						{
+							"$type":"ByAvatarWeaponType",
+							"weaponTypes":["WEAPON_CATALYST","WEAPON_BOW"], //这个是判断角色定义的所用武器的，角色实际装备了什么不影响判定。
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relci_RangerAttackUp":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["ExtraAttack"],
+							"damagePercentageRatio":"%DmgRate",
+							/*"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],*/
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"DmgRate":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215004
+//
+//  冰之川与雪之砂 4件（未投放，2020.10.15）
+//
+//  ID：78
+//
+//  超导、融化反应加成20%，释放充能技后提升30%冰强
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ReactionIceEnhance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionIceEnhance",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_Relic_ReactionIceEnhance_Stack"
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ReactionIceEnhance":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_ElemReactSConductDelta":"%ReactionUp",
+						"Actor_ElemReactMeltDelta":"%MeltUp",
+					},
+				},
+				"UNIQUE_Relic_ReactionIceEnhance_Stack":
+				{
+					"duration":"%Dura",
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_IceAddHurtDelta":"%IceUp",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ReactionUp":0,
+				"MeltUp":0,
+				"Dura":0,
+				"IceUp":0,
+			},
+		}
+	},
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  215005
+//
+//  如雷的盛怒 4件
+//
+//  ID ：79
+//
+//  超载、超导、感电反应加成20%    触发反应减少1秒技能cd，内置冷却0.8秒。   【3.0修正：增加激化、激化雷、蔓生雷相关效果】
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ReactionElectricEnhance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionElectricEnhance",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_ReactionElectricEnhance",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Relic_ReactionElectricEnhance_CD","UNIQUE_Relic_ReactionElectricEnhance_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ReactionElectricEnhance":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_ElemReactExplodeDelta":"%ReactionUp",
+						"Actor_ElemReactSConductDelta":"%ReactionUp",
+						"Actor_ElemReactElectricDelta":"%ReactionUp",
+						"Actor_ElemReactOvergrowElectricDelta":"%ReactionUp",  //3.0修正：蔓生雷增幅40%
+						"Actor_ElemReactOverdoseElectricDelta":"%OverdoseElectricReactionUp",  //3.0修正：激化雷增幅X%
+					},
+				},
+				"UNIQUE_Relic_ReactionElectricEnhance_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个就是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Explode","Superconductor","Shock","Overdose","OverdoseElectric","OvergrowMushroomElectric"],    //3.0修正：增加激化、激化雷、蔓生雷
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_ReactionElectricEnhance_CDReduce",
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key":"_ABILITY_Relic_ReactionElectricEnhance",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+								},
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Relic_ReactionElectricEnhance_CD":
+				{
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_ReactionElectricEnhance",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Relic_ReactionElectricEnhance_CDReduce":
+				{
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"ModifyAvatarSkillCD",
+							"skillSlot":[2],
+							"cdDelta":-1, // 这个地方不支持Dynamicfloat。另外实测减了2倍的cd，奇怪了（1.0版本程序已修复
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_Ability_Relic_CDCount",
+							"value":1,
+						}
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ReactionUp":0,
+				"CDTime":0,
+				"OverdoseElectricReactionUp":0,  //3.0修正：新增参数，激化雷的增幅系数
+			},
+		}
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215006
+//
+//  炽烈的炎之魔女 4件
+//
+//  ID： 80
+//
+//  超载、点燃等伤害提升20%，每次释放战技，使2件套效果提升50%，最多提高150%。   【3.0修正】：新增蔓生火
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ReactionFireEnhance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionFireEnhance",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"UNIQUE_Relic_ReactionFireEnhance_Stack"
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ReactionFireEnhance":
+				{
+					"isLimitedProperties":true,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_ElemReactExplodeDelta":"%ReactionUp",
+						"Actor_ElemReactBurnDelta":"%ReactionUp",
+						"Actor_ElemReactOvergrowFireDelta":"%ReactionUp",   //3.0新增：蔓生火，与超载燃烧增幅系数相同
+						"Actor_ElemReactSteamDelta":"%MeltUp",
+						"Actor_ElemReactMeltDelta":"%MeltUp",
+					},
+				},
+				"UNIQUE_Relic_ReactionFireEnhance_Stack":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":3,
+					},
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%FireUp*%ExtraPercent",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"ReactionUp":0,
+				"MeltUp":0,
+				"FireUp":0,
+				"Dura":0,
+				"ExtraPercent":0,
+			},
+		}
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215007
+//
+//  昔日宗室之仪 2件
+//
+//  ID：81
+//
+//  Relic_ElementalBurstUp
+//
+//  元素爆发伤害提升15%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ElementalBurstUp",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags": ["Elemental_Burst"],
+					"damagePercentageRatio":"%Rate",
+					"predicates":
+					[
+						{
+							"$type":"ByEntityTypes",
+							"target":"Target",
+							"entityTypes":["Monster",],
+						},
+					],
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215007
+//
+//  昔日宗室之仪 4件
+//
+//  ID：81
+//
+//  Relic_TeamAtkupAfterElementalBurst
+//
+//  释放元素爆发后，全队攻击提升15%，持续10秒。 会有图标
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_TeamAtkupAfterElementalBurst",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Relic_TeamAtkupAfterElementalBurst",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Relic_TeamAtkupAfterElementalBurst",
+							"target":"AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_TeamAtkupAfterElementalBurst":
+				{
+					"duration":"%Time",
+					"isUnique":true,//unique效果相当于不叠加效果。
+					"state":"AttackUp",
+					"buffID":10001,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio" : "%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Time":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215008
+//
+//  染血的骑士道 4件
+//
+//  ID： 82
+//
+//  Relic_KillEnhanceExtraAtk
+//
+//  击杀敌人后，重击不消耗体力且伤害提升30%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_KillEnhanceExtraAtk",
+			"isDynamicAbility":true,
+			"onRemoved":
+			[
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Relic_KillEnhanceExtraAtk",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_KillEnhanceExtraAtk",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [-1.5, -0.5, 0.5],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" : ["UNIQUE_Relic_KillEnhanceExtraAtk_CD","UNIQUE_Relic_KillEnhanceExtraAtk_Handler",],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_KillEnhanceExtraAtk_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByKillingMixin",
+							"detectWindow":0.6,
+							"onKill":
+							[
+								{
+									"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+									"target":"Other",
+									"targetPredicates":
+									[
+										{
+											"$type":"ByEntityTypes",
+											"target":"Target",
+											"entityTypes":["Monster",],
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type":"ApplyModifier",
+											"modifierName":"UNIQUE_Relic_KillEnhanceExtraAtk",
+										},
+										{
+											"$type":"AddGlobalValue",
+											"key":"_ABILITY_Relic_KillEnhanceExtraAtk",
+											"value":-1,
+											"useLimitRange":true,
+											"maxValue":-1,
+											"minValue":-1,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_KillEnhanceExtraAtk":
+				{
+					"duration":"%Dura",
+					"state":"AttackUp",
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["ExtraAttack"],
+							"damagePercentageRatio":"%Rate",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+						},
+						/*{
+							"$type": "SwitchSkillIDMixin",//好像不行
+							"fromSkillID": 10001,
+							"toSkillID": 10006,
+						},*/
+						{
+							"$type":"AttachToStateIDMixin",
+							"stateIDs":
+							[
+								"ExtraAttack",
+								"ExtraAttack1",
+								"ExtraAttack2",
+								"ExtraAttack3",
+								"ExtraAttack_BS",
+								"ExtraAttack_Charge",
+								///////
+								"Attack01",
+								"Attack02",
+								"Attack03",
+								"Attack04",
+								"Attack05",
+								"Attack06",
+								///////
+								"Gandalfr_Attack01",
+								"Gandalfr_Attack02",
+								"Gandalfr_Attack03",
+								"Gandalfr_Attack04",
+								"Gandalfr_Attack05",
+								"Gandalfr_Attack06",
+								"Gandalfr_ExtraAttack",
+								///////
+								"Katana_Attack01",
+								"Katana_Attack02",
+								"Katana_Attack03",
+								"Katana_Attack04",
+								"Katana_Attack05",
+								"Katana_Attack06",
+								"Katana_ExtraAttack",
+							],
+							"modifierName":"UNIQUE_Relic_KillEnhanceExtraAtk_StaminaCost",
+						},
+					],
+				},
+				"UNIQUE_Relic_KillEnhanceExtraAtk_StaminaCost":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_CostStaminaRatio":"%StaminaReduce",//-200%肯定就不消耗了吧，用于大剑
+					},
+				},
+				"UNIQUE_Relic_KillEnhanceExtraAtk_CD":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"onRemoved":
+					[
+
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_KillEnhanceExtraAtk",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Dura":0,
+				"Rate":0,
+				"StaminaReduce":0,
+				"CDTime":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215009
+//
+//  祭火之人 单件
+//
+//  ID：83
+//
+//  火元素引起的效果持续时间减少40%
+//  6.5 单机测试已过
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_FireResistance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_FireResistance_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_FireResistance_Handler":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Fire",
+							"durationRatio":0.4,          //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215010
+//
+//  祭水之人 单件
+//
+//  ID：84
+//
+//  水元素引起的效果持续时间减少40%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_WaterResistance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_WaterResistance_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_WaterResistance_Handler":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Water",
+							"durationRatio":0.4,       //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215011
+//
+//  祭雷之人 单件
+//
+//  ID：85
+//
+//  雷元素引起的效果持续时间减少40%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_ElectricResistance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_EletricResistance_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_EletricResistance_Handler":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Electric",
+							"durationRatio":0.4,     //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215012
+//
+//  祭风之人 单件  （未投放）
+//
+//  ID：86
+//
+//  风元素引起的效果持续时间减少40%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_WindResistance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_WindResistance_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_WindResistance_Handler":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Wind",
+							"durationRatio":0.4,        //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215013
+//
+//  祭冰之人 单件
+//
+//  ID：87
+//
+//  冰元素引起的效果持续时间减少40%
+//
+///////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_IceResistance",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_IceResistance_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_IceResistance_Handler":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Ice",
+							"durationRatio":0.4,           //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+						{
+							"$type":"AttachElementTypeResistance",
+							"elementType":"Frozen",
+							"durationRatio":0.4,           //减少对应元素持续时间百分比，(该参数非DynamicFloat，不能用变量做赋值)
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215014
+//
+//  悠古的磐岩 4件
+//
+//  ID：88
+//
+//  Relic_ElementDmgUpAfterCrystalShield
+//
+//  拾取元素结晶提升全队对应元素伤害35%，持续10s；获得不同类型元素结晶，将替换上一个效果
+//
+///////////////////////////////////////////////////////////////
+
+	//这个写法很复杂，但是目前试下来能实现且无Bug，待后续迭代有更简单的办法
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_ElementDmgUpAfterCrystalShield",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				//因为没有针对元素结晶的Predicate，只能在Mixin当中遍历结晶的元素类型
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Fire"],
+					"actions":
+					[
+						{//不同角色之间携带该圣遗物需要保证效果唯一性，因此不同角色在上Buff前需要清一次之前获得的Buff效果
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Water"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Grass"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Electric"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Ice"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Wind"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"DoActionByGainCrystalSeedMixin",
+					"elementTypes":["Rock"],
+					"actions":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff",
+							"target": "AllPlayerAvatars",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamFireBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWaterBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_WaterAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamGrassBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_GrassAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamElectricBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamIceBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_IceAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamWindBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_WindAddHurtDelta":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_ElementDmgUpAfterCrystalShield_TeamRockBuff":
+				{
+					"isUnique":true,
+					"duration": "%Dura",
+					"isLimitedProperties":true,
+					"state":"AttackUp",
+					"properties":
+					{
+						"Actor_RockAddHurtDelta":"%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Dura":0,
+			},
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  215015
+//
+//  逆飞的流星  4件
+//
+//  ID：89
+//
+//  Relic_ShieldEnhanceAtk  受到护盾庇护时，角色额外获得XX%普攻和重击伤害加成。
+//  6.5单机测试已过
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Relic_ShieldEnhanceAtk",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ShieldEnhanceAtk_Handler",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_Ability_Relic_ShieldEnhanceAtk_Check",
+					"removeAppliedModifier":true,
+					"valueSteps":[-0.5,0.5,1.5],
+					"modifierNameSteps":
+					[
+						"UNIQUE_Relic_ShieldEnhanceAtk_NoBuff",
+						"UNIQUE_Relic_ShieldEnhanceAtk_HasBuff",
+					],
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"damagePercentageRatio":"%Rate",
+					"attackTags":
+					[
+						"NormalAttack_01",
+						"NormalAttack_02",
+						"NormalAttack_03",
+						"NormalAttack_04",
+						"NormalAttack_05",
+						"NormalAttack_06",
+						"ExtraAttack",
+					],
+					"predicates":
+					[
+						{
+							"$type":"ByEntityTypes",
+							"target":"Target",
+							"entityTypes":["Monster"],
+						},
+						{
+							"$type":"ByHasShield",
+							"target":"Self",
+							"type":"All",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				//通过Modifier上的Interval间隔检测自身是否有护盾进行属性增减
+				"UNIQUE_Relic_ShieldEnhanceAtk_Handler":
+				{
+					"isUnique":true,
+					"thinkInterval":1.0,
+					"onThinkInterval":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByHasShield",
+									"type":"All",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"_Ability_Relic_ShieldEnhanceAtk_Check",
+									"useLimitRange":true,
+									"maxValue":1,
+									"minValue":1,
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"AddGlobalValue",
+									"key":"_Ability_Relic_ShieldEnhanceAtk_Check",
+									"useLimitRange":true,
+									"maxValue":0,
+									"minValue":0,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_ShieldEnhanceAtk_NoBuff":
+				{
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Relic_ShieldEnhanceAtk_HasBuff",
+						},
+					],
+				},
+				"UNIQUE_Relic_ShieldEnhanceAtk_HasBuff":   //控制特效播放
+				{
+					"isUnique":true,
+					"state":"AttackUp",
+					// "modifierMixins":
+					// [
+					// 	{
+					// 		"$type":"ModifyDamageMixin",
+					// 		"damagePercentageRatio":"%Rate",
+					// 		"attackTags":
+					// 		[
+					// 			"NormalAttack_01",
+					// 			"NormalAttack_02",
+					// 			"NormalAttack_03",
+					// 			"NormalAttack_04",
+					// 			"NormalAttack_05",
+					// 			"NormalAttack_06",
+					// 			"ExtraAttack",
+					// 		],
+					// 		"predicates":
+					// 		[
+					// 			{
+					// 				"$type":"ByEntityTypes",
+					// 				"target":"Target",
+					// 				"entityTypes":["Monster"],
+					// 			},
+					// 		],
+					// 	},
+					// ],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215016
+//
+//  沉沦之心 4件
+//
+//  ID：90
+//
+//  Relic_WaterSkillEnhanceNormalAtkAndExtraAtk
+//
+//  释放小技能后角色造成普攻和重击伤害提高20%。   5星水圣遗物套用。 （2020.10.15）
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_WaterSkillEnhanceNormalAtkAndExtraAtk",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_WaterSkillEnhanceNormalAtkAndExtraAtk_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_WaterSkillEnhanceNormalAtkAndExtraAtk_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerSkill":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_WaterSkillEnhanceNormalAtkAndExtraAtk",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_WaterSkillEnhanceNormalAtkAndExtraAtk":
+				{
+					"duration":"%duration",
+					"stacking":"MultipleAllRefresh",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType":"%stack",
+					},
+					"state":"AttackUp",
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+							"damagePercentageRatio":"%DmgRate",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"duration":0,
+				"stack":0,
+				"DmgRate":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215017
+//
+//  千岩牢固 4件
+//
+//  ID：91
+//
+//  Relic_ShieldCostUpWhenElementalArtHit
+//
+//  元素战技命中敌人时，队伍中所有角色获得攻击力提升20%,护盾强效提升20%效果，持续3秒。触发cd0.5秒，该效果不可叠加。角色在后台时也能触发效果.
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ShieldCostUpWhenElementalArtHit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_ApplyBuff",
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_ApplyBuff":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"stacking":"Unique",
+					"onAdded":
+					[
+                        {
+                        	"$type":"RemoveUniqueModifier",
+                        	"target": "AllPlayerAvatars",
+                        	"modifierName":"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_Buff",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+                        },
+                        {
+                        	"$type":"ApplyModifier",
+                        	"target": "AllPlayerAvatars",
+                        	"modifierName":"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_Buff",
+							"doOffStage":true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetPositionToSelfPosition",
+									"compareType":"XZ",
+									"value":40,
+									"logic": "LesserOrEqual",
+								},
+							],
+                        },
+					],
+				},
+				"UNIQUE_Relic_ShieldCostUpWhenElementalArtHit_Buff":
+				{
+					"isUnique":true,
+					"duration":"%Time",
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%AttackRate",
+						"Actor_ShieldCostMinusRatio":"%ShieldCost",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"AttackRate":0,
+				"ShieldCost":0,
+				"Time":0,
+				"CDTime":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215018
+//
+//  苍白之火 4件
+//
+//  ID：92
+//
+//  Relic_AttackUpWhenNormalAtkAndExtraAtkHit
+//
+//  元素战技命中时，自身的攻击力提升3%，持续5秒。3层后额外提升2件套效果1倍
+//
+////////////////////////////////////////////////////////////////
+
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AttackUpWhenNormalAtkAndExtraAtkHit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Handler",
+				},
+			],
+			"onRemoved":
+			[
+				//Ability卸除时需要重置全局变量值
+				{
+					"$type":"SetGlobalValue",
+					"key":"_ABILITY_Relic_AttackUpWhenNormalAtkAndExtraAtkHit",
+					"value":0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_AttackUpWhenNormalAtkAndExtraAtkHit",
+					"defaultGlobalValueOnCreate":0,
+					"valueSteps" : [0.5,1.5,100],
+					"removeAppliedModifier":true,
+					"modifierNameSteps" :
+					[
+						"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Buff1",
+						"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Buff2",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type": "ByAttackTags",
+									"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra"],
+								},
+							],
+							"successActions": //在success里嵌套predicated会有问题，因为丢失target了。
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_AddGlobalvalue"
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_AddGlobalvalue":
+				{
+					"duration":"%CDTime",
+					"isUnique":true,
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_BuffTime",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_AttackUpWhenNormalAtkAndExtraAtkHit",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":2,
+						},
+					],
+				},
+				"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_BuffTime":
+				{
+					"duration":"%Dura",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onRemoved":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key":"_ABILITY_Relic_AttackUpWhenNormalAtkAndExtraAtkHit",
+							"value" : 0,
+							"doOffStage":true,
+						},
+					],
+
+				},
+				"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Buff1":
+				{
+					"isUnique":true,
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate",
+					},
+				},
+				"UNIQUE_Relic_AttackUpWhenNormalAtkAndExtraAtkHit_Buff2":
+				{
+					"isUnique":true,
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Rate*2",
+						"Actor_PhysicalAddHurtDelta":"%ExtraRate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"Dura":0,
+				"CDTime":0,
+				"ExtraRate":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215019
+//
+//  2.0 神社 耗能套 4件
+//
+//  ID：93
+//
+//  Relic_NormalDamageUpIfCostEnergy
+//
+//  施放元素战技时，如果当前元素能量高于20，则会消耗20元素能量，使普通攻击、重击、下落攻击伤害提高50
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_NormalDamageUpIfCostEnergy",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Relic_NormalDamageUpIfCostEnergy_Check",
+					"removeAppliedModifier":true,
+					"valueSteps":[-1.5,-0.5,0.5],
+					"modifierNameSteps":
+					[
+						"UNIQUE_Relic_NormalDamageUpIfCostEnergy_CD",
+						"UNIQUE_Relic_NormalDamageUpIfCostEnergy_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_NormalDamageUpIfCostEnergy_Handler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerSkill":
+							[
+								{
+									"$type":"Predicated",
+									"target":"Self",
+									"doOffStage": true,
+									"targetPredicates":
+									[
+										{
+											"$type":"ByEnergy",
+											"value":"%EnergyCost",
+											"logic":"GreaterOrEqual",
+										},
+									],
+									"successActions":
+									[
+										{
+											"$type":"ReviveElemEnergy",
+											"doOffStage": true,
+											"value":"-%EnergyCost",
+										},
+										{
+											"$type":"ApplyModifier",
+											"doOffStage": true,
+											"modifierName":"UNIQUE_Relic_NormalDamageUpIfCostEnergy_Buff",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_NormalDamageUpIfCostEnergy_Buff":
+				{
+					"duration":"%Time",
+					"state":"AttackUp",
+					"isUnique":true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_NormalDamageUpIfCostEnergy_Check",
+							"value":-1,
+							"useLimitRange":true,
+							"maxValue":-1,
+							"minValue":-1,
+							"doOffStage":true,
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack","FallingAttack"],
+							"damagePercentageRatio":"%DamageUp",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Relic_NormalDamageUpIfCostEnergy_Check",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,//这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Relic_NormalDamageUpIfCostEnergy_CD": //不拆开了，cd和buff记在了一起。
+				{
+					"isUnique":true,
+				},
+			},
+			"abilitySpecials":
+			{
+				"EnergyCost":0,
+				"DamageUp":0,
+				"Time":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215020
+//
+//  2.0 武士套 充能套 4件
+//
+//  ID：94
+//
+//  Relic_ElementalBurstUpByChargeEfficiency
+//
+//  元素爆发造成的伤害提高，数值相当于角色充能效率的xx%。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ElementalBurstUpByChargeEfficiency", //2种实现方法，注意一下：1、放大时刷新一次数值。2、实时计算数值。只是写法上不同,目前选了实时计算。如有问题可以改为thinkinterval判断
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",  //武器有个bug是onAdded时间比overrideMap设置早，目前看来relic没这个问题。
+					"key": "_ABILITY_Relic_ElementalBurstUpByChargeMax",
+					"value": "%MaxDamageUp",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Relic_ElementalBurstUpByChargeZero",
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["Elemental_Burst",],
+					"damagePercentageRatio":"%Ratio*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY", //即时的，非快照。
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",//不能使用ByTargetOverrideMap，因为mixin不支持
+							"target":"Self",
+							"key": "_ABILITY_Relic_ElementalBurstUpByChargeMax",
+							"value": "%Ratio*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY",//值必须在0和max之间才会有增益。
+							"compareType":"MoreThan",
+						},
+						{
+							"$type":"ByTargetGlobalValue",
+							"target":"Self",
+							"key": "_ABILITY_Relic_ElementalBurstUpByChargeZero",
+							"value": "%Ratio*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY",
+							"compareType":"LessAndEqual",
+						},
+					],
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags":["Elemental_Burst",],
+					"damagePercentageRatio":"%MaxDamageUp", //超过上限时，只增伤到上限
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"target":"Self",
+							"key": "_ABILITY_Relic_ElementalBurstUpByChargeMax",
+							"value": "%Ratio*%FIGHT_PROP_NONEXTRA_CHARGE_EFFICIENCY",
+							"compareType":"LessAndEqual",
+						},
+					],
+				},
+			],
+			"abilitySpecials":
+			{
+				"Ratio":0,
+				"MaxDamageUp":0
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  215020   （测试用，这套可能带来脱手系的大幅强化，建议先压一压）
+//
+//  2.0  充能套 4件
+//
+//  ID：94
+//
+//  Relic_
+//
+//  元素爆发造成伤害时，对场上所有角色恢复1点能量，同一目标x秒内不会再次受到此效果影响。后场生效。 （即unique，必须超过时间才可能上上去）
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ElementalBurstGainTeamEnergy", //实现时用到了UNIQUE+unique，时间内无法被别人和自己刷新。
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_CheckElementalBurstAttack",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_CheckElementalBurstAttack":
+				{
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Burst",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"target": "AllPlayerAvatars",
+									"modifierName":"UNIQUE_Relic_ElementalBurstAttackGainEnergy",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_ElementalBurstAttackGainEnergy": //两个relic也不能叠加。
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Weapon_TriggerGreen", //测试用特效，看是否需要
+							"doOffStage":true,
+						},
+						{
+							"$type":"ReviveElemEnergy",
+							"value":"%Energy",
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Energy":2,
+				"CDTime":2,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215021
+//
+//  2.3  岩防御伤害套 4件  （备用）
+//
+//  ID：95
+//
+//  Relic_RaiseDefenceAndRock
+//
+//  不受伤时，一段时间x秒，提升一次层数，提升防御和岩伤，最高4层。受到伤害减少1层，每0.5秒最多减少1层。
+//
+////////////////////////////////////////////////////////////////
+
+
+	/*{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_RaiseDefenceAndRock", //
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_Defender_Handler"
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_Defender_Level",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-1.5,
+						-0.5,
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+						10
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Relic_DefenderResetTimer",
+						"UNIQUE_Relic_DefenderBuff0",
+						"UNIQUE_Relic_DefenderBuff1",
+						"UNIQUE_Relic_DefenderBuff2",
+						"UNIQUE_Relic_DefenderBuff3",
+						"UNIQUE_Relic_DefenderBuff4",
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_Defender_Handler": {
+					"isUnique": true,
+					"onBeingHit": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Relic_Defender_Leveldown",
+							// "doOffStage": true,//后台受击是否可以不算？
+							"predicates": [
+								{
+									"$type": "ByHitDamage",//受到伤害
+									"damage": 0,
+									"logic": "Greater",
+								},
+								// {
+								// 	"$type":"ByHitEnBreak", //受到伤害和受到“攻击”的不同。需要取舍一下。
+								// 	"damage":0,
+								// 	"logic":"Greater",
+								// },
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_Defender_Leveldown": {
+					"duration": "%Leveldown_CD",
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": -1, //需要保证一直受击的话永远不会开始计时。后台受击是否可以不算？
+							"doOffStage": true,
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberBehit",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number0",
+							"predicates": [
+								{
+									"$type":"ByTargetGlobalValue", //仅当“被打”+被打后数值为0，才会播放这个特效。
+									"value": 0,
+									"key": "_ABILITY_Relic_Defender_Level",
+								},
+							]
+						},
+					],
+				},
+				"UNIQUE_Relic_DefenderResetTimer": //掉光时跳到这个modifier，将计时重置，需要花点时间才能重新开始计时。
+				{
+					"isUnique": true,
+					"thinkInterval": 0.1, //回到第0层要花点时间,不然的话在0层一直挨打也可能触发addGV
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Relic_DefenderBuff0": {
+					"isUnique": true,
+					"thinkInterval": "%Interval", //这个在后场要生效
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"doOffStage":true,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberFlash",
+						},
+					],
+				},
+				"UNIQUE_Relic_DefenderBuff1": {
+					"onAdded": [
+						{
+							"$type":"AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number1",
+						},
+					],
+					"isUnique": true,
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberFlash",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate",
+						"Actor_RockAddHurtDelta": "%RockRate"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff2": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number2",
+						},
+					],
+					"isUnique": true,
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberFlash",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*2",
+						"Actor_RockAddHurtDelta": "%RockRate*2"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff3": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number3",
+						},
+					],
+					"isUnique": true,
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberFlash",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*3",
+						"Actor_RockAddHurtDelta": "%RockRate*3"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff4": {
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number4",
+						},
+					],
+					"isUnique": true,
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"doOffStage": true,
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*4",
+						"Actor_RockAddHurtDelta": "%RockRate*4"
+					},
+				},
+			},
+			"onRemoved": [
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Relic_Defender_Level",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Interval": 0, //之前4秒增加也有点快了。
+				"Rate": 0,
+				"RockRate":0,
+				"Leveldown_CD": 0, //1秒对于后场生效的，苛刻度有点低了。
+			},
+		},
+	},*/
+////////////////////////////////////////////////////////////////
+//
+//  215021
+//
+//  2.3  华馆梦醒形骸记 岩防御伤害套 4件
+//
+//  ID：95
+//
+//  Relic_RaiseDefenceAndRock
+//
+//  场下造成岩伤叠1层，后场每x秒叠1层。（有2种写法）
+//
+//  用interval减层的问题出在满层，满层的时候buff无法切换只能续，导致interval间隔不重置。
+//	方案1：所以减层的逻辑是放在onAdded上，每次刷新层数的时候自带一个减层modifier。4层用add时刷新，其他层在掉下来时刷新。（试了下这个逻辑很乱）
+//  方案2：满层刷新下interval。实现困难，目前看法是单独用一个modifier管4层。
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_RaiseDefenceAndRock", //
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_Defender_Handler"
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_Defender_NotLocalAvatar",
+				},
+			],
+			"onRemoved": [
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Relic_Defender_Level",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+				{
+					"$type": "RemoveUniqueModifier", //干掉无计时的modifier
+					"modifierName": "UNIQUE_Relic_Defender_Level_Timer",
+					"doOffStage": true,
+				},
+			],
+			"onAvatarOut": [
+				{
+					"$type":"RemoveUniqueModifier", //重刷1次计时  //机制比暗巷好一些，后续再想想有没有更好的。但不应该用一直判断的mixin
+					"modifierName": "UNIQUE_Relic_Defender_NotLocalAvatar",
+					"doOffStage": true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_Defender_NotLocalAvatar",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_Defender_Level",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-0.5,
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+						10
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Relic_DefenderBuff0",
+						"UNIQUE_Relic_DefenderBuff1",
+						"UNIQUE_Relic_DefenderBuff2",
+						"UNIQUE_Relic_DefenderBuff3",
+						"UNIQUE_Relic_DefenderBuff4",
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_Defender_NotLocalAvatar":{//还有种办法是通过predicatemixin加上，仅在后场加这个modifier
+					"isUnique": true,
+					"thinkInterval": "%BackTime",
+					"onThinkInterval": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Relic_Defender_Levelup",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByNot",
+									"predicates": [
+										{
+											"$type": "ByIsLocalAvatar",
+										},
+									],
+								},
+							]
+						},
+					],
+				},
+				"UNIQUE_Relic_Defender_Handler": {
+					"isUnique": true,
+					"onAttackLanded": [
+						{
+							"$type":"Predicated", //注意绝不能有dooffstage，因为需要自动判定角色在场
+							"target":"Target",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type":"ByHitElement",
+									"element": "Rock",
+								},
+								//不要求造成伤害
+								// {
+								// 	"$type":"ByHitDamage",
+								// 	"damage": 0,
+								// 	"logic": "Greater",
+								// },
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"target":"Self",
+									"modifierName": "UNIQUE_Relic_Defender_Levelup",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_Defender_Levelup": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Levelup_CD",
+					"onAdded": [
+						{
+							"$type": "FireEffect", //向上会有特效，向下不一定有
+							"effectPattern": "Eff_Relic_Rock_NumberFlash",
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue", //当增加前就已经是4层的话就不会再播放增加特效。
+									"value": 3.5,
+									"key": "_ABILITY_Relic_Defender_Level",
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier", //重新刷新计时,由于没有下上buff，不会有问题。
+							"modifierName": "UNIQUE_Relic_Defender_Level_Timer",
+							"doOffStage": true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Relic_Defender_Level_Timer",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Relic_Defender_Level_Timer":{//每层写interval是无法刷新interval时长的，只能单独开modifier处理掉层功能。
+					// "duration": "%Time",
+					"isUnique": true,
+					"thinkInterval": "%Time",
+					"onThinkInterval": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Relic_Rock_NumberBehit", //向下的特效
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue", //当增加前就已经是0层的话就不会再下降特效。
+									"value": 0.5,
+									"key": "_ABILITY_Relic_Defender_Level",
+									"compareType": "MoreThan",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Relic_Defender_Level",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": 0,
+							"doOffStage": true, //掉层必须dooffstage
+						},
+					],
+				},
+				"UNIQUE_Relic_DefenderBuff0": {
+					"isUnique": true,
+					"onAdded":[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number0",
+						},
+					],
+				},
+				"UNIQUE_Relic_DefenderBuff1": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number1",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate",
+						"Actor_RockAddHurtDelta": "%RockRate"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff2": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number2",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*2",
+						"Actor_RockAddHurtDelta": "%RockRate*2"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff3": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number3",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*3",
+						"Actor_RockAddHurtDelta": "%RockRate*3"
+					},
+				},
+				"UNIQUE_Relic_DefenderBuff4": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Relic_Rock_Number4",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_DefenceRatio": "%Rate*4",
+						"Actor_RockAddHurtDelta": "%RockRate*4"
+					},
+				},
+			},
+			"abilitySpecials": {
+				"Levelup_CD": 0, //叠层cd。
+				"BackTime":0,
+				"Rate": 0,
+				"RockRate": 0,
+				"Time": 0, //buff持续时间
+			},
+		},
+	},
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  215022
+//
+//  2.3  海染砗磲 珊瑚宫治疗套
+//
+//  ID：96
+//
+//  Relic_HealAndHolyNova
+//
+//  通过对队友治疗积累治疗能量，根据治疗量对周围x米内队友造成治疗，敌人造成伤害（要用ignoreAttackerProp，不能用TrueDamage）。
+//
+//  测试表明角色如果死亡ability会移除，将无法触发伤害。建议让球消散即可。
+//
+//  治疗球位置有问题，需要改成随角色转动的。特效也需要是状态机。
+//
+//  同时间只能存在一个治疗球。（这个怎么限制呢。。bullet只有单个所属，team则有清除问题。也可以考虑给team一个unique的modifier，控制GV。
+//
+//  GV有个问题，无法确定是谁加的，自然remove的时候不能移走自己的。如果用modifierattch的方式放到team上，那么relic移走的时候就只会带走自己的。不会影响别人。
+//
+////////////////////////////////////////////////////////////////
+
+
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_HealAndHolyNova", //
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValue",//初始化一下标记，如果已经有，那就不动。
+					"target":"Team",
+					"key": "_ABILITY_Relic_HealAndHolyNova_TeamHasBall",
+					"value":0,
+					"predicates": [
+						{
+							"$type":"ByTargetGlobalValue",
+							"key": "_ABILITY_Relic_HealAndHolyNova_TeamHasBall",
+							"compareType": "NoneOrEqual",
+							"value": 0,
+						},
+					]
+				},
+			],
+			"onRemoved": [
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Relic_HealAndHolyNova_BallEffect",
+					"doOffStage": true,
+				},
+			],
+			"onAbilityStart": [//为了节约，不准备写两个ability了。而在trigger这里做分支。
+				{
+					"$type":"Predicated",
+					"doOffStage": true,
+					// "target": "Caster", //这里Target可能没有指向Caster，查一下 //2021.9.27没问题。
+					"targetPredicates": [
+						{
+							"$type":"ByTargetOverrideMapValue",
+							"logic": "Equal",
+							// "targetAbilityName": "Relic_HealAndHolyNova",
+							"targetKey": "TriggerType",
+							"targetValue": 0,
+						},
+					],
+					"successActions": [
+						{
+							"$type": "AttachModifier", //给Team，用于处理唯一性，角色死亡回收,所以得ability去attach
+							"modifierName": "UNIQUE_Relic_HealAndHolyNova",
+							"target": "Team",
+							"doOffStage": true,
+						},
+					],
+					"failActions": [
+						{
+							"$type": "SetGlobalPos",
+							"target": "CurLocalAvatar",
+							"key": "_ABILITY_Relic_HealAndHolyNova_Position",
+							"setTarget": false, //存到Caster上，让攻击盒位置正确。因为后台角色位置不更新，用Caster位置会错误。
+							"doOffStage": true,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"parameter": "Burst",
+							"effectPattern": "Eff_Relic_Maria_Animator",
+							"target": "Team",
+							"doOffStage": true, //这个特效不回收，要记得别的地方销毁。
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",//这类set都无法在别人身上执行。所以没法放team上。
+							"globalValueKey": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"overrideMapKey": "HealAmount",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue", //限制下上下限
+							"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"value": "%HealAmount",
+							"useLimitRange": true,
+							"maxValue": "%MaxHealAmount",
+							"minValue": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"overrideMapKey": "HealAmount",
+							"doOffStage": true,
+						},
+						{ //需要参考导能圆盘时期的冲击波：1、ignoreAttackerProperty 2、用extra
+							"$type": "TriggerAttackEvent",
+							"doOffStage": true,
+							"target": "Caster", //这个target是施法者。(可能会有位置问题，需要注意用gadget还是用GV来完成)
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"height": 2,
+									"radius": 6,
+									"ignoreMassive": true,
+									"born": {
+										"$type": "ConfigBornByGlobalValue", //在球的位置爆炸，需要的话可能要做成gadget。
+										"positionKey": "_ABILITY_Relic_HealAndHolyNova_Position", //不在意角度
+									},
+								},
+								"attackInfo": {
+									"attackTag": "RelicSkill",
+									"attackProperty": {
+										"damageExtra": "%DamageRatio*%HealAmount", //需要根据治疗量算出来
+										"ignoreAttackerProperty": true, //这个除了无视攻击方，还会无视受击方的等级、防御。
+										"elementType": "None",
+										"strikeType": "Default",
+										"enBreak": 0,
+									},
+									"hitPattern": {
+										"onHitEffectName": "default", //注意下是否需要受击特效
+										"hitImpulseType": "LV1", //shake，甚至可以更低
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalValue", //重置全部队友的，防止队友有治疗量积累。
+							"target": "CurTeamAvatars",
+							"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_HealAndHolyNova_State", //0的时候计时
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Relic_HealAndHolyNova_CD",
+						"UNIQUE_Relic_HealAndHolyNova_Handler",
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_HealAndHolyNova_Handler":
+				{
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"onHeal": //后场也要判到heal
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",//这个target是治疗目标
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Avatar",
+									],
+								},
+							],
+							"successActions":[
+								{
+									"$type":"GetHealAmountToGlobalValue",  //群体治疗可能有问题，时序可能要调整。记得测试芭芭拉
+									"type":"Add",
+									"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+									"doOffStage": true,
+								},
+								{ //onheal回来时机不同，不能保证1帧内4个角色的onHeal都跑到。
+									"$type": "TriggerAbility", //给Team挂球，然后开始记录3秒内的治疗量。注意问题在于team可能挂不上。
+									"doOffStage": true,
+									"abilityName": "Relic_HealAndHolyNova",
+									"abilitySpecials": {
+										"TriggerType": 0,
+									},
+									"predicates":[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Team",
+											"key": "_ABILITY_Relic_HealAndHolyNova_TeamHasBall",
+											"compareType": "NoneOrEqual",
+											"value": 0,
+										},
+										{
+											"$type": "ByTargetGlobalValue", //防止0治疗触发(某些逻辑效果非表现效果有用到，如钟离盾)
+											"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+											"compareType": "MoreThan",
+											"value": 0,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_HealAndHolyNova": //挂在Team上，(类gadget，不会因为角色卡帧减速而影响爆的时间)，而且能保证唯一。
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Time",
+					"timeScale": "Level",//保底
+					"onAdded":[
+						{
+							"$type": "SetGlobalValue", //重置全部队友的，防止队友有治疗量积累。
+							"target": "CurTeamAvatars",//仅自己队伍，不包括联机队友
+							"key": "_ABILITY_Relic_HealAndHolyNova_HealSum",
+							"value": 0,
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type":"ByNot",
+									"predicates": [
+										{
+											"$type": "ByTargetType",
+											"targetType": "Caster"
+										},
+									]
+								},
+							]
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"target": "Caster",
+							"modifierName": "UNIQUE_Relic_HealAndHolyNova_BallEffect",
+							"doOffStage": true,
+						},
+						{
+							"$type":"ApplyModifier",//这个时长需要比3秒长，保证爆炸特效能播完再销毁。只能apply
+							"target": "Caster",
+							"modifierName": "UNIQUE_Relic_HealAndHolyNova_BallEffect",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue", //记下标记，测试下下掉ability时标记是否会恢复。
+							"target": "Self",
+							"key": "_ABILITY_Relic_HealAndHolyNova_TeamHasBall",
+							"value": 1,
+							"doOffStage": true,
+						},
+					],//modifier的结果就是角色死亡可能会失去伤害，需要注意测试
+					"onRemoved": [
+						{
+							"$type": "TriggerAbility", //目前死亡也会打出伤害。是因为死亡时间太长了。需要测一下加长后伤害是否还出来。
+							"target": "Caster",
+							"abilityName": "Relic_HealAndHolyNova",
+							"abilitySpecials": {
+								"TriggerType": 1,
+							},
+						},
+						{
+							"$type": "SetGlobalValue", //结束了再关掉caster的check
+							"target": "Caster",
+							"key": "_ABILITY_Relic_HealAndHolyNova_State",
+							"value": -1,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Relic_HealAndHolyNova_TeamHasBall",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Relic_HealAndHolyNova_BallEffect":
+				{
+					"isUnique": true,
+					"duration": "%Time+0.5",
+					"timeScale": "Level",
+					"onAdded": [
+						{
+							"$type": "SetGlobalDir",
+							"target": "CurLocalAvatar",
+							"key": "_ABILITY_Relic_HealAndHolyNova_Dir",
+							"setTarget": false, //存到Caster上，尝试重现这个攻击位置。让特效朝向正确，不用每次在世界坐标生成，然后飘到左边。
+							"doOffStage": true,
+						},
+						{
+							"$type":"SetGlobalValue",
+							"target": "Team",
+							"key": "_ABILITY_Relic_HealAndHolyNova_Dir_0",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_ABILITY_Relic_HealAndHolyNova_Dir_1",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Team",
+							"key": "_ABILITY_Relic_HealAndHolyNova_Dir_2",
+							"value": 0,
+							"doOffStage": true,
+						},
+						{
+							"$type": "AddGlobalValueToTarget",
+							"srcTarget": "Self",
+							"dstTarget": "Team",
+							"srcKey": "_ABILITY_Relic_HealAndHolyNova_Dir_0",
+							"dstKey": "_ABILITY_Relic_HealAndHolyNova_Dir_0",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AddGlobalValueToTarget",
+							"srcTarget": "Self",
+							"dstTarget": "Team",
+							"srcKey": "_ABILITY_Relic_HealAndHolyNova_Dir_1",
+							"dstKey": "_ABILITY_Relic_HealAndHolyNova_Dir_1",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AddGlobalValueToTarget",
+							"srcTarget": "Self",
+							"dstTarget": "Team",
+							"srcKey": "_ABILITY_Relic_HealAndHolyNova_Dir_2",
+							"dstKey": "_ABILITY_Relic_HealAndHolyNova_Dir_2",
+							"doOffStage": true,
+						},
+						{
+							"$type":"AttachModifier",
+							"target": "Team",
+							"modifierName": "Relic_HealAndHolyNova_BallEffect_Team",
+							"doOffStage": true,
+						},
+					],
+					"onHeal"://虽然不在这里统计数值了，但需要给特效发blink的trigger让治疗时亮一下。
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target", //这个target是治疗目标
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Avatar",
+									],
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SendEffectTrigger",
+									"parameter": "Blink",
+									"effectPattern": "Eff_Relic_Maria_Animator",
+									"target": "Team",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"Relic_HealAndHolyNova_BallEffect_Team": {//让Team自己给自己上特效。
+					"stacking": "Overlap",
+					"duration": "%Time+0.5",
+					"onAdded": [
+						{ //由于其他modifier的时长都不符合，只能attach在这里了。回收可能会有点晚。要注意cd时间是否被数值策划改了。
+							//另外由于角色attach给team会导致联机残留。只能team自己给自己attacheffect
+							"$type": "AttachEffect",
+							// "target": "Team",
+							"effectPattern": "Eff_Relic_Maria_Animator",
+							"born": {
+								"$type": "ConfigBornByTarget",
+								"direction": {
+									"$type": "ConfigDirectionByGlobalValue",
+									"directionKey": "_ABILITY_Relic_HealAndHolyNova_Dir",
+								},
+							},
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Relic_HealAndHolyNova_CD":
+				{
+					"isUnique": true,
+					"duration": "%CDTime-%Time", //为了刷新一下checker，而且如果cd较久可以减少检测的计算量。
+					"timeScale": "Level",
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Relic_HealAndHolyNova_State",
+							"value": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					]
+				},
+			},
+			"abilitySpecials": {
+				"Time":0,
+				"HealRatio":0,
+				"DamageRatio":0,
+				"CDTime": 0,
+				"MaxHealAmount":0,
+				"TriggerType":0,
+				"HealAmount":0,
+			}
+		},
+	},
+
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_HeaQAtest", //
+			"isDynamicAbility": true,
+			"onAbilityStart":[
+				{
+					"$type":"AttachModifier",
+					"modifierName": "Relic_HeaQAtest",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Add_HealSumQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Add_RealHealSumQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Set_onHealQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Set_onHealRealQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Add_onBeingHealedSumQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Add_onBeingHealedRealSumQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Set_onBeingHealedQATest",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "Set_onBeingHealedRealQATest",
+					"value": 0,
+				},
+			],
+			"modifiers": {
+				"Relic_HeaQAtest":{
+					"duration": 20,
+					"onHeal": [
+						{
+							"$type": "GetHealAmountToGlobalValue",//测试治疗值（合计）
+							"type": "Add",
+							"key": "Add_HealSumQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHealAmountToGlobalValue", //测试实际治疗值（合计）
+							"type": "Add",
+							"key": "Add_RealHealSumQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHealAmountToGlobalValue", //测试治疗值(单次)
+							"type": "Set",
+							"key": "Set_onHealQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHPHealedToGlobalValue", //测试实际治疗值(单次)
+							"type": "Set",
+							"key": "Set_onHealRealQATest",
+							"doOffStage": true,
+						},
+					],
+					"onBeingHealed": [
+						{
+							"$type": "GetHealAmountToGlobalValue", //测试治疗值（合计）
+							"type": "Add",
+							"key": "Add_onBeingHealedSumQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHPHealedToGlobalValue", //测试实际治疗值（合计）
+							"type": "Add",
+							"key": "Add_onBeingHealedRealSumQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHealAmountToGlobalValue", //测试治疗值(单次)
+							"type": "Set",
+							"key": "Set_onBeingHealedQATest",
+							"doOffStage": true,
+						},
+						{
+							"$type": "GetHPHealedToGlobalValue", //测试实际治疗值(单次)
+							"type": "Set",
+							"key": "Set_onBeingHealedRealQATest",
+							"doOffStage": true,
+						},
+					],
+				},
+			}
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215023
+//
+//  2.6  辰砂往生录
+//
+//  ID：97
+//
+//  Relic_AttackUpWhenHPdown
+//
+//  特点为元素爆发之后，但不打“元素爆发伤害”的角色。 （不然会用宗室和绝缘套）
+//
+//  离场失效，使用目标为站场伤害角色，竞争对手为角斗士套和水套。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AttackUpWhenHPdown", 
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type":"SetGlobalValue",//先初始化
+					"key": "_ABILITY_Relic_AttackUpWhenHPdown_GV",
+					"value": 0,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill": [
+						{
+							"$type": "SetGlobalValue", //重复触发重置掉血buff效果
+							"key": "_ABILITY_Relic_AttackUpWhenHPdown_GV",
+							"value": 0,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName":"UNIQUE_Relic_AttackUp_BurstBuff",
+						},
+					]
+				},
+			],
+			"onAvatarOut": [//离场失效
+				{
+					"$type":"RemoveModifier",
+					"modifierName": "UNIQUE_Relic_AttackUp_BurstBuff",
+					"doOffStage": true,
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_AttackUp_BurstBuff"://基础buff内容，损血加攻等等都在这个上面再处理
+				{
+					"isUnique": true,
+					"state": "AttackUp",
+					"duration": "%Dura",
+					"modifierMixins":[
+						{
+							"$type": "DoActionByEventMixin",
+							"onEvent": "HPDown",
+							"actions": [
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Relic_AttackUpWhenHPdown_TriggerCD",
+								},
+							]
+						},
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Relic_AttackUpWhenHPdown_GV",
+							"valueSteps": [
+								0.5,
+								1.5,
+								2.5,
+								3.5,
+								4.5,
+								5.5,
+								6.5,
+								7.5,
+								8.5,
+								9.5,
+								10.5
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": [
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff1",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff2",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff3",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff4",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff5",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff6",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff7",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff8",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff9",
+								"UNIQUE_Relic_AttackUpWhenHPdown_Buff10",
+							],
+						},
+					],
+					"properties": {
+						"Actor_AttackRatio": "%Base_Ratio",
+					},
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_TriggerCD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%TriggerCD",
+					"onAdded": [
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Relic_AttackUpWhenHPdown_GV",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": "%MaxLevel",
+							"minValue": 0
+						},
+					],
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff1":{ //需要考虑下是否需要表示，例如一个越来越浓的buff特效
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff2": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*2",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff3":{
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*3",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff4": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*4",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff5":{
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*5",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff6": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*6",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff7": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*7",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff8": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*8",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff9": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*9",
+					}
+				},
+				"UNIQUE_Relic_AttackUpWhenHPdown_Buff10": {
+					"isUnique": true,
+					"properties": {
+						"Actor_AttackRatio": "%Ratio*10",
+					}
+				},
+			},
+			"abilitySpecials": {
+				"Dura":0,
+				"Base_Ratio": 0,
+				"Ratio": 0,
+				"MaxLevel":0,
+				"TriggerCD": 0,
+			}
+		},
+	},
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  215024
+//
+//  2.6  来歆余响
+//
+//  ID：98
+//
+//  Relic_AttackWithExtraDamage
+//
+//  按照伪随机C表格：10%=0.01475，20%=0.0557，25%=0.08474，30%=0.11895，50%=0.30210
+//
+//  目前有2个方案：1、按键时判定是否触发，持续1秒，触发后0.1秒销毁。 问题是如果有角色命中点在1秒后，就会有问题。
+//                1.1、按键时判定是否触发，持续3秒。会导致玩家先按键5次，叠满概率后，下次必定触发。
+//                2、命中时进行判定，判定cd0.3秒，判定成功，下一帧上buff，持续无限。buff触发后0.1秒销毁。问题是需要命中，而且第一次必定不会触发。 （采用）
+//                
+//  配置里的细节。有buff的时候必定下次不会触发增伤。（也就是附伤无法连续触发）
+//                如果需要连续触发，只需要触发的时候判一次，判定失败再移除即可。
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_AttackWithExtraDamage",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Relic_AttackWithExtraDamage_Handler",
+					"value": 0,
+					"doOffStage": true,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Relic_AttackWithExtraDamage",
+					"value": 0,
+					"doOffStage": true,
+				},
+				{
+					"$type": "Randomed",
+					"chance": "%Base_Rate", //初始化判定一次。且不占判定序列。
+					"successActions": [
+						// {
+						// 	"$type": "TriggerAbility", //triggerAbility是延迟1帧生效的，注意此时不能移除modifier，不然无法生效。
+						// 	"abilityName": "Relic_AttackWithExtraDamage",
+						// 	"doOffStage": true,
+						// },
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Relic_AttackWithExtraDamage", //控制增伤的。
+							"value": 1,
+						},
+						{
+							"$type": "SetOverrideMapValue", //触发了，下次概率也回归正常了。
+							"overrideMapKey": "ChanceRate",
+							"value": 0,
+						},
+					],
+					"failActions": [//失败就开始检测
+						{
+							"$type": "SetOverrideMapValue", 
+							"value": 1,
+							"overrideMapKey": "ChanceRate",
+						},
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Relic_AttackWithExtraDamage_Handler",
+							"value": 0,
+						},
+					],
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_Handler",//常驻检查
+				},
+			],
+			"onRemoved": [//Remove这个当角色被丢出队伍等特殊方式时，是跑不到的。注意不要让上给别人的modifier用这个保底，会导致残留（讨龙+换时装的例子）
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CountDown",
+					"doOffStage": true,
+				},
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CD",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				// {
+				// 	"$type": "AttachModifierToSelfGlobalValueMixin",
+				// 	"globalValueKey": "_ABILITY_Relic_AttackWithExtraDamage_Handler", //0的时候生效
+				// 	"defaultGlobalValueOnCreate": -1,
+				// 	"valueSteps": [
+				// 		-0.5,
+				// 		0.5
+				// 	],
+				// 	"removeAppliedModifier": true,
+				// 	"modifierNameSteps": [
+				// 		// "UNIQUE_Relic_AttackWithExtraDamage_CD",  //这个cd延迟会导致误差严重。必须触发瞬间同时开始记cd。
+				// 		"UNIQUE_Relic_AttackWithExtraDamage_Handler",
+				// 	],
+				// },
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Relic_AttackWithExtraDamage", //1的时候生效
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						0.5,
+						1.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Relic_AttackWithExtraDamage",
+					],
+				},
+			],
+			"onAbilityStart": [//晚一帧上buff，那么这次攻击就不会增伤了。//试过直接上Mixin，会导致当次攻击立刻消耗并且没吃到增伤（即使只有1个怪）
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Relic_AttackWithExtraDamage",
+					"doOffStage": true,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Relic_AttackWithExtraDamage", //控制增伤的。
+					"value": 1,
+					"doOffStage": true,
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_AttackWithExtraDamage_Handler":{
+					"isUnique": true, 
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",//判定时效果角色必须在场。buff生效是可以离场生效的。
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06"
+									],
+								},//描述是“命中”就会开始判断，不加damage判定
+								{
+									"$type":"ByTargetGlobalValue",
+									"target":"Self",
+									"key": "_ABILITY_Relic_AttackWithExtraDamage_Handler",//0的时候正常判定，-1就不进行判定了。
+									"value": 0,
+									"compareType":"NoneOrEqual" ,
+								},
+							],
+							"successActions": [
+								{
+									"$type": "AttachModifier", //进行判定，判定有trigger_CD
+									"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_Trigger",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Relic_AttackWithExtraDamage_Trigger": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"timeScale": "Level",
+					"duration": "%Trigger_CD", //防止1次攻击触发多次判定。保证只判定一次。0.2秒
+					"thinkInterval": "%Trigger_CD",
+					"onThinkIntervalIsFixedUpdate": true,
+					"onThinkInterval": [
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_Trigger",
+							"doOffStage": true,
+						},
+					],
+					"onAdded": [
+						{
+							"$type": "Randomed", //判定操作要求角色在场
+							"chance": "%Base_Rate+%Extra_Rate*%ChanceRate",
+							"successActions": [
+								{
+									"$type":"TriggerAbility",//为了晚一帧出现增伤
+									"abilityName": "Relic_AttackWithExtraDamage",
+								},
+								{
+									"$type": "SetOverrideMapValue", //触发了，下次概率也回归正常了。
+									"overrideMapKey": "ChanceRate",
+									"value": 0,
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue", //达到+1效果
+									"value": "%ChanceRate+1",
+									"overrideMapKey": "ChanceRate",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Relic_AttackWithExtraDamage": 
+				{
+					"isUnique": true,
+					// "buffID": 10001,//注意：测试用。最终不留一个攻击图标，不然玩家会发现效果。应该是静默效果。
+					"duration": "%Dura",//不攻击过一段时间就消失了。现在配置是永续，dura=0
+					"modifierMixins": [
+						{
+							"$type":"ModifyDamageMixin",
+							"attackTags": [
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06"
+							],
+							"damageExtra": "%FIGHT_PROP_CUR_ATTACK*%AttackPercentage" //当前攻击力乘以一定系数获得伤害效果。作为伤害，应该用面板值。用了extra也不会导致重复叠加。已确认这个不属于属性转属性
+						},
+					],
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue", //不再监测。等cd那个modifier恢复监测。
+							"key": "_ABILITY_Relic_AttackWithExtraDamage_Handler",
+							"value": -1,
+							"doOffStage": true,
+						},
+					],
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true, //生效是可以离场生效的。
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06"
+									],
+								},
+								{
+									"$type": "ByHitDamage", //描述是“造成伤害后”，有伤害才会消耗次数
+									"damage": 0,
+									"logic": "Greater"
+								},//想了下打盾得触发，不然容易没用。又想了下发现这样就相当于打盾一直有用。
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CountDown",
+									"doOffStage": true,
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CD",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Relic_AttackWithExtraDamage_CountDown":{ //保持buff0.05秒。（0.1秒的话绫华3连击全吃）
+					"isUnique": true,
+					"duration": "%Keep_Time",
+					"stacking": "Unique",
+					"timeScale": "Level",
+					"thinkInterval": "%Keep_Time",
+					"onThinkIntervalIsFixedUpdate": true,
+					"onThinkInterval": [
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CountDown",
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Relic_AttackWithExtraDamage", //去掉增伤modifier
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Relic_AttackWithExtraDamage_CD": {
+					"isUnique": true,
+					"duration": "%Relic_CD",
+					"stacking": "Unique",
+					"timeScale": "Level",
+					"thinkInterval": "%Relic_CD",
+					"onThinkIntervalIsFixedUpdate": true,
+					"onThinkInterval": [
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Relic_AttackWithExtraDamage_CD",
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [ //无论是interval生效还是duration生效都能正常执行。在0.2秒后判一次会增伤还是加概率。
+						{
+							"$type": "Randomed",
+							"doOffStage": true,
+							"chance": "%Base_Rate", //初始化判定一次。且不占判定序列。因为relic_cd已经算占过序列了。
+							"successActions": [
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Relic_AttackWithExtraDamage",//控制增伤的。注意用triggerability的延迟可能会丢掉buff。所以新增了一个GV。
+									"value": 1,
+									"doOffStage": true,
+								},
+								{
+									"$type": "SetOverrideMapValue", //触发了，下次概率也回归正常了。
+									"overrideMapKey": "ChanceRate",
+									"value": 0,
+									"doOffStage": true,
+								},
+							],
+							"failActions": [
+								{
+									"$type": "SetOverrideMapValue", //达到+1效果
+									"value": 1,
+									"overrideMapKey": "ChanceRate",
+									"doOffStage": true,
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Relic_AttackWithExtraDamage_Handler",//开始检测
+									"value": 0,
+									"doOffStage": true,
+								},
+							],
+						},
+					]
+				},
+			},
+			"abilitySpecials": {
+				"Base_Rate":0,
+				"AttackPercentage":0, 
+				"Keep_Time": 0,//持续多久
+				"Extra_Rate": 0,
+				"Trigger_CD": 0,//命中判定的cd
+				"Relic_CD":0,  //触发后下次再开始监测的CD
+				"ChanceRate":0,//用于记录ExtraRate叠加了几遍。
+				"Dura": 0, //假如触发了又不造成伤害，可以保留多久 //写成0可以永续。设计目的就是永续（让玩家无法判断是否是“当次触发")
+			}
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  215025
+//
+//  3.0草神套 深林的记忆 4件
+//
+//  套装ID：20
+//
+//  Relic_ReactionGrassEnhance
+//
+//  元素战技或元素爆发命中敌人后，会使目标的草元素抗性下降X%，持续X秒。
+//
+////////////////////////////////////////////////////////////////
+	{
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_ReactionGrassEnhance",
+            "isDynamicAbility":true,
+            "onAdded":
+            [
+            	{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ReactionGrassEnhance_Handler",
+				},
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Relic_ReactionGrassEnhance_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage":true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra","Elemental_Burst"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Relic_ReactionGrassEnhance_ApplyBuff",
+									"target":"Target",
+									"doOffStage":true,
+								},
+							],
+						},
+					],
+				},
+
+				"UNIQUE_Relic_ReactionGrassEnhance_ApplyBuff":
+				{
+					"isUnique":true,
+					"duration":"%Dura",
+					"state":"DefenseDown",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_GrassSubHurtDelta":"-1*%ResistDown"
+					},
+				},
+            },
+            "abilitySpecials":
+            {
+				"ResistDown":0,
+				"Dura":0,
+            },
+        },
+	},
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  215026
+//
+//  3.0赤王套  饰金套 4件
+//
+//  套装ID：21
+//
+//  Relic_ElemMasteryGathering
+//
+//  在触发元素反应后，会根据队伍内其他角色元素属性来汲取能力：
+//  每有一个同色会使其获得（1/2/3）攻击力，每有一个异色会使其获得（1/2/3）元素精通，持续X秒，前后台都会生效。
+//  该BUFF唯一，覆盖式，并且攻击力和元素精通的提升上限都是3（处理边界条件：在试用时队伍角色总数为5）
+//
+////////////////////////////////////////////////////////////////
+	{
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Relic_ElemMasteryGathering",
+           	"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Relic_ElemMasteryGathering_Handler"
+				},
+			],
+			"onAbilityStart": [
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_ElemMasteryGathering",
+					"doOffStage": true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_ElemMasteryGathering",
+					"doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Relic_ElemMasteryGathering_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"range":20,//这个是默认值
+							"entityTypes":["Monster",],
+							"reactionTypes":["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce","CrystallizeFire","CrystallizeWater","CrystallizeElectric","CrystallizeIce","Overdose","OverdoseElectric","OverdoseGrass","Overgrow","OvergrowMushroomFire","OvergrowMushroomElectric"],
+							"actions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName": "UNIQUE_Relic_ElemMasteryGathering_Adder",
+									"doOffStage": true,
+								},
+							],
+						},	//一个检测发生了元素反应的mixin
+					],
+					"isUnique":true,
+				},
+				"UNIQUE_Relic_ElemMasteryGathering_Adder":{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Trigger_CD",
+					"onAdded": [
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": true,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_RELIC_ElemMasteryGathering_Same_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetSameElementCountToGlobalValue",
+							"checkSameElement": false,
+							"elementBaseOn": "Self",
+							"globalValueKey": "_RELIC_ElemMasteryGathering_Diff_Number",
+							"teamBaseOn": "AllTeams",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_RELIC_ElemMasteryGathering_Same_Number",
+							"overrideMapKey": "SameNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_RELIC_ElemMasteryGathering_Diff_Number",
+							"overrideMapKey": "DiffNumber",
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetOverrideMapValue", //如果超过上限，限制到上限
+							"overrideMapKey": "SameNumber",
+							"value": "%Max_Same_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_RELIC_ElemMasteryGathering_Same_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Same_Value"
+								},
+							]
+						},
+						{
+							"$type": "SetOverrideMapValue",//如果超过上限，限制到上限
+							"overrideMapKey": "DiffNumber",
+							"value": "%Max_Diff_Value",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_RELIC_ElemMasteryGathering_Diff_Number",
+									"compareType": "MoreThan",
+									"value": "%Max_Diff_Value"
+								},
+							]
+						},
+						{
+							"$type":"TriggerAbility",//为了能attach，改成triggerability,另外错开一帧避免当次伤害受到增幅。更加严谨。
+							"abilityName": "Relic_ElemMasteryGathering",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_ElemMasteryGathering":
+				{
+					"duration":"%Duration",
+					"isUnique":true,
+					"state":"AttackUp",
+					"stacking" : "Refresh",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElemMasteryDelta":"%ElemMastery*%DiffNumber",
+						"Actor_AttackRatio" : "%Rate*%SameNumber",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"ElemMastery": 0,
+				"Duration": 0,
+				"Trigger_CD": 0,
+				"Max_Same_Value":3,
+				"Max_Diff_Value":3,
+				"SameNumber":0,
+				"DiffNumber":0,
+			},
+        },
+	},
+]

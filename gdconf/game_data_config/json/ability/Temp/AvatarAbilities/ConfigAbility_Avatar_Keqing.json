@@ -1,0 +1,4767 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10421,
+					"chargeTime": 0.12,//
+					"secondChargeTime": 0.2,//
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+							"predicates":
+							[
+								{
+									"$type" : "ByAny",
+									"predicates" :
+									[
+										{
+											"$type" : "ByAnimatorInt",
+											"value" : 0,
+											"parameter" : "ComboCount",
+											"logic" : "Equal",
+										},
+										{
+											"$type" : "ByAnimatorInt",
+											"value" : 5,
+											"parameter" : "ComboCount",
+											"logic" : "Equal",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseSecondCharged":
+					[
+
+					],
+					"chargeStateIDs": ["Attack01","Attack02","Attack03","Attack04","Attack05","Run"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10001,
+							"costStaminaRatio":"%ExtraAttack_Sword_Stamina_Cost"
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				//故意少判了一点点体力，为了顾及一部分网络延迟
+				"ExtraAttack_Sword_Stamina_Cost": 0,
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+
+	//重击引爆标记功能。
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_ExtraAttack_ExplodeGadget_Eff",
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility", //提早播放标记快爆炸特效。
+					"otherTargets":
+					{
+						"$type":"SelectTargetsByChildren",
+						"configID":41042004,
+					},
+					"abilityName":"Keqing_SkillGadget_Material"
+				},
+			],
+		},
+	},
+
+
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_ExtraAttack_ExplodeGadget",
+			"onAbilityStart":
+			[
+				{//清除掉标记。
+					"$type":"TriggerAbility",
+					"otherTargets":
+					{
+						"$type":"SelectTargetsByChildren",
+						"configID":41042004,
+					},
+					"abilityName":"Keqing_SkillGadget_ExplodeAbility",
+				},
+				{//1.3修复新增
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Keqing_SkillChange",
+				},
+			],
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  普攻的一些控制ability
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_NormalAttack_Handler",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack04",
+					"modifierName":"Keqing_Hide",//注意角色隐藏功能会叠加。如果隐藏2次会变-2，需要显示2次才能真显示出来。
+					"normalizeStart":0.19, //之前是0.21
+					"normalizeEnd":0.4,
+				},
+				// {
+				// 	"$type":"AttachToNormalizedTimeMixin",
+				// 	"stateID":"Attack04",
+				// 	"modifierName":"Keqing_Appear",
+				// 	"normalizeStart":0.4,
+				// 	"normalizeEnd":1,
+				// },
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack05",
+					"modifierName":"Keqing_Hide2",
+					"normalizeStart":0,
+					"normalizeEnd":0.08,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Attack05",
+					"modifierName":"Keqing_Appear2",
+					"normalizeStart":0.08,
+					"normalizeEnd":1,
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Attack05"],
+					"modifierName":"Keqing_Hide_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"Keqing_Hide_Handler":
+				{
+					"onRemoved":
+					[
+                        {//借用一下，保证第五击退出时会kill就可以。
+                            "$type":"KillGadget",
+                            "gadgetInfo":
+                            {
+                                "$type":"SelectTargetsByChildren",
+                                "configID":41042003,
+                                "sortType":"Default",
+                            },
+                            "doOffStage":true,
+                        },
+					],
+				},
+				"Keqing_Hide":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"doOffStage":true,
+						},
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": false,
+							"hdMeshKey": "Default",
+						},                     
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+ 						{
+							"$type": "EnableHDMesh",
+							"enable": true,
+							"hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+						},                         
+					],
+				},
+				"Keqing_Appear":
+				{
+					"onAdded":
+					[
+					],
+				},
+				"Keqing_Hide2":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"doOffStage":true,
+						},
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": false,
+							"hdMeshKey": "Default",
+						},  
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": true,
+							"hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+						},  
+					],
+				},
+				"Keqing_Appear2":
+				{
+					"onAdded":
+					[
+						// {
+						// 	"$type": "TriggerSetVisible",
+						// 	"visible": true,
+						// 	"doOffStage":true,
+						// },
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  普攻第五击  子弹版本
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_NormalAttack05_CreateBullet",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41042003,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					// "born":
+					// {
+					// 	"$type": "ConfigBornByAttachPoint",
+					// 	"attachPointName": "RootNode",
+					// 	"offset" :
+					// 	{
+					// 		"x": 0.0,
+					// 		"y": 0.0,
+					// 		"z": 0.0,
+					// 	},
+					// },
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_NormalAttack05_Bullet",
+			"onAbilityStart":
+			[
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["MonsterEquip"],
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "DamageByAttackValue",
+							"target": "Target",
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "NormalAttack_05",
+								"attenuationTag": "NormalAttack",
+					        	"attackProperty":
+								{
+					          		"damagePercentage": 0.72,
+							  		"strikeType": "Slash",
+							  		"elementDurability": 25,
+					          		"overrideByWeapon": true,
+					          		"attackType": "Melee",
+					          		"enBreak" : 64.8,
+					        	},
+					        	"hitPattern":
+								{
+					          		"onHitEffectName": "default",
+									"hitImpulseType":"LV7",
+					    //       		"hitLevel": "Air",	//hitlevel = 7
+									// "hitImpulseX": 0,	//hitlevel = 7
+									// "hitImpulseY": 800,	//hitlevel = 7
+					          		"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+					          		"hitHaltTime": 0,
+					          		"hitHaltTimeScale": 0.01,
+					          		"muteHitText": false
+					        	},
+					        	"forceCameraShake": false,
+					        	"cameraShake":
+					        	{
+					        		"shakeType": "CustomVector",
+									"shakeRange": 0.36,
+									"shakeTime": 0.12,
+									"shakeDistance": 30,
+									"shakeDir":
+									{
+										"x":-1,
+										"y":0,
+										"z":0,
+									},
+					        	},
+					        },
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+					        	"attackPattern":
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"filterByFrame" : true,
+									"radius" : 0.8,
+									"born":
+									{
+										"$type": "ConfigBornByCollisionPoint",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+					        	},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag": "NormalAttack_05",
+									"attenuationTag": "NormalAttack",
+						        	"attackProperty":
+									{
+						          		"damagePercentage": 0.72,
+								  		"strikeType": "Slash",
+								  		"elementDurability": 25,
+						          		"overrideByWeapon": true,
+						          		"attackType": "Melee",
+						          		"enBreak" : 64.8,
+						        	},
+						        	"hitPattern":
+									{
+						          		"onHitEffectName": "default",
+										"hitImpulseType":"LV7",
+						    //       		"hitLevel": "Air",	//hitlevel = 7
+										// "hitImpulseX": 0,	//hitlevel = 7
+										// "hitImpulseY": 800,	//hitlevel = 7
+						          		"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+						          		"hitHaltTime": 0,
+						          		"hitHaltTimeScale": 0.01,
+						          		"muteHitText": false
+						        	},
+						        	"forceCameraShake": false,
+						        	"cameraShake":
+						        	{
+						        		"shakeType": "CustomVector",
+										"shakeRange": 0.36,
+										"shakeTime": 0.12,
+										"shakeDistance": 30,
+										"shakeDir":
+										{
+											"x":-1,
+											"y":0,
+											"z":0,
+										},
+						        	},
+						        },
+							},
+						},
+					],
+				},
+			]
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  小技能  ElementalArt
+//  //投掷一个物品，然后闪现到物品所在位置
+//  //蓄力可进入射击模式，
+//
+////////////////////////////////////////////////////////////////
+
+// 小技能单点生成子弹的配置
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Electrans_Click",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10422,
+					"cdRatio": 1,
+				},
+				{//先重置这个pos作为保险，防止玩家点击太快传送到上个pos位置
+					"$type":"SetGlobalPos",
+					"key": "_ABILITY_Keqing_AttackPos",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":5,
+						},
+					},
+					"doOffStage": true,
+				},
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByHasAttackTarget",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 41042001,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.7,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+									"angleOffset": //注意这个只对部分direction有效。例如这个attach的
+									{
+										"x": 0,
+										"y": 0,
+										"z": 0,
+									},
+									"maxAngle": 45,
+									"maxAngleType":"Vertical",//
+								},
+							},
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 41042007,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "FocusAnchor",
+								"attachPointTargetType": "Self",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.7,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName": "FocusAnchor",
+									"attachPointTargetType": "Self",
+									"angleOffset": //注意这个只对部分direction有效。例如这个attach的
+									{
+										"x": 0,
+										"y": 0,
+										"z": 0,
+									},
+									"maxAngle": 45,
+									"maxAngleType":"Vertical",//
+								},
+							},
+						},
+					],
+				},
+				{
+					"$type":"SetAnimatorBool",
+					"boolID":"CombatAir",
+					"value":false,//不使用空中移动
+					"persistent":true, 
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Keqing_SkillChange",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Keqing_SkillChange":
+				{
+					"isUnique":true,
+					"duration":5,// 考虑加久一点点，3秒反应时间不够。
+					"modifierMixins":
+					[
+						{
+							"$type": "SwitchSkillIDMixin",//这个mixin是永续的，只是在remove的时候发动了B替换回A（如果查找不到B整个替换回行为就会失效）
+							"priority":"AvatarSpecial",
+							"skillIndex": 1,
+							"skillID": 10423,
+						},
+					],
+				}
+			},
+			"abilitySpecials":
+			{
+
+			},
+		},
+	},
+
+// 小技能蓄力生成子弹的配置
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Electrans_Charge",
+			"abilityMixins":
+			[
+                {
+					"$type": "SkillButtonHoldChargeMixin",
+					"skillID": 10422,
+					"beforeStateIDs" : ["Electrans_BS"],
+					"beforeHoldDuration":0.1,
+					"chargeLoopStateIDs" : ["Electrans_Charge_Loop",],
+					"afterStateIDs": ["Electrans_Charge_Cast","Electrans_Charge_AS"],
+					"chargeLoopDurations" : [ 10 ],
+					"nextLoopTriggerID" : "NextLoopTrigger",
+					"endHoldTrigger" : "EndHoldTrigger",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Electrans_Charge_Loop","Electrans_Charge_Cast", ],//是为了让相机退出的时机跟动作错开一些
+					"modifierName": "Focus",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Electrans_Charge_Loop",],
+					"modifierName": "Charge",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart", //把这个放到最初。然后让技能可以onExit也是可以的
+					"skillID": 10422,
+					"cdRatio": 1,
+				},
+				{
+					"$type":"SetAnimatorBool",
+					"boolID":"CombatAir",//启用combatAir，意味着动作可以离地。
+					"value":true,
+					"persistent":true, //设置后可以保证重连或者换人都不会导致参数丢失。
+				},
+				{
+					"$type":"SetAnimatorBool",
+					"target":"Owner",
+					"boolID":"GadgetHigh", //默认用空中动画，默认做成true。//这个后续不再使用了，即使贴地也不会用地面动作了。2020.10.12确认。
+					"value":true,
+				},
+				{//先重置这个pos作为保险，防止玩家点击太快传送到上个pos位置
+					"$type":"SetGlobalPos",
+					"key": "_ABILITY_Keqing_AttackPos",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":5,
+						},
+					},
+					"doOffStage": true,
+				},
+				{
+					"$type": "TriggerBullet", //生成子弹
+					"bulletID": 41042002,//这个不追踪，要不同子弹
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "FocusAnchor",
+		                "offset":
+		                {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.7,
+						},
+						// "$type": "ConfigBornByAttachPoint",
+						// "attachPointName" : "WeaponL",
+						// "offset" :
+						// {
+						// 	"x": 0,
+						// 	"y": 0,
+						// 	"z": 0,
+						// },
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+							// "maxAngle":30,
+							// "maxAngleType":"Vertical",
+							"angleOffset":
+							{
+								"x": 0.0,
+								"y": 0.0,		//角度偏移
+								"z": 0.0,
+							},
+						},
+					},
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"UNIQUE_Keqing_SkillChange",
+				},
+			],
+			"modifiers":
+			{
+				"Focus":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.8,
+								"y": 0.2,
+								"z": -2.5,
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.5,
+								"y": -0.2,
+								"z": 0.0,
+							},
+							"cameraFollowMaxDegree": 35,  //上版本设定25和-45
+							"cameraFollowMinDegree":-55,//原本上下限60,60
+							"cameraFastFocusMode": true,
+							"dragButtonName": "Skill2",
+							"assistance":
+							{
+								"ps4":
+								{
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useGyro": true,
+								},
+							},
+							"canMove": false,
+							"showCrosshair":false,
+							"vcam_fov":45,
+							"focusAnchorVerAngle":0, //不用特意改变度数
+							"focusAnchorHorAngle":0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"Charge":
+				{
+					"onAdded":
+					[
+						{
+			              "$type": "AddGlobalValue",
+			              "key": "_Keqing_Aim_Range",
+			              "value": 8,
+			              "useLimitRange": true,
+			              "maxValue": 8,
+			              "minValue": 8,
+			            },
+			            {
+			              "$type": "AttachEffect",
+			              "effectPattern": "Eff_Avatar_Keqing_ElementalArt_Charge_Aim",
+			            },
+					],
+				},
+				"UNIQUE_Keqing_SkillChange":
+				{
+					"isUnique":true,
+					"duration":5,
+					"modifierMixins":
+					[
+						{
+							"$type": "SwitchSkillIDMixin",//这个mixin是永续的，只是在remove的时候发动了10162替换回10161（如果查找不到10162这个替换回行为就会失效）
+							"priority":"AvatarSpecial",
+							"skillIndex": 1,
+							"skillID": 10423,
+						},
+					],
+				}
+			},
+			"abilitySpecials":
+			{
+				"dmg":0,
+			},
+		},
+	},
+
+// 无论单点还是蓄力，子弹死亡时触发角色的ability创建gadget
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Electrans_SetGadget",
+			"onAbilityStart":
+			[
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"value":1,
+							"key":"_ABILITY_Keqing_GadgetHigh", //判断离地是否太高
+							"compareType":"NoneOrEqual"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41042004,
+							"campID":1001,
+							"campTargetType":"Enemy",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "_ABILITY_Keqing_AttackPos",
+								"directionKey": "_ABILITY_Keqing_AttackDir",
+								// "alongGround":true,
+							},
+						},
+					],
+					"failActions": //当离地面足够近时，贴地。但是飞行目标点抬高0.5用于空中动作防止离地太近。
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 41042004,
+							"campID":1001,
+							"campTargetType":"Enemy",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "_ABILITY_Keqing_AttackPos",
+								"directionKey": "_ABILITY_Keqing_AttackDir",
+								"onGround":true,
+								// "alongGround":true,
+							},
+						},
+						{
+							"$type":"AddGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Keqing_AttackPos_1",	//强行抬高0.3,便于进行空中位移
+							"value":0.3,
+							"doOffStage": true,
+						},
+					],
+				},
+			],
+		},
+	},
+
+//二段释放小技能
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Electrans_Part2",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10423,
+					"cdRatio": 1,
+				},
+				{
+					"$type":"SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type":"SelectTargetsByChildren",
+						"configID": 41042004,
+						"sortType": "Default",
+						// "sortType": "Reversed",//旧的在default上排序在前，新的在最后。所以用reverse就对了。
+						"topLimit":1,
+					},
+					"turnToTargetImmediately":true,
+				},
+				{
+					"$type":"KillGadget", //干掉点击的子弹（如果存在）
+					"gadgetInfo":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41042001,
+						"sortType": "Default",
+						// "topLimit":1,
+					},
+				},
+				{
+					"$type":"KillGadget", //干掉点击的子弹（如果存在）
+					"gadgetInfo":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41042007,
+						"sortType": "Default",
+						// "topLimit":1,
+					},
+				},
+				{
+					"$type":"KillGadget",//干掉蓄力的子弹（如果存在）
+					"gadgetInfo":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41042002,
+						"sortType": "Default",
+						// "topLimit":1,
+					},
+				},
+				{
+					"$type":"FixedAvatarRushMove",
+					"target":"Target",
+					"toPos":
+					{
+						"$type":"ConfigBornByGlobalValue",
+						"positionKey": "_ABILITY_Keqing_AttackPos",
+						"offset":
+						{
+							"x":0,
+							"y":0,
+							"z":0,
+						},
+					},
+					"maxRange":15,
+					"timeRange":0.16, //曾经0.16
+					"animatorStateIDs":["Electrans_Ground","Electrans_Fly","Electrans_FlyAir"], //这项是必须写的
+					"isInAir":true,
+					// "predicates":
+					// [
+					// 	// {
+					// 	// 	"$type":"ByTargetGlobalValue",
+					// 	// 	"value":1,
+					// 	// 	"key":"_ABILITY_Keqing_GadgetHigh",//用空中落地动作
+					// 	// 	"compareType":"Equal",
+					// 	// },
+					// ],
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Keqing_SkillChange",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"KillGadget", //有时候当帧实在搜不到，延迟一点再删一次。
+				},
+				{
+					"$type":"KillGadget", //干掉gadget
+					"gadgetInfo":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 41042004,
+						"sortType": "Default",
+						// "topLimit":1,
+					},
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Keqing_ElementalArt_AttackElectric",
+					"otherTargets":
+					{
+						"$type":"SelectTargetsByEquipParts",
+						"equipPartNames" : ["equip01","equip02","sheathPoint"],
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByUnlockTalentParam",//这个好像默认owner，不填target也从不指错。
+							"talentParam":"Keqing_ElementalArt_AttackElectric",
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_Ground",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.55,
+					"modifierName":"Keqing_Blink_Ground",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_Ground",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.5,
+					"modifierName":"Keqing_CloseCollider_Ground",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_Fly", //fly和ground完全是相同的动画。参数完全一致。
+					"normalizeStart":0.0,
+					"normalizeEnd":0.55,
+					"modifierName":"Keqing_Blink",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_Fly",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.5,
+					"modifierName":"Keqing_CloseCollider",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_FlyAir",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.55,
+					"modifierName":"Keqing_Blink_Air",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_FlyAir",
+					"normalizeStart":0.0,
+					"normalizeEnd":0.26, //flyair动画较长，0.3没问题，而隐藏模型是表现性质，要比collider要长一些。
+					"modifierName":"Keqing_CloseCollider_Air",
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs":["Electrans_Fly","Electrans_FlyAir",],
+					"modifierName" : "Keqing_Air_LoseWeight",
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_FlyAir_AS",
+					"modifierName" : "Keqing_Air_LoseWeight2",//残留了一些速度，可以等速度消失再重力。
+					"normalizeStart" : 0.0,
+					"normalizeEnd" : 0.4,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID":"Electrans_FlyAir",
+					"modifierName" : "Electrans_CameraPullBack_Air",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.9,
+				},
+			],
+			"modifiers":
+			{
+				"KillGadget":
+				{
+					"duration":0.33,
+					"thinkInterval":0.1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"KillGadget",
+							"doOffStage":true,
+							"gadgetInfo":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41042004,
+								"sortType": "Default",
+								// "topLimit":1,
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"KillGadget",
+							"doOffStage":true,
+							"gadgetInfo":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 41042004,
+								"sortType": "Default",
+								// "topLimit":1,
+							},
+						},
+					],
+				},
+				"Keqing_Blink_Ground":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"Keqing_ElementalArt_BlinkAttack",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark_Talent",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark_Talent",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Keqing_SkinSet",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+                        // {
+                        //     "$type": "RemoveVelocityForce",
+                        //     "forces":
+                        //     [
+                        //         "RushMoveType"
+                        //     ],
+                        // },
+					],
+				},
+				"Keqing_CloseCollider_Ground":
+				{
+					"onAdded" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": false,
+							"hdMeshKey": "Default",
+						},  
+					],
+					"onRemoved" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": true,
+							"hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+						},  
+					],
+				},
+				"Keqing_Blink":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"Keqing_ElementalArt_BlinkAttack",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark_Talent",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark_Talent",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Keqing_SkinSet",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+					],
+					"properties":
+					{
+						// "Actor_FallingDamageRatio": -1,
+						"Actor_EndureDelta": 0,//霸体防止打断
+					},
+				},
+				"Keqing_CloseCollider":
+				{
+					"onAdded" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": false,
+							"hdMeshKey": "Default",
+						},  
+					],
+					"onRemoved" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+						{
+							"$type": "EnableHDMesh",
+							"enable": true,
+							"hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+						},  
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+					],
+				},
+				"Keqing_Blink_Air":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"Keqing_ElementalArt_BlinkAttack",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark_Talent",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark_Talent",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_HideSpark",
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Avatar_Keqing_ElementalArt_ShowSpark",
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Keqing_SkinSet",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+					],
+					"properties": //增加防止撞死效果
+					{
+						// "Actor_FallingDamageRatio": -1,
+						"Actor_EndureDelta": 0,//霸体防止打断
+					},
+				},
+				"Keqing_SkinSet":
+				{
+					"duration":1.2,
+					"onAdded":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"SkinSet"
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID":"SkinReset"
+						},
+					],
+				},
+				"Keqing_CloseCollider_Air":
+				{
+					"onAdded" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+					],
+					"onRemoved" :
+					[
+						{
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+					],
+				},
+				"Keqing_Air_LoseWeight":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetVelocityIgnoreAirGY",
+							"ignoreAirGY" : true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "SetVelocityIgnoreAirGY",
+							"ignoreAirGY" : false,
+						},
+						{
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+					],
+					"properties"://增加防止撞死效果
+					{
+						"Actor_AddGravityScale" : -2,
+						"Actor_FallingDamageRatio": -1, //防止摔死。
+					},
+				},
+				"Keqing_Air_LoseWeight2":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "SetVelocityIgnoreAirGY", //虽然可以屏蔽，但是真正问题在于实现rush机制的时候错误保留了速度。等修复
+							"ignoreAirGY" : true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "SetVelocityIgnoreAirGY",
+							"ignoreAirGY" : false,
+						},
+						{
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+					],
+					"properties":
+					{
+						"Actor_AddGravityScale" : -2,
+					},
+				},
+				"Electrans_CameraPullBack_Air"://镜头后拉，防止空中动作离镜头太近。
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarCameraParam",
+							"target" : "Self",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 5,
+								"forceRadiusDuration" : 0,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+					],
+				},
+				"Keqing_ElementalArt_AttackElectric":
+				{
+					"duration":"%Dura",
+					"elementDurability":25,
+					"elementType":"Electric",
+					"overrideWeaponElement": true,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Keqing_Break1_Buff",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Dura":0.6//考虑到2段的施法时间，还有后摇。建议稍微加一点时间，不然时间太赶了。
+			},
+		},
+	},
+
+
+// 天赋中角色消失、出现时的攻击盒
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Talent_Electrans_BlinkAttack1",
+			"isDynamicAbility":true,
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"canHitHead" : false,
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius":2,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x" : 0,
+									"y" : 1,
+									"z" : 0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art_Hold",
+							"attenuationTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"elementType" : "Electric",
+								"elementDurability" : 25,
+				          		"attackType": "Melee",
+								"strikeType": "Default",
+								"enBreak": 50,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV1", //下调为shake了
+								// "hitLevel": "Light",	//hitlevel =
+								// "hitImpulseX": 0,	//hitlevel =
+								// "hitImpulseY": 0,	//hitlevel =
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+								"retreatType":"ByHitDirection",
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Talent_Electrans_BlinkAttack2", //因为出现攻击盒比动作（带位移）先发动，所以必须进行前移，无法和消失用同一个攻击盒。
+			"isDynamicAbility":true,
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"canHitHead" : false,
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius":2,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x" : 0,
+									"y" : 1,
+									"z" : 1.5,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art_Hold",
+							"attenuationTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"elementType" : "Electric",
+								"elementDurability" : 25,
+				          		"attackType": "Melee",
+								"strikeType": "Default",
+								"enBreak": 50,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV1", //下调为shake了
+								// "hitLevel": "Light",	//hitlevel =
+								// "hitImpulseX": 0,	//hitlevel =
+								// "hitImpulseY": 0,	//hitlevel =
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+								"retreatType":"ByHitDirection",
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+//空中位移后的攻击
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_Electrans_Strike",
+			// "abilityMixins":
+			// [
+			// 	{
+			// 		"$type":"AttachToStateIDMixin",
+			// 		"stateIDs":["Electrans_FlyAir","Electrans_Fly","Electrans_Ground"],
+			// 		"modifierName":"GenerateElemBall_ElementalArt",
+			// 	},
+			// ],
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"GenerateElemBall_ElementalArt", //掉球常驻
+				},
+			],
+			"modifiers":
+			{
+				"GenerateElemBall_ElementalArt":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+				                {
+				                	"$type":"ByHitStrikeType",
+				                	"strikeType":"Slash",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Ball",
+									// "target": "OriginOwner", //给玩家
+								},
+							],
+						},
+					],
+				},
+				"Ball":
+				{
+					"duration": 0.6,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type" : "Randomed",
+							"chance" : 1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 6,
+									"ratio": "%GetElementRatio",//CounterStage 1 2 3
+									"born":
+									{
+										"$type": "ConfigBornByTarget", //可以在自己前面生成。问题不大。
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+						{
+							"$type" : "Randomed",
+							"chance" : 0.5,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2020,
+									"baseEnergy": 3,
+									"ratio": "%GetElementRatio",//CounterStage 1 2 3
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"canHitHead" : false,
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height":3,
+							"radius":3,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1.0, //cricle高度是+0.3,下移一些。
+									"z" : 1.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attenuationTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"elementType" : "Electric",
+								"elementDurability" : 50,
+				          		"attackType": "Melee",
+								"strikeType": "Slash",
+								"enBreak": 100,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName" : "Eff_Avatar_Keqing_ElementalArt_Strike_Hit",
+								"hitImpulseType":"LV7",
+								"overrideHitImpulse":
+								{
+									"hitLevel": "Air",	//hitlevel = 7
+									"hitImpulseX": 0,	//hitlevel = 7
+									"hitImpulseY": 600,	//hitlevel = 7
+								},
+								// "hitLevel": "Air",	//hitlevel = 7
+								// "hitImpulseX": 0,	//hitlevel = 7
+								// "hitImpulseY": 800,	//hitlevel = 7
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.09,
+								"hitHaltTimeScale" : 0.01,
+								"muteHitText" : false,
+								"retreatType":"ByHitDirection",
+							},
+							"forceCameraShake": false,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 20,
+								"shakeDir":
+								{
+									"x":-0.9,
+									"y":0.1,
+									"z":0,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"GetElementRatio":1,
+				"Damage":0,
+			},
+		},
+	},
+
+
+////////////////////////////////////////////////////////////////
+//
+//  子弹技能   目前单击和蓄力的子弹复用一个ability
+//
+////////////////////////////////////////////////////////////////
+
+//子弹 41042001和41042002 共用一个ability
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_SkillBullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"AttachEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalArt_Bullet",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							// "$type" : "ConfigAttackCircle",
+							"$type" : "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							// "fanAngle": 360.0,
+							"radius": 1.6,
+							"checkHitScene": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": 0.0, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy" : "OriginOwner",
+							"attackTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Default",
+								"elementType":"Electric",
+								"elementDurability":25,
+								"enBreak" : 50,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalArt_Hit",
+								"hitImpulseType":"LV3",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeRange": 0.12,
+								"shakeTime": 0.1,
+							},
+						},
+					},
+				},
+			],
+			"onKill":
+			[
+				// {
+				// 	"$type": "SetGlobalPos",
+				// 	"target": "Owner", //这个记到self上
+				// 	"key": "_ABILITY_Keqing_AttackPos",	//以当前位置通知刻晴创建子弹
+				// 	"born":
+				// 	{
+				// 		"$type": "ConfigBornBySelf",
+				// 		"offset":
+				// 		{
+				// 			"x":0,
+				// 			"y":0,
+				// 			"z":0,
+				// 		},
+				// 	},
+				// 	"setTarget": true,
+				// 	"doOffStage": true,
+				// },
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetAltitude",//低于0.5的直接给贴地了，这样能播地面动作。 这样水面上表现错误。
+							"value":0.5,
+							"logic":"GreaterOrEqual", //但是用下面这个有概率落水。反而打不出攻击盒。+0.5就好了。2020.8.4
+						},
+						// {
+						// 	"$type":"ByGlobalPosToGround", //上面那个会判断水面，导致使用地面动作。
+						// 	"target":"Owner",
+						// 	"globalPos":"_ABILITY_Keqing_AttackPos",
+						// 	"toGroundHeight":0.5,
+						// 	"toWater":false,
+						// 	"logic":"GreaterOrEqual",
+						// },
+					],
+					"successActions":
+					[
+						// {
+						// 	"$type":"SetAnimatorBool",
+						// 	"target":"Owner",
+						// 	"boolID":"GadgetHigh", //GadgetHigh 默认做成true，防止还没判断高度就释放2段了。
+						// 	"value":true,
+						// },
+						{
+							"$type":"AddGlobalValue",
+							"target":"Owner",
+							"value":1,
+							"useLimitRange":true,
+							"key":"_ABILITY_Keqing_GadgetHigh",//用空中动作，以前的分支在高度之后才确定，现在改为施放瞬间就确定分支了。
+							"maxValue":1,
+							"minValue":1,
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target": "Owner",
+							"key": "_ABILITY_Keqing_AttackPos",	//以当前位置通知刻晴创建子弹
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+							"setTarget": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalDir",
+							"target": "Owner",
+							"key": "_ABILITY_Keqing_AttackDir",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+							"setTarget": true,
+							"doOffStage": true,
+						},
+					],
+					"failActions":
+					[
+						// {
+						// 	"$type":"SetAnimatorBool", //原本是用这个选择地面动作，为保持稳定我修改了，蓄力永远空中动作2020.8.4
+						// 	"target":"Owner",
+						// 	"boolID":"GadgetHigh",
+						// 	"value":false,
+						// },
+						{
+							"$type":"AddGlobalValue",
+							"target":"Owner",
+							"value":0,
+							"useLimitRange":true,
+							"key":"_ABILITY_Keqing_GadgetHigh",//说明整体目标比较贴地
+							"maxValue":0,
+							"minValue":0,
+						},
+						{
+							"$type": "SetGlobalPos",
+							"target": "Owner",
+							"key": "_ABILITY_Keqing_AttackPos",	//以当前位置通知刻晴创建子弹
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+								"onGround":true,
+								"onGroundRaycastUpDist":1,
+							},
+							"setTarget": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "SetGlobalDir",
+							"target": "Owner",
+							"key": "_ABILITY_Keqing_AttackDir",//其实没有用到
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+								"onGround":true,
+								"onGroundRaycastUpDist":1,
+							},
+							"setTarget": true,
+							"doOffStage": true,
+						},
+					],
+				},
+				{
+					"$type":"TriggerAbility",            //通知刻晴创建子弹,保证owner是刻晴才能查到children。（子弹的子弹不是刻晴的children）
+					"target":"Owner",
+					"abilityID":"Avatar_Keqing_Electrans_SetGadget",
+					"abilityName":"Avatar_Keqing_Electrans_SetGadget",//只写id可能会报错，补上2个。和菲谢尔一致。
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"ExtraHeight":0,
+				"Damage":0,
+			},
+		},
+	},
+
+
+//标记身上的ability  41042004
+
+	{//负责特效表现
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_SkillGadget_Material",  //标记
+			"onAdded":
+			[
+				{
+					"$type":"AttachEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalArt_Trap",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"SendEffectTrigger",
+					"parameter":"Eff_Keqing_Trap_Bomb",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalArt_Trap",
+				},
+			],
+			"onKill":
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalArt_Trap_Die",
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"target":"Owner",
+					"modifierName":"UNIQUE_Keqing_SkillChange", //重载的时候清除掉自己的modifier
+				},
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+	{//负责机制表现，触发爆炸
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_SkillGadget_ExplodeAbility",  //标记
+			"onAbilityStart":
+			[
+				{
+					"$type":"CreateGadget",//再创建一个gadget用于打攻击。
+					"gadgetID":41042005,
+					"campID":1001,
+					"campTargetType":"Enemy",
+				},
+				{
+					"$type":"KillSelf",
+				},
+			],
+		},
+	},
+
+
+
+
+//标记引爆，用于打攻击盒的ability  41042005
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_TrapBurst_Material", //标记爆炸效果用物件。
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Trap_Busrt",
+				},
+				// {
+				// 	"$type":"AttachModifier",
+				// 	"modifierName":"GenerateElemBall_ElementalArt_Gadget",
+				// },
+			],
+			"modifiers":
+			{
+				"Trap_Busrt": //打多会卡，只打2hit
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Keqing_ElementalArt_TrapBurst",
+						},
+						{//多段攻击盒。
+							"$type":"TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										//"attachPointName" : "RootNode",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag":"Elemental_Art",
+									"attenuationTag":"Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%Damage1",
+								  		"strikeType": "Slash",
+								  		"elementDurability": 50,
+										"elementType" : "Electric",
+										"overrideByWeapon": false,
+						          		"attackType": "Range",
+						          		"enBreak" : 50,
+						        	},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+						          		"retreatType": "ByOriginOwner",
+						          		"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+						          		"hitHaltTime": 0.00,
+						          		"hitHaltTimeScale": 0.01,
+						          		"muteHitText": false
+						        	},
+						        	"forceCameraShake": false,
+						        },
+						    },
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										//"attachPointName" : "RootNode",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.4,//超载会炸，为了命中可以高一点点
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag":"Elemental_Art",
+									"attenuationTag":"Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%Damage2",
+								  		"strikeType": "Slash",
+								  		"elementDurability": 50,
+										"elementType" : "Electric",
+										"overrideByWeapon": false,
+						          		"attackType": "Range",
+						          		"enBreak" : 50,
+						        	},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+						          		"retreatType": "ByOriginOwner",
+						          		"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+						          		"hitHaltTime": 0.00,
+						          		"hitHaltTimeScale": 0.01,
+						          		"muteHitText": false
+						        	},
+						        	"forceCameraShake": false,
+						        },
+						    },
+						},
+					],
+				},
+				// "GenerateElemBall_ElementalArt_Gadget":
+				// {
+				// 	"onAttackLanded":
+				// 	[
+				// 		{
+				// 			"$type" : "Predicated",
+				// 			"target" : "Target",
+				// 			"targetPredicates":
+				// 			[
+				// 				{
+				// 					"$type" : "ByAttackTags",
+				// 					"attackTags" : ["Elemental_Art"],
+				// 				},
+				// 				{
+				// 					"$type" : "ByEntityTypes",
+				// 					"entityTypes" : ["Monster"],
+				// 				},
+				// 				{
+				//                 	"$type": "ByTargetGlobalValue",
+				//                 	"key": "_ANIMAL_ENTITY_TYPE",
+				//                 	"value": 0,
+				//                 	"compareType": "NoneOrEqual",
+				//                 },
+				// 			],
+				// 			"successActions":
+				// 			[
+				// 				{
+				// 					"$type": "ApplyModifier",
+				// 					"modifierName": "Ball",
+				// 					"target": "OriginOwner", //给玩家
+				// 				},
+				// 			],
+				// 		},
+				// 	],
+				// },
+				// "Ball":
+				// {
+				// 	"duration": 0.6,
+				// 	"stacking": "Unique",
+				// 	"onAdded":
+				// 	[
+				// 		{
+				// 			"$type" : "Randomed",
+				// 			"chance" : 1,
+				// 			"successActions":
+				// 			[
+				// 				{
+				// 					"$type": "GenerateElemBall",
+				// 					"target":"Caster",//ability拥有者，也就是trap的位置（这样表现上比较舒服
+				// 					"configID": 2020,
+				// 					"baseEnergy": 6,
+				// 					"ratio": "%GetElementRatio",
+				// 					"born":
+				// 					{
+				// 						"$type": "ConfigBornByTarget",
+				// 						"offset" :
+				// 						{
+				// 							"x": 0.0,
+				// 							"y": 0.0,
+				// 							"z": 0.0,
+				// 						},
+				// 					},
+				// 				},
+				// 			],
+				// 		},
+				// 		{
+				// 			"$type" : "Randomed",
+				// 			"chance" : 0.5,
+				// 			"successActions":
+				// 			[
+				// 				{
+				// 					"$type": "GenerateElemBall",
+				// 					"target":"Caster",//ability拥有者，也就是trap的位置（
+				// 					"configID": 2020,
+				// 					"baseEnergy": 3,
+				// 					"ratio": "%GetElementRatio",
+				// 					"born":
+				// 					{
+				// 						"$type": "ConfigBornByTarget",
+				// 						"offset" :
+				// 						{
+				// 							"x": 0.0,
+				// 							"y": 0.0,
+				// 							"z": 1.0,
+				// 						},
+				// 					},
+				// 				},
+				// 			],
+				// 		},
+				// 	],
+				// },
+
+			},
+			"abilitySpecials":
+			{
+				"GetElementRatio":1,
+				"Damage1":0,
+				"Damage2":0,
+				// "Damage3":0.5,
+			},
+		},
+	},
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  充能技  ELementalburst
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_ElementalBurst_Camera",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS","ElementalBurst","ElementalBurst_AS"],//"ElementalBurst_AS",
+					"modifierName":"Camera_Handler",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS","ElementalBurst",],
+					"modifierName":"Keqing_EmotionControl",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS","ElementalBurst","ElementalBurst_AS",], //暂时AS先带了无敌。
+					"modifierName":"ElementalBurst_Protection",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS","ElementalBurst",],
+					"modifierName":"Keqing_ElementalBurst_HideWeapon",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS",],
+					"modifierName":"Keqing_ElementalBurst_Initialize",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"ElementalBurst",
+					"modifierName":"Keqing_ElementalBurst_Hide",
+					"normalizeStart":0.02, //
+					"normalizeEnd":0.9,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key": "_ABILITY_Keqing_NoCamera",
+					"value": 0,
+					"useLimitRange":true,
+					"maxValue":0,
+					"minValue":0,
+				},
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Field",
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":0.2,
+								"fanAngle": 360.0,
+								"radius": 1,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 1,
+										"z" : -0.2,
+									},
+								},
+							},
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 1,
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"AvatarEnterCameraShot",
+							"cameraMoveCfgPath":"Camera_Keqing_ElementalBurst",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Weapon",
+						},
+					],
+					"failActions":
+					[
+
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Weapon_NoCamera",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Keqing_NoCamera",
+							"value": 1,
+						},
+					],
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Weather_ChangeMixin",
+				},
+			],
+			"modifiers":
+			{
+				"ElementalBurst_Protection":
+				{
+					"state": "Invincible",
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"Camera_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerPostProcessEffectMixin",
+							"postEffectAssetName":"PostEffect_Avatar_Keqing_ElementalBurst_ScreenEffect_01",
+							"duration":4,
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "EnableHeadControl",
+							"enable": false,
+							"blend": false,
+						},
+						// {
+						// 	"$type": "DungeonFogEffects",
+			   //              "doOffStage": true,
+				  //           "enable": true,
+				  //           "muteRemoteAction":true,
+				  //           "cameraFogEffectName": "Eff_Avatar_Keqing_ElementalBurst_CameraEff",
+						// 	"localOffset":
+						// 	{
+						// 		"x":0,
+						// 		"y":0,
+						// 		"z":-3,
+						// 	},
+						// },
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+						},
+			            {
+			              "$type": "DungeonFogEffects",
+			              "doOffStage": true,
+			              "enable": false,
+			              "cameraFogEffectName": "Eff_Avatar_Keqing_ElementalBurst_CameraEff",
+							"localOffset":
+							{
+								"x":0,
+								"y":0,
+								"z":-3,
+							},
+			            },
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 8,
+								"forceRadiusDuration": 0.6,
+								"shouldKeepForceRadius":true,
+							},
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type" : "AvatarExitCameraShot",
+							"doOffStage" : true,
+						},
+						{
+							"$type": "EnableHeadControl",
+							"enable": true,
+							"doOffStage": true,
+						},
+			            {
+			              "$type": "DungeonFogEffects",
+			              "doOffStage": true,
+			              "enable": false,
+			              "cameraFogEffectName": "Eff_Avatar_Keqing_ElementalBurst_CameraEff",
+							"localOffset":
+							{
+								"x":0,
+								"y":0,
+								"z":-3,
+							},
+			            },
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 8,
+								"forceRadiusDuration": 0.6,
+								"shouldKeepForceRadius":true,
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+				"Keqing_EmotionControl":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEyeKey": false,
+							"toggleEmoSync": false,
+						},
+					],
+		            "onRemoved":
+		            [
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEyeKey": true,
+							"toggleEmoSync": true,
+						},
+			        ],
+			        "onAvatarOut":
+			        [
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEyeKey": true,
+							"toggleEmoSync": true,
+						},
+			        ],
+				},
+				"Weather_ChangeMixin":
+				{
+					"duration":5,
+					"modifierMixins":
+					[
+						{
+							"$type": "TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern": "Weather_Keqing_ElementalBurst",
+							"transDuration" : 0.3,//
+							"duration" : 4,//
+						},
+					],
+				},
+				"Keqing_ElementalBurst_HideWeapon":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01","sheathPoint"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01","sheathPoint"],
+							"doOffStage":true,
+						},
+					],
+				},
+				"Keqing_ElementalBurst_Hide":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider"],
+							"setEnable": false,
+						},
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 8,
+								"forceRadiusDuration": 0.6,
+								"shouldKeepForceRadius":true,
+							},
+						},
+
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider"],
+							"setEnable": true,
+							"doOffStage":true,
+						},
+					],
+				},
+				"Keqing_ElementalBurst_Initialize"://稍微吹开一些周围敌人，便于表演。
+				{
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Keqing_ElementalBurst_Talent_Buff",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									"talentParam":"Keqing_ElementalBurst_Buff"
+								},
+							],
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type":"WindZoneMixin",
+							"shapeName":"CircleR2",
+							"strength":-2,
+							"targetType":"All",
+							"predicates" :
+							[
+								{
+									"$type" : "ByTargetWeight",	//WindZoneLevel = 1
+									"logic" : "LesserOrEqual",	//WindZoneLevel = 1
+									"weight" : 150.0,	//WindZoneLevel = 1
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+									"reject" : true,
+								},
+							],
+						},
+					],
+				},
+				"Keqing_ElementalBurst_Talent_Buff":
+				{
+					"duration":"%Time",
+					// "state": "AttackUp",
+					"onAdded":
+					[
+            			{
+		            		"$type":"AttachEffect",
+		            		"effectPattern":"Eff_Avatar_Keqing_Talent6_Buff",
+            			},
+					],
+					"properties":
+					{
+						"Actor_CriticalDelta":"%Critic",
+						"Actor_ChargeEfficiencyDelta":"%ChargeRatio"
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Critic":0,
+				"ChargeRatio":0,
+				"Time":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  充能技打击效果
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_ElementalBurst",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10425,
+					"cdRatio": 1,
+				},
+				{
+					"$type":"CreateGadget",
+					"gadgetID":41042006,
+					"campID":1001,
+					"campTargetType":"Enemy",
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  物件技能  41042006  用于打最后一击(此时角色已经移动了） Keqing_ElementalBurst_Gadget_Material
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_Material",
+			"onAdded":
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Attack00",//有个很蛋疼的事情，明明gadget打的，但是halt算在角色身上了。导致特效和halt对不上了。
+				},
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Attack01",
+				},
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Attack02",
+				},
+			],
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"Predicated",
+					"target":"Owner",//改成gagdget执行后要改为owner，
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Keqing_NoCamera",
+							"value":0,
+							"compareType":"NoneOrEqual",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Attack03",
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Keqing_ElementalBurst_Attack03_NoCamera",
+						},
+					],
+				},
+				{
+					"$type": "ActCameraRadialBlur",
+					"cameraRadialBlur":
+					{
+						"power": 1.5,
+						"blurTime": 0.25,
+						"fadeTime": 0.3,
+					},
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage_Last",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 200,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV7",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.09,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.45,
+								"shakeTime": 0.35,
+								// "shakeDistance": 20, //写8或10的时候感觉不会震,因为衰减到8、10米就没了。
+								"shakeDir":
+								{
+									"x":-1,
+									"y":0.2,
+									"z":0,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage_Start":0,
+				"Damage1":0,
+				"Damage2":0,
+				"Damage_Last":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_CameraEffect",
+			"onAbilityStart":
+			[
+				{
+				 	"$type":"ApplyModifier",
+				 	"target":"Owner",
+				 	"modifierName":"Camera_Effect",
+				},
+			],
+			"modifiers":
+			{
+				"Camera_Effect":
+				{
+					"duration":1,
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerPostProcessEffectMixin",
+							"postEffectAssetName":"PostEffect_Avatar_Keqing_ElementalBurst_ScreenEffect_02",
+							"duration":0.5,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_StartAttack",
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackTag":"Elemental_Burst",
+							"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage_Start",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 100,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV1",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+								"shakeRange": 0.09,
+								"shakeTime": 0.06,
+								"shakeDistance":10,
+								"shakeDir":
+								{
+									"x": 0,
+									"y":-1,
+									"z": 0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage_Start":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_AttackType1",//无震屏攻击1，击退200  重复2次
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 25,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV3",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	// "forceCameraShake": true,
+				   //      	"cameraShake":
+				   //      	{
+							// 	"shakeRange": 0.15,
+							// 	"shakeTime": 0.09,
+							// 	"shakeDistance":10,
+							// },
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_AttackType2",//无震屏攻击2，击退0 重复2次
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 25,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV1",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	// "forceCameraShake": true,
+				   //      	"cameraShake":
+				   //      	{
+							// 	"shakeRange": 0.15,
+							// 	"shakeTime": 0.09,
+							// 	"shakeDistance":10,
+							// },
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_AttackType3",//有震屏攻击3  右到左攻击 重复2次
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 25,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV3",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.15,
+								"shakeTime": 0.09,
+								// "shakeDistance":8,
+								"shakeDir":
+								{
+									"x":1,
+									"y":0,
+									"z":0,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_AttackType4",//有震屏攻击4 从左到右  1次
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 25,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV1",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.15,
+								"shakeTime": 0.09,
+								// "shakeDistance":8,
+								"shakeDir":
+								{
+									"x":-1,
+									"y":0,
+									"z":0,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Keqing_ElementalBurst_Gadget_AttackType5",//有震屏攻击5 上到下 只有1次
+			"onAbilityStart":
+			[
+				// {
+				// 	"$type":"FireEffect",
+				// 	"effectPattern":"Eff_Weapon_MusicBlast",
+				// },////////记得删掉
+				{
+					"$type":"TriggerAttackEvent",
+					"target":"OriginOwner",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							// "$type": "ConfigAttackSphere",
+							"$type":"ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"height": 4,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -1,
+									"z" : 0.0,
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy":"OriginOwner",
+							"attackTag":"Elemental_Burst",
+          					"attenuationTag": "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Damage",
+								"strikeType": "Slash",
+		  						"attackType": "Range",
+								"elementType" : "Electric",
+								"elementDurability": 25,
+								"enBreak": 25,
+				        	},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Avatar_Keqing_ElementalBurst_Attack_Hit",
+								"hitImpulseType":"LV1",
+				          		"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+				          		// "hitHaltTime": 0.03,
+				          		"hitHaltTime": 0,
+				          		"hitHaltTimeScale":0.01,
+				          		"muteHitText": false,
+				          		"retreatType":"ByHitDirection",
+				        	},
+				        	"forceCameraShake": true,
+				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.2,
+								"shakeTime": 0.12,
+								// "shakeDistance":8,
+								"shakeDir":
+								{
+									"x":0,
+									"y":-1,
+									"z":0,
+								},
+				        	},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage":0,
+			},
+		},
+	},
+
+
+
+
+////////////////////////////////////////////////////////////////
+//
+//  以下为技能升级相关Ability
+//
+////////////////////////////////////////////////////////////////
+
+
+
+////普攻重击伤害替换
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_NormalAttack_DamageHandler",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%Attack_01",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%Attack_02",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%Attack_03",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04_1"],
+					"damagePercentage": "%Attack_04_01",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04_2"],
+					"damagePercentage": "%Attack_04_02",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"attackTags": ["NormalAttack_05"],
+					"damagePercentage": "%Attack_05",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_1"],
+					"damagePercentage":"%ExtraAttack1",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_2"],
+					"damagePercentage":"%ExtraAttack2",
+				},
+			],
+			"abilitySpecials":
+			{
+				"Attack_01": 0,
+				"Attack_02": 0,
+				"Attack_03": 0,
+				"Attack_04_01": 0,
+				"Attack_04_02": 0,
+				"Attack_05": 0,
+				"ExtraAttack1": 0,
+				"ExtraAttack2": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  以下为命之座相关Ability
+//
+////////////////////////////////////////////////////////////////
+////命中附着掉球
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Keqing_DropBall_Talent",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Attack01","Attack02","Attack03","Attack04","Attack05","ExtraAttack",],
+					"modifierName":"Keqing_DropBall_Talent_Handler"
+				},
+			],
+			"modifiers":
+			{
+				"Keqing_DropBall_Talent_Handler":
+				{
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+											"element": "Electric",
+										},
+									],
+								}
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":"%Chance",
+									// "target":"Target",//先在自己身边生成吧
+									"successActions":
+									[
+										{
+											"$type":"ApplyModifier",
+											"modifierName":"Keqing_DropBall_Talent",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Keqing_DropBall_Talent":
+				{
+					"duration":"%CDTime",
+					"Stacking":"Unique",
+					"onAdded":
+					[
+						{
+                            "$type": "GenerateElemBall",
+                            "configID": 2020,
+                            "baseEnergy": 3,
+                            "ratio": 1,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset" :
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 1,
+                                },
+                                "bornRandom" :
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange":0,
+                                    "maxRandomRange":1,
+                                },
+                            },
+                        },
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"Chance":0,
+				"CDTime":0,
+			},
+		},
+	},
+///
+////雷系元素反应后提升攻击
+	{
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Keqing_ElecReaction_Talent",
+            "isDynamicAbility":true,
+            "abilityMixins":
+			[
+				{
+					"$type": "DoActionByElementReactionMixin",
+					"range": 20, //这个就是默认值
+					"entityTypes":["Monster",],
+					"reactionTypes":["Explode","Shock","Superconductor","SwirlElectric","CrystallizeElectric","Overdose","OverdoseElectric","OvergrowMushroomElectric"], //雷相关
+					"actions":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Avatar_Keqing_AttackUp_Talent",
+						}
+					],
+				}, //一个检测发生了元素反应的mixin
+			],
+			"modifiers":
+			{
+				"Avatar_Keqing_AttackUp_Talent":
+				{
+					"duration":"%Dura",
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%AttackUp",
+					},
+				},
+			},
+            "abilitySpecials":
+            {
+            	"Dura":0,
+            	"AttackUp":0
+            },
+        },
+	},
+
+
+////普攻或重击、技能、充能技增加雷元素伤害
+	{
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Keqing_ElecUpWhenDoSkill_Talent",
+            "isDynamicAbility":true,
+            "abilityMixins":
+            [
+            	/*{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Attack01","Attack02","Attack03","Attack04","Attack05","ExtraAttack",],
+					"modifierName":"Talent_Keqing_NormalAttack",
+            	},
+            	{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["Electrans_BS","Electrans_Ground","Electrans_Fly","Electrans_FlyAir"],
+					"modifierName":"Talent_Keqing_ElementalArt",
+            	},
+            	{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ElementalBurst_BS"],
+					"modifierName":"Talent_Keqing_ElementalBurst",
+            	},*/
+            	{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["ExtraAttack",],
+					"modifierName":"Talent_Keqing_ExtraAttack_Buff_Trigger",
+            	},
+            	{
+            		"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+            		"onTriggerNormalAttack":
+            		[
+            			{
+            				"$type":"ApplyModifier",
+            				"modifierName":"Talent_Keqing_NormalAttack_Buff",
+            			},
+            			// {
+            			// 	"$type":"ApplyModifier",
+            			// 	"modifierName":"Talent_Keqing_Buff_Eff",
+            			// },
+            		],
+            		"onTriggerSkill":
+            		[
+            			{
+            				"$type":"ApplyModifier",
+            				"modifierName":"Talent_Keqing_ElemntalArt_Buff",
+            			},
+            			// {
+            			// 	"$type":"ApplyModifier",
+            			// 	"modifierName":"Talent_Keqing_Buff_Eff",
+            			// },
+            		],
+            		"onTriggerUltimateSkill":
+            		[
+            			{
+            				"$type":"ApplyModifier",
+            				"modifierName":"Talent_Keqing_ElemntalBurst_Buff",
+            			},
+            			// {
+            			// 	"$type":"ApplyModifier",
+            			// 	"modifierName":"Talent_Keqing_Buff_Eff",
+            			// },
+            		],
+
+            	},
+            ],
+            "modifiers":
+            {
+            	"Talent_Keqing_ExtraAttack_Buff_Trigger":
+            	{
+            		"onAdded":
+            		[
+            			{
+            				"$type":"ApplyModifier",
+            				"modifierName":"Talent_Keqing_ExtraAttack_Buff",
+            			},
+            			// {
+            			// 	"$type":"ApplyModifier",
+            			// 	"modifierName":"Talent_Keqing_Buff_Eff",
+            			// },
+            		],
+            	},
+            	// "Talent_Keqing_Buff_Eff":
+            	// {
+            	// 	"duration":"%Dura",
+            	// 	"onAdded":
+            	// 	[
+            	// 		{
+		           //  		"$type":"AttachEffect",
+		           //  		"effectPattern":"Eff_Avatar_Keqing_Talent6_Buff",
+            	// 		},
+            	// 	],
+            	// },
+            	"Talent_Keqing_NormalAttack_Buff":
+            	{
+            		"duration":"%Dura",
+            		"isLimitedProperties":true,
+            		"properties":
+            		{
+            			"Actor_ElecAddHurtDelta":"%Rate",
+            		},
+            	},
+            	"Talent_Keqing_ExtraAttack_Buff":
+            	{
+            		"duration":"%Dura",
+            		"isLimitedProperties":true,
+            		"properties":
+            		{
+            			"Actor_ElecAddHurtDelta":"%Rate",
+            		},
+            	},
+            	"Talent_Keqing_ElemntalArt_Buff":
+            	{
+            		"duration":"%Dura",
+            		"isLimitedProperties":true,
+            		"properties":
+            		{
+            			"Actor_ElecAddHurtDelta":"%Rate",
+            		},
+            	},
+            	"Talent_Keqing_ElemntalBurst_Buff":
+            	{
+            		"duration":"%Dura",
+            		"isLimitedProperties":true,
+            		"properties":
+            		{
+            			"Actor_ElecAddHurtDelta":"%Rate",
+            		},
+            	},
+            },
+            "abilitySpecials":
+            {
+            	"Rate":0,
+            	"Dura":0
+            },
+        },
+	},
+
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Keqing_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5042010,
+                    "flySkillID": 5042010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce_AS",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_AttachWeaponEffect",
+                },
+    			{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,	
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachWeaponEffect":
+                {
+                    "onAdded":
+                    [
+	                    {
+	                    	"$type":"AttachEffect",
+	                    	"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+	                    },
+                    ],
+                },
+                "FallingAnthem_CameraRadialBlur":
+                {
+					"duration":0.23,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                               			"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce_AS":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+
+]

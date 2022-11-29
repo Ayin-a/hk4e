@@ -1,0 +1,2933 @@
+[
+
+//****************普攻重击*************************
+//重击输入：Avatar_Tohma_ExtraAttack
+//重击子弹和伤害：Avatar_Tohma_ExtraAttack_CreateBullet
+//普攻伤害数值：Avatar_Tohma_NormalAttack_DamageHandler
+//空中攻击：Avatar_Tohma_FallingAnthem
+//
+//*****************小技能************************
+//托马盾控制ability：Avatar_Tohma_ElementalArt_Handler  //虽然叫art实际上所有产盾都走这个ability。
+//托马小技能攻击点：Avatar_Tohma_ElementalArt_Strike
+//
+//*****************元素爆发************************
+//元素爆发的攻击点：Avatar_Tohma_ElementalBurst_Start
+//元素爆发：托马身上的buff时间记录。 Avatar_Tohma_ElementalBurst_Buff_Handler  根据角色state触发协同攻击。
+//元素爆发触发协同攻击（同时刷新护盾）：Avatar_Tohma_ElementalBurst_TriggerAttack
+//
+//*****************盾叠加逻辑************************
+//小技能---->生成或者刷新盾。数值用小技能数值，刷新也是小技能数值。（总值受HP上限限制）
+//大招---->生成或者刷新盾。数值用大招数值，刷新也是大招数值。（总值受HP上限限制）
+//由于两处地方数值不同，但modifier名字需要相同（不然互刷和叠加困难）。也需要同一个ability去管理（其他ability上不了同属性uniqueModifier）
+//所以ElementalArt_Handler这个ability记录了所有数值，在触发时传递一个分支数值。
+
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  重击输入：Avatar_Tohma_ExtraAttack
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ExtraAttack",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_FX",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack_BS"
+                    ],
+                    "modifierName": "ExtraAttack_BS_FX",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_CloseCollider",
+                },
+                {
+                    "$type": "ButtonHoldChargeMixin",
+                    "skillID": 10501,
+                    "chargeTime": 0.12,
+                    "secondChargeTime": 0.2,
+                    "OnBeginUncharged":
+                    [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 99,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAny",
+                                    "predicates":
+                                    [
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 0,
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 4,
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseUncharged":
+                    [
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": true,
+                        },
+                    ],
+                    "OnReleaseCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginSecondCharged":
+                    [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 6,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Pole_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseSecondCharged":
+                    [
+
+                    ],
+                    "chargeStateIDs":
+                    [
+                        "Attack01",
+                        "Attack02",
+                        "Attack03",
+                        "Run"
+                    ],
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_StaminaCost",
+                },
+            ],
+            "modifiers":
+            {
+                "ExtraAttack_StaminaCost":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarSkillStart",
+                            "skillID": 10002,
+                            "costStaminaRatio":"%ExtraAttack_Pole_Stamina_Cost",
+                        },
+                    ],
+                },
+                "ExtraAttack_FX":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_ExtraAttack_Sprint",
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.3,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                    ]
+                },
+                "ExtraAttack_BS_FX":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_ExtraAttack",
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.3,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                    ]
+                },
+                "ExtraAttack_CloseCollider":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": true,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHDMesh",
+                            "enable": false,
+                            "hdMeshKey": "Default",
+                        }, 
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "TriggerSetPassThrough",
+                            "passThrough": false,
+                            "doOffStage": true,
+                            "canBeHandledOnRecover": true,
+                        },
+                        {
+                            "$type": "EnableHDMesh",
+                            "enable": true,
+                            "hdMeshKey": "Default",
+                            "canBeHandledOnRecover": true,
+                        }, 
+                        {
+                            "$type":"KillGadget",
+                            "gadgetInfo":
+                            {
+                                "$type":"SelectTargetsByChildren",
+                                "configID":41050001,
+                                "sortType":"Default",
+                            },
+                            "doOffStage":true,
+                        },
+                    ],
+                }
+            },
+            "abilitySpecials":
+            {
+                //故意少判了一点点体力，为了顾及一部分网络延迟
+                "ExtraAttack_Pole_Stamina_Cost": 0,
+                "Flexible_Stamina":-2,
+            },
+        },
+    },//Avatar_Tohma_ExtraAttack
+    ////////////////////////////////////////////////////////////////
+    //
+    //  重击触发子弹：Tohma_ExtraAttack (Bullet Ver.)
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ExtraAttack_CreateBullet",
+            "onAbilityStart":
+            [
+                {
+                    "$type": "TriggerBullet",
+                    "bulletID": 41050001,
+                },
+            ],
+        },
+    }, //Avatar_Tohma_ExtraAttack_CreateBullet
+    {
+
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ExtraAttack_Bullet",
+            "onAbilityStart":
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Target",
+                    "targetPredicates":
+                    [
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": ["MonsterEquip"],
+                        },
+                    ],
+                    "successActions":
+                    [
+                        {
+                            "$type": "DamageByAttackValue",
+                            "target": "Target",
+                            "attackInfo":
+                            {
+                                "canBeModifiedBy": "OriginOwner",
+                                "attackTag": "ExtraAttack",
+                                "attenuationTag":"ExtraAttack",
+                                "attenuationGroup":"Avatar_Pole_ExtraAttack",
+                                "attackProperty":
+                                {
+                                    "damagePercentage": "%ExtraAttack",
+                                    "strikeType": "Spear",
+                                    "elementDurability": 25,
+                                    "overrideByWeapon": true,
+                                    "attackType": "Melee",
+                                    "enBreak": 120,
+                                },
+                                "hitPattern":
+                                {
+                                    "onHitEffectName": "default",
+                                    "hitImpulseType":"LV5", //注意香菱的lv6是误写
+                                    "canBeDefenceHalt": true,
+                                    "hitHaltTime": 0.0,
+                                    "hitHaltTimeScale": 0.01,
+                                    "muteHitText": false
+                                },
+                                "forceCameraShake": false,
+                                "cameraShake":
+                                {
+                                    "shakeType": "CustomVector",
+                                    "shakeRange": 0.36,
+                                    "shakeTime": 0.12,
+                                    "shakeDistance": 30,
+                                    "shakeDir":
+                                    {
+                                        "x": 0,
+                                        "y": -1,
+                                        "z": 0,
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "failActions":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 0.8,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornByCollisionPoint",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                        },
+                                    },
+                                },
+                                "attackInfo":
+                                {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackTag": "ExtraAttack",
+                                    "attenuationTag":"ExtraAttack",
+                                    "attenuationGroup":"Avatar_Pole_ExtraAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%ExtraAttack",
+                                        "strikeType": "Spear",
+                                        "elementDurability": 25,
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "enBreak": 120,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV5",
+                                        "canBeDefenceHalt": true,
+                                        "hitHaltTime": 0.0,
+                                        "hitHaltTimeScale": 0.01,
+                                        "muteHitText": false
+                                    },
+                                    "forceCameraShake": false,
+                                    "cameraShake":
+                                    {
+                                        "shakeType": "CustomVector",
+                                        "shakeRange": 0.36,
+                                        "shakeTime": 0.12,
+                                        "shakeDistance": 30,
+                                        "shakeDir":
+                                        {
+                                            "x": 0,
+                                            "y": -1,
+                                            "z": 0,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+            "abilitySpecials":
+            {
+                "ExtraAttack": 0,
+            },
+        },
+    },//Avatar_Tohma_ExtraAttack_Bullet
+    ////////////////////////////////////////////////////////////////
+    //
+    //  全技能的盾逻辑,托马所有盾均属于此ability。//Avatar_Tohma_ElementalArt_Handler
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ElementalArt_Handler",
+            "onAdded": [
+                {
+                    "$type": "SetGlobalValue",
+                    // "target": "Team",
+                    "value": 0,
+                    "key": "_ABILITY_Avatar_Tohma_HasTeamShield", //先声明个变量。还是记自己身上靠谱
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type":"Predicated",
+                    // "target": "Team",
+                    "target": "Self",
+                    "doOffStage":true,
+                    "targetPredicates": [
+                        {
+                            "$type":"ByTargetGlobalValue",
+                            "target": "Target",
+                            "key": "_ABILITY_Avatar_Tohma_HasTeamShield",
+                            "compareType": "NoneOrEqual",
+                            "value": 0
+                        },
+                    ],
+                    "successActions": [//无盾，执行加盾操作
+                        {
+                            "$type": "Predicated",
+                            "target": "Self",
+                            "doOffStage":true,
+                            "targetPredicates": [
+                                {
+                                    "$type":"ByTargetOverrideMapValue", //先判断是小技能还是大招（虽然可以统一处理，但是灵活性不好）
+                                    "targetKey": "SkillType",
+                                    "targetValue": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {//将数值设置成小技能数值
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalArt_ShieldHPRatio",
+                                    "overrideMapKey": "ShieldHPRatio",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalArt_ShieldHPConst",
+                                    "overrideMapKey": "ShieldHPConst",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ArtDura",
+                                    "overrideMapKey": "Dura",
+                                    "doOffStage":true,
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {//将数值设置成大招数值
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalBurst_ShieldHPRatio",
+                                    "overrideMapKey": "ShieldHPRatio",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalBurst_ShieldHPConst",
+                                    "overrideMapKey": "ShieldHPConst",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%BurstDura",
+                                    "overrideMapKey": "Dura",
+                                    "doOffStage":true,
+                                },
+                            ],
+                        },
+                        {
+                            "$type":"AttachModifier",//注意下按道理新增盾也需要受上限影响，但手动用ChangeShieldValue感觉不合适。所以单次上是数值限制不会超的。以后有需要应当开发globalshield上限功能。
+                            "target":"Team",
+                            "modifierName":"UNIQUE_Tohma_ElementalArt_FireShield_Team",
+                            "doOffStage":true,
+                        },
+                    ],
+                    "failActions": [//有盾，需要执行刷新/叠加操作
+                        {
+                            "$type": "Predicated",
+                            "target": "Self",
+                            "doOffStage":true,
+                            "targetPredicates": [
+                                {
+                                    "$type":"ByTargetOverrideMapValue", //先判断是小技能还是大招（虽然可以统一处理，但是灵活性不好）
+                                    "targetKey": "SkillType",
+                                    "targetValue": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {//将数值设置成小技能数值
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalArt_ShieldHPRatio",
+                                    "overrideMapKey": "ShieldHPRatio",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalArt_ShieldHPConst",
+                                    "overrideMapKey": "ShieldHPConst",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ArtDura",
+                                    "overrideMapKey": "Dura",
+                                    "doOffStage":true,
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {//将数值设置成大招数值
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalBurst_ShieldHPRatio",
+                                    "overrideMapKey": "ShieldHPRatio",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%ElementalBurst_ShieldHPConst",
+                                    "overrideMapKey": "ShieldHPConst",
+                                    "doOffStage":true,
+                                },
+                                {
+                                    "$type":"SetOverrideMapValue",
+                                    "value": "%BurstDura",
+                                    "overrideMapKey": "Dura",
+                                    "doOffStage":true,
+                                },
+                            ],
+                        },
+                        // {
+                        //     "$type":"FireEffect",
+                        //     // "target": "Team", //给自己或team的话位置会匹配不上场上角色。
+                        //     "target":"CurLocalAvatar",
+                        //     "doOffStage":true,
+                        //     "effectPattern":"Eff_Avatar_Male_Pole_Tohma_Shield_Refresh",
+                        // },
+                        { //由于特效会流动，直接播放图案的相位对不上，改成状态机。
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            "target": "Team",
+                            "parameter": "Refresh",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type":"ChangeShieldValue",
+                            "target":"Team",
+                            "modifierName":"UNIQUE_Tohma_ElementalArt_FireShield_Team",
+                            "shieldHPRatio":"%ShieldHPRatio",
+                            "shieldHP":"%ShieldHPConst",
+                            "maxShieldByHPRatio":"%MaxShieldByAvatarHPRatio",
+                            "maxShieldHP": "%MaxShieldByAvatarHP",
+                            "refreshTime":true,
+                            "doOffStage":true,
+                        },
+                    ]
+                },
+                {//无论是刷新还是叠加，都需要检测一次shield然后播放对应形态的特效。 然后大招buff上下的时候也会改一次trigger//注意，这样不能实时监测了。而且本来也做不到
+                    "$type":"Predicated",
+                    "target":"Self",
+                    "doOffStage": true,
+                    "targetPredicates": [
+                        {
+                            "$type":"ByTargetGlobalValue",
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Tohma_Has_ELementalBurstBuff",
+                            "compareType": "Equal",
+                        },
+                    ],
+                    "successActions": [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            // "target": "CurLocalAvatar",
+                            "target":"Team",
+                            "parameter": "Burst",
+                            "type": "Bool",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "failActions": [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            // "target": "CurLocalAvatar",
+                            "target":"Team",
+                            "parameter": "Burst",
+                            "type": "Bool",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                {//无论是刷新还是叠加，都会触发突1，就不用写到分支里了。
+                    "$type": "ApplyModifier", //如果解锁了突1，为角色附加护盾强效。
+                    "target": "CurLocalAvatar", //cd记当前角色身上
+                    "modifierName": "UNIQUE_Tohma_ShieldCostMinusRatio_CD",
+                    "doOffStage": true,
+                    "predicates": [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Tohma_PermanentSkill_1_GainShieldCostMinusRatio",
+                        },
+                    ]
+                },
+                {//无论是刷新还是叠加，会触发命6。
+                    "$type":"Predicated",
+                    "target": "Caster",
+                    "doOffStage": true,
+                    "targetPredicates": [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Tohma_Talent6_DamageUp",
+                        },
+                    ],
+                    "successActions": [
+                        {
+                            "$type": "RemoveUniqueModifier",
+                            "modifierName": "UNIQUE_Tohma_Talent6_DamageUp",
+                            "target": "AllPlayerAvatars",
+                            "doOffStage": true,
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetPositionToSelfPosition",
+                                    "compareType": "XZ",
+                                    "value": 40,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Tohma_Talent6_DamageUp",
+                            "target": "AllPlayerAvatars",
+                            "doOffStage": true,
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetPositionToSelfPosition",
+                                    "compareType": "XZ",
+                                    "value": 40,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                    ]
+                },
+
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Tohma_ElementalArt_FireShield_Team":
+                {
+                    "isUnique": true,
+                    "duration": "%Dura",
+                    "modifierMixins":
+                    [
+                        {
+							"$type": "GlobalMainShieldMixin",
+							"shieldType":"Avatar_Fire",
+							"shieldHPRatio" : "%ShieldHPRatio",
+                            "shieldHP": "%ShieldHPConst",
+							"effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+							"showDamageText": "INFO_ELITE_DEFENCE",
+							"childShieldModifierName": "UNIQUE_Tohma_ElementalArt_FireShield_Child",
+							"onShieldBroken": //broken的定义为受到攻击后盾值低于0.时间到了不会触发。
+                            [
+                                { //onbeinghit的结算在移除盾之后，单次破盾无法结算受击，所以需要这里加。
+                                    "$type": "ApplyModifier", //如果解锁了命1，减少托马cd
+                                    "target": "Caster",
+                                    "modifierName": "UNIQUE_Tohma_Talent1_ReduceCD",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByUnlockTalentParam",
+                                            "talentParam": "Tohma_Talent1_ReduceCD",
+                                        },
+                                        {
+                                            "$type": "ByNot", //并且当前角色不是托马
+                                            "predicates": [
+                                                {
+                                                    "$type": "ByTargetType",
+                                                    "target": "CurLocalAvatar",
+                                                    "targetType": "Caster", //实际只有4个生效Self/Caster/Owner/OriginOwner
+                                                },
+                                            ]
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Tohma_ElementalArt_FireShield_Team"
+                                },
+                            ],
+						},
+                    ],
+                    "onAdded":
+                    [
+                        {
+                            "$type":"SetGlobalValue",
+                            "target":"Caster",
+                            "value":1,
+                            "key":"_ABILITY_Avatar_Tohma_HasTeamShield", //保持一个标记，便于确定是刷新盾还是新增盾。
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"SetGlobalValue",
+                            "target": "Caster",
+                            "value":0,
+                            "key":"_ABILITY_Avatar_Tohma_HasTeamShield",
+                        },
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Avatar_Male_Pole_Tohma_Shield_Broken",
+                        },
+                    ],
+                },
+                "UNIQUE_Tohma_ElementalArt_FireShield_Child": //modifier在当前角色身上
+                {
+                    "isUnique": true,
+                    "onAdded": [
+                        { //无论是刷新还是叠加，都需要检测一次shield然后播放对应形态的特效。 然后大招buff上下的时候也会改一次trigger//注意，这样不能实时监测了。而且本来也做不到
+                            "$type": "Predicated",
+                            "target": "Caster",
+                            "doOffStage": true,
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "value": 1,
+                                    "key": "_ABILITY_Avatar_Tohma_Has_ELementalBurstBuff",
+                                    "compareType": "Equal",
+                                },
+                            ],
+                            "successActions": [//这个可能无法让localavatar去执行,那就trigger托马的ability（需要新增）
+                                {
+                                    "$type": "SendEffectTrigger",
+                                    "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                                    // "target": "CurLocalAvatar",
+                                    "target":"Team",
+                                    "parameter": "Burst",
+                                    "type": "Bool",
+                                    "value": 1,
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "failActions": [
+                                {
+                                    "$type": "SendEffectTrigger",
+                                    "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                                    // "target": "CurLocalAvatar",
+                                    "target":"Team",
+                                    "parameter": "Burst",
+                                    "type": "Bool",
+                                    "value": 0,
+                                    "doOffStage": true,
+                                },
+                            ]
+                        },
+                    ],
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "GlobalSubShieldMixin",
+                            "mainShieldModifierName": "UNIQUE_Tohma_ElementalArt_FireShield_Team",
+                        },
+                    ],
+                    "onBeingHit":
+                    [
+                        {
+                            "$type": "ApplyModifier", //如果解锁了命1，减少托马cd，这个不依赖enbreak和damage等等。
+                            "target": "Caster",
+                            "modifierName": "UNIQUE_Tohma_Talent1_ReduceCD",
+                            "predicates": [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Tohma_Talent1_ReduceCD",
+                                },
+                                {
+                                    "$type": "ByNot", //并且当前角色不是托马
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetType",
+                                            "target": "CurLocalAvatar",
+                                            "targetType": "Caster", //实际只有4个生效Self/Caster/Owner/OriginOwner
+                                        },
+                                    ]
+                                },
+                            ],
+                        },
+                        {//onbeinghit的结算在移除盾之后，单次破盾无法结算受击，需要在broken里加一下。
+                            "$type": "Predicated",
+                            "target": "Target",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type": "ByAny", //和钟离一致。
+                                    "predicates": [
+                                        {
+                                            "$type": "ByHitDamage",
+                                            "damage": 0,
+                                            "logic": "Greater"
+                                        },
+                                        {
+                                            "$type": "ByHitEnBreak",
+                                            "enBreak": 0,
+                                            "logic": "Greater",
+                                        },
+                                    ],
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "target":"Team",
+                                    "modifierName": "UNIQUE_Tohma_Shield_Hit_Handler", //实测本地角色执行SendEffectTrigger然后target选team也可以影响到直属父亲为team的特效。可以参见辛焱的1段盾。By HTC 2021.6.7
+                                                                                //但有盾特效cd问题。。还是得有modifier
+                                },
+                            ],
+                        },
+                    ],
+                    "properties":
+                    {
+                        "Actor_EndureDelta": 0,
+                    },
+                },
+                "UNIQUE_Tohma_Shield_Hit_Handler": {
+                    "isUnique": true,
+                    "duration": 0.5,
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "target": "Team",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            "parameter": "Hit",
+                        },
+                    ]
+                },
+                "UNIQUE_Tohma_ShieldCostMinusRatio_CD":{
+                    "isUnique": true,
+                    "stacking":"Unique",
+                    "duration": "%PermanentSkill1_CDTime",
+                    "onAdded": [
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName": "UNIQUE_Tohma_ShieldCostMinusRatio_Buff",
+                        },
+                    ],
+                },
+                "UNIQUE_Tohma_ShieldCostMinusRatio_Buff": {
+                    "isUnique": true,
+                    "state": "DefenseUp",
+                    "duration": "%PermanentSkill1_Time",
+                    "stacking": "MultipleAllRefresh",
+                    "stackingOption": {
+                        "maxModifierNumForMultipleType": "%PermanentSkill1_Stack",
+                    },
+                    "isLimitedProperties": true,
+                    "properties": {
+                        "Actor_ShieldCostMinusRatio":"%PermanentSkill1_ShieldCostMinusRatio",
+                    },
+                },
+                "UNIQUE_Tohma_Talent1_ReduceCD":{
+                    "duration": "%Talent1_CD",
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "timeScale": "Level", //较长cd会受角色卡帧影响，记为Level则不会误差。
+                    "onAdded": [
+                        {
+                            "$type":"ModifyAvatarSkillCD",
+                            "skillID": 10502,
+                            "cdDelta": "-%Art_CD",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "ModifyAvatarSkillCD",
+                            "skillID": 10505,
+                            "cdDelta": "-%Burst_CD",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "target": "CurLocalAvatar",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Talent_ReduceCD", //注意：可选特效
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "UNIQUE_Tohma_Talent6_DamageUp":
+                {
+                    "isUnique":true,
+                    "duration": "%Talent6_Time",
+                    "onAdded": [
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Talent_TeamBuff",
+                            "doOffStage": true,
+                        },
+                    ],
+                    "modifierMixins":
+                    [
+                        {
+                            "$type":"ModifyDamageMixin",
+                            "attackTags":[
+                                "NormalAttack_01",
+                                "NormalAttack_02",
+                                "NormalAttack_03",
+                                "NormalAttack_04",
+                                "NormalAttack_05",
+                                "NormalAttack_06",
+                                "ExtraAttack",
+                                "FallingAttack",
+                            ],
+                            "damagePercentageRatio": "%Talent6_DamageUp",
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "SkillType":0,//1,2代表小技能和大招。
+                "MaxShieldByAvatarHPRatio":0,
+                "MaxShieldByAvatarHP":0,
+                "ElementalArt_ShieldHPRatio":0,
+                "ElementalArt_ShieldHPConst":0,
+                "ArtDura":0,
+                "ElementalBurst_ShieldHPRatio":0,
+                "ElementalBurst_ShieldHPConst":0,
+                "BurstDura":0,
+                "Dura":0,
+                "ShieldHPRatio":0,
+                "ShieldHPConst":0,
+                "PermanentSkill1_ShieldCostMinusRatio":0,
+                "PermanentSkill1_Time":0,
+                "PermanentSkill1_Stack": 0,
+                "PermanentSkill1_CDTime":0,
+                "Art_CD":0,
+                "Burst_CD":0,
+                "Talent1_CD": 0,
+                "Talent6_DamageUp": 0,
+                "Talent6_Time": 0,
+            },
+        },
+    },//Avatar_Tohma_ElementalArt_Handler
+    ////////////////////////////////////////////////////////////////
+    //
+    //  小技能攻击点和上盾点和上火附着点：Avatar_Tohma_ElementalArt_Strike
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ElementalArt_Strike",
+            // "abilityMixins":
+            // [
+            //     {
+            //         "$type":"AttachToStateIDMixin",
+            //         "stateIDs":
+            //         [
+            //             "ElementalArt","ElementalArt_AS", //虽然0.2发动，0.7能打断。但是在出球前被怪打断会提早结束modifier导致不掉球。
+            //         ],
+            //         "modifierName": "GenerateElemBall_Tohma_ElementalArt",
+            //     },
+            // ],
+            "onAdded": [
+                {
+                    "$type":"AttachModifier",
+                    "modifierName": "GenerateElemBall_Tohma_ElementalArt",//写成常驻
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type":"AvatarSkillStart",
+                    "skillID":10502,
+                },
+                {
+                    "$type":"TriggerAbility",
+                    "abilityName": "Avatar_Tohma_ElementalArt_Handler",
+                    "abilitySpecials": {
+                        "SkillType":1, //传递说明是小技能
+                    }
+                },
+                { //仅在释放小技能时，附加火附着。
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Tohma_ElementalArt_FireBuff", //上的时候有一次清buff效果
+                    "target": "CurLocalAvatar",
+                },
+                {
+                    "$type" : "TriggerAttackEvent",
+                    "targetType" : "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern" :
+                        {
+                            "$type" : "ConfigAttackCircle",
+                            "triggerType" : "TriggerNoRepeat",
+                            "radius":3,
+                            "fanAngle":270, //身后不打到
+                            "height":2.5,
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset" :
+                                {
+                                    "x" : 0.0,
+                                    "y" : -0.5,
+                                    "z" : 1,
+                                },
+                            },
+                        }, //方形攻击盒命中范围很有问题。 至少得有行秋的范围才能好用。选用扇形
+                        "attackInfo":
+                        {
+                            "attackTag": "Elemental_Art",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%ElementalArt_Damage",
+                                "strikeType": "Slash",
+                                "elementType" : "Fire",
+                                "attackType":"Melee",
+                                "elementDurability" : 25,
+                                "enBreak": 150,
+                            },
+                            "hitPattern" :
+                            {
+                                "onHitEffectName" : "Eff_Avatar_Male_Pole_Tohma_ElementalArt_Hit",
+                                "hitImpulseType":"LV3",
+                                // "retreatType": "ByAttacker",
+                                "retreatType": "ByHitDirection",
+                                "canBeDefenceHalt": true,
+                                "hitHaltTime" : 0.06,
+                                "hitHaltTimeScale" : 0.01,
+                                "muteHitText" : false,
+                            },
+                            "forceCameraShake": false,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.15,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": -1,
+                                    "z": 0,
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Tohma_ElementalArt_FireBuff": {
+                    "isUnique": true,
+                    "stacking": "Refresh",
+                    "duration": 1.0,
+                    "elementType": "Fire",
+                    "elementDurability": 25,
+                },
+                "GenerateElemBall_Tohma_ElementalArt":
+                {
+                    "stacking":"Unique",
+                    "onHittingOther":
+                    [
+                        {
+                            "$type" : "Predicated",
+                            "target" : "Other",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type" : "ByAttackTags",
+                                    "attackTags" : ["Elemental_Art"],
+                                },
+                                {
+                                    "$type" : "ByEntityTypes",
+                                    "entityTypes" : ["Monster"],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "ApplyModifier", //点击
+                                    "modifierName": "Ball",
+                                    "target": "Self",
+                                },
+                                {
+                                    "$type": "ApplyModifier",
+                                    "modifierName": "Ball_Extra",
+                                    "target": "Self",
+                                }
+                            ],
+                        },
+                    ],
+                },
+                "Ball":
+                {
+                    "duration": 0.3,
+                    "stacking": "Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type" : "Randomed",
+                            "chance" : 1.0,
+                            "successActions":
+                            [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "configID": 2017,
+                                    "baseEnergy": 9,
+                                    "ratio": 1,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornByTarget",
+                                        "offset" :
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "Ball_Extra": {
+                    "duration": 0.3,
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "Randomed",
+                            "chance": 0.5,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "configID": 2017,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornByTarget",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "ElementalArt_Damage":0,
+            },
+        },
+    },//Avatar_Tohma_ElementalArt_Strike
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  元素爆发发动点，推开敌人：Avatar_Tohma_ElementalBurst_Start
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ElementalBurst_Start",
+            "onAbilityStart":
+            [
+                {
+                    "$type":"FireEffect",
+                    "effectPattern":"Eff_Avatar_Male_Pole_Tohma_ElementalBurst",
+                },
+                {
+                    "$type" : "TriggerAttackEvent",
+                    "targetType" : "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "fanAngle": 360.0,
+                            "radius": 4,//保证范围和特效一致
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x" : 0.0,
+                                    "y" : 0.0,
+                                    "z" : 0.0,
+                                },
+                            },
+                            "ignoreMassive":true,
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag":"Elemental_Burst",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%ElementalBurst_Damage",
+                                "elementType": "Fire",
+                                "strikeType":"None", //写成none防止播放通用受击特效/音效。
+                                "elementDurability": 50,
+                                "enBreak": 200,
+                            },
+                            "hitPattern":
+                            {
+                                // "onHitEffectName": "default",
+                                "onHitEffectName":"Eff_Avatar_Male_Pole_Tohma_ElementalArt_Hit",
+                                "hitImpulseType":"LV3",
+                                "retreatType": "ByHitDirection",
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.25,
+                                "shakeTime": 0.09,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x":0,
+                                    "y":1,
+                                    "z":0,
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "$type": "ActCameraRadialBlur",
+                    "cameraRadialBlur": {
+                        "power": 0.6,
+                        "blurTime": 0.4,
+                        "fadeTime": 0.2,
+                    },
+                },
+                {//托马命4回能
+                    "$type": "ReviveElemEnergy",
+                    "value": "%Tohma_Talent4_Value",
+                    "predicates": [
+                        {
+                            "$type": "ByUnlockTalentParam", //解锁命4触发
+                            "talentParam": "Tohma_Talent4_ReviveEnergy",
+                        },
+                    ]
+                },
+
+            ],
+            "abilityMixins": [
+                {
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalBurst",
+                    "modifierName": "Tohma_ElementalBurst_SkillStart&Camera_Remover_Handler",
+                    "normalizeStart": 0,
+                    "normalizeEnd": 0.65,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": ["ElementalBurst"],
+                    "modifierName": "Tohma_ElementalBurst_Invincible",
+                },
+            ],
+            "modifiers":
+            {
+                "Tohma_ElementalBurst_SkillStart&Camera_Remover_Handler": //控制恢复镜头，屏蔽摇头
+                {
+                    "onAdded": [
+                        {
+                            "$type": "AvatarSkillStart",
+                            "skillID": 10505,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": false,
+                            "blend": false,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "cameraParam": {
+                                "forceRadius": 6,
+                                "forceRadiusDuration": 0,
+                                "shouldKeepForceRadius": true,
+                            },
+                        },
+                        {
+                            "$type": "AvatarExitCameraShot",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                        {//由于一些表现问题，盾的变量必须在坐下的时候发动，于是SetGlobalvalue的位置就移到了这里。
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Tohma_Has_ELementalBurstBuff",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            "target": "Team",
+                            "parameter": "Burst",
+                            "type": "Bool",
+                            "value": 1,
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onAvatarOut": [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "cameraParam": {
+                                "forceRadius": 6,
+                                "forceRadiusDuration": 0,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "AvatarExitCameraShot",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Tohma_ElementalBurst_Invincible": {
+                    "state": "Invincible",
+                    "onAdded": [
+                        {
+                            "$type": "AttachAbilityStateResistance",
+                            "resistanceListID": 11002,
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials": {
+                "ElementalBurst_Damage":0,
+                "Tohma_Talent4_Value": 0,
+            }
+        },
+    }, //Avatar_Tohma_ElementalBurst_Start
+    ////////////////////////////////////////////////////////////////
+    //
+    //  元素爆发buff管理。 Avatar_Tohma_ElementalBurst_Buff_Handler 包括：
+    //  1、托马身上记录时长和攻击cd。
+    //  2、当前角色身上检测普通攻击动画，触发TriggerAttack和Art上盾
+    //  特殊攻击包括：公子近战、雷神刀形态
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ElementalBurst_Buff_Handler", //管理大招buff
+            "onAdded": [
+                {
+                    "$type": "SetGlobalValue", //注册一下变量。
+                    "key": "_ABILITY_Tohma_ElementalBurst_AttackMark",
+                    "value": 0,
+                },
+                {
+                    "$type": "SetGlobalValue", //注册一下变量。
+                    "key": "_ABILITY_Avatar_Tohma_Has_ELementalBurstBuff",
+                    "value": 0,
+                },
+            ],
+            "onAbilityStart":
+            [
+                {
+                    "$type": "RemoveUniqueModifier",
+                    "modifierName": "UNIQUE_Tohma_ElementalBurst_Buff_Handler",
+                    "doOffStage": true,
+                },
+                {
+                    "$type":"ApplyModifier",
+                    "modifierName":"UNIQUE_Tohma_ElementalBurst_Buff_Handler",
+                    "doOffStage":true,
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Tohma_ElementalBurst_Buff_Handler"://modifier由托马维护
+                {
+                    "duration":"%Dura",
+                    "isUnique":true,
+                    "stacking":"Refresh",
+                    "onAdded": [
+                        {
+                            "$type":"AttachModifier",
+                            "target": "Team",
+                            "modifierName": "UNIQUE_Avatar_Male_Pole_Tohma_ElementalBurst_TeamEffect"
+                        },
+                        // {
+                        //     "$type": "AttachEffect",
+                        //     "target": "Team",
+                        //     "effectPattern": "Eff_Avatar_Male_Pole_Tohma_ElementalBurst_BuffBegin",//Team上播放特效（因为特效需要连续，不能每个人播一次）
+                        // },//由于表现问题，盾变亮的GV和trigger放到了上一个ability触发。角色坐下发动效果时发动，65%的动画点。
+                    ],
+                    "modifierMixins":[
+                        {
+                            "$type":"CurLocalAvatarMixin",
+                            "modifierName":"UNIQUE_Tohma_ElementalBurst_AttackDetect", //用于检测当前角色在攻击
+                        },
+                    ],
+                    "thinkInterval": "%Dura-1", //需要提早播结束特效
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type":"SendEffectTrigger",
+                            "target":"Team",
+                            "effectPattern":"Eff_Avatar_Male_Pole_Tohma_ElementalBurst_BuffBegin",
+                            "parameter":"End",
+                            "doOffStage":true,
+                        },
+                    ],
+                    "onRemoved":[//先留着，记得要remove掉很多东西
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Caster",
+                            "key": "_ABILITY_Tohma_ElementalBurst_AttackMark",  //技能结束，移除攻击计数
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Tohma_Has_ELementalBurstBuff",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_Shield",
+                            "target":"Team",
+                            "parameter": "Burst",
+                            "type": "Bool",
+                            "value": 0,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Avatar_Male_Pole_Tohma_ElementalBurst_TeamEffect":
+                {
+                    "isUnique": true,
+                    "duration": "%Dura",
+                    "onAdded": [
+                        {
+                            "$type":"AttachEffect",//注意下team自己播放的时候角色trigger能否发到。
+                            "effectPattern": "Eff_Avatar_Male_Pole_Tohma_ElementalBurst_BuffBegin",
+                        },
+                    ],
+                },
+                "UNIQUE_Tohma_ElementalBurst_AttackDetect": //挂当前场上角色身上，标记目标正在普攻期间
+                {
+                    "isUnique": true,
+                    "duration":"%Dura", //注意：曾经碰到重连后残留的问题。留个时间保底。
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack01",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05, //留一点时间等turnDirection完成 0.05就会比绫华慢，但已经不辅助绫华了所以和行秋统一。
+                            "normalizeEnd": 0.25,   //和水剑比，和动作关联更大，区间不能放太后面。
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack02",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05, //注意必须留一个区间让协同攻击触发，如果仅在固定节点5%触发，部分动画长的攻击如果正好错过5%会一直琺触发效果，会导致手感巨差。
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack03",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack04",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack05",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Attack06",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack01",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack02",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack03",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack04",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack05",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Gandalfr_Attack06",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack01",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack02",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack03",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack04",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack05",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Tartaglia_Attack06",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Katana_Attack01",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Katana_Attack02",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Katana_Attack03",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Katana_Attack04",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        {
+                            "$type": "AttachToNormalizedTimeMixin",
+                            "stateID": "Katana_Attack05",
+                            "modifierName": "UNIQUE_Tohma_ElementalBurst_AttackMark",
+                            "normalizeStart": 0.05,
+                            "normalizeEnd": 0.25,
+                        },
+                        ///如果重击、下落单独打一个，独立于普攻cd计算。  会导致画面很乱。记得回改。 另外设计上准备改成只支持普攻（同行秋）。
+                    ],
+                },
+                "UNIQUE_Tohma_ElementalBurst_AttackMark"://挂在LocalAvatar上
+                {
+                    "isUnique":true,
+                    // "stacking":"Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Tohma_ElementalBurst_AttackMark",
+                            "value": 1,
+                            "target": "Caster",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type":"SetGlobalPos",
+                            "setTarget":false, //这时就会赋给Caster
+                            "key":"_ABILITY_Avatar_Tohma_ElementalBurstPos",
+                            "born":
+                            {
+                                "$type":"ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x":0,
+                                    "y":0,//想要打到地面
+                                    "z":-1, //记录pos的时候需要先加上偏移。因为后面恢复的时候无法找到当前角色朝向
+                                },
+                            },
+                        },
+                        {
+                            "$type":"SetGlobalDir",
+                            "setTarget":false,
+                            "key":"_ABILITY_Avatar_Tohma_ElementalBurstDir",
+                        },
+                        {
+                            "$type":"ApplyModifier", //让Caster判断攻击cd
+                            "target":"Caster",
+                            "modifierName":"UNIQUE_Tohma_ElementalBurst_Attack_CDHandler"
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Tohma_ElementalBurst_AttackMark",
+                            "value": 0,
+                            "target": "Caster",
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Tohma_ElementalBurst_Attack_CDHandler": //对Caster来说普攻期间永续
+                {
+                    "isUnique":true,
+                    "stacking":"Unique", //由于是unique，modifier本身即代表了cd，这个modifier至少1秒才能移除。
+                    "onAdded":
+                    [
+                        {
+                            "$type":"TriggerAbility",
+                            "doOffStage":true,
+                            "target":"Caster",
+                            "abilityName":"Avatar_Tohma_ElementalBurst_TriggerAttack",//发动攻击，刷新忠犬护盾
+                        },
+                        // {
+                        //     "$type": "FireEffect",
+                        //     "effectPattern": "Eff_Avatar_Male_Pole_Tohma_SupportHit",
+                        //     "doOffStage": true,
+                        //     "target": "CurLocalAvatar", //Tohma隐藏了，某些特效会因为角色隐藏不播。所以必须给local播放
+                        //     "born": {
+                        //         "$type": "ConfigBornByGlobalValue",
+                        //         "positionKey": "_ABILITY_Avatar_Tohma_ElementalBurstPos",
+                        //         "directionKey":"_ABILITY_Avatar_Tohma_ElementalBurstDir",
+                        //         "direction": {
+                        //             "$type": "ConfigDirectionByGroundNormalRange", //检查一个方向的平均法线。
+                        //             "range": 3,
+                        //         },
+                        //         "onGround": true,
+                        //     },
+                        // },
+                    ],
+                    "thinkInterval":"%CDTime",
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "Predicated",//每秒判断是否在攻击中，在则发动攻击，不在则移除modifier（cd）。
+                            "target": "Self",
+                            "doOffStage": true,
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ABILITY_Tohma_ElementalBurst_AttackMark",
+                                    "value": 1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type": "Predicated",//每1秒判断是否未被冻住，不冻住则进行攻击，冻住则移除modifier（这个state内不会重新上了），但下次攻击时会上并触发onAdded的攻击。
+                                    "doOffStage": true,
+                                    "target": "CurLocalAvatar",
+                                    "targetPredicates":
+                                    [
+                                        {
+                                            "$type" : "ByAny",
+                                            "predicates":
+                                            [
+                                                {
+                                                    "$type" : "ByHasAbilityState",
+                                                    "abilityState" : "ElementFreeze",
+                                                },
+                                                {
+                                                    "$type" : "ByHasAbilityState",
+                                                    "abilityState" : "ElementPetrifaction",
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                    "successActions":
+                                    [
+                                        {
+                                            "$type": "RemoveUniqueModifier",
+                                            "modifierName": "UNIQUE_Tohma_ElementalBurst_Attack_CDHandler",
+                                            "doOffStage": true,
+                                        },
+                                    ],
+                                    "failActions":
+                                    [
+                                        {
+                                            "$type":"TriggerAbility",
+                                            "doOffStage":true,
+                                            "target":"Caster",
+                                            "abilityName":"Avatar_Tohma_ElementalBurst_TriggerAttack",//发动攻击
+                                        },
+                                    ],
+                                },
+                            ],
+                            "failActions":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Tohma_ElementalBurst_Attack_CDHandler",
+                                    "doOffStage": true,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "Dura":0.92,//由于特效需要，buff在0位置就上了，需要补上技能释放的时间
+                "CDTime":0,
+            },
+        },
+    },//Avatar_Tohma_ElementalBurst_Buff_Handler
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  元素爆发协同攻击：Avatar_Tohma_ElementalBurst_TriggerAttack
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+         "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_ElementalBurst_TriggerAttack",
+            "onAbilityStart":
+            [
+                {
+                    "$type":"ApplyModifier", //team去播特效
+                    "target":"Team",
+                    "modifierName":"UNIQUE_Tohma_ElementalBurst_Armor_BlinkEffect",
+                    "doOffStage":true,
+                },
+                {
+                    "$type":"TriggerAbility",
+                    "target": "Self",
+                    "abilityName": "Avatar_Tohma_ElementalArt_Handler",
+                    "abilitySpecials": {
+                        "SkillType":2, //传递说明是大招
+                    },
+                    "doOffStage": true,
+                },
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Male_Pole_Tohma_SupportHit",
+                    "doOffStage": true,
+                    // "target": "CurLocalAvatar", //某些特效可能会因为角色隐藏不播。所以给local播放
+                    "target": "Caster", //单次特效，不会被隐藏。
+                    "born": {
+                        "$type": "ConfigBornByGlobalValue",//注意gv必须在target身上，不然会读不到
+                        "positionKey": "_ABILITY_Avatar_Tohma_ElementalBurstPos",
+                        "directionKey": "_ABILITY_Avatar_Tohma_ElementalBurstDir",
+                        "direction": {
+                            "$type": "ConfigDirectionByGroundNormalRange", //检查一个方向的平均法线。
+                            "range": 3,
+                        },
+                        "onGround": true,
+                    },
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "doOffStage": true,
+                    "target":"Caster", //这个是攻击发起者。 需要注意下是否正确。默认好像不是self
+                    "targetType": "Enemy",
+                    "attackEvent": {
+                        "attackPattern": {
+                            "$type": "ConfigAttackBox", //circle对近身的匹配太差了。
+                            "triggerType": "TriggerNoRepeat",
+                            "size": {
+                                "x": 4.5,
+                                "y": 2,
+                                "z": 8,
+                            },
+                            "born": {
+                                "$type": "ConfigBornByGlobalValue",
+                                "positionKey": "_ABILITY_Avatar_Tohma_ElementalBurstPos",
+                                "directionKey": "_ABILITY_Avatar_Tohma_ElementalBurstDir",
+                                //这里offset的z会按托马离队时的朝向算。所以在写key的时候就记录了向后位移。
+                                "offset": {
+                                    "y":1,
+                                },
+                            },
+                            "massiveAttackRatio": 0.4, //不然草地体验太差了。
+                        },
+                        "attackInfo": {
+                            "attackTag": "Elemental_Burst",
+                            "attenuationTag": "Elemental_Burst",
+                            "attackProperty": {
+                                "damagePercentage": "%ElementalBurst_TriggerDamage",
+                                "damageExtra": "%HP2Damage*%FIGHT_PROP_MAX_HP", //如果未解锁，这个Extra的HP2D系数本来就是0
+                                "strikeType": "None",//写成none防止播放通用受击特效/音效。
+                                "elementType": "Fire",
+                                "elementDurability": 25,
+                                "attackType": "Default",
+                                "enBreak": 35,
+                            },
+                            "hitPattern": {
+                                "onHitEffectName": "Eff_Avatar_Male_Pole_Tohma_ElementalBurst_Hit",
+                                "hitImpulseType": "LV2",
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0.00,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false
+                            },
+                        },
+                    },
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Tohma_ElementalBurst_Armor_BlinkEffect"://触发时让大招的buff可以亮一下。
+                {
+                    "duration":0.3,
+                    "isUnique":true,
+                    "stacking":"Unique",
+                    "onAdded":
+                    [
+                        {
+                            "$type":"SendEffectTrigger", //大招播放触发特效
+                            "effectPattern":"Eff_Avatar_Male_Pole_Tohma_ElementalBurst_BuffBegin",
+                            "parameter":"TriggerAttack",
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+                "ElementalBurst_TriggerDamage":0,
+                "HP2Damage":0,
+            },
+        },
+    },//Avatar_Tohma_ElementalBurst_TriggerAttack
+
+
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //   普攻伤害替换：Avatar_Tohma_NormalAttack_DamageHandler
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_NormalAttack_DamageHandler",
+            "abilityMixins":
+            [
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK01"],
+                    "damagePercentage": "%Attack01",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK02"],
+                    "damagePercentage": "%Attack02",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK03_01"],
+                    "damagePercentage": "%Attack03_01",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK03_02"],
+                    "damagePercentage": "%Attack03_02",
+                },
+                {
+                    "$type": "ModifyDamageMixin",
+                    "animEventNames": ["ATK04"],
+                    "damagePercentage": "%Attack04",
+                },
+                //Extra记到bullet的ability里了
+                // {
+                //     "$type": "AttachToNormalizedTimeMixin",
+                //     "stateID": "Attack04",
+                //     "modifierName": "Tohma_NormalAttack_WeaponHide",
+                //     "normalizeStart": 0.10, //在22帧左右消失
+                //     "normalizeEnd": 0.465,
+                // },
+
+            ],
+            "modifiers":
+            {
+                // "Tohma_NormalAttack_WeaponHide":{
+                //     "onAdded": [
+                //         {
+                //             "$type": "TriggerHideWeapon",
+                //             "visible": false,
+                //             "partNames": [
+                //                 "equip01","equip02",
+                //                 "sheathPoint"
+                //             ],
+                //         },
+                //     ],
+                //     "onRemoved": [
+                //         {
+                //             "$type": "TriggerHideWeapon",
+                //             "visible": true,
+                //             "partNames": [
+                //                 "equip01","equip02",
+                //                 "sheathPoint"
+                //             ],
+                //             "doOffStage": true,
+                //         },
+                //     ],
+                // },
+            },
+            "abilitySpecials":
+            {
+                "Attack01": 0,
+                "Attack02": 0,
+                "Attack03_01": 0,
+                "Attack03_02": 0,
+                "Attack04": 0,
+            },
+        },
+    },//Avatar_Tohma_NormalAttack_DamageHandler
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  空中攻击   ：Avatar_Tohma_FallingAnthem
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Tohma_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5050010,
+                    "flySkillID": 5050010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            /*                          "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.3,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                            },*/
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_01_Normal",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Strike_02_Normal",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_BS_Material":
+                {
+                    "duration":0.53,
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_BS_Normal",
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "ActCameraRadialBlur",
+                            "cameraRadialBlur":
+                            {
+                                "power": 0.3,
+                                "blurTime": 0.3,
+                                "fadeTime": 0.15,
+                            },
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                        "elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Spear",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                                        "hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_01":
+                {
+                    "onAdded":[
+                        {
+                          "$type": "ClearGlobalValue",
+                          "key": "_ABILITY_FallingAttack_Altitude",
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAttack_Altitude",
+                            "value": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "useLimitRange": true,
+                            "maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },//==================================================================================
+
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "FallingAnthem_FallingDamageImmune_02",
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                    "onAdded":[
+                        {
+                            "$type": "SetGlobalValueToOverrideMap",
+                            "globalValueKey": "_ABILITY_FallingAttack_Altitude",
+                            "overrideMapKey": "FallingAnthem_FallingDamageRatio",
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "FallingAnthem_FallingDamageImmune_03",
+                        },
+                    ],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Loop_01_Normal",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Pole_FallingAnthem_Loop_02_Normal",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        /*                      {
+                            "$type": "DebugLog",
+                            "content": "FallingAnthem Height Set True!",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 3.0,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },*/
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                        /*                      {
+                            "$type": "DebugLog",
+                            "content": "FallingAnthem Height Reset!",
+                        },*/
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                    /*                  "onRemoved":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces": ["RushMoveType"],
+                        },
+                    ],*/
+                },
+            },
+            "abilitySpecials":
+            {
+                "FallingAnthem_Normal_Loop_Damage": 0,
+                "FallingAnthem_Normal_Rank_1_Damage": 0,
+                "FallingAnthem_Normal_Rank_2_Damage": 0,
+
+                "FallingAnthem_Altitude_Lv0": 20,
+                "FallingAnthem_Altitude_Lv1": 40,
+                "FallingAnthem_Altitude_Lv2": 60,
+                "FallingAnthem_Altitude_Lv3": 100,
+                "FallingAnthem_Altitude_Lv4": 200,
+
+                "FallingAnthem_FallingDamageRatio_Lv0": -1,
+                "FallingAnthem_FallingDamageRatio_Lv1": -1,
+                "FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+                "FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+                "FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+                "FallingAnthem_FallingDamageRatio": 0,
+            },
+        },
+    },//Avatar_Tohma_FallingAnthem
+]

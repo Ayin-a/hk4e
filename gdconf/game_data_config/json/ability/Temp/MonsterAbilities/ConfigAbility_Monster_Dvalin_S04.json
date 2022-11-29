@@ -1,0 +1,7681 @@
+[
+//////////////////////////////////
+//
+//  Test Fix Move Dvalin
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Steer",
+			"abilityMixins":
+			[
+				{
+					"$type":"FixDvalinS04MoveMixin",
+				},				
+				{
+					"$type": "StageReadyMixin",						
+					"onStageReady":
+					[
+						{
+							"$type": "ShowUICombatBar",
+							"show": true,
+							"fore": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"FallingDamage",
+							"target":"CurTeamAvatars",
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AttachAbilityStateResistance",
+					"resistanceListID": 13002,
+				},
+				// 创建CameraCenter
+				{
+					"$type": "CreateGadget",
+					"target": "Self",
+					"gadgetID": 42901068, // Dvalin_S04_Camera_Center
+					"byServer": true,
+					"born":
+					{
+						"$type": "ConfigBornByWorld",
+						"worldPos" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"worldFwd" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 1.0,
+						},
+					},
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"FallingDamage",
+					"target":"CurTeamAvatars",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"EnvEffect",
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_STATE_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_POSE_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key": "_DVALIN_S04_FLAG_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+			"onKill":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901068,
+						"sortType": "Default",
+					},
+					"key": "_ISDVALINALIVE_",
+					"value": 0,
+					"useLimitRange": true,
+					"maxValue": 0,
+					"minValue": 0,
+				},
+				{
+					"$type":"KillSelf",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901068,
+						"sortType": "Default",
+					},
+					"duration": 10,
+				},
+				{
+					"$type": "KillSelf",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901087,
+						"sortType": "Default",
+					},
+				},
+				{
+					"$type": "KillSelf",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901069,
+						"sortType": "Default",
+					}
+				},
+			],
+			"modifiers":
+			{
+				"FallingDamage":
+				{
+					"properties":
+					{
+						"Actor_FallingDamageRatio": -1,
+					},
+				},
+				"EnvEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_SceneRocks",
+							"born":
+							{
+								"$type": "ConfigBornByWorld",
+								"worldPos" : 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_SceneVortex",
+							"born":
+							{
+								"$type": "ConfigBornByWorld",
+								"worldPos" : 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 STAGE CONTROLLER
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StageController",
+			"abilityMixins":
+			[
+				// DEFINE DVALIN GLOBAL VALUE
+				// STAGE:
+				//   1 - Stage1
+				//   2 - Stage2
+				//   3 - Stage3
+				//   4 - Stage4
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_STATE_",
+					"valueSteps" : [0.5, 1.5, 2.5, 3.5, 4.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["UNIQUE_Stage1","UNIQUE_Stage2", "UNIQUE_Stage3", "UNIQUE_Stage4"],
+				},
+				// Pose:
+				//   1 - Center
+				//   2 - Edge
+				//   3 - Weak
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_POSE_",
+					"valueSteps" : [0.5, 1.5, 2.5, 3.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["UNIQUE_Center", "UNIQUE_Edge", "UNIQUE_Weak"],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Stage1":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": 140,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "stage1",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type":"ShowReminder",
+							"id": 20010021,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_STATE_",
+							"value": 2,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 2,
+						},
+					],
+					"modifierMixins":
+					[
+						// SHIELD BROKEN COUNT:
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_WEAKSHIELDBROKEN_",
+							"valueSteps" : [-0.5, 0.5, 1.5],
+							"defaultGlobalValueOnCreate": 0,
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty","ShieldBrokenCount_1"],
+						},
+					],
+				},
+				"UNIQUE_Stage2":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": 450,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "stage2",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_STATE_",
+							"value": 3,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 3,
+						},
+					],
+					"modifierMixins":
+					[
+						// SHIELD BROKEN COUNT:
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_WEAKSHIELDBROKEN_",
+							"valueSteps" : [0.5, 2.5 ,3.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty","ShieldBrokenCount_2"],
+						},
+					],
+				},
+				"UNIQUE_Stage3":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": 560,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "stage3",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "ReTriggerAISkillInitialCD",
+							"skillIDs": [61, 62],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_STATE_",
+							"value": 4,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": 4,
+						},
+					],
+					"modifierMixins":
+					[
+						// SHIELD BROKEN COUNT:
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_WEAKSHIELDBROKEN_",
+							"valueSteps" : [2.5, 5.5 ,100],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty","ShieldBrokenCount_3"],
+						},
+					],
+				},
+				"UNIQUE_Stage4":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "stage4",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"Empty":
+				{
+				},
+				"ShieldBrokenCount_1":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Stage1",
+						},
+					],
+				},
+				"ShieldBrokenCount_2":
+				{		
+					"onAdded":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Stage2",
+						},
+					],
+				},
+				"ShieldBrokenCount_3":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Stage3",
+						},
+					],
+				},
+				"UNIQUE_Center":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isEdge",
+							"value": false,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isWeak",
+							"value": false,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"UNIQUE_Edge":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isEdge",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isWeak",
+							"value": false,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"UNIQUE_Weak":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isEdge",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "SetPoseBool",
+							"boolID": "isWeak",
+							"value": true,
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 GADGET CONTROLLER
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GreateGadgetController",
+			"onAdded":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 42901067,
+					"campID": 4001,
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByWorld",
+						"worldPos" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"worldFwd" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 1.0,
+						},
+					},
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Reminder",
+				},
+			],
+			"modifiers":
+			{
+				"Reminder":
+				{
+					"duration": 20.0,
+					"onAdded":
+					[
+						{
+							"$type":"ShowReminder",
+							"id": 20020201,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"Dvalin_S04_hint",
+									"value":0,
+									"compareType":"NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"Dvalin_S04_hint",
+							"value":1,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateAirFlowController",
+			"onAdded":
+			[
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone1",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone2",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone3",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone4",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone5",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone6",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone7",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone8",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901070,
+					"campTargetType": "All",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "DeadZone9",
+					},
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_AirFlowController_CreateAirFlowPause",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901070,
+						"sortType": "Default",
+					},
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_AirFlowController_CreateAirFlow",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901070,
+						"sortType": "Default",
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_AirFlowController_CreateAirFlow",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"defaultGlobalValueOnCreate":1,
+					"globalValueKey": "_CREATEAIRFLOW_",
+					"valueSteps" : [-0.5, 0.5, 1.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["Empty", "CreateAirFlow_Detect"],
+				},
+			],
+			"onAbilityStart":
+			[
+				// 特定条件下生成风种子
+				{
+					"$type":"Repeated",
+					"repeatTimes":3,
+					"actions":
+					[
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901086,
+									"campID": 5001,
+									"campTargetType": "All",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 16,
+											"y": 0.2,
+											"z": -4.5,
+										},
+										"bornRandom":
+										{
+						                	"$type": "BornRandomFromCenter",
+						                	"minRandomRange": 0,
+						                	"maxRandomRange": 2,
+						                },
+									},
+								},
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901086,
+									"campID": 5001,
+									"campTargetType": "All",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": -16,
+											"y": 0.2,
+											"z": -4.5,
+										},
+										"bornRandom":
+										{
+						                	"$type": "BornRandomFromCenter",
+						                	"minRandomRange": 0,
+						                	"maxRandomRange": 2,
+						                },
+									},
+								},			
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"CreateAirFlow_Detect":
+				{
+					"thinkInterval" : 1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "Rect_Dvalin_DeadZone",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "CreateAirFlow_Handler",
+									"target": "Self",
+								},				
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "CreateAirFlow",
+							"target": "Self",
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "CreateAirFlow_Handler",
+							"target": "Self",
+						},
+					],
+				},
+				"CreateAirFlow_Handler":
+				{
+					"stacking": "Unique",
+					"duration" :17.5,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "CreateAirFlow",
+							"target": "Self",
+						},
+					],
+				},
+				"CreateAirFlow":
+				{
+					"duration": 2.5,
+					"thinkInterval" :1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901086,
+							"campID": 5001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": -16,
+									"y": 0.2,
+									"z": -4.5,
+								},
+								"bornRandom":
+								{
+				                	"$type": "BornRandomFromCenter",
+				                	"minRandomRange": 0,
+				                	"maxRandomRange": 2,
+				                },
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901086,
+							"campID": 5001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 16,
+									"y": 0.2,
+									"z": -4.5,
+								},
+								"bornRandom":
+								{
+				                	"$type": "BornRandomFromCenter",
+				                	"minRandomRange": 0,
+				                	"maxRandomRange": 2,
+				                },
+							},
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901086,
+							"campID": 5001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": -16,
+									"y": 0.2,
+									"z": -4.5,
+								},
+								"bornRandom":
+								{
+				                	"$type": "BornRandomFromCenter",
+				                	"minRandomRange": 0,
+				                	"maxRandomRange": 2,
+				                },
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901086,
+							"campID": 5001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 16,
+									"y": 0.2,
+									"z": -4.5,
+								},
+								"bornRandom":
+								{
+				                	"$type": "BornRandomFromCenter",
+				                	"minRandomRange": 0,
+				                	"maxRandomRange": 2,
+				                },
+							},
+						},
+					],
+				},
+				"Empty":
+				{
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_AirFlowController_CreateAirFlowPause",
+			"onAbilityStart":
+			[
+				{
+					"$type": "KillSelf",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901086,
+						"sortType": "Default",
+					}
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "CreateAirFlow_Detect_Pause",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"CreateAirFlow_Detect_Pause":
+				{
+					"duration" :17.5,
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Self",
+							"key": "_CREATEAIRFLOW_",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Self",
+							"key": "_CREATEAIRFLOW_",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Dvalin_S04_WindSeed",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"target": "Self",
+					"modifierName": "WindSeed_Material",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Delay",
+				},
+			],
+			"onFieldEnter":
+			[	
+				{
+					"$type": "ApplyModifier",
+					"target": "Target",
+					"modifierName": "WindForce_Handle",
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "WindSeed_Material",
+				},
+			],
+			"modifiers":
+			{
+				"WindForce_Handle_AoE":
+				{
+					"duration": 0.5,
+					"stacking": "Multiple",
+					"stackingOption": 
+					{
+		            	"maxModifierNumForMultipleType": 2,
+		          	},
+		          	"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Team",
+							"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+						},
+						//初始子弹
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "WindForce",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 1,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "AddElementDurability",
+							"target": "Team",
+							"modifierName": "WindForce",
+							"value": 50,
+							"useLimitRange": true,
+							"maxValue": 50.0,
+							"minValue": 0.0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Bullet_Eff2",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_ELEMENT_WIND_BULLET",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddElementDurability",
+							"target": "Team",
+							"modifierName": "WindForce",
+							"value": 50,
+							"useLimitRange": true,
+							"maxValue": 50.0,
+							"minValue": 0.0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 3,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},	
+				"WindForce_Handle":
+				{
+					"duration": 0.5,
+					"stacking": "Multiple",
+					"stackingOption": 
+					{
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onAdded":
+					[
+						//给范围内除自己外的所有人上一个AOE种子
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "WindForce_Handle_AoE",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR10",
+								"centerBasedOn": "Self",
+								"campTargetType": "AllExceptSelf",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"target": "Team",
+							"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "WindForce",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 1,
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "AddElementDurability",
+							"target": "Team",
+							"modifierName": "WindForce",
+							"value": 50,
+							"useLimitRange": true,
+							"maxValue": 50.0,
+							"minValue": 0.0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Bullet_Eff2",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_ELEMENT_WIND_BULLET",
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Team",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 2,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Team",
+							"modifierName": "WindForce_Explode",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 3,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"WindSeed_Material":
+				{
+					"duration": 15,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_WindSeed_Davlin",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SendEffectTrigger",
+							"parameter" : "Disappear",
+						},
+						{
+							"$type": "KillSelf",
+							"duration": 1,
+						},
+					]
+				},
+				"Delay":
+				{
+					"duration": 1.5,
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "ShowTrigger",
+						},
+					],
+				}, 
+				"WindFoce_SkillCast":
+				{
+					"isLimitedProperties": true,
+					"modifierMixins":
+					[
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"onTriggerUltimateSkill":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"target": "Team",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 3,
+									"useLimitRange": true,
+									"maxValue": 3,
+									"minValue": 3,
+									"predicates":
+									[
+										{
+											"$type":"ByAvatarElementType",
+											"target": "CurLocalAvatar",
+											"elementType":"Wind",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "WindForce_Explode",
+									"predicates":
+									[
+										{
+											"$type":"ByAvatarElementType",
+											"target": "CurLocalAvatar",
+											"elementType":"Wind",
+										},
+									],
+								},
+							],
+							"onTriggerSkill":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"target": "Team",
+									"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+									"value": 3,
+									"useLimitRange": true,
+									"maxValue": 3,
+									"minValue": 3,
+									"predicates":
+									[
+										{
+											"$type":"ByAvatarElementType",
+											"target": "CurLocalAvatar",
+											"elementType":"Wind",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier",
+									"target": "Team",
+									"modifierName": "WindForce_Explode",
+									"predicates":
+									[
+										{
+											"$type":"ByAvatarElementType",
+											"target": "CurLocalAvatar",
+											"elementType":"Wind",
+										},
+									],
+								},
+							],
+						}
+					],
+					"properties":
+					{
+						"Actor_CostStaminaRatio" : -0.3,
+					},
+				},
+				"WindForce":
+				{
+					"duration": 15,
+					"elementType": "None",
+					"elementDurability": 50,
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"target": "CurLocalAvatar",
+							"gadgetID": 70900333,
+							"campID": 1001,
+							"campTargetType": "Enemy",
+							"ownerIs":"Other",
+						},
+						{
+							"$type": "AttachModifier",
+							"target": "CurTeamAvatars",
+							"modifierName": "WindFoce_SkillCast",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kill_Bullet",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2",
+								"centerBasedOn": "CurLocalAvatar",
+								"campTargetType": "All",
+								"campBasedOn": "CurLocalAvatar",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_ELEMENT_WIND_BULLET",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"target": "Team",
+							"key": "_HAS_ELEMFORCE_WIND_DVALIN",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+						},
+					],
+				},
+				"Kill_Bullet":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"KillSelf",
+						},
+					],
+				},
+				"Bullet_Eff2":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_Element_WindForce_02",
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Item_Element_WindForce_Dissipate_02",
+						},
+					]
+				},
+				"Bullet_Eff3":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_Element_WindForce_03",
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Item_Element_WindForce_Dissipate_03",
+						},
+					]
+				},
+				"WindForce_Explode":
+				{
+					"duration": 0.1,
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Bullet_Eff3",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2",
+								"centerBasedOn": "CurLocalAvatar",
+								"campTargetType": "All",
+								"campBasedOn": "CurLocalAvatar",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_ELEMENT_WIND_BULLET",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Item_WindSeed_Merge",
+						},
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "WindForce",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901071,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Kill_Bullet",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR2",
+								"centerBasedOn": "CurLocalAvatar",
+								"campTargetType": "All",
+								"campBasedOn": "CurLocalAvatar",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_IS_ELEMENT_WIND_BULLET",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_CreateWindSeed",
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_GadgetController_CreateAirFlowController",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901067,
+						"sortType": "Default",
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateComparer",
+			"onAdded":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_DEADZONE1_CREATED_",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_DEADZONE2_CREATED_",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_DEADZONE3_CREATED_",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901072,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type" : "ConfigDirectionByEntity",
+							"angleOffset" :
+							{
+								"x": 0.0,
+								"y": 8.66,
+								"z": 0.0,
+							}
+						}
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901073,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type" : "ConfigDirectionByEntity",
+							"angleOffset" :
+							{
+								"x": 0.0,
+								"y": 128.66,
+								"z": 0.0,
+							}
+						}
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901074,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"direction":
+						{
+							"$type" : "ConfigDirectionByEntity",
+							"angleOffset" :
+							{
+								"x": 0.0,
+								"y": 248.66,
+								"z": 0.0,
+							}
+						}
+					},
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_Roar_ForWardComparer1",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901072,
+						"sortType": "Default",
+					}
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_Roar_ForWardComparer2",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901073,
+						"sortType": "Default",
+					}
+				},
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_Roar_ForWardComparer3",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901074,
+						"sortType": "Default",
+					}
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar_ForWardComparer1",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ForWardComparer1",
+					"target": "CurLocalAvatar",
+				},
+			],
+			"modifiers":
+			{
+				"ForWardComparer1":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Caster",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetForwardAndSelfPosition",
+									"value": 60.0,
+									"logic": "Lesser",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "CreateDeadZone1",
+									"target": "Caster",
+								},
+							],
+						},
+					],
+				},
+				"CreateDeadZone1":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Owner",
+							"targetPredicates" :
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Owner",
+									"key": "_DEADZONE1_CREATED_",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+							"successActions" :
+							[
+								{
+									"$type":"TriggerAbility",
+									"target": "Owner",
+									"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone1",
+								},
+							],
+							"failActions" :
+							[
+								{
+									"$type" : "Predicated",
+									"target" : "Owner",
+									"targetPredicates" :
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Owner",
+											"key": "_DEADZONE2_CREATED_",
+											"value": 0,
+											"compareType": "Equal",
+										},
+									],
+									"successActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone2",
+										},
+									],
+									"failActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone3",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar_ForWardComparer2",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ForWardComparer2",
+					"target": "CurLocalAvatar",
+				},
+			],
+			"modifiers":
+			{
+				"ForWardComparer2":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Caster",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetForwardAndSelfPosition",
+									"value": 60.0,
+									"logic": "Lesser",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "CreateDeadZone2",
+									"target": "Caster",
+								},
+							],
+						},
+					],
+				},
+				"CreateDeadZone2":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Owner",
+							"targetPredicates" :
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Owner",
+									"key": "_DEADZONE2_CREATED_",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+							"successActions" :
+							[
+								{
+									"$type":"TriggerAbility",
+									"target": "Owner",
+									"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone2",
+								},
+							],
+							"failActions" :
+							[
+								{
+									"$type" : "Predicated",
+									"target" : "Owner",
+									"targetPredicates" :
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Owner",
+											"key": "_DEADZONE1_CREATED_",
+											"value": 0,
+											"compareType": "Equal",
+										},
+									],
+									"successActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone1",
+										},
+									],
+									"failActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone3",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar_ForWardComparer3",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "ForWardComparer3",
+					"target": "CurLocalAvatar",
+				},
+			],
+			"modifiers":
+			{
+				"ForWardComparer3":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Caster",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetForwardAndSelfPosition",
+									"value": 60.0,
+									"logic": "Lesser",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "CreateDeadZone3",
+									"target": "Caster",
+								},
+							],
+						},
+					],
+				},
+				"CreateDeadZone3":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Owner",
+							"targetPredicates" :
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Owner",
+									"key": "_DEADZONE3_CREATED_",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+							"successActions" :
+							[
+								{
+									"$type":"TriggerAbility",
+									"target": "Owner",
+									"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone3",
+								},
+							],
+							"failActions" :
+							[
+								{
+									"$type" : "Predicated",
+									"target" : "Owner",
+									"targetPredicates" :
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"target": "Owner",
+											"key": "_DEADZONE1_CREATED_",
+											"value": 0,
+											"compareType": "Equal",
+										},
+									],
+									"successActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone1",
+										},
+									],
+									"failActions" :
+									[
+										{
+											"$type":"TriggerAbility",
+											"target": "Owner",
+											"abilityName":"Dvalin_S04_GadgetController_CreateDeadZone2",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			},
+		},
+	},
+	// DeadZone
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateDeadZone1",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "CreateDeadZone1",
+				},
+			],
+			"modifiers":
+			{
+				"CreateDeadZone1":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone1",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone1",
+									"attachPointTargetType":"Self",
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone2",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone2",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone9",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone9",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_DEADZONE1_CREATED_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateDeadZone2",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "CreateDeadZone2",
+				},
+			],
+			"modifiers":
+			{
+				"CreateDeadZone2":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone3",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone3",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone4",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone4",
+									"attachPointTargetType":"Self",
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone5",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone5",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_DEADZONE2_CREATED_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateDeadZone3",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "CreateDeadZone3",
+				},
+			],
+			"modifiers":
+			{
+				"CreateDeadZone3":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone6",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone6",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone7",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone7",
+									"attachPointTargetType":"Self",
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"byServer": true,
+							"lifeByOwnerIsAlive": true,
+							"gadgetID": 42901075,
+							"campID": 4001,
+							"campTargetType": "All",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "DeadZone8",
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"DeadZone8",
+									"attachPointTargetType":"Self",
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "OriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_DEADZONE3_CREATED_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeadZone_Damage1",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneTimer",
+					"target": "Self",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneStrongEffect",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"DeadZoneTimer":
+				{
+					"duration": 5.5,
+					"onAdded" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone_Down",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneAirFlow",
+							"target": "Self",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneDamage1",
+							"target": "Self",
+						},
+						{
+							"$type": "ShowReminder",
+							"id": 20010035,
+						},
+					],
+				},
+				"DeadZoneDamage1" :
+				{
+					"thinkInterval" : 2,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+					"onThinkInterval" :
+					[
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "Rect_Dvalin_DeadZone",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "DeadZoneDamageHandler1",
+									"target": "Target",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "DeadZoneDamageRemover1",
+									"target": "Target",
+								},					
+							],
+						},
+					],
+				},
+				"DeadZoneDamageHandler1":
+				{
+					"duration": 0.1,
+					"onAdded" :
+					[
+						{
+							"$type":"AddGlobalValue",
+							"target": "Self",
+							"key":"_DEADZONE_DAMAGELEVEL1_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 100,
+							"minValue" : 0,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_DEADZONE_DAMAGELEVEL1_",
+							"overrideMapKey": "DeadZone_DamageLevel",
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": "%DeadZone_DamageLevel*0.03",
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.03,
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"DeadZoneDamageRemover1":
+				{
+					"stacking": "Unique",
+					"onRemoved" :
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_DEADZONE_DAMAGELEVEL1_",
+							"target": "Self",
+						},
+					],
+				},
+				"DeadZoneStrongEffect":
+				{
+					"duration": 5,
+					"onRemoved" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZoneAlert",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+				},
+				"DeadZoneAirFlow":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"defaultGlobalValueOnCreate":0,
+							"globalValueKey": "_AIRFLOW_DEADZONE_",
+							"valueSteps" : [-0.5, 0.5, 1.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty", "DeadZoneAirFlow_Handler"],
+						},
+					],
+					"thinkInterval" : 1,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+				},
+				"DeadZoneAirFlow_Handler":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901010,
+								"sortType": "Default",
+							},
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": -16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Empty":
+				{
+				},
+			},
+			"abilitySpecials" :
+			{
+				"DeadZone_DamageLevel":0,
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeadZone_Damage2",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneTimer",
+					"target": "Self",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneStrongEffect",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"DeadZoneTimer":
+				{
+					"duration": 5.5,
+					"onAdded" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone_Down",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneAirFlow",
+							"target": "Self",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneDamage2",
+							"target": "Self",
+						},
+					],
+				},
+				"DeadZoneDamage2" :
+				{
+					"thinkInterval" :2,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+					"onThinkInterval" :
+					[
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "Rect_Dvalin_DeadZone",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "DeadZoneDamageHandler2",
+									"target": "Target",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "DeadZoneDamageRemover2",
+									"target": "Target",
+								},					
+							],
+						},
+					],
+				},
+				"DeadZoneDamageHandler2":
+				{
+					"duration": 0.1,
+					"onAdded" :
+					[
+						{
+							"$type":"AddGlobalValue",
+							"target": "Self",
+							"key":"_DEADZONE_DAMAGELEVEL2_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 100,
+							"minValue" : 0,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_DEADZONE_DAMAGELEVEL2_",
+							"overrideMapKey": "DeadZone_DamageLevel",
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": "%DeadZone_DamageLevel*0.03",
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.03,
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"DeadZoneDamageRemover2":
+				{
+					"stacking": "Unique",
+					"onRemoved" :
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_DEADZONE_DAMAGELEVEL2_",
+							"target": "Self",
+						},
+					],
+				},
+				"DeadZoneStrongEffect":
+				{
+					"duration": 5,
+					"onRemoved" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZoneAlert",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+				},
+				"DeadZoneAirFlow":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"defaultGlobalValueOnCreate":0,
+							"globalValueKey": "_AIRFLOW_DEADZONE_",
+							"valueSteps" : [-0.5, 0.5, 1.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty", "DeadZoneAirFlow_Handler"],
+						},
+					],
+					"thinkInterval" : 1,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+				},
+				"DeadZoneAirFlow_Handler":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901010,
+								"sortType": "Default",
+							},
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": -16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Empty":
+				{
+				},
+			},
+			"abilitySpecials" :
+			{
+				"DeadZone_DamageLevel":0,
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeadZone_Damage3",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneTimer",
+					"target": "Self",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "DeadZoneStrongEffect",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"DeadZoneTimer":
+				{
+					"duration": 5.5,
+					"onAdded" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone_Down",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneAirFlow",
+							"target": "Self",
+						},
+					],
+					"onRemoved" :
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DeadZoneDamage3",
+							"target": "Self",
+						},
+					],
+				},
+				"DeadZoneDamage3" :
+				{
+					"thinkInterval" :3,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZone",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+					"onThinkInterval" :
+					[
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "Rect_Dvalin_DeadZone",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "DeadZoneDamageHandler3",
+									"target": "Target",
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "DeadZoneDamageRemover3",
+									"target": "Target",
+								},					
+							],
+						},
+					],
+				},
+				"DeadZoneDamageHandler3":
+				{
+					"duration": 0.1,
+					"onAdded" :
+					[
+						{
+							"$type":"AddGlobalValue",
+							"target": "Self",
+							"key":"_DEADZONE_DAMAGELEVEL3_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 100,
+							"minValue" : 0,
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_DEADZONE_DAMAGELEVEL3_",
+							"overrideMapKey": "DeadZone_DamageLevel",
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": "%DeadZone_DamageLevel*0.03",
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Caster",
+							"target": "Self",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 0.03,
+									"strikeType": "Blunt",
+									"elementType" : "Wind",
+									"elementDurability" : 25,
+									"enBreak": 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "none",
+					          		"hitImpulseType":"LV0",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+								},
+								"canHitHead": false,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "CasterOriginOwner",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"DeadZoneDamageRemover3":
+				{
+					"stacking": "Unique",
+					"onRemoved" :
+					[
+						{
+							"$type": "ClearGlobalValue",
+							"key": "_DEADZONE_DAMAGELEVEL3_",
+							"target": "Self",
+						},
+					],
+				},
+				"DeadZoneStrongEffect":
+				{
+					"duration": 5,
+					"onRemoved" :
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S01_Roar_DeadZoneAlert",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"onGround":true,
+							},
+						},
+					],
+				},
+				"DeadZoneAirFlow":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"defaultGlobalValueOnCreate":0,
+							"globalValueKey": "_AIRFLOW_DEADZONE_",
+							"valueSteps" : [-0.5, 0.5, 1.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Empty", "DeadZoneAirFlow_Handler"],
+						},
+					],
+					"thinkInterval" : 1,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Self",
+							"key" : "_AVARTARDETECTED_DEADZONE_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AVARTARDETECTED_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target":"Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_AVARTARDETECTED_DEADZONE_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 1,
+									"useLimitRange" : true,
+									"maxValue" : 1,
+									"minValue" : 1,
+								},				
+							],
+							"failActions":
+							[
+								{
+									"$type" : "AddGlobalValue",
+									"target": "Self",
+									"key" : "_AIRFLOW_DEADZONE_",
+									"value" : 0,
+									"useLimitRange" : true,
+									"maxValue" : 0,
+									"minValue" : 0,
+								},				
+							],
+						},
+					],
+				},
+				"DeadZoneAirFlow_Handler":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901010,
+								"sortType": "Default",
+							},
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": -16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901010,
+							"campID": 1001,
+							"campTargetType": "All",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 16,
+									"y": 0.2,
+									"z": -4,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByWorld",
+									"eularAngles":
+									{
+										"x" : 0,
+										"y" : 0,
+										"z" : 0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"Empty":
+				{
+				},
+			},
+			"abilitySpecials" :
+			{
+				"DeadZone_DamageLevel":0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 ABYSS TRIGGER
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_FallInAbyss",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ToNearstAnchorPoint",
+					"target": "CurLocalAvatar",
+				},
+			],
+		},
+	},
+//////////////////////////////////
+//
+//  Set Center/Edge
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_SetCenter",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key": "_POSE_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_SetEdge",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key": "_POSE_",
+					"value": 2,
+					"useLimitRange": true,
+					"maxValue": 2,
+					"minValue": 2,
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 Gnaw
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GnawLeft",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gnaw"],
+					"modifierName": "Gnaw_Dummy",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 22.5,
+								"y" : 6.0,
+								"z" : 25.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": -7,
+									"y": 34.0,
+									"z": 65.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": -20.0,
+										"z": 0.0,
+									},
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 1.0,
+								"strikeType": "Slash",
+								"attackType": "Melee",
+								"enbreak":200,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 3.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Gnaw_Dust_L",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+						"offset": 
+						{
+							"x": -10.0,
+							"y": 30.0,
+							"z": 70.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Gnaw_Dummy":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901088,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"ClawRight",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901089,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"ClawLeft",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901088,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901089,
+								"sortType": "Default",
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GnawRight",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 22.5,
+								"y" : 6.0,
+								"z" : 25.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 7,
+									"y": 34.0,
+									"z": 65.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": 20.0,
+										"z": 0.0,
+									},
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 1.0,
+								"strikeType": "Slash",
+								"attackType": "Melee",
+								"enbreak":200,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 3.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Gnaw_Dust_R",
+					"born": 
+					{
+						"$type": "ConfigBornBySelf",
+						"offset": 
+						{
+							"x": 10.0,
+							"y": 30.0,
+							"z": 70.0,
+						},
+					},
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 Breathe
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Dvalin_S04_Breathe_Shake_Left",
+			"onAbilityStart": 
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 15.0,
+								"y" : 2.0,
+								"z" : 20.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 10.0,
+									"y": 30.0,
+									"z": 65.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0.0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 3.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Support_Dust",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "ClawLeft",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Dvalin_S04_Breathe_Shake_Right",
+			"onAbilityStart": 
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 15.0,
+								"y" : 2.0,
+								"z" : 20.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": -10.0,
+									"y": 30.0,
+									"z": 65.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0.0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV0",	
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 3.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Support_Dust",
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "ClawRight",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Breathe",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Breathe",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Breathe"],
+					"modifierName": "RemoveDamage",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValueToOverrideMap",
+					"globalValueKey":"_DVALIN_S04_FIRSTSIGHT_",
+					"overrideMapKey":"Ratio",
+				},
+			],
+			"modifiers":
+			{
+				"Breathe":
+				{
+					"duration": 9.6,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_Breathe_Beam",
+						},
+					],
+					"thinkInterval": 0.4,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 42901063,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": false,
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName" : "Breathe",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByAttachPoint",
+									"attachPointName":"Breathe",
+									"attachPointTargetType":"Self",
+								},
+							},
+						},
+					],
+				},
+				"RemoveDamage":
+				{
+					"properties":
+					{
+						"Actor_SubHurtDelta": 0.25,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901088,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"ClawRight",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901089,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "Enemy",
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"ClawLeft",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Breathe",
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901088,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901089,
+								"sortType": "Default",
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Ratio": 0,
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Breathe_GroundEffectLeft",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GroundLeftEffect",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Breathe"],
+					"modifierName": "RemoveGroundLeftEffect",
+				},
+			],
+			"modifiers":
+			{
+				"GroundLeftEffect":
+				{
+					"duration": 9.4,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_Breath_OnGroundLeft",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 10.0,
+									"y": 30.0,
+									"z": 72.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": 12.5,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"RemoveGroundLeftEffect":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "GroundLeftEffect",
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Breathe_GroundEffectRight",
+			"onAbilityStart":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "GroundEffectRight",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Breathe"],
+					"modifierName": "RemoveGroundRightEffect",
+				},
+			],
+			"modifiers":
+			{
+				"GroundEffectRight":
+				{
+					"duration": 9.4,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_Breath_OnGroundRight",
+							"born": 
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": -10.0,
+									"y": 30.0,
+									"z": 72.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": -12.5,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+					],
+				},
+				"RemoveGroundRightEffect":
+				{
+					"onRemoved":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "GroundEffectRight",
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Breathe_Explode",
+			"onAbilityStart": 
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius" : 1,
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0.5,
+								"strikeType": "Blunt",
+								"elementType": "Wind",
+								"elementDurability": 20,
+								"enbreak":200,
+							},
+							"hitPattern" :
+							{
+								"hitImpulseType":"LV1",
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 Ascent
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Ascent_BS",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Ascent_BS",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" : 
+						{
+							"x": 0.0,
+							"y": 30.0,
+							"z": 65.0,
+						},
+					},
+				},
+			],
+		}
+	},
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Ascent_Effect",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Ascent_Dust",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" : 
+						{
+							"x": -5.0,
+							"y": 30.0,
+							"z": 65.0,
+						},
+					},
+				},
+			],
+		}
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Ascent",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Ascent"],
+					"modifierName": "EnablePushCollider",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 20.0,
+								"y" : 3.0,
+								"z" : 24.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 30.0,
+									"z": 65.0,							
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 1,
+								"strikeType": "Slash",
+								"attackType": "Melee",
+								"enbreak":200,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "default",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 2.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"EnablePushCollider":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider","Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01","Collider_Seal01","Push_Claw_L","Push_Claw_R"],
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["PushCollider","Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01","Collider_Seal01","Push_Claw_L","Push_Claw_R"],
+							"setEnable": true,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Ascent_Shake",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 20.0,
+								"y" : 2.0,
+								"z" : 24.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornByTarget",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 30.0,
+									"z": 65.0,							
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"enbreak":0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "none",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":true,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 2.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Star Fall
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StarFall_Start",
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAbility",
+					"abilityName":"Dvalin_S04_GadgetController_CreateStarFallCenter",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901067,
+						"sortType": "Default",
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_GadgetController_CreateStarFallCenter",
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall1",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall2",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall9",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall3",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall4",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall5",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall6",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall7",
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"byServer": true,
+					"lifeByOwnerIsAlive": true,
+					"gadgetID": 42901065,
+					"campID": 4001,
+					"campTargetType": "All",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointTargetType" : "Self",
+						"attachPointName": "StarFall8",
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StarFall_Platform1_CreateStarFall",
+			"onAdded":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key" : "_ISPLATFORM1_",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 1,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key" : "_AVARTARDETECTED_STARFALL_",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"defaultGlobalValueOnCreate":0,
+					"globalValueKey": "_AVARTARDETECTED_STARFALL_",
+					"valueSteps" : [-0.5, 0.5, 1.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["UNIQUE_StarFallOpen", "UNIQUE_StarFallClose"],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_StarFallClose":
+				{
+					"isUnique": true,
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key" : "_AVARTARDETECTED_STARFALL_",
+							"value" : 0,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+							"predicates" :
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Dvalin_S04_WeakEnd"],
+								},
+							],
+
+						},
+					],
+				},
+				"UNIQUE_StarFallOpen":
+				{
+					"isUnique": true,
+					"thinkInterval": 10,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher1", 
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher2", 
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher3", 
+							"target": "Self",
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher1", 
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher2", 
+							"target": "Self",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall_Luancher3", 
+							"target": "Self",
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key" : "_AVARTARDETECTED_STARFALL_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+							"predicates" :
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Dvalin_S04_WeakStart"],
+								},
+							],
+
+						},
+					],
+				},
+				"Starfall_Luancher1":
+				{
+					"duration": 0.25,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos1",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": 8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos2",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": -8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall1", 
+							"target": "Self",
+						},
+					],
+				},
+				"Starfall_Luancher2":
+				{
+					"duration": 0.5,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos3",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": 8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos4",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": -8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall2", 
+							"target": "Self",
+						},
+					],
+				},
+				"Starfall_Luancher3":
+				{
+					"duration": 0.75,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos5",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": 8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalPos",
+							"key": "Starfall_Pos6",
+							"target":"Self",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": -8.5,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0,
+									"maxRandomRange": 10,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Starfall3", 
+							"target": "Self",
+						},
+					],
+				},
+				"Starfall1":
+				{
+					"duration": 4.5,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos1",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos2",
+							},
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos1",
+										"onGround": true,
+									},
+								},
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos2",
+										"onGround": true,
+									},
+								},					
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos1",
+								"onGround": true,
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos2",
+								"onGround": true,
+							},
+						},
+					],
+				},
+				"Starfall2":
+				{
+					"duration": 4.5,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos3",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos4",
+							},
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos3",
+										"onGround": true,
+									},
+								},
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos4",
+										"onGround": true,
+									},
+								},					
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos3",
+								"onGround": true,
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos4",
+								"onGround": true,
+							},
+						},
+					],
+				},
+				"Starfall3":
+				{
+					"duration": 4.5,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos5",
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos6",
+							},
+						},
+						{
+							"$type": "Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR25",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos5",
+										"onGround": true,
+									},
+								},
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42901061,
+									"campID": 4001,
+									"campTargetType": "Enemy",
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "Starfall_Pos6",
+										"onGround": true,
+									},
+								},					
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos6",
+								"onGround": true,
+							},
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Alert_Die",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "Starfall_Pos6",
+								"onGround": true,
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StarFall_Platform2",
+			"onAdded":
+			[
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StarFall_Launcher",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Timer", 
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"Timer":
+				{
+					"duration": 2,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_BulletAlert",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"onGround": true,
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerBullet",
+							"bulletID": 42901062,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 20.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByLookAtEntity"
+								}
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_StarFall_Bullet",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Bullet",
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_StarFall_Explosion",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+					},
+				},
+				{
+					"$type": "ActCameraShake",
+					"cameraShake":
+					{
+						"shakeRange": 1,
+						"shakeTime": 0.3,
+						"shakeDistance": 80,
+					},
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius" : 5.0,
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0.5,
+								"strikeType": "Blunt",
+								"elementType": "Wind",
+								"elementDurability": 100,
+								"enbreak":200,
+							},
+							"hitPattern" :
+							{
+								"overrideHitImpulse":
+								{
+									"hitLevel" : "Air",
+									"hitImpulseX" : 400,
+									"hitImpulseY" : 200,
+								},
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.50,
+								"shakeTime": 0.3,
+								"shakeDistance": 30.0,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Twisted Wind
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_TwistedWind_Launcher",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"trackTarget": "CurLocalAvatar",
+					"bulletID": 42901064,
+					"lifeByOwnerIsAlive": false,
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WingL",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						}
+					},
+				},
+				{
+					"$type": "TriggerBullet",
+					"trackTarget": "CurLocalAvatar",
+					"bulletID": 42901064,
+					"lifeByOwnerIsAlive": false,
+					"born": 
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WingR",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttackTarget",
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName" : "Dvalin_S04_TwistedWind_Bullet",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_TwistedWind_Wind",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius" : 4.0,
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0.5,
+								"strikeType": "Blunt",
+								"elementType": "Wind",
+								"elementDurability": 100,
+								"enbreak":200,
+							},
+							"hitPattern" :
+							{
+								"overrideHitImpulse":
+								{
+									"hitLevel" : "Air",
+									"hitImpulseX" : 400,
+									"hitImpulseY" : 200,
+								},
+								"reboundRatio" : 0,
+								"hitHaltTime" : 0.0,
+								"hitHaltTimeScale" : 0.05,
+								"muteHitText" : false,
+							},
+						},
+					},
+				},
+				{
+					"$type": "ActCameraShake",
+					"cameraShake":
+					{
+						"shakeRange": 1.5,
+						"shakeTime": 0.4,
+						"shakeDistance": 100,
+					},
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern"  : "Eff_Monster_Dvalin_S04_TwistedWind_Explode",
+					"born" : 
+					{
+						"$type": "ConfigBornByCollisionPoint",
+					},
+				},
+			],
+		}
+	},	
+////////////////////////////////////////////////////////////////
+//
+//  Death Cannon
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeathCannonBS",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_DeathCannon_BS",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "Mouth",
+						"offset" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 42901078,
+					"campID": 4001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" : 
+						{
+							"x": 0.0,
+							"y": 30.0,
+							"z": 75.0,
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeathCannon",
+			"onAbilityStart":
+			[
+				{
+					"$type": "Predicated",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByChildren",
+						"configID": 42901078,
+						"sortType": "Default",
+					},
+					"successActions":
+					[
+						{
+							"$type": "TriggerBullet",
+							"target": "Target",
+							"trackTarget": "Target",
+							"bulletID": 42901085,
+							"campID": 4001,
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "Breathe",
+								"attachPointTargetType": "Self",
+								"offset" : 
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 13.5,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+						},
+						{
+							"$type": "ActCameraRadialBlur",
+							"cameraRadialBlur":
+							{
+								"power": 2,
+								"blurTime": 0.4,
+								"fadeTime": 0.2,
+							},
+						},				
+					],
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeathCannonZone_Damage",
+			"onAdded":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key" : "_ISDEATHCANNONZONE_",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 1,
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_DeathCannon_Alert",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByEntity",
+							"angleOffset": 
+							{
+								"x": 0.0,
+								"y": 180.0,
+								"z": 0.0,
+							},
+						},
+					},
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_DeathCannon_Explode",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+					},
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 20.0,
+								"y" : 2.0,
+								"z" : 20.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": -10.0,							
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"enbreak":0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "none",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":true,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 2.00,
+								"shakeTime": 0.5,
+								"shakeDistance": 100.0,
+							},
+						},
+					},
+				},
+				{
+					"$type": "Predicated",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "Rect_Dvalin_DeadZone",
+						"centerBasedOn": "Self",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Self",
+					},
+					"targetPredicates":
+					[
+						{
+							"$type" : "ByEntityTypes",
+							"entityTypes" : ["Avatar"],
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"DamageByAttackValue",
+							"attacker":"Self",
+							"target": "Target",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 2,
+									"strikeType": "Blunt",
+									"enbreak":1000,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+					          		"hitImpulseType":"LV6",
+									"reboundRatio": 0,
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.00,
+									"hitHaltTimeScale":0.01,
+									"muteHitText": false,
+									"retreatType":"ByAttacker",
+								},
+								"canHitHead": false,
+							},
+						},					
+					],
+				},
+				{
+					"$type": "KillSelf",
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeathCannon_Bullet_Hit",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_DeathCannon_Shoot",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Target",
+							"key": "_ISDEATHCANNONZONE_",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"TriggerAbility",
+							"abilityName":"Dvalin_S04_DeathCannonZone_Damage",
+							"target": "Target",
+						},	
+						{
+							"$type":"KillSelf",
+						},				
+					],
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Hurricane
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_TriggerHurricane",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 42901066,
+					"trackTarget": "Self",
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Hurricane_Bullet",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_Hurricane_Loop",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Attack",
+				},
+			],
+			"modifiers":
+			{
+				"Attack":
+				{
+					"thinkInterval": 0.2,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType"  : "Enemy",
+							"attackEvent"  : 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 15,
+									"born":
+									{
+										"$type" : "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 25.0,							
+										}, 
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 0.1,
+										"enbreak":30,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV5",
+										"reboundRatio": 0,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0,
+										"muteHitText":false,
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		}
+	},
+//////////////////////////////////
+//
+//  Roar
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar",
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Roar","Roar_BS","StarFall","DeathCannon_Center"],
+					"modifierName": "SpecialState_EnableHitBox",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Roar_BS"],
+					"modifierName": "DeadZone_Timer",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Roar"],
+					"modifierName": "DeadZone_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"SpecialState_EnableHitBox" :
+				{
+					"state": "LockHP",
+					"onAdded":
+					[
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Head01", "hitbox_Neck01", "hitbox_Neck02", "hitbox_Neck03", "hitbox_Claw_L", "hitbox_Claw_R"],
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Head01", "hitbox_Neck01", "hitbox_Neck02", "hitbox_Neck03", "hitbox_Claw_L", "hitbox_Claw_R"],
+							"setEnable": true,
+						},
+					],
+				},
+				"DeadZone_Handler" :
+				{
+					"onAdded":
+					[
+						{
+							"$type":"TriggerAbility",
+							"abilityName":"Dvalin_S04_GadgetController_CreateComparer",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901067,
+								"sortType": "Default",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_DVALIN_S04_DEADZONE_HANDLED_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type":"TriggerAbility",
+							"abilityName":"Dvalin_S04_AirFlowController_CreateAirFlowPause",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901070,
+								"sortType": "Default",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_DVALIN_S04_DEADZONE_HANDLED_",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "ReTriggerAISkillInitialCD",
+							"skillIDs": [34, 35, 36, 51, 52, 53, 56, 57, 58, 61, 66],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key" : "_DVALIN_S04_DEADZONE_HANDLED_",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 10,
+							"minValue" : 0,
+						},
+					],
+				},
+				"DeadZone_Timer" :
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_DVALIN_S04_DEADZONE_HANDLED_",
+							"value": 0,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_RoarReminder",
+			"onAbilityStart": 
+			[
+				{
+					"$type": "Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_REMINDER_ROAR_",
+							"value": 1,
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type": "ShowReminder",
+							"id": 20010024,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_REMINDER_ROAR_",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 1,
+							"maxValue": 1,
+						},
+					],
+				},
+			],
+		},
+	},
+//////////////////////////////////
+//
+//  Roar Camera Shot
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar_Camera",
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AvatarEnterCameraShot",
+					"targetType" : "Self",
+					"cameraMoveCfgPath": "Camera_Monster_Dvalin_Starfall",
+					"shotType": "LEVEL",
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Roar_CameraBlur",
+			"onAbilityStart": 
+			[
+				{
+					"$type": "ActCameraRadialBlur",
+					"cameraRadialBlur":
+					{
+						"power": 2,
+						"blurTime": 0.5,
+						"fadeTime": 0.25,
+					},
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType"  : "Enemy",
+					"attackEvent"  : 
+					{
+						"attackPattern" : 
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 40.0,
+								"y" : 2.0,
+								"z" : 20.0,
+							},
+							"born":
+							{
+								"$type" : "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 0,
+									"y": 30.0,
+									"z": 65.0,
+								},
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset": 
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"enbreak":0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName" : "none",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0,
+								"muteHitText":false,
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 2,
+								"shakeTime": 4,
+								"shakeDistance": 200.0,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Weak
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_WeakShield",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Born","IdleCenter","Ascent","TwistedWind","IdleEdge","Roar_AS"],
+					"modifierName": "WeakShield_SubHurt",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["WeakLoop"],
+					"modifierName": "Base_SubHurt",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Born"],
+					"modifierName": "WeakShield_StageReady",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValueToOverrideMap",
+					"globalValueKey":"_DVALIN_S04_FIRSTSIGHT_",
+					"overrideMapKey":"Ratio",
+				},
+				{
+					"$type":"SetGlobalValueToOverrideMap",
+					"globalValueKey":"_DVALIN_S04_FIRSTSIGHT_SHIELD",
+					"overrideMapKey":"ShieldRatio",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WeakShield",
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "WeakShield",
+				},
+			],
+			"modifiers" : 
+			{
+				"WeakShield" : 
+				{
+					"state": "LockHP",
+					"elementDurability": 600,
+					"stacking": "Unique",
+					"modifierMixins":
+					[
+						{
+							"$type": "ElementShieldMixin",
+							"elementType": "None",
+							"shieldHPRatio": 0.2,
+							"damageRatio": "%ShieldRatio*0.25+1",
+							"showDamageText": "INFO_ELITE_DEFENCE",
+							"useMutiPlayerFixData": true,
+							"onShieldBroken":
+							[
+								{
+									"$type":"RemoveModifier",
+									"modifierName":"WeakShield",
+								},
+							],
+						},
+					],
+					"onBeingHit":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Dvalin_HitBlood",
+							"born":
+							{
+								"$type": "ConfigBornByHitPoint",
+							},
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "WEAK_SHIELD",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 1,
+							"maxValue": 1,
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_DVALIN_S04_FIRSTSIGHT_",
+							"overrideMapKey":"Ratio",
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey":"_DVALIN_S04_FIRSTSIGHT_SHIELD",
+							"overrideMapKey":"ShieldRatio",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "WeakStartTrigger",
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "WEAK_SHIELD",
+							"value": 0,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_WEAKSHIELDBROKEN_",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 6,
+							"minValue": 0,
+						},
+					],
+				},
+				"WeakShield_SubHurt" : 
+				{
+					"properties":
+					{
+						"Actor_SubHurtDelta" : 0.95,
+					},
+				},
+				"Base_SubHurt" : 
+				{
+					"properties":
+					{
+						"Actor_SubHurtDelta" : "%Ratio*0.25",
+					},
+				},
+				"WeakShield_StageReady" : 
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Dvalin_S04_WeakShield",
+							"canBeHandledOnRecover": true,
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"WEAK_SHIELD",
+									"value":0,
+									"compareType":"Equal",
+								},
+							],
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Monster_Dvalin_S04_WeakStart_Rock",
+							"parameter": "EffectTrigger",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Ratio": 0,
+				"ShieldRatio": 0,
+			},
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_WeakStartDetect",
+			"onAbilityStart": 
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "AllExceptSelf",
+					"attackEvent": 
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 40,
+								"y" : 3,
+								"z" : 20,
+							},
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": -5, // + means up, - means down
+									"y": 30, // + means left, - means right
+									"z": 65, // + means forward, - means backward
+								}
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag" : "Dvalin_S04_WeakStart",
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"enBreak": 0.0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"muteHitText": false,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_WeakEndDetect",
+			"onAbilityStart": 
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "AllExceptSelf",
+					"attackEvent": 
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 40,
+								"y" : 3,
+								"z" : 20,
+							},
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": -5, // + means up, - means down
+									"y": 30, // + means left, - means right
+									"z": 65, // + means forward, - means backward
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag" : "Dvalin_S04_WeakEnd",
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"enBreak": 0.0,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV0",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"muteHitText": false,
+							},
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Weak",
+			"abilityMixins":
+			[
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["WeakStartBS"],
+					"modifierName" : "WeakStart_Collider",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["WeakStartAS","WeakLoop"],
+					"modifierName": "WeakLoop_Collider",
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["WeakEnd"],
+					"modifierName" : "WeakEnd_Collider",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["WeakStartAS","WeakLoop"],
+					"modifierName": "Climbable",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["WeakStartBS","WeakStartAS", "WeakLoop"],
+					"modifierName": "WeakPose",
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["WeakEnd"],
+					"modifierName" : "WeakEffect_Remove",
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["WeakStartBS","WeakStartAS"],
+					"modifierName" : "Avatar_RejectCrashDamage",
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "EnableHitBoxByName",
+					"hitBoxNames": ["hitbox_Seal01"],
+					"setEnable": false,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName"  : "WeakEffect_Attach",
+					"target" : "Self",
+				},
+			],
+			"modifiers" : 
+			{
+				"WeakEffect_Attach":
+				{
+					"duration": 20,		
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern"  : "Eff_Monster_Dvalin_S04_WeakStart_Rock",
+							"born" : 
+							{
+								"$type": "ConfigBornByTarget",
+								"offset": 
+								{
+									"x": 0.0,
+									"y": 30.0,
+									"z": 70.0,
+								},
+							},
+						},
+					],
+				},
+				"WeakStart_Collider":
+				{		
+					"onAdded":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01"],
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01"],
+							"setEnable": true,
+						},
+					],
+				},
+				"WeakLoop_Collider":
+				{		
+					"onAdded":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Neck04","Collider_Neck05","Collider_Neck04_Extra","Collider_Neck05_Extra"],
+							"setEnable": true,
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Neck02", "Collider_Neck03"],
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Neck04","Collider_Neck05","Collider_Neck04_Extra","Collider_Neck05_Extra"],
+							"setEnable": false,
+						},
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Neck02", "Collider_Neck03"],
+							"setEnable": true,
+						},
+					],
+				},
+				"WeakEnd_Collider":
+				{		
+					"onAdded":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01"],
+							"setEnable": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "EnablePushColliderName",
+							"pushColliderNames": ["Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01"],
+							"setEnable": true,
+						},
+					],
+				},
+				"WeakPose":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_POSE_",
+							"value": 3,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 3,
+						},
+						{
+							"$type": "AvatarEnterCameraShot",
+							"targetType" : "Self",
+							"cameraMoveCfgPath": "Camera_Monster_Dvalin_WeakStart",
+							"shotType": "LEVEL",
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "WeakPointEmmision",
+							"value": true,
+						},
+						{
+							"$type":"ShowReminder",
+							"id": 20010030,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_DVALIN_S04_FIRSTSIGHT_",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901069,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901087,
+								"sortType": "Default",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_POSE_",
+							"value": 2,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 2,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "WeakPointEmmision",
+							"value": false,
+						},
+					],
+				},
+				"Climbable" : 
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_LockOn_Small",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Dvalin_S04_Foible",
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901069,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "All",
+							"byServer":true,
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"ClimbColliderAttachPoint",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Head01", "hitbox_Neck01", "hitbox_Neck02", "hitbox_Neck03", "hitbox_Claw_L", "hitbox_Claw_R"],
+							"setEnable": false,
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Seal01"],
+							"setEnable": true,
+						},
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 42901087,
+							"campID": 4001,
+							"lifeByOwnerIsAlive": true,
+							"campTargetType": "Enemy",
+							"byServer":true,
+							"born":
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"Seal_01",
+								"attachPointTargetType":"Self",
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":0,
+								},
+							},
+						},
+						{
+							"$type" : "RemoveModifier",
+							"modifierName"  : "ForceKillGadget",
+							"target" : "Self",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901069,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Head01", "hitbox_Neck01", "hitbox_Neck02", "hitbox_Neck03", "hitbox_Claw_L", "hitbox_Claw_R"],
+							"setEnable": true,
+							"canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["hitbox_Seal01"],
+							"setEnable": false,
+						},
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Monster_Dvalin_S04_WeakStart_Rock",
+							"parameter": "EffectTrigger",
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901087,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName"  : "ForceKillGadget",
+							"target" : "Self",
+						},
+					],
+				},
+				"WeakEffect_Remove":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_POSE_",
+							"value": 2,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 2,
+						},
+					],					
+					"onRemoved":
+					[
+						{
+							"$type" : "RemoveModifier",
+							"modifierName"  : "WeakEffect_Attach",
+							"target" : "Self",
+						},
+					],
+				},
+				"ForceKillGadget":
+				{								
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901069,
+								"sortType": "Default",
+							},
+						},
+						{
+							"$type": "KillSelf",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByChildren",
+								"configID": 42901087,
+								"sortType": "Default",
+							},
+						},
+					],
+				},
+				"WeakStart_WindZone":
+				{
+					"duration": 2.5,		
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR20",
+							"strength" : 50,
+							"innerRadius": 2,
+							"born" : 
+							{
+								"$type": "ConfigBornBySelf",
+								"offset": 
+								{
+									"x": 5.0,
+									"y": 30.0,
+									"z": 75.0,
+								},
+							},
+							"targetType": "Enemy",
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar"],
+								},
+							],
+						},
+					],
+				},
+				"WeakStart_RejectCrashDamage":
+				{
+					"duration": 2.5,		
+					"modifierMixins":
+					[
+						{
+							"$type":"RejectAttackMixin",
+							"attackTag":"CrashDamage",
+						},
+					],
+				},
+				"Avatar_RejectCrashDamage":
+				{	
+					"onAdded":
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName"  : "WeakStart_RejectCrashDamage",
+							"target" : "CurLocalAvatar",
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName"  : "WeakStart_WindZone",
+							"target" : "Self",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "ApplyModifier",
+							"modifierName"  : "WeakStart_RejectCrashDamage",
+							"target" : "CurLocalAvatar",
+						},
+						{
+							"$type" : "RemoveModifier",
+							"modifierName"  : "WeakStart_WindZone",
+							"target" : "Self",
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Enable Dead Region
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_DeadRegion",
+			"onAdded":
+			[
+				{
+					"$type" : "ApplyModifier",
+					"modifierName"  : "CalcDvalinS04RebornPoint",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "CalcDvalinS04RebornPoint",
+					"enable" : true,
+				},
+				{
+					"$type": "TriggerPlayerDie",
+				},
+			],
+			"modifiers":
+			{
+				"CalcDvalinS04RebornPoint":
+				{
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "CalcDvalinS04RebornPoint",
+							"enable" : true,
+						},
+					],
+				},
+			},
+		},	
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Camera Center
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Update_Camera_Center",
+			"abilityMixins":
+			[
+				{
+					"$type": "StageReadyMixin",						
+					"onStageReady":
+					[
+						{
+							"$type": "AvatarEnterCameraShot",
+							"targetType" : "Self",
+							"cameraMoveCfgPath": "Camera_Dungeon_Dvalin_S04",
+							"shotType": "LEVEL",
+							"predicates":
+							[
+								{
+									"$type":"ByTargetGlobalValue",
+									"target": "Self",
+									"key":"_ISDVALINALIVE_",
+									"value":1,
+									"compareType":"Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key": "_ISDVALINALIVE_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+				{
+					"$type": "AvatarEnterCameraShot",
+					"targetType" : "Self",
+					"cameraMoveCfgPath": "Camera_Dungeon_Dvalin_S04",
+					"shotType": "LEVEL",
+					"canBeHandledOnRecover": true,
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"target": "Self",
+							"key":"_ISDVALINALIVE_",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 PLATFORM
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_Platform",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Intact",
+					"target": "Self",
+				},
+				{
+					"$type": "RegistToStageScript",
+					"alias": "S04_PLATFORM",
+					"canBeHandledOnRecover": true,
+				},
+			],
+			"modifiers":
+			{
+				"Intact":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "DVALIN_PLATFORM_STATE",
+							"value": 1,
+							"target": "Self",
+						},
+						{
+							"$type": "SyncToStageScript",
+							"alias": "S04_PLATFORM",
+							"canBeHandledOnRecover": true,
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Heal Hp First Time 
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_HealHp",
+			"onAbilityStart":
+			[
+				{
+					"$type":"HealHP",
+					"amountByTargetMaxHPRatio" : 1,
+					"muteHealEffect": true,
+					"target":"CurLocalAvatar",
+				},
+			],
+		},	
+	},
+//////////////////////////////////
+//
+//  Die
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Monster_Dvalin_S04_UnablePushCollider",
+			"onAbilityStart": 
+			[
+				{
+					"$type": "EnablePushColliderName",
+					"pushColliderNames": ["PushCollider","Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01","Collider_Seal01","Push_Claw_L","Push_Claw_R"],
+					"setEnable": false,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"target": "CurLocalAvatar",
+					"key": "_EXITCAMERASHOT_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Self",
+							"key": "_DVALIN_S04_FIRSTSIGHT_",
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+				},
+			],
+		},
+	},
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Monster_Dvalin_S04_Die",
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AddGlobalValue",
+					"target": "CurLocalAvatar",
+					"key": "_EXITCAMERASHOT_",
+					"value": 1,
+					"useLimitRange": true,
+					"maxValue": 1,
+					"minValue": 1,
+				},
+			],
+		},
+	},
+//////////////////////////////////
+//
+//  AvatarExitCameraShot
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_AvatarExitCameraShot",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", 
+					"globalValueKey": "_EXITCAMERASHOT_",
+					"valueSteps" : [-0.5, 0.5, 1.5],
+					"defaultGlobalValueOnCreate":0,
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["Empty","UNIQUE_AvatarExitCameraShot"],
+				},
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AvatarExitCameraShot",
+					"cameraMoveCfgPath": "Camera_Dungeon_Dvalin_S04",
+					"shotType": "LEVEL",
+					"targetType" : "Self",
+				},
+				{
+					"$type": "EnablePushColliderName",
+					"pushColliderNames": ["PushCollider","Collider_Head01","Collider_Neck03","Collider_Neck02","Collider_Neck01","Collider_Seal01","Push_Claw_L","Push_Claw_R"],
+					"setEnable": false,
+				},
+			],
+			"modifiers":
+			{
+				"Empty":
+				{
+				},
+				"UNIQUE_AvatarExitCameraShot":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AvatarExitCameraShot",
+							"cameraMoveCfgPath": "Camera_Dungeon_Dvalin_S04",
+							"shotType": "LEVEL",
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Dvalin_S04_LockDummy
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_LockDummy",
+			"onAbilityStart":
+			[
+			],
+		},	
+	},
+////////////////////////////////////////////////
+//
+// Wind Seed
+//
+////////////////////////////////////////////////
+	{
+		"Default" :
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_AirFlow",
+			"onAdded" :
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Kill_Bullet",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR2",
+						"centerBasedOn": "Self",
+						"campTargetType": "All",
+						"campBasedOn": "Self",
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_IS_SEED_WIND",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key" : "_IS_SEED_WIND",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 0,
+				},
+			],
+			"modifiers" :
+			{
+				"Kill_Bullet":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"KillSelf",
+						},
+					],
+				},
+	 		},
+		},
+	},
+//////////////////////////////////
+//
+//  AvatarExitCameraShot
+//
+//////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_AvatarFlyingCamera",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":	["Fly"],
+					"modifierName": "AvatarFlyingCamera",
+				},
+			],
+			"modifiers":
+			{
+				"AvatarFlyingCamera": 
+				{
+/*					"onAdded": 
+					[
+						{
+							"doOffStage": true,
+							"$type": "AvatarExitCameraShot",
+						},
+					],*/
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  DVALIN S04 EnvEff
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default" : 
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Dvalin_S04_EnvEff",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_SceneRocks",
+					"born":
+					{
+						"$type": "ConfigBornByWorld",
+						"worldPos" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Dvalin_S04_SceneVortex",
+					"born":
+					{
+						"$type": "ConfigBornByWorld",
+						"worldPos" : 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+		},
+	},
+]

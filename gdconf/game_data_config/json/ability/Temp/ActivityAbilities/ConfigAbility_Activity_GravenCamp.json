@@ -1,0 +1,188 @@
+[
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "ActivityAbility_GravenCamp_GrassReaction_Impact",
+            "isDynamicAbility": true,
+            "onAdded": 
+            [  
+                {
+                    "$type": "SetGlobalValue",
+                    "target": "Team",
+                    "key": "ImpactState",
+                    "value": 0
+                }
+            ],
+            "abilityMixins": 
+            [
+                {
+                    "$type": "CurLocalAvatarMixinV2",
+                    "modifierName": "UNIQUE_Activity_GravenCamp_GrassReaction_Impact"
+                }
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Activity_GravenCamp_GrassReaction_Impact":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "SetSystemValueToOverrideMap",
+                            "target": "Self",
+                            "key": "ImpactDamageSystemValue",
+                            "type": "ElementLevelCo"
+                        },
+                    ],
+                    "modifierMixins": 
+                    [
+                        {
+                            "$type": "DoActionByElementReactionMixin",
+                            "range": 20,
+                            "entityTypes": 
+                            [
+                               "Monster"
+                            ],
+                            "reactionTypes": 
+                            [
+                                "Burning",
+                                "Overdose",
+                                "Overgrow",
+                                "OverdoseGrass",
+                                "OverdoseElectric",
+                                "OvergrowMushroomElectric",
+                                "OvergrowMushroomFire"
+                            ],
+                            "actions": 
+                            [
+                                {
+                                    "$type": "Predicated",
+                                    "target": "Other",
+                                    "doOffStage": true,
+                                    "targetPredicates": 
+                                    [
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "ImpactState",
+                                            "target": "Team",
+                                            "value": 0,
+                                            "compareType": "NoneOrEqual",
+                                        }
+                                    ],//通过可以生成冲击波的状态判断cd是否结束
+                                    "successActions": 
+                                    [
+                                        {
+                                            "$type": "ApplyModifier",
+                                            "target": "Other",
+                                            "modifierName": "Activity_GravenCamp_GrassReaction_Handler_Delay",
+                                        },
+                                        {
+                                            "$type": "ApplyModifier",
+                                            "doOffStage": true,
+                                            "target": "Team",
+                                            "modifierName": "UNIQUE_Activity_GravenCamp_GrassReaction_Impact_CD"
+                                        },
+                                    ]
+                                }
+                            ],
+                        }
+                    ]
+                },
+
+                "Activity_GravenCamp_GrassReaction_Handler_Delay":
+                {
+                    "duration": 0.05,
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "doAfterDie": true,
+                            "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+                        },
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "doAfterDie": true,
+                            "target": "Applier",
+                            "attackEvent": 
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 4,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                    }
+                                },
+                                "attackInfo": 
+                                {
+                                    "canBeModifiedBy": "OriginOwner",
+                                    "attackProperty": 
+                                    {
+                                        "damageExtra": "%ImpactDamage*%ImpactDamageSystemValue",
+                                        "ignoreAttackerProperty": true,//忽略角色属性加成
+                                        "ignoreModifyDamage": true,
+                                        "trueDamage": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",//元素类型为无
+                                        "elementDurability": 0,//元素含量为0
+                                        "enBreak": 0
+                                    },
+                                    "hitPattern": 
+                                    {
+                                        "onHitEffectName": "default",//击中特效名称，
+                                        "hitImpulseType": "LV2",//击退？
+                                        "reboundRatio": 0,//需要解释
+                                        "canBeDefenceHalt": false,//持盾防御者无法产生额外卡肉
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false,//不跳字
+                                    },//打击效果
+                                }
+                            }
+                        },//生成圆形攻击盒
+                    ],
+                },
+                "UNIQUE_Activity_GravenCamp_GrassReaction_Impact_CD":
+                {
+                    "isUnique": true,
+                    "stacking": "Unique",
+                    "duration": "%ImpactInterval",
+                    "onAdded": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "doOffStage": true,
+                            "doAfterDie": true,
+                            "target": "Team",
+                            "key": "ImpactState",
+                            "value": -1
+                        }
+                    ],
+                    "onRemoved": 
+                    [
+                        {
+                            "$type": "SetGlobalValue",
+                            "doOffStage": true,
+                            "doAfterDie": true,
+                            "target": "Team",
+                            "key": "ImpactState",
+                            "value": 0
+                        }
+                    ]    
+                },
+               
+            },
+            "abilitySpecials": 
+            {
+                "ImpactDamageSystemValue": 0,
+                "ImpactDamage": 6,
+                "ImpactInterval": 2,
+            }    
+        }
+    }
+]

@@ -1,0 +1,547 @@
+[
+///////////////////////////////////////////////////////////////
+//
+// 2.3狗活动 烟雾发射器
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Dq_Property_Prop_SmokeDevice_01",
+			"abilityMixins": 
+			[//状态流转：0 交互-> 201 duration到-> 202 duration到-> 0
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,//只有这个state能交互
+					"modifierName": "Close",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Open",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "CoolDown",
+				},
+			],
+			"onAdded": 
+			[
+				{					
+					"$type": "AttachAbilityStateResistance",
+					"resistanceListID": 11002,//位于AvatarSkillData，状态免疫大礼包
+			  },
+			],
+			"modifiers":
+			{
+				"HachiSmokeArea":
+				{
+					"duration": 1.5,
+					"stacking": "Refresh",					
+					//"state": "DenyLockOn",
+					"onAdded": 
+					[
+						{
+							"$type": "ServerLuaCall",
+							"luaCallType": "FromGroup",
+							"funcName": "SLC_SmokeClearThreat",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "ServerLuaCall",
+							"luaCallType": "FromGroup",
+							"funcName": "SLC_SmokeSetThreat",
+						},
+					]
+				},
+				"HachiDenyLockOn":
+				{
+					"duration": 1.5,
+					"stacking": "Refresh",					
+					"state": "DenyLockOn",
+				},
+				"Close":
+				{
+					"onAdded": 
+					[
+						{//可交互提示特效
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_Hint_SearchPoint",
+						}
+					],
+					"onBeingHit": 
+					[
+
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 201,
+							"predicates":
+							[
+								{
+									"$type" : "ByNot",
+									"predicates":
+									[
+										{
+								 			"$type" : "ByAttackTags",
+								 			"attackTags" : ["BurningDamage","ShockDamage"],
+								 		},
+									]
+								},
+							],	
+						}
+					]
+				},
+				"CoolDown":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DisableInteractTimer",
+						}
+					],
+				},
+				"OpenStateTimer":
+				{//烟雾效果持续时间
+					"duration": 5,
+					"onRemoved": 
+					[
+						{
+							"$type":"ExecuteGadgetLua",
+							"param1": 202,
+						},
+					],
+				},
+				"DisableInteractTimer":
+				{//烟雾结束后，几秒后可以交互
+					"duration": 10,
+					"onRemoved": 
+					[
+						{
+							"$type":"ExecuteGadgetLua",
+							"param1": 0,
+						},
+					]
+				},
+				"Open":
+				{
+					"onAdded":
+					[
+						{//烟雾特效
+							"$type":"AttachEffect",
+							"effectPattern": "Eff_ScenObj_SmokeDevice_01_Fog",
+							"scale": 0.5,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "OpenStateTimer",
+						},
+						{//运营埋点lua上报 param1 1-烟雾 2-诱饵
+							"$type":"ServerLuaCall",
+							"luaCallType": "FromGroup",
+							"funcName":"SLC_HachiGadgetActionMark",
+							"paramNum": 1,
+							"param1": 1,
+						}
+					],
+					"thinkInterval": 0.5,
+					"onThinkInterval": 
+					[
+						{
+							"$type":"Predicated",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR5",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"targetPredicates": 
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Avatar"],
+								},					
+							],
+							"successActions": 
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName" :"HachiSmokeArea",
+									"target": "Self",
+								},
+								{
+									"$type": "ApplyModifier",
+									"modifierName" :"HachiDenyLockOn",
+									"target": "Other",
+								},
+							]
+						}
+					]
+				},
+			},
+		},
+	},
+///////////////////////////////////////////////////////////////
+//
+// 2.3狗活动 烟花诱饵
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Dq_Property_Prop_NoisyBait_01",
+			"abilityMixins": 
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "Close",
+				},
+				{//开启,给狗传坐标，狗那侧取这个坐标，然后进pose放技能
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Open",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 202,
+					"modifierName": "CoolDown",
+				},
+			],
+			"onAdded": 
+			[
+				{					
+					"$type": "AttachAbilityStateResistance",
+					"resistanceListID": 11002,//位于AvatarSkillData，状态免疫大礼包
+			  },
+			],
+			"modifiers":
+			{
+				"Close":
+				{
+					"onAdded": 
+					[
+						{//可交互提示特效
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Item_Hint_SearchPoint",
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern": "Eff_Quest_SiteInteract_Event",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.6,
+									"z": 0.0,
+								},
+							}
+						},
+					],
+					"onBeingHit": 
+					[
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 201,
+							"predicates":
+							[
+								{
+									"$type" : "ByNot",
+									"predicates":
+									[
+										{
+								 			"$type" : "ByAttackTags",
+								 			"attackTags" : ["BurningDamage","ShockDamage"],
+								 		},
+									]
+								},
+							],	
+						}
+					]
+				},
+				"CoolDown":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "DisableInteractTimer",
+						}
+					],
+				},
+				"OpenStateTimer":
+				{//烟雾效果持续时间
+					"duration": 10,
+					"onRemoved": 
+					[
+						{
+							"$type":"ExecuteGadgetLua",
+							"param1": 202,
+						},
+					],
+				},
+				"DisableInteractTimer":
+				{//烟雾结束后，几秒后可以交互
+					"duration": 5,
+					"onRemoved": 
+					[
+						{
+							"$type":"ExecuteGadgetLua",
+							"param1": 0,
+						},
+					]
+				},
+				"Open":
+				{
+					"onAdded": 
+					[//开启状态表现
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "OpenStateTimer",
+						},
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_SceneObj_NoisyBait_01",
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "RootNode",
+							},
+						},
+						{//运营埋点lua上报 param1 1-烟雾 2-诱饵
+							"$type":"ServerLuaCall",
+							"luaCallType": "FromGroup",
+							"funcName":"SLC_HachiGadgetActionMark",
+							"paramNum": 1,
+							"param1": 2,
+						}
+					],
+					"thinkInterval": 0.5,
+					"onThinkInterval": 
+					[
+						{
+							"$type":"Predicated",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByShape",
+								"shapeName": "CircleR10",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+								"sortType": "Nearest", 
+							},
+							"targetPredicates": 
+							[
+								{//对狗的判据
+									"$type" : "ByTargetGlobalValue",
+									"target": "Target",
+									"key":"_IS_INU_SHIHANDAI",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions": 
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_HappyPoint_Attracted",
+									"target": "Target",
+								},
+								{//给狗传坐标
+									"$type":"SetGlobalPos",
+									"key":"_HAPPY_POINT_POS",
+									"target": "Target",
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										/*"offset":
+										{
+											"x" : 0.0,
+											"y" : 0.0,
+											"z" : 0.5,//偏移
+										},	*/						
+									},
+									"setTarget":true,
+								},
+							]
+						}
+					],
+				},
+				"UNIQUE_HappyPoint_Attracted":
+				{
+					"duration": 1,
+					"isUnique": true,
+					"stacking": "RefreshUniqueDurability",
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_FIND_HAPPY_POINT",
+							"target": "Self",
+							"value": 1,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_FIND_HAPPY_POINT",
+							"target": "Self",
+							"value": 0,
+						},
+					]
+				},
+			},
+		},
+	},
+///////////////////////////////////////////////////////////////
+//
+// 2.3狗活动 巡逻特殊路点 通知进入field的狗进行环视动作
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Dq_Property_Prop_HachiWayPoint_01",
+			"onFieldEnter": 
+			[
+				{
+					"$type": "Predicated",
+					"target"  : "Target",
+					"targetPredicates"  :
+					[
+						{
+							"$type" : "ByTargetGlobalValue",
+							"key"  : "_IS_INU_SHIHANDAI",
+							"target": "Target",
+							"value"  : 1,
+							"compareType"  : "Equal",
+						},
+					],
+					"successActions": 
+					[
+						{
+							"$type":"SetGlobalValue",
+							"value": 1,
+							"key": "_SHIHANDAI_TO_SEARCH",
+							"target": "Target",
+						},
+					],
+				}
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+/////////////////////////////////////////////
+//
+//   狗子 可开启牢笼 战斗不可交互
+//
+/////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Gear_Property_Ani_Prop_WoodenCage_01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "Door_Open",
+				},
+			],
+			"modifiers": 
+			{
+				"Door_Open":
+				{
+					"onAdded":
+					[
+						{
+			
+							"$type":"FireEffect",
+							"effectPattern":"Eff_CoverSmoke_Mini_01",
+							"born":
+					        {
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"LockPosition"
+							}
+						},
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 202,
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////
+//
+// 通用矮光柱提示点 可配Billboard图标
+// Default:显示特效+显示图标， GearStart:隐藏特效隐藏图标
+//
+//////////////////////////////////////////////////////
+	{
+		"Default": 
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Area_Common_Property_Prop_HintPoint_01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 0,
+					"modifierName": "DefaultEffect",
+				},
+				{
+					"$type": "AttachToGadgetStateMixin",
+					"gadgetState": 201,
+					"modifierName": "HideEffect",
+				},
+			],
+			/*"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "DefaultEffect",
+					"target": "Self",
+				},
+			],*/
+			"modifiers":
+			{
+				"DefaultEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_QuestGuide_Position",
+						},
+					],
+				},
+				"HideEffect":
+				{
+					/*"onAdded":
+					[
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "DefaultEffect",
+						},
+					]*/
+				}
+			},
+		},
+	},
+]

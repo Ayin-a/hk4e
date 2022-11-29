@@ -1,0 +1,1 @@
+main_id = 22105sub_ids = {	2210501,	2210502,	2210503,	2210504,}finish_action = {	CLIENT = { },	SERVER = { },}fail_action = {	CLIENT = { },	SERVER = { },}cancel_action = {	CLIENT = { },	SERVER = 	{		QUEST_EXEC_REFRESH_GROUP_SUITE = 		{			{ "3", "133105256,1", },			{ "3", "133104058,1", },		},	},}

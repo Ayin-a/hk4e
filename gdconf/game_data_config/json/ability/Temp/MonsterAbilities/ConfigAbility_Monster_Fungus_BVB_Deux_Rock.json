@@ -1,0 +1,160 @@
+[
+	// 蕈兽BVB活动 - 伸展岩    yiming.liao
+	//
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 嘲讽逻辑
+			"abilityName": "Fungus_Deux_BVB_Rock_Taunt",
+			"onAbilityStart": [
+				// 嘲讽特效
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Fungus_Deux_Rock_Taunt"
+				},
+				// 自身霸体
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "RockEndure"
+				}
+			],
+			"modifiers": {
+				"RockEndure": {
+					"duration": 8,
+					"properties": {
+						"Actor_EndureDelta": 0.33
+					},
+					"onAdded": [
+						{
+							"$type": "TriggerTaunt",
+							"tauntLevel": "Ability_TauntLevel_4",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR15",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self"
+							},
+							// 仇恨值的提升量
+							"careValue": 660,
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster", "Partner"]
+								}
+							]
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "TriggerTaunt",
+							"tauntLevel": "Ability_TauntLevel_4",
+							"otherTargets": {
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR15",
+								"centerBasedOn": "Self",
+								"campTargetType": "Enemy",
+								"campBasedOn": "Self"
+							},
+							// 结束时，仇恨值的减少量
+							"careValue": -410,
+							"predicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Monster", "Partner"]
+								}
+							]
+						}
+					]
+					// 这一波操作可以让岩的仇恨在20秒之后达到800，之后峰值可以维持到800左右
+					// 全力输出，伸展风和燃烧反应也需要约30秒的时间达到800
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 对特定Tag的攻击，大量削减岩元素
+			"abilityName": "Fungus_Deux_BVB_Rock_RockConsuming",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "RockConsuming_Moniter"
+				}
+			],
+			// 大招的Shader管理，配合特效同学用 就不写一个新的Ability了
+			"abilityMixins": [
+				{
+					"$type": "DoActionByStateIDMixin",
+					"stateIDs": ["UnionBurst"],
+					"enterActions": [
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "UBShader"
+						}
+					]
+				}
+			],
+			"modifiers": {
+				"RockConsuming_Moniter": {
+					"onAttackLanded": [
+						// if (AttackTags == "BVB_FungusRock_UB") {
+						//		HasRockElement ? MinusRockElementDurability(-150);
+						// }
+						// else if (AttackTags == "BVB_FungusRock_Melee") {
+						//		HasRockElement ? MinusRockElementDurability(-60);
+						// }
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByHasElement",
+									"element": "Rock"
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": ["BVB_FungusRock_UB"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"value": -300.0,
+									"elementType": "Rock",
+									"sortModifier": "All",
+									"target": "Target"
+								}
+							]
+						},
+						// 小技能判据
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByHasElement",
+									"element": "Rock"
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": ["BVB_FungusRock_Melee"]
+								}
+							],
+							"successActions": [
+								{
+									"$type": "AddElementDurability",
+									"value": -50.0,
+									"elementType": "Rock",
+									"sortModifier": "All",
+									"target": "Target"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+]

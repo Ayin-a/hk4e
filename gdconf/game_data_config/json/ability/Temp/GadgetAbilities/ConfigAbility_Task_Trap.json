@@ -1,0 +1,334 @@
+[	
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Task_HuntTrap_GlobalValue",
+			"onAdded":
+			[
+				{
+					"$type": "HideUIBillBoard",
+					"hide": true,
+				},
+				{
+					"$type": "EnableAIStealthy",
+					"enable": true,
+				},
+				{
+					"$type": "AddGlobalValue",
+					"key" : "_Is_Hunt_Trap",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 0,
+				},
+			],
+		},
+	},
+
+	
+	{
+		"Default": //创建时陷阱能力改变怪物AI和自杀
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Task_TrapHunter",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Suicide180", //180秒后陷阱自杀销毁
+					"target": "Self",
+				},
+
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "HuntBuff", //让野猪逃跑的技能
+					"target": "Self",
+				},
+
+			],
+
+			"modifiers":
+			{
+				"RunToEscape"://给目标怪物上buff，改变怪物AI
+				{	
+					"duration":7,
+					"onAdded":
+					[
+						{
+							"$type": "DebugLog",
+							"content": "onRunAdd Start!!!!!!",
+						},
+						{						
+							"$type": "SetPoseInt",
+							"intID": "FleeState",
+							"value": -1,
+						},
+					   	{
+							"$type": "SetPoseBool",
+							"boolID": "NearTrap",
+							"value": true,
+					   	},
+					],
+					
+					"onRemoved":
+					[
+						{						
+							"$type": "SetPoseInt",
+							"intID": "FleeState",
+							"value": 0,
+						},
+					   	{
+							"$type": "SetPoseBool",
+							"boolID": "NearTrap",
+							"value": false,
+					   	},
+					]
+
+				},
+		
+				"HuntBuff":
+				{
+					"duration": 2,
+					"thinkInterval": 1,
+					"onThinkInterval":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "HuntBuff", //让野猪逃跑的技能
+							"target": "Self",
+						},
+
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "RunToEscape", //给目标怪物上逃跑modifier
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR50",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_Hunt_Animal",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],					
+						},
+
+					],
+				},
+
+				"Suicide180"://陷阱180秒自杀销毁
+				{
+					"duration":180,
+					"elementDurability": 180,
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Quest_SiteInteract",
+						},
+					],
+
+					"onRemoved":
+					[
+						{
+							"$type":"KillSelf",
+						},
+					],
+					
+				},
+
+			},
+		},
+	},
+
+	{
+		"Default": //产生碰撞时，陷阱攻击
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Trap_Hunt_Attack",
+			"onAbilityStart":
+			[
+
+				{
+
+					"$type": "ApplyModifier",
+					"modifierName": "MonsterSkill", //给野猪上modifier
+
+					"otherTargets": 
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR3",
+						"centerBasedOn": "Self",
+						"campTargetType": "All",
+						"campBasedOn": "Self",
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Is_Hunt_Animal",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+
+			"modifiers":
+			{
+				"MonsterSkill"://野猪自杀，对周围施放技能
+				{
+					"duration":0.2,
+					"onAdded":
+					[
+						{
+
+							"$type": "ApplyModifier",
+							"modifierName": "Trap_Suicide", //陷阱自杀销毁
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR3",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_Hunt_Trap",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+
+						{
+							"$type":"DamageByAttackValue",
+							"target" : "Self",
+                            "attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Blunt",
+										"elementType": "None",
+										"elementDurability": 20,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										"hitImpulseType":"LV3",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",	//hitlevel = 2
+											"hitImpulseX": 0,	//hitlevel = 2
+											"hitImpulseY": 0,	//hitlevel = 2
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : true,
+									},
+								},
+						},
+
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "DebugLog",
+							"content": "onMonster_Suicide Start!!!!!!",
+						},
+
+						{
+
+							"$type": "ApplyModifier",
+							"modifierName": "Trap_Suicide", //陷阱自杀销毁
+							"otherTargets": 
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR3",
+								"centerBasedOn": "Self",
+								"campTargetType": "All",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Is_Hunt_Trap",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+
+						{
+							"$type":"DamageByAttackValue",
+							"target" : "Self",
+                            "attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": 1.0,
+										"strikeType": "Blunt",
+										"elementType": "None",
+										"elementDurability": 20,
+										"enBreak": 500.0,
+									},
+									"hitPattern" :
+									{
+										"hitImpulseType":"LV3",
+										"overrideHitImpulse":
+										{
+											"hitLevel": "Heavy",	//hitlevel = 2
+											"hitImpulseX": 0,	//hitlevel = 2
+											"hitImpulseY": 0,	//hitlevel = 2
+										},
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : true,
+									},
+								},
+						},
+
+					],
+
+				},
+
+				"Trap_Suicide"://陷阱自杀销毁
+				{	
+					"duration":0.8,
+					"onRemoved":
+					[
+						{
+							"$type": "DebugLog",
+							"content": "onKILL_Trap Start!!!!!!",
+						},
+
+						{
+							"$type": "DropSubfield",
+							"subfieldName": "MonsterMeat",
+						},
+						{
+
+							"$type": "KillSelf",
+						},
+					],
+				},
+
+			},
+		},
+	},
+]

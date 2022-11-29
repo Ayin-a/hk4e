@@ -1,0 +1,6041 @@
+[
+//公子这个角色的特点是：近战、远程、印记伤害，算作普攻。
+//所以原本的普攻tag，在他身上需要重新分配：
+//远程普攻：NormalAttack_01
+//近战攻击：NormalAttack_02
+//远程瞄准/近战重击：ExtraAttack
+//印记远程：NormalAttack_03
+//印记近战：Elemental_Art
+//印记死亡：NormalAttack_05
+//印记收割：Elemental_Burst
+
+
+////////////////////////////////////////////////////////////////
+//
+//  瞄准射击时，搭在弓上的箭特效
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Avatar_Tartaglia_Arrow_FX",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Aim","FastAim"],
+					"modifierName": "Tartaglia_Arrow_FX",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"Tartaglia_Arrow_FX":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Male_Bow_Tartaglia_Arrow",
+						},
+					]
+				}
+			}
+		}
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  公子的攻击键按键逻辑
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_PressShoot",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Gandalfr_IsActivated",
+					"valueSteps" : [-0.5, 0.5, 1.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["Tartaglia_Bow_Mode_Handler", "Tartaglia_Gandalfr_Mode_Handler"],
+				},	
+			],
+			"modifiers":
+			{
+				"Tartaglia_Bow_Mode_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ButtonHoldChargeMixin",
+							"skillID": 10331,
+							"chargeTime": 0.2,
+							"OnBeginUncharged":
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 100,
+								},
+							],
+							"OnReleaseUncharged":
+							[
+								{
+									"$type": "SetCameraLockTime",
+									"lockTime": 0.3,
+								},
+								{
+									"$type": "EntityDoSkill",
+									"skillID": 10335,
+									"isHold": true,
+								},
+							],
+							"OnBeginCharged":
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 101,
+								},
+							],
+							"OnReleaseCharged":
+							[
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 10331,
+								},
+								{
+									"$type": "AvatarSkillStart",
+									"skillID": 10334,
+								},
+								{
+									"$type": "EntityDoSkill",
+									"skillID": 10335,
+									"isHold": true,
+								},
+								// {
+								// 	"$type": "SetAnimatorTrigger",
+								// 	"triggerID": "AimEnd",
+								// },
+							],
+							"chargeStateIDs": [ "ShootBS","Shoot", "FastAim", "FastAimShoot" ],
+						},
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["FastAim", "FastAimShoot"],
+							"modifierName": "KeepFastAiming",
+						},
+						{
+							//当快速瞄准射击结束时，会设置FastAimShootFinish，使得动画从FastAim状态出来，同时会通过FastAimShooting防止在射击过程中点击了瞄准按钮直接退出
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["FastAimShoot"],
+							"modifierName": "SetFastAimShooting",
+						},
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["ShootBS", "FastAim", "FastAimShoot"],
+							"modifierName": "SetNeedAimEndStates",
+						},
+
+					],
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_Cloak"],
+							"setEnable" : true,
+                            "canBeHandledOnRecover": true,
+						},
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_CloakEffectMesh"],
+							"setEnable" : false,
+                            "canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "TriggerHideWeapon",
+							"doOffStage": true,
+							"visible": true,
+							"partNames": ["equip01","equip02","equip03","sheathPoint"],
+                            "canBeHandledOnRecover": true,
+						},
+					],
+				},
+				"Tartaglia_Gandalfr_Mode_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ButtonHoldChargeMixin",
+							"skillID": 10337,
+							"chargeTime": 0.12,
+							"secondChargeTime": 0.2,
+							"OnBeginUncharged":
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 11,
+									"predicates":
+									[
+										{
+											"$type" : "ByAny",
+											"predicates" :
+											[
+												{
+													"$type" : "ByAnimatorInt",
+													"value" : 0,
+													"parameter" : "ComboCount",
+													"logic" : "Equal",
+												},
+												{
+													"$type" : "ByAnimatorInt",
+													"value" : 6,
+													"parameter" : "ComboCount",
+													"logic" : "Equal",
+												},
+											],
+										},
+									],
+								},
+								{
+									"$type": "SetAnimatorBool",
+									"boolID": "IsCharging",
+									"value": false,
+								},
+							],
+							"OnReleaseUncharged":
+							[
+		/*						{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},*/
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 1,
+								},
+							],
+							"OnBeginCharged":
+							[
+								{
+									"$type": "SetAnimatorBool",
+									"boolID": "IsCharging",
+									"value": true,
+								},
+							],
+							"OnReleaseCharged":
+							[
+								{
+									"$type": "SetAnimatorBool",
+									"boolID": "IsCharging",
+									"value": false,
+								},
+		/*						{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},*/
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 1,
+								},
+		/*						{
+									"$type": "ResetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},*/
+							],
+							"OnBeginSecondCharged":
+							[
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "DoSkill",
+									"predicates":
+									[
+										{
+											"$type": "ByLocalAvatarStamina",
+											"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+											"logic": "GreaterOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "SetAnimatorInt",
+									"intID": "SkillID",
+									"value": 6,
+									"predicates":
+									[
+										{
+											"$type": "ByLocalAvatarStamina",
+											"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+											"logic": "GreaterOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "SetAnimatorBool",
+									"boolID": "IsCharging",
+									"value": false,
+								},
+		/*						{
+									"$type": "ResetAnimatorTrigger",
+									"triggerID": "DoSkill",
+								},*/
+							],
+							"OnReleaseSecondCharged":
+							[
+
+							],
+							"chargeStateIDs": [ "Gandalfr_Attack01","Gandalfr_Attack02","Gandalfr_Attack03","Gandalfr_Attack04","Gandalfr_Attack05","Gandalfr_Attack06","Run"],
+						},
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Gandalfr_ExtraAttack"],
+							"modifierName": "ExtraAttack_StaminaCost",
+						},
+						{
+							"$type": "AttachToStateIDMixin",
+							"stateIDs": ["Aim","FastAim"],
+							"modifierName": "ExtraAttack_Mode_Error_Handler",
+							"isCheckOnAttach":true,
+						},
+					],
+//姿态相关特效、材质表现切换
+					"onAdded":
+					[
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_Cloak"],
+							"setEnable" : false,
+                            "canBeHandledOnRecover": true,
+						},
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_CloakEffectMesh"],
+							"setEnable" : true,
+                            "canBeHandledOnRecover": true,
+						},
+						{
+							"$type": "TriggerHideWeapon",
+							"doOffStage": true,
+							"visible": false,
+							"partNames": ["equip01","equip02","equip03","sheathPoint"],
+                            "canBeHandledOnRecover": true,
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_Cloak"],
+							"setEnable" : true,
+						},
+						{
+							"$type" : "TriggerSetRenderersEnable",
+							"doOffStage" : true,
+							"renderNames" : ["Body_CloakEffectMesh"],
+							"setEnable" : false,
+						},
+						{
+							"$type": "TriggerHideWeapon",
+							"doOffStage": true,
+							"visible": true,
+							"partNames": ["equip01","equip02","equip03","sheathPoint"],
+						},
+					],
+				},
+				"ExtraAttack_Mode_Error_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID": "AimEnd",
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+					"thinkInterval": 0.2,
+					"onThinkInterval":
+					[
+						{
+							"$type":"SetAnimatorTrigger",
+							"triggerID": "AimEnd",
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"KeepFastAiming":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetAnimatorBool",
+							"boolID":"FastAiming",
+							"value":true,
+						},
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.75,
+								"y": 0.39,
+								"z": -1.87
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.75,
+								"y": 0.65,
+								"z": -1.87
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold":360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov":30,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorBool",
+							"boolID":"FastAiming",
+							"value":false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"SetFastAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "FastAimShooting",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "AimEnd",
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorBool",
+									"parameter": "FastAiming",
+									"value": true
+								},
+							]
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				},
+				"ExtraAttack_StaminaCost":
+				{
+					// "duration": 0.2,
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10001,
+							"costStaminaRatio" : "%ExtraAttack_Sword_Stamina_Cost",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+//故意少判了一点点体力，为了顾及一部分网络延迟
+				"ExtraAttack_Sword_Stamina_Cost": 0, //故意少判了一点点体力，为了顾及一部分网络延迟
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_AimPressShoot",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10334,
+					"chargeTime": 0,
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10331,
+						},
+						{
+							"$type": "AvatarSkillStart",
+							"skillID": 10334,
+						},
+						{
+							"$type": "EntityDoSkill",
+							"skillID": 10335,
+							"isHold": true,
+						},
+					],
+					"chargeStateIDs": [ "Aim", "AimShoot" ],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Aim", "AimShoot"],
+					"modifierName": "KeepAiming",
+				},
+				{
+					// 通过AimShooting防止在射击过程中点击了瞄准按钮直接退出
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AimShoot"],
+					"modifierName": "SetAimShooting",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Aim", "AimShoot"],
+					"modifierName": "SetNeedAimEndStates",
+				},
+			],
+			"modifiers":
+			{
+				"KeepAiming":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"SetAnimatorBool",
+							"boolID":"Aiming",
+							"value":true,
+						},
+						{
+							"$type": "AvatarEnterFocus",
+							"cameraFollowLower":
+							{
+								"x": 0.75,
+								"y": 0.39,
+								"z": -1.87
+							},
+							"cameraFollowUpper":
+							{
+								"x": 0.75,
+								"y": 0.65,
+								"z": -1.87
+							},
+							"cameraFastFocusMode": true,
+							"faceToTarget": true,
+							"faceToTargetAngleThreshold":360,
+							"assistance":
+							{
+								"ps4":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},
+								"ps5":
+								{
+									"useFocusSticky": true,
+									"useGyro": false,
+								},								
+								"other":
+								{
+									"useFocusSticky": true,
+									"useGyro": true,
+								},
+							},
+							"canMove": true,
+							"vcam_fov":30,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"SetAnimatorBool",
+							"boolID":"Aiming",
+							"value":false,
+						},
+						{
+							"$type": "AvatarExitFocus",
+							"keepRotation": true,
+						},
+					],
+				},
+				"SetAimShooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "AimShooting",
+							"value": false,
+						},
+					]
+				},
+				"SetNeedAimEndStates":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "InStatesNeedAimEnd",
+							"value": false,
+						},
+					]
+				}
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  上面引用过的，公子各种箭的Trigger机制
+//
+////////////////////////////////////////////////////////////////
+
+///////////////////普攻平射/////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_01",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033001,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						},
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_02",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033002,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_03",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033003,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+				},
+			],
+		},
+	},
+//因为动画很颇费，攻击帧没有机会
+//所以写死了一个点把箭射出去，第6击也是一样。
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_04",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033004,
+/*					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},*/
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.1294,
+							"y": 1.506,
+							"z": 0.3554,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_ShootArrow_Big_Custom",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.1294,
+							"y": 1.506,
+							"z": 0.3554,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+				}
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_05",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033005,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_06",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033006,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.021,
+							"y": 1.1,
+							"z": 1.4,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+/*						{
+							"$type" : "ConfigDirectionByDefault",
+						},*/
+					},
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_ShootArrow_Big_Last",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset":
+						{
+							"x": -0.021,
+							"y": 1.1,
+							"z": 1.4,
+						},
+/*						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}*/
+					},
+				},
+				{
+					"$type": "ActCameraShake",
+					"cameraShake": 
+					{
+						"shakeType": "Center",
+						"shakeRange": 0.3,
+						"shakeTime": 0.12,
+						"shakeDistance": 30,
+						"extension":
+						{
+							"baseOnCamera": true,
+						},
+					},
+				},
+			],
+		},
+	},
+
+///////////////////////////////瞄准射击//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_Aiming",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033007,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 4,
+							"forceByCaster":true,
+							"compareType": "MoreThanAndEqual",
+						},
+					]
+				},
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033008,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponL",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"attachPointName":"FocusAnchor",
+							"attachPointTargetType":"Self",
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 3,
+							"forceByCaster":true,
+							"compareType": "LessAndEqual",
+						},
+					]
+				},
+				{
+					"$type": "ActCameraShake",
+					"cameraShake": 
+					{
+						"shakeType": "Center",
+						"shakeRange": 0.2,
+						"shakeTime": 0.12,
+						"shakeDistance": 30,
+						"extension":
+						{
+							"baseOnCamera": true,
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 4,
+							"forceByCaster":true,
+							"compareType": "MoreThanAndEqual",
+						},
+					]
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_WaterMagic_Arrow_Onshooting",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponR",
+						"offset" :
+						{
+							"x": 0.0, // + means up, - means down
+							"y": 0.0, // + means left, - means right
+							"z": 0.9, // + means forward, - means backward
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 4,
+							"forceByCaster":true,
+							"compareType": "MoreThanAndEqual",
+						},
+					]
+				},
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_WaterMagic_Arrow_Onshooting_Unsuccessful",
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName" : "WeaponR",
+						"offset" :
+						{
+							"x": 0.0, // + means up, - means down
+							"y": 0.0, // + means left, - means right
+							"z": 0.9, // + means forward, - means backward
+						}
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Enchanted_Time",
+							"value": 3,
+							"forceByCaster":true,
+							"compareType": "LessAndEqual",
+						},
+					]
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  公子的普通箭头特效挂接
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_Heavy_Material",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK01"],
+					"damagePercentage": "%NormalAttack_Range_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK02"],
+					"damagePercentage": "%NormalAttack_Range_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK03"],
+					"damagePercentage": "%NormalAttack_Range_03_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK04"],
+					"damagePercentage": "%NormalAttack_Range_04_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK05"],
+					"damagePercentage": "%NormalAttack_Range_05_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Arrow_ATK06"],
+					"damagePercentage": "%NormalAttack_Range_06_DamagePercentage",
+				},
+			],
+			"onAdded":
+			[
+//箭头拖尾特效
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_Arrow_Fly_Big",
+				},
+			],
+			"onAbilityStart":
+			[
+//箭头命中敌人，或不同场景时的特效
+//可以在collision的时候trigger，这样不像安柏那样超多Ability，可以少写一个。
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect" : "Eff_Arrow_Hit_Earth",
+						"surfaceEffect" :
+						{
+							"Water" : "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+					"NormalAttack_Range_01_DamagePercentage": 0,
+					"NormalAttack_Range_02_DamagePercentage": 0,
+					"NormalAttack_Range_03_DamagePercentage": 0,
+					"NormalAttack_Range_04_DamagePercentage": 0,
+					"NormalAttack_Range_05_DamagePercentage": 0,
+					"NormalAttack_Range_06_DamagePercentage": 0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  公子的瞄准射击箭相关逻辑
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_Enchanted_Water",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"ShootArrow_Enchanted_Water",
+				},
+/*				{
+					"$type":"AttachModifier",
+					"modifierName":"Tartaglia_Hit_Handler",
+					"target":"Self",
+				},*/
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 0.1,
+								"y" : 0.1,
+								"z" : 1.0,
+							},
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset" :
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy" : "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%DamageWithWater",
+								"strikeType": "Pierce",
+								"elementType": "Water",
+								"elementDurability": 25,
+								"enBreak" : 20,
+								"enHeadBreak" : 60,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "Eff_WaterMagic_Arrow_Hit",
+								"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern" :
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head_Water",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"bulletWane":
+							{
+								"waneDelay":0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval":0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio":0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval":0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin":"Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio":0.1,
+								"elementDurabilityWaneInterval":0.05,
+								"elementDurabilityWaneRatio":0.1,
+								"elementDurabilityWaneMinRatio":0.1,
+							},
+						},
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByHasElement",
+							"element" : "Water",
+						},
+					],
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 0.1,
+								"y" : 0.1,
+								"z" : 1.0,
+							},
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset" :
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy" : "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%DamageWithoutWater",
+								"strikeType": "Pierce",
+								"enBreak" : 10,
+								"enHeadBreak" : 30,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern" :
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"bulletWane":
+							{
+								"waneDelay":0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval":0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio":0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval":0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin":"Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio":0.1,
+								"elementDurabilityWaneInterval":0.05,
+								"elementDurabilityWaneRatio":0.1,
+								"elementDurabilityWaneMinRatio":0.1,
+							},
+						}
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByNot",
+							"predicates" :
+							[
+								{
+									"$type" : "ByHasElement",
+									"element" : "Water",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+//水元素箭的表现和机制，与其水含量绑定。
+				"ShootArrow_Enchanted_Water":
+				{
+					"elementType": "Water",
+					"elementDurability": 25,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_WaterMagic_Arrow",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterMagic_Arrow_Fly_Particle",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterMagic_Arrow_Fly_Trail",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "ApplyModifier",
+							"target" : "Self",
+							"modifierName" : "ShootArrow_Enchanted_WithoutWater",
+						},
+					],
+				},
+				"ShootArrow_Enchanted_WithoutWater":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_Arrow_Fly_Big",
+						},
+					],
+				},
+			},
+			"abilitySpecials" :
+			{
+				"DamageWithWater" : 0,
+				"DamageWithoutWater" : 0,
+			},
+		},
+	},
+//蓄力未满射出来的箭
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootArrow_Enchanted_WithoutWater",
+			"onAdded":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackBox",
+							"triggerType" : "TriggerNoRepeat",
+							"size" :
+							{
+								"x" : 0.1,
+								"y" : 0.1,
+								"z" : 1.0,
+							},
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+								"offset" :
+								{
+									"x": 0.0, // + means up, - means down
+									"y": 0.0, // + means left, - means right
+									"z": -0.5, // + means forward, - means backward
+								}
+							},
+							"checkHitLayerType": "Both",
+						},
+						"attackInfo":
+						{
+							"canBeModifiedBy" : "OriginOwner",
+							"attackTag": "ExtraAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%DamageWithoutWater",
+								"strikeType": "Pierce",
+								"enBreak" : 10,
+								"enHeadBreak" : 30,
+							},
+							"hitPattern" :
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV2",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"canHitHead": true,
+							"hitHeadPattern" :
+							{
+								"onHitEffectName": "Eff_Arrow_Hit_Head",
+								"hitImpulseType":"LV5",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.12,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText":false,
+							},
+							"bulletWane":
+							{
+								"waneDelay":0.7, // 表示从Bullet创生之后这么久，开始套用衰减规则
+								"damageWaneInterval":0.05,// 伤害衰减周期，每过这么久，进行一次伤害衰减
+								"damageWaneRatio":0.1,// 每次进行伤害衰减时，按照DamageWaneRatio的比例，在damagePercentage上进行【扣除】，最多扣除到0
+								"hitLevelWaneInterval":0.1,// 受击等级衰减周期，每过这么久，进行一次受击等级衰减，每次将当前受击等级往下降一级：Air→Heavy→Light→Shake→Mute
+								"hitLevelWaneMin":"Mute",// 受击等级最少衰减为这个等级。如果原本就不高于这个等级，则不予衰减。
+								"damageWaneMinRatio":0.1,
+								"elementDurabilityWaneInterval":0.05,
+								"elementDurabilityWaneRatio":0.1,
+								"elementDurabilityWaneMinRatio":0.1,
+							},
+						}
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials" :
+			{
+				"DamageWithoutWater" : 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  公子蓄力箭的命中特效逻辑
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootAimingArrow_Material",
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect" : "Eff_WaterMagic_Arrow_Hit",
+						"surfaceEffect" :
+						{
+							"Water" : "Eff_Arrow_Hit_Water"
+						}
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByHasElement",
+							"element" : "Water",
+						},
+					],
+				},
+				{
+					"$type": "FireHitEffect",
+					"hitScene":
+					{
+						"defaultEffect" : "Eff_Arrow_Hit_Earth",
+						"surfaceEffect" :
+						{
+							"Water" : "Eff_Arrow_Hit_Water"
+						}
+					},
+					"predicates" :
+					[
+						{
+							"$type" : "ByNot",
+							"predicates" :
+							[
+								{
+									"$type" : "ByHasElement",
+									"element" : "Water",
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	},
+//蓄力箭。。。。。没有水属性的表现
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootAimingArrowWithoutWater_Material",
+			"onAdded":
+			[
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_Arrow_Fly_Big",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireHitEffect",
+
+					"hitScene":
+					{
+						"defaultEffect" : "Eff_Arrow_Hit_Earth",
+						"surfaceEffect" :
+						{
+							"Water" : "Eff_Arrow_Hit_Water",
+						}
+					},
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  公子蓄力箭的蓄力逻辑及其特效表现
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShootAimingArrow_Charge",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Aim", "FastAim"],
+					"modifierName": "ShootAimingArrow_Charge_Handler",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"AimLoop",
+					"modifierName":"Aim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID":"FastAimLoop",
+					"modifierName":"FastAim_ChangeAlpha",
+					"normalizeStart":0.0,
+					"normalizeEnd":1.0,
+				},
+				{
+					"$type": "AttachToStateIDMixin", //播放瞄准蓄力特效
+					"stateIDs": ["FastAim", "FastAimShoot"],
+					"modifierName": "ShowAimingEffect",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": [ "Aim", "FastAim","FastAimShoot","AimShoot"],
+					"modifierName": "ShootAimingArrow_Charge_Remove",
+				},
+				{
+					"$type": "AttachToStateIDMixin",//播放瞄准蓄力特效
+					"stateIDs": [ "Aim", "AimShoot"],
+					"modifierName": "ShowAimingEffect",
+				},
+			],
+			"onAbilityStart":
+			[
+///////////////////////射完了记得清一下标记及相关特效////////////////////////////////////
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_Enchanted_Time",
+					"value" : -5,
+					"useLimitRange" : true,
+					"maxValue" : 5,
+					"minValue" : 0,
+				},
+				{
+					"$type":"RemoveModifier",
+					"modifierName":"AimChargeMark",
+				},
+				{
+					"$type":"RemoveModifier",
+					"modifierName":"WaterMagic_Arrow_Glow_Once",
+				},
+				{
+					"$type":"RemoveModifier",
+					"modifierName":"WaterMagic_Arrow_Glow_WithoutWater_Once",
+				},
+////////////////////////////////////////////////////////////////////////////////////////
+			],
+			"modifiers":
+			{
+				"ShootAimingArrow_Charge_Handler":
+				{
+					"thinkInterval":0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"AimChargeMark",
+						},
+					],
+				},
+				"Aim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+				"FastAim_ChangeAlpha":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "EffectChangeAlphaMixin",
+							"target":"Team",
+							"startDuration":0.2,
+							"endDuration":0.3,
+						},
+					],
+				},
+				"ShootAimingArrow_Charge_Remove":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_Enchanted_Time",
+							"value" : -5,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"AimChargeMark",
+						}
+					],
+				},
+				"AimChargeMark":
+				{
+					"stacking":"MultipleRefreshNoRemove",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_Enchanted_Time",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+						},
+					],
+				},
+				"ShowAimingEffect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "WaterMagic_Arrow_Glow_WithoutWater_Once",
+						},
+					],
+					"thinkInterval":0.1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName":"WaterMagic_Arrow_Glow_Once",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 4,
+									"forceByCaster":true,
+									"compareType": "MoreThanAndEqual",
+								},
+							]
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "WaterMagic_Arrow_Glow_WithoutWater_Once",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Enchanted_Time",
+									"value": 1,
+									"forceByCaster":true,
+									"compareType": "Equal",
+								},
+							]
+						},
+					],
+				},
+				"WaterMagic_Arrow_Glow_Once":
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_WaterMagic_Arrow_Glow_Once_02",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_WaterMagic_Arrow_Glow_Loop_02",
+						},
+					]
+				},
+				"WaterMagic_Arrow_Glow_WithoutWater_Once":
+				{
+					"stacking":"Unique",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_WaterMagic_Arrow_Glow_Once_01",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_WaterMagic_Arrow_Glow_Loop_01",
+						},
+					]
+				}
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  Change Main Skill 用于瞄准模式下射击
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ChangeMainSkill",
+			"abilityMixins":
+			[
+				{
+					"$type": "AvatarChangeSkillMixin",
+					"priority":"AvatarCommon",
+					"aimSkillID" : 10334,
+				},
+			],
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  断流印记相关处理逻辑
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_WaterFlower_Handler",
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName" : "Tartaglia_WaterFLower_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"Tartaglia_WaterFLower_Handler":
+				{
+					"onAttackLanded":
+					[
+//注意两个问题：
+//1.断流印记不能掉球；
+//2.水属性被消耗掉的蓄力箭不能掉球。
+//所以这里要设法识别。	
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[							
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["ExtraAttack"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type" : "ByHitElement",
+									"element" : "Water",
+								},
+								{
+									"$type" : "ByHitStrikeType",
+									"strikeType" : "Pierce",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Tartaglia_WaterFlower_Flag",
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "WaterMagicArrow_AquaFlower_Range",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},
+//正常的瞄准射击，那就掉球+上印记
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[							
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["ExtraAttack"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type" : "ByHitElement",
+									"element" : "Water",
+								},
+								{
+									"$type" : "ByHitStrikeType",
+									"strikeType" : "Pierce",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_WaterMagicArrow_AquaFlower",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},
+//大招的远程模式，只上印记
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Burst"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type" : "ByHitElement",
+									"element" : "Water",
+								},
+								{
+									"$type" : "ByHitStrikeType",
+									"strikeType" : "Pierce",
+								},
+							],
+							"successActions":
+							[						
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_WaterMagicArrow_AquaFlower",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},	
+//天赋2，近战姿态的伤害暴击也能上
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["NormalAttack_02","ExtraAttack"],
+								},
+								{
+									"$type" : "ByHitCritical",
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_IsActivated",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type" : "ByUnlockTalentParam",
+									"target" : "Caster",
+									"talentParam" : "Avatar_Tartaglia_EddyBlade",
+								},
+							],
+							"successActions":
+							[						
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_WaterMagicArrow_AquaFlower",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},	
+//大招的近战模式，收割印记
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Burst"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type" : "ByHitStrikeType",
+									"strikeType" : "Slash",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Tartaglia_WaterFlower_Flag",
+									"value":1,
+									"compareType":"Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_IsActivated",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_WaterMagicArrow_AquaFlower_Reaper",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},
+//断流印记的近战效果
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["NormalAttack_02","ExtraAttack"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type":"ByTargetGlobalValue",
+									"key":"_ABILITY_Tartaglia_WaterFlower_Flag",
+									"value":1,
+									"compareType":"Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_IsActivated",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "WaterMagicArrow_AquaFlower_Melee",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},
+//断流印记死亡传染
+//attackTag是NormalAttack_05，和弓箭的攻击重合，因此需要额外判断条件；
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["NormalAttack_05"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[							
+								{
+									"$type": "AttachModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_WaterMagicArrow_AquaFlower",
+									"target": "Target",
+								},
+							],
+							"doOffStage": true,
+						},
+					],
+				},
+//公子的核心机制：断流印记
+//这个印记具有以下机制：
+//1. 水属性；
+//2. 可以分别被公子的远程蓄力箭、近战斩击、大招无敌斩互动，并产生不同的效果。
+				"UNIQUE_WaterMagicArrow_AquaFlower":
+				{
+					"isUnique": true,
+					"stacking": "Refresh",
+					"duration": "%AquaFlower_Duration",
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Tartaglia_WaterFlower", 
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Tartaglia_WaterFlower_Flag",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":0,
+						},
+					],
+					"thinkInterval": "%AquaFlower_RippleInterval",
+					"onThinkInterval":
+					[
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"modifierName": "WaterMagicArrow_AquaFlower_Range_Talent",
+							"target": "Self",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_IsActivated",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Avatar_Tartaglia_Ripple",
+								},
+							],
+						},
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"modifierName": "WaterMagicArrow_AquaFlower_Melee_Talent",
+							"target": "Self",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_IsActivated",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByUnlockTalentParam",
+									"talentParam": "Avatar_Tartaglia_Ripple",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Tartaglia_WaterFlower_Flag",
+							"value":-11,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_WaterFlower_AS", 
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterFlower_Kill_Burst",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 5.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										//"attachPointName" : "RootNode",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.7,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag" : "NormalAttack_05",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Kill_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 50,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "WaterMagicArrow_AquaFlower_EndOfIris_EnergyRegain",
+							"target" : "Caster",
+							"predicates" :
+							[
+								{
+									"$type" : "ByUnlockTalentParam",
+									"target" : "Caster",
+									"talentParam" : "Avatar_Tartaglia_EndOfIris",
+								},
+							],
+						},
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_WaterMagicArrow_AquaFlower",
+						},
+					],
+				},
+				"WaterMagicArrow_AquaFlower_EndOfIris_EnergyRegain":
+				{
+					"duration": 0.3,
+					"stacking": "Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 8,
+					},
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":4,
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					// "modifierMixins":
+					// [
+					// 	{
+					// 		"$type" : "ReviveElemEnergyMixin",
+					// 		"type" : "Both",
+					// 		"period" : 0.2,
+					// 		"baseEnergy" : 4,
+					// 		"ratio" : 1,
+					// 	},
+					// ],
+				},
+				"WaterMagicArrow_AquaFlower_Range":
+				{
+					"duration": 0.7,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterFlower_Range_Burst",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attenuationTag": "AquaFlower",
+									"attackTag" : "NormalAttack_03",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Range_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 15,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2018,
+							"baseEnergy": 3,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+									"target": "Caster",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Tartaglia_WaterFlower_ElemBallMark",
+							"target": "Caster",
+						},
+					],
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attenuationTag": "AquaFlower",
+									"attackTag" : "NormalAttack_03",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Range_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 15,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"WaterMagicArrow_AquaFlower_Range_Talent":
+				{
+					"duration": 0.7,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterFlower_Range_Burst",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attenuationTag": "AquaFlower",
+									"attackTag" : "NormalAttack_03",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Range_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 15,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2018,
+							"baseEnergy": 3,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+									"target": "Caster",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Tartaglia_WaterFlower_ElemBallMark",
+							"target": "Caster",
+						},
+					],
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attenuationTag": "AquaFlower",
+									"attackTag" : "NormalAttack_03",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Range_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 15,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByOriginOwner",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+				"UNIQUE_Tartaglia_WaterFlower_ElemBallMark":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"duration": 3.0,
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"WaterMagicArrow_AquaFlower_Melee":
+				{
+					"stacking": "Unique",
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterFlower_Melee_Burst",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius": 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+									// "ignoreMassive":true,
+								},
+								"attackInfo":
+								{
+/*									"attenuationTag": "AquaFlower",*/
+									"attackTag" : "Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Melee_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2018,
+							"baseEnergy": 3,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+									"target": "Caster",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Tartaglia_WaterFlower_ElemBallMark",
+							"target": "Caster",
+						},
+					],
+				},
+				"WaterMagicArrow_AquaFlower_Melee_Talent":
+				{
+					"stacking": "Unique",
+					"duration": 1.5,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Male_Bow_Tartaglia_WaterFlower_Melee_Burst",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius": 3,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+									// "ignoreMassive":true,
+								},
+								"attackInfo":
+								{
+/*									"attenuationTag": "AquaFlower",*/
+									"attackTag" : "Elemental_Art",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Melee_Damage",
+										"strikeType": "Slash",
+										"elementDurability": 25,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type": "GenerateElemBall",
+							"configID": 2018,
+							"baseEnergy": 3,
+							"ratio": 1,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Tartaglia_WaterFlower_ElemBallMark",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+									"target": "Caster",
+								},
+							],
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Tartaglia_WaterFlower_ElemBallMark",
+							"target": "Caster",
+						},
+					],
+				},
+				"UNIQUE_WaterMagicArrow_AquaFlower_Reaper":
+				{
+					"duration": 0.8,
+					"isUnique": true,
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "Caster",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern" :
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius": 5,
+									"born":
+									{
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName" : "Fx_ChestNode",
+										"attachPointTargetType": "Self",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+									},
+									// "ignoreMassive":true,
+								},
+								"attackInfo":
+								{
+/*									"attenuationTag": "AquaFlower",*/
+									"attackTag" : "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquaFlower_Reaper_Damage",
+										"strikeType": "Default",
+										"elementDurability": 50,
+										"elementType": "Water",
+										"overrideByWeapon": false,
+										"attackType": "Melee",
+										"enBreak" : 100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV7",
+										"retreatType": "ByAttacker",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.00,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+						{
+							"$type" : "RemoveUniqueModifier",
+							"modifierName" : "UNIQUE_WaterMagicArrow_AquaFlower",
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Tartaglia_AquariaBlade_Melee_Reaper",
+						},
+					],
+				}
+			},
+			"abilitySpecials" :
+			{
+				"AquaFlower_Range_Damage" : 0,
+				"AquaFlower_Melee_Damage" : 0,
+				"AquaFlower_Kill_Damage" : 0,
+				"AquaFlower_Reaper_Damage" : 0,
+				"AquaFlower_Duration" : 10.0,
+				"AquaFlower_GainEnergy" : 0,
+				"AquaFlower_RippleInterval" : 0,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  元素战技 切近战攻击
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Gandalfr",
+			"abilityMixins":
+			[
+				{
+					"$type" : "AttachToStateIDMixin",
+					"modifierName" : "Gandalfr_Perform_Maintainer",
+					"stateIDs" : ["NormalMoveWeaponPutaway","Gandalfr_End","AquariaBlade_Melee"],
+				},
+				{
+					"$type" : "AttachToStateIDMixin",
+					"modifierName" : "Gandalfr_Perform_Available_Checker_ForState",
+					"stateIDs" : ["StandbyShow","NormalMoveWeaponPutaway","NormalStandbyWeapon","NormalStandby","AquariaBlade_Range_AS","AquariaBlade_Melee_AS","Gandalfr_Start_AS","Gandalfr_End_AS","Shoot","ShootBS","Aim","FastAim","Gandalfr_Attack01","Gandalfr_Attack02","Gandalfr_Attack03","Gandalfr_Attack04","Gandalfr_Attack05","Gandalfr_Attack06","Gandalfr_ExtraAttack","Gandalfr_ExtraAttack_AS"],
+				},
+				{
+					"$type" : "AttachToAnimatorStateIDMixin",
+					"stateIDs" : ["RunToIdle","SprintToIdle","WalkToIdle","Walk"],
+					"modifierName" : "Gandalfr_Perform_Available_Checker_ForAnimate",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK01"],
+					"damagePercentage": "%Gandalfr_Attack_01_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK02"],
+					"damagePercentage": "%Gandalfr_Attack_02_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK03"],
+					"damagePercentage": "%Gandalfr_Attack_03_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK04"],
+					"damagePercentage": "%Gandalfr_Attack_04_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK05"],
+					"damagePercentage": "%Gandalfr_Attack_05_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK06_1"],
+					"damagePercentage": "%Gandalfr_Attack_06_1_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ATK06_2"],
+					"damagePercentage": "%Gandalfr_Attack_06_2_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ExtraAttack_1"],
+					"damagePercentage": "%Gandalfr_ExtraAttack_1_DamagePercentage",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["Gandalfr_ExtraAttack_2"],
+					"damagePercentage": "%Gandalfr_ExtraAttack_2_DamagePercentage",
+				},
+			],
+			"onAdded":
+			[
+				//初始化相关依赖变量
+				{
+					"doOffStage" : true,
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_Gandalfr_Cooldown_Count",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"doOffStage" : true,
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_Gandalfr_Perform_Available_ForState",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"doOffStage" : true,
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+					"value" : 0,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "Gandalfr_Avatar_Absence_Handler",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID" : 10336,
+					"cdRatio" : 0.125,
+				},
+				//开场震一哈
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackSphere",
+							"triggerType": "TriggerNoRepeat",
+							"radius": 3.0,
+						},
+						"attackInfo":
+						{
+							"attackTag": "Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Gandalfr_StartDamage",
+								"strikeType": "Blunt",
+								"elementType": "Water",
+								"elementDurability": 50,
+								"elementRank": 3,
+								"enBreak": 51.75,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV3",
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"hitHaltTime": 0.0,
+								"canBeDefenceHalt": false,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "Center",
+								"shakeRange": 0.6,
+								"shakeTime": 0.36,
+								"shakeDistance": 30,
+								"extension":
+								{
+									"baseCycle": 0.08,
+									"cycleDamping": -0.04,
+								},
+							},
+						},
+					},
+				},
+/*				{
+					"$type" : "ActCameraRadialBlur",
+					"cameraRadialBlur" :
+					{
+						"power": 1,
+						"blurTime": 0.4,
+						"fadeTime": 0.2,
+					},
+				},*/
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_Gandalfr_Start_Blast",
+				},
+				{
+					"$type" : "FireEffect",
+					"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_Gandalfr_Start_Blast_Head",
+				},
+				{
+					"$type" : "ApplyModifier",
+					"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+				},
+				{
+					"$type" : "ClearEndura",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Gandalfr_Main_Handler":
+				{
+					"isUnique": true,
+					"elementDurability": 100,
+					"duration": 31,
+					"modifierMixins":
+					[
+						{
+							"$type" : "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Gandalfr_Cooldown_Count",
+							"valueSteps" : [-1, 26.5, 30.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Gandalfr_End_Warning_Blank", "Gandalfr_End_Warning"],
+						},
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority":"AvatarSpecial",
+							"skillIndex": 1,
+							"skillID": 10336,
+						},
+						{
+							"$type": "SwitchSkillIDMixin",
+							"priority":"AvatarCommon",
+							"skillIndex": 0,
+							"skillID": 10337,
+						},
+					],
+					"properties":
+					{
+						"Actor_EndureDelta" : 0.5,
+					},
+					"onAdded":
+					[
+						{
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsGandalfr",
+							"value" : 1,
+							"persistent": false,
+						},
+						{
+							"$type" : "AddGlobalValue",
+							"doOffStage" : true,
+							"key" : "_ABILITY_Gandalfr_IsActivated",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+						{
+							"$type" : "ApplyModifier",
+							"modifierName" : "UNIQUE_Gandalfr_Maximum_Cooldown_Handler",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Gandalfr_CoolDown_Count_On_Team",
+							"target": "Team",
+						},
+					],
+					"thinkInterval": 0.2,
+					"onThinkInterval":
+					[
+						{
+							"$type" : "SetAnimatorFloat",
+							"floatID" : "IsGandalfr",
+							"value" : 1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "SetAnimatorFloat",
+							"doOffStage" : true,
+							"floatID" : "IsGandalfr",
+							"value" : 0,
+						},
+						{
+							"$type" : "AddGlobalValue",
+							"doOffStage" : true,
+							"key" : "_ABILITY_Gandalfr_IsActivated",
+							"value" : -1,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_Gandalfr_End_Blast",
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_Gandalfr_End_Blast_Head",
+						},
+						{
+							"$type" : "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName" : "UNIQUE_Gandalfr_Maximum_Cooldown_Handler",
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName": "UNIQUE_Gandalfr_CoolDown_Count_On_Team",
+							"target": "Team",
+						},
+					],
+				},
+				"UNIQUE_Gandalfr_CoolDown_Count_On_Team":
+				{
+					"isUnique" : true,
+					"thinkInterval" : 1.0,
+					"onThinkInterval" :
+					[
+						//数到最大时间为止
+						{
+							"$type" : "AddGlobalValue",
+							"target": "Caster",
+							"key" : "_ABILITY_Gandalfr_Cooldown_Count",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 35,
+							"minValue" : 0,
+						},
+					],	
+				},
+				"UNIQUE_Gandalfr_Maximum_Cooldown_Handler":
+				{
+					"isUnique" : true,
+/*					"thinkInterval" : 1.0,
+					"onThinkInterval" :
+					[
+						//数到最大时间为止
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Cooldown_Count",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 35,
+							"minValue" : 0,
+						},
+					],*/
+					"onRemoved" :
+					[
+//根据在这个姿态下存在的时间，决定冷却长短
+//30s内，按照持续时间线性增加冷却时间
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"doOffStage": true,
+							"globalValueKey": "_ABILITY_Gandalfr_Cooldown_Count",
+							"overrideMapKey": "Gandalfr_Cooldown_Count",
+							"isFromOwner": false,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10332,
+							"cdRatio" : "1+%Gandalfr_Cooldown_Count*0.167",
+							"predicates" :
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Cooldown_Count",
+									"forceByCaster": true,
+									"value": 29,
+									"compareType": "LessAndEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_AquariaBlade_Ultimate_Used",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+//超过30s被拉回的，算45s
+						{
+							"doOffStage" : true,
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10332,
+							"cdRatio" : 7.5,
+							"predicates" :
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Cooldown_Count",
+									"forceByCaster": true,
+									"value": 29,
+									"compareType": "MoreThan",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_AquariaBlade_Ultimate_Used",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+//撤之前清空变量
+						{
+							"doOffStage" : true,
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_AquariaBlade_Ultimate_Used",
+							"value" : -99,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Cooldown_Count",
+							"value" : -99,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+					],
+				},
+				"Gandalfr_Perform_Available_Checker_ForState":
+				{
+					"onAdded":
+					[
+						//现在你可以潇洒地切换状态了
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Perform_Available_ForState",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+					"onRemoved":
+					[
+						//现在你只能猥琐地切换状态了
+						{
+							"doOffStage" : true,
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Perform_Available_ForState",
+							"value" : -99,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+					]
+				},
+				"Gandalfr_Perform_Available_Checker_ForAnimate":
+				{
+					"onAdded":
+					[
+						//现在你可以潇洒地切换状态了
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+					"onRemoved":
+					[
+						//现在你只能猥琐地切换状态了
+						{
+							"doOffStage" : true,
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+							"value" : -99,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+					]
+				},
+				"Gandalfr_Perform_Maintainer":
+				{
+					//保证在收武器/技能结束阶段，能完整播完收武器效果
+					//播完就扣掉，防止有人拿这个续命
+					"onAdded":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+							"useLimitRange" : true,
+							"maxValue" : 125,
+							"minValue" : 0,
+							"value" : 20,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type" : "AddElementDurability",
+							"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+							"useLimitRange" : true,
+							"maxValue" : 125,
+							"minValue" : 0,
+							"value" : -20,
+						},
+					],
+				},
+				"Gandalfr_Avatar_Absence_Handler":
+				{
+					//走都走了，人都死了
+					"onAvatarOut":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+						},
+					],
+					"onKill":
+					[
+						{
+							"$type" : "RemoveUniqueModifier",
+							"doOffStage" : true,
+							"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+						},
+					],
+				},
+				"Gandalfr_End_Warning_Blank":
+				{
+//这个人很懒，什么都没有留下					
+				},
+				"Gandalfr_End_Warning":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_Avatar_Male_Bow_Tartaglia_Gandalfr_Start_Coruscate_Head",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Gandalfr_StartDamage": 0,
+				"Gandalfr_Attack_01_DamagePercentage": 0,
+				"Gandalfr_Attack_02_DamagePercentage": 0,
+				"Gandalfr_Attack_03_DamagePercentage": 0,
+				"Gandalfr_Attack_04_DamagePercentage": 0,
+				"Gandalfr_Attack_05_DamagePercentage": 0,
+				"Gandalfr_Attack_06_1_DamagePercentage": 0,
+				"Gandalfr_Attack_06_2_DamagePercentage": 0,
+				"Gandalfr_ExtraAttack_1_DamagePercentage": 0,
+				"Gandalfr_ExtraAttack_2_DamagePercentage": 0,
+				"Gandalfr_Cooldown_Count": 0,
+			},
+		},
+	},
+//如果公子成功进了收招动作，那就靠收招动作，驱动停止近战状态
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Gandalfr_Remover",
+			"onAbilityStart":
+			[
+				{
+					"$type" : "RemoveUniqueModifier",
+					"doOffStage" : true,
+					"modifierName" : "UNIQUE_Gandalfr_Main_Handler",
+				},
+				{
+					"$type" : "RemoveUniqueModifier",
+					"doOffStage" : true,
+					"modifierName" : "UNIQUE_Gandalfr_Maximum_Cooldown_Handler",
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  第五击的子弹
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Gandalfr_Attack05",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Gandalfr_Attack04",
+					"modifierName": "Gandalfr_Attack05_FixPos",	//设置第五击特效播放位置，保证和第四击无缝衔接
+					"normalizeStart": 0.02,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41033009,	//加gadget保证攻击事件不会因为进下一击被切断
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornByGlobalValue",
+						"positionKey": "Gandalfr_Attack05Pos",
+						"directionKey": "Gandalfr_Attack05Dir",
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Gandalfr_Attack05_FixPos":
+				{
+					"duration": 0.1,
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalPos",
+							"key": "Gandalfr_Attack05Pos",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.85,
+								},
+							},
+						},
+						{
+							"$type": "SetGlobalDir",
+							"key": "Gandalfr_Attack05Dir",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"direction":
+								{
+									"$type": "ConfigDirectionByEntity",
+									"angleOffset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									}
+								}
+							},
+						},
+					],
+				},
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  判断是直接切姿态还是进一个动画来进入状态
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Gandalfr_Trigger",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10332,
+					"chargeTime": 5.0,
+					"secondChargeTime": 10.0,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "ForceUseSkillSuccess",
+							"skillID": 10332,
+							"type": "Skill",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Avatar_Tartaglia_Gandalfr",	
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+									],
+								},
+							],
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type" : "ResetAnimatorTrigger",
+							"triggerID" : "DoSkill",
+						},
+					],
+					"OnBeginCharged":
+					[
+					],
+					"OnReleaseCharged":
+					[
+					],
+					"OnBeginSecondCharged":
+					[
+					],
+					"OnReleaseSecondCharged":
+					[
+					],
+				},
+			],
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  判断是直接切姿态还是进一个动画来结束状态
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Gandalfr_TriggerOff",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10336,
+					"chargeTime": 5.0,
+					"secondChargeTime": 10.0,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "ForceUseSkillSuccess",
+							"skillID": 10332,
+							"type": "Skill",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Avatar_Tartaglia_Gandalfr_Remover",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+									"forceByCaster": true,
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+									],
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 2,
+							"predicates":
+							[
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForState",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+										{
+											"$type": "ByTargetGlobalValue",
+											"key": "_ABILITY_Gandalfr_Perform_Available_ForAnimate",
+											"forceByCaster": true,
+											"value": 1,
+											"compareType": "MoreThanAndEqual",
+										},
+									],
+								},
+							],
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type" : "ResetAnimatorTrigger",
+							"triggerID" : "DoSkill",
+						},
+					],
+					"OnBeginCharged":
+					[
+					],
+					"OnReleaseCharged":
+					[
+					],
+					"OnBeginSecondCharged":
+					[
+					],
+					"OnReleaseSecondCharged":
+					[
+					],
+				},
+			],
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_AquariaBlade_Melee",
+			"onAdded":
+//初始化相关变量
+			[
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_AquariaBlade_Ultimate_Used",
+					"value" : -5,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackCircle",
+							"triggerType" : "TriggerNoRepeat",
+							"height": 5.0,
+							"fanAngle": 360,
+							"radius": 8,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -2.5,
+									"z" : 0.0,
+								},
+							},
+							// "ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+/*							"attenuationTag": "AquaFlower",*/
+							"attackTag" : "Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%AquariaBlade_Melee_Damage",
+								"strikeType": "Slash",
+								"elementDurability": 50,
+								"elementType": "Water",
+								"overrideByWeapon": false,
+								"attackType": "Melee",
+								"enBreak" : 250,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV7",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0.00,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+						},
+					},
+				},
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID": 10333,
+				},
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_AquariaBlade_Ultimate_Used",
+					"value" : 1,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 1,
+					"predicates" :
+					[
+						{
+							"$type" : "ByUnlockTalentParam",
+							"talentParam" : "Avatar_Tartaglia_ThousandWithers",
+						},
+					],
+				},
+			],
+			"abilitySpecials":
+			{
+				"AquariaBlade_Melee_Damage" : 0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_AquariaBlade_Range",
+			"onAbilityStart":
+			[	
+				{
+					"$type" : "AvatarSkillStart",
+					"skillID" : 10333,
+					"cdRatio" : 1,
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41033009,
+					"target": "SelfAttackTarget",
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born": 
+					{
+						"$type": "ConfigBornByTarget",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+					"predicates": 
+					[
+						{
+						  "$type": "ByHasAttackTarget",
+						},
+					],
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41033009,
+					"target": "Self",
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born": 
+					{
+						"$type": "ConfigBornByTarget",
+						"offset": 
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 7.0,
+						},
+						"onGround": true,
+					},
+					"predicates": 
+					[
+						{
+							"$type": "ByNot",
+							"predicates":
+							[
+								{
+								  "$type": "ByHasAttackTarget",
+								},
+							],
+						},
+					],
+				},
+/*				{
+					"$type" : "ModifyAvatarSkillCD",
+					"skillID" : 10332,
+					"cdRatio" : -1,
+					"predicates" :
+					[
+						{
+							"$type" : "ByUnlockTalentParam",
+							"target" : "Caster",
+							"talentParam" : "Avatar_Tartaglia_ThousandWithers"
+						},
+					],
+				},*/
+				{
+					"$type" : "ApplyModifier",
+					"doOffStage" : true,
+					"modifierName" : "AqauriaBlade_Range_EnergyRegain",
+					"target" : "Caster",
+				},
+			],
+			"modifiers":
+			{
+				"AqauriaBlade_Range_EnergyRegain":
+				{
+					"duration": 0.3,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value":"%AqauriaBlade_Range_EnergyRegain",
+							"target":"Self",
+							"doOffStage":true,
+						},
+					],
+					// "modifierMixins":
+					// [
+					// 	{
+					// 		"$type" : "ReviveElemEnergyMixin",
+					// 		"type" : "Both",
+					// 		"period" : 0.2,
+					// 		"baseEnergy" : "%AqauriaBlade_Range_EnergyRegain",
+					// 		"ratio" : 1,
+					// 	},
+					// ],
+				},
+			},
+			"abilitySpecials":
+			{
+				"AqauriaBlade_Range_EnergyRegain" : 0,
+			}
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_AquariaBlade_Range_Gadget",
+			"onAdded":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Tartaglia_AquariaBlade_Range_Alert",
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "AquariaBlade_Range_Damage",
+					"target": "Self",
+				},
+			],
+			"modifiers":
+			{
+				"AquariaBlade_Range_Damage":
+				{
+					"duration": 1.1,
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target": "OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"fanAngle": 360.0,
+									"radius": 6.0,
+									"height": 4.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : -2.0,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Elemental_Burst",
+									"attackProperty":
+									{
+										"damagePercentage": "%AquariaBlade_Range_Damage",
+										"overrideByWeapon": false,
+										"attackType": "Range",
+										"elementType": "Water",
+										"elementDurability": 50,
+										"strikeType": "Pierce",
+										"enBreak" : 200,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "none",
+										"hitImpulseType":"LV5",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+/*						        	"forceCameraShake": true,
+									"cameraShake":
+									{
+										"shakeType": "CustomVector",
+										"shakeRange": 0.6,
+										"shakeTime": 0.36,
+										"shakeDistance": 25,
+										"shakeDir":
+										{
+											"x":0, 
+											"y":1,
+											"z":0,
+										},
+										"extension":
+										{
+											"baseCycle": 0.08,
+											"cycleDamping": -0.04,
+										},
+									},*/
+								},
+							},
+						},
+						{
+							"$type" : "FireEffect",
+							"effectPattern" : "Eff_Tartaglia_AquariaBlade_Range_Explosion",
+						},
+					],
+				},
+				"AquariaBlade_Range_Damage_1":
+				{
+
+				},
+				"AquariaBlade_Range_Damage_2":
+				{
+
+				},
+				"AquariaBlade_Range_OnlyEffect_1":
+				{
+
+				},
+				"AquariaBlade_Range_OnlyEffect_2":
+				{
+
+				},
+			},
+			"abilitySpecials":
+			{
+				"AquariaBlade_Range_Damage": 0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_Blade_Manager",
+			"abilityMixins":
+			[
+/*				{
+					"$type" : "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Gandalfr_IsActivated",
+					"valueSteps" : [-0.5, 0.5, 1.5],
+					"removeAppliedModifier": true,
+					"modifierNameSteps" : ["Gandalfr_Blade_Manager_Blank", "Gandalfr_Blade_Manager"],
+				},*/
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["Gandalfr_Start","Gandalfr_Start_AS","AquariaBlade_Melee","AquariaBlade_Melee_AS",/*"Gandalfr_End","Gandalfr_End_AS",*/"Gandalfr_ExtraAttack","Gandalfr_ExtraAttack_AS","Gandalfr_Attack01","Gandalfr_Attack02","Gandalfr_Attack03","Gandalfr_Attack04","Gandalfr_Attack05","Gandalfr_Attack06"],
+					"modifierName": "Gandalfr_Blade_Manager_Switch",
+				},
+//进状态出双刀
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Start",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.5,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Start",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0.754,
+					"normalizeEnd" : 0.9,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Start_AS",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.721,
+					"normalizeEnd" : 0.9,
+				},
+//第一击是双剑，自然收刀消散
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack01",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack01",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.65,
+					"normalizeEnd" : 0.8,
+				},
+//第二击是双剑
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack02",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack02",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.782,
+					"normalizeEnd" : 0.9,
+				},
+//第三击是双剑
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack03",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack03",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.65,
+					"normalizeEnd" : 0.8,
+				},
+//第四击是双剑,20.2%时切成双刃
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack04",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.1,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack04",
+					"modifierName" : "Gandalfr_Blade_Manager_ToDual",
+					"target" : "Self",
+					"normalizeStart" : 0.067,
+					"normalizeEnd" : 0.25,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack04",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.65,
+					"normalizeEnd" : 0.8,
+				},
+//第五击是双刃，在3.2%扔出去
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack05",
+					"modifierName" : "Gandalfr_Blade_Manager_ToDual",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack05",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.657,
+					"normalizeEnd" : 0.8,
+				},
+//第六击是空手，在5.9%的时候变成双刃
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateID" : "Gandalfr_Attack06",
+					"modifierName" : "Gandalfr_Blade_Manager_ToDual",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack06",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0.115,
+					"normalizeEnd" : 0.4,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_Attack06",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.658,
+					"normalizeEnd" : 0.8,
+				},
+//重击鬼知道是啥
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_ExtraAttack",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_ExtraAttack_AS",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.2,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "Gandalfr_ExtraAttack_AS",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.588,
+					"normalizeEnd" : 0.7,
+				},
+//近战大招的武器变化
+/*				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "AquariaBlade_Melee",
+					"modifierName" : "Gandalfr_Blade_Manager_ToSingle",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.1,
+				},*/
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "AquariaBlade_Melee",
+					"modifierName" : "Gandalfr_Blade_Manager_ToDual",
+					"target" : "Self",
+					"normalizeStart" : 0,
+					"normalizeEnd" : 0.15,
+				},
+				{
+					"$type" : "AttachToNormalizedTimeMixin",
+					"stateID" : "AquariaBlade_Melee_AS",
+					"modifierName" : "Gandalfr_Blade_Manager_ToBlank",
+					"target" : "Self",
+					"normalizeStart" : 0.65,
+					"normalizeEnd" : 0.75,
+				},
+			],
+			"onAdded":
+			[
+//初始化变量
+				{
+					"$type" : "AddGlobalValue",
+					"key" : "_ABILITY_Gandalfr_Single_Or_Dual",
+					"value" : -5,
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+				},
+			],
+			"modifiers":
+			{
+				"Gandalfr_Blade_Manager_Blank":
+				{
+//这个人很懒，什么都没有留下					
+				},
+/*				"Gandalfr_Blade_Manager":
+				{
+					"modifierMixins":
+					[
+
+					],
+				},*/
+				"Gandalfr_Blade_Manager_Switch":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type" : "AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Gandalfr_Single_Or_Dual",
+							"valueSteps" : [-0.5, 0.5, 1.5, 2.5],
+							"removeAppliedModifier": true,
+							"modifierNameSteps" : ["Gandalfr_Blade_Single", "Gandalfr_Blade_Dual", "Gandalfr_Blade_Blank"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_L_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 0,
+									"forceByCaster":true,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_R_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 0,
+									"forceByCaster":true,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_Dual_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 1,
+									"forceByCaster":true,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Single_Or_Dual",
+							"value" : 5,
+							"useLimitRange" : true,
+							"maxValue" : 2,
+							"minValue" : 2,
+						},
+					],
+				},
+				"Gandalfr_Blade_Single":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_L",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_R",
+						},
+					],
+				},
+				"Gandalfr_Blade_Dual":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_SingleToDual",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_Dual",
+						},
+					],
+				},
+				"Gandalfr_Blade_Blank":
+				{
+					"onAdded":
+					[
+					],
+				},
+				"Gandalfr_Blade_Manager_ToSingle":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Single_Or_Dual",
+							"value" : -5,
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+						},
+					],
+				},
+				"Gandalfr_Blade_Manager_ToDual":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Single_Or_Dual",
+							"value" : 1,
+							"useLimitRange" : true,
+							"maxValue" : 1,
+							"minValue" : 1,
+						},
+					],
+				},
+				"Gandalfr_Blade_Manager_ToBlank":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_L_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 0,
+									"forceByCaster":true,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_R_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 0,
+									"forceByCaster":true,
+									"compareType": "NoneOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Tartaglia_Gandalfr_Weapon_Dual_Dissipate",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Gandalfr_Single_Or_Dual",
+									"value": 1,
+									"forceByCaster":true,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type" : "AddGlobalValue",
+							"key" : "_ABILITY_Gandalfr_Single_Or_Dual",
+							"value" : 2,
+							"useLimitRange" : true,
+							"maxValue" : 2,
+							"minValue" : 2,
+						},
+					],
+				},
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_AquariaBlade_CameraController",
+			"onAbilityStart":
+			[
+				{
+					"$type":"AvatarEnterCameraShot",
+					"cameraMoveCfgPath":"Camera_Tartaglia_AquariaBlade_Melee",
+					"target" : "Self",
+					"predicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":0.4,
+								"fanAngle": 30.0,
+								"radius": 1.4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 1.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"checkWaterLayer":true,
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 0.5,
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Gandalfr_IsActivated",
+							"forceByCaster": true,
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				{
+					"$type":"AvatarEnterCameraShot",
+					"cameraMoveCfgPath":"Camera_Tartaglia_AquariaBlade_Range",
+					"target" : "Self",
+					"predicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":0.4,
+								"fanAngle": 30.0,
+								"radius": 1.4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 1.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"checkWaterLayer":true,
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 0.5,
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_Gandalfr_IsActivated",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Melee","AquariaBlade_Range"],
+					"modifierName": "AquariaBlade_Camera_Protection_Ghost",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Melee","AquariaBlade_Range"],
+					"modifierName": "AquariaBlade_Camera_Protection_Invincible",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Melee"],
+					"modifierName": "AquariaBlade_Melee_Camera_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Range","AquariaBlade_Range_AS"],
+					"modifierName": "AquariaBlade_Range_Camera_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Melee"],
+					"modifierName": "AquariaBlade_Windzone_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Melee","AquariaBlade_Range"],
+					"modifierName": "AquariaBlade_Camera_Remover",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["AquariaBlade_Range"],
+					"modifierName": "Tartaglia_AquariaBlade_Range_Material_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"AquariaBlade_Camera_Protection_Ghost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"AquariaBlade_Camera_Protection_Invincible":
+				{
+					"state": "Invincible",
+				},
+				"AquariaBlade_Melee_Camera_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern":"Weather_Tartaglia_AquariaBlade_Melee",
+							"transDuration":0.7,
+							"duration":1.6,
+						},
+					],
+				},
+				"AquariaBlade_Range_Camera_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern":"Weather_Tartaglia_AquariaBlade_Range",
+							"transDuration":0.7,
+							"duration":1.8,
+						},
+					],
+				},
+				"AquariaBlade_Windzone_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR3",
+							"strength" : -3,
+							"attenuation" : 2,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								//"attachPointName" : "RootNode",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "Enemy",
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Grass"],
+									/*"reject" : true,*/
+								},
+								{
+									"$type" : "ByTargetWeight",	//WindZoneLevel = 2
+									"logic" : "LesserOrEqual",	//WindZoneLevel = 2
+									"weight" : 250.0,	//WindZoneLevel = 2
+								},
+							],
+						},
+					],
+				},
+				"AquariaBlade_Camera_Remover":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEmoSync" : false,
+							"toggleEyeKey" : false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AvatarCameraParam",
+							"lockParam" : false,
+							"cameraParam" :
+							{
+								"forceRadius" : 6.0,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEmoSync" : true,
+							"toggleEyeKey" : true,
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Invisible":
+				{
+					"onAdded" :
+					[
+						{
+							"$type": "TriggerSetVisible",		//普攻第五击，隐身
+							"visible": false,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage": true, 
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Range_Material_Handler":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Self",
+							"targetPredicates":
+							[							
+								{
+									"$type":"ByAttackNotHitScene",
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"height":0.4,
+										"fanAngle": 30.0,
+										"radius": 1.4,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x" : 0.0,
+												"y" : 1.5,
+												"z" : 0.0,
+											},
+										},
+									},
+									"checkWaterLayer":true,
+								},
+								{
+									"$type": "ByAvatarInWaterDepth",
+									"compareType": "LessAndEqual",
+									"depth": 0.5,
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Tartaglia_AquariaBlade_Range_Arrow",
+									"target": "Self",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "Tartaglia_AquariaBlade_Range_Arrow_ThirdParty",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Range_Arrow":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_Arrow",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_BS",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToNormalizedTimeMixin",
+							"stateID": "AquariaBlade_Range",
+							"modifierName": "Tartaglia_AquariaBlade_Range_Arrow_Shooting",
+							"normalizeStart": 0.667,
+							"normalizeEnd": 0.9,
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Range_Arrow_ThirdParty":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_Arrow_Thirdparty",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_BS_Thirdparty",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachToNormalizedTimeMixin",
+							"stateID": "AquariaBlade_Range",
+							"modifierName": "Tartaglia_AquariaBlade_Range_Arrow_Shooting_ThirdParty",
+							"normalizeStart": 0.667,
+							"normalizeEnd": 0.9,
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Range_Arrow_Shooting":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_BS_Shooting",
+						},
+					],
+				},
+				"Tartaglia_AquariaBlade_Range_Arrow_Shooting_ThirdParty":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Tartaglia_AquariaBlade_Range_BS_Shooting_Thirdparty",
+						},
+					],
+				},
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  核心天赋：队伍里每有一个不同的武器类型，技能的冷却时间下降x%
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_CoreTalent",
+			"onAdded":
+			[
+				{
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+					"value": -2,
+					"useLimitRange" : true,
+					"maxValue" : 1,
+					"minValue" : 1,
+				},
+				{
+					"$type" : "AttachModifier",
+					"doOffStage" : true,
+					"modifierName" : "Tartaglia_CoreTalent_Main_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"Tartaglia_CoreTalent_Main_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+							"defaultGlobalValueOnCreate": 0,					
+							"valueSteps" : [0.5,1.5,2.5,3.5,99],
+							"removeAppliedModifier": true,
+							"modifierNameSteps": ["Tartaglia_CoreTalent_1","Tartaglia_CoreTalent_2","Tartaglia_CoreTalent_3","Tartaglia_CoreTalent_4"],
+						},
+					],
+					"thinkInterval": 1.0,
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 1,
+							"predicates":
+							[
+								{
+									"$type" : "ByCurTeamWeaponTypeSort",
+									"number" : 1,
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 2,
+							"minValue": 2,
+							"predicates":
+							[
+								{
+									"$type" : "ByCurTeamWeaponTypeSort",
+									"number" : 2,
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 3,
+							"predicates":
+							[
+								{
+									"$type" : "ByCurTeamWeaponTypeSort",
+									"number" : 3,
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"doOffStage": true,
+							"key": "_ABILITY_Avatar_Tartaglia_CoreTalent_WeaponCount",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 4,
+							"minValue": 4,
+							"predicates":
+							[
+								{
+									"$type" : "ByCurTeamWeaponTypeSort",
+									"number" : 4,
+									"logic" : "GreaterOrEqual",
+								},
+							],
+						},
+					],
+				},
+				"Tartaglia_CoreTalent_1":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_SkillCDMinusRatio" : "%Tartaglia_CoreTalent_CDReductionRatio",
+					},
+				},
+				"Tartaglia_CoreTalent_2":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_SkillCDMinusRatio" : "%Tartaglia_CoreTalent_CDReductionRatio*2",
+					},
+				},
+				"Tartaglia_CoreTalent_3":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_SkillCDMinusRatio" : "%Tartaglia_CoreTalent_CDReductionRatio*3",
+					},
+				},
+				"Tartaglia_CoreTalent_4":
+				{
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_SkillCDMinusRatio" : "%Tartaglia_CoreTalent_CDReductionRatio*4",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Tartaglia_CoreTalent_CDReductionRatio": 0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  公子进入show02时临时显示武器
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShowWeaponOn",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerHideWeapon",
+					"doOffStage": true,
+					"visible": true,
+					"partNames": ["equip01","equip02","equip03","sheathPoint"],							
+				}
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_ShowWeaponOff",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerHideWeapon",
+					"doOffStage": true,
+					"visible": false,
+					"partNames": ["equip01","equip02","equip03","sheathPoint"],		
+					"predicates":		
+					[
+						{
+							"$type" : "ByAnimatorFloat",
+							"parameter" : "IsGandalfr",
+							"value" : 1,
+							"logic" : "Equal",									
+						}
+					]			
+				}
+			],
+			"modifiers":
+			{
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Tartaglia_FallingAnthem",
+			"abilityMixins":
+			[
+				{
+					"$type": "AvatarChangeSkillMixin",
+					"jumpSkillID": 5033010,
+					"flySkillID": 5033010,
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_Material",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "FallingAnthem_Loop_Normal",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": 
+					[
+						"FallingAnthem_BS_2",
+						"FallingAnthem_Loop",
+						"FallingAnthem_Loop_Low",
+					],
+					"modifierName": "FallingAnthem_LoopDamage",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_Height_Detect",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_FallingDamageImmune_01",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop"
+					],
+					"modifierName": "Inertia",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+						"FallingAnthem_AS_1",
+						"FallingAnthem_AS_2"
+					],
+					"modifierName": "FallingAnthem_OverHead_Camera",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS"
+					],
+					"modifierName": "FallingAnthem_ClearVelocityForce",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS",
+						"FallingAnthem_Loop",
+					],
+					"modifierName": "FallingAnthem_AttachEffect_BS_01", //气流效果
+				},
+			],
+			"onAdded":
+			[
+			],
+			"onAbilityStart":
+			[
+				//普通状态第一段
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 2.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 3.0,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -0.5,
+									"z": 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+								"strikeType": "Pierce",
+								"attackType": "Melee",
+								"elementType": "None",
+								"elementDurability": 25,
+								"enBreak": 50,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV2",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+							/*
+						  "forceCameraShake": true,
+
+						  "cameraShake":
+						  {
+							  "shakeType": "CustomVector",
+						  "shakeRange": 0.3,
+						  "shakeTime": 0.12,
+						  "shakeDistance": 30,
+						  "shakeDir":
+							{
+							  "x": 0,
+							  "y": 1,
+							  "z": 0,
+							},
+						  },
+
+						  "cameraShake":
+						  {
+							  "shakeType": "CustomVector",
+							  "shakeRange": 0.08,
+							  "shakeTime": 0.06,
+							  "shakeDistance": 15,
+							  "shakeDir":
+							  {
+								  "x": 0,
+								  "y": 1,
+								  "z": 0,
+							  },
+							  "extension":
+							  {
+								  "baseCycle": 0.24,
+								  "cycleDamping": 0,
+								  "rangeAttenuation": 0.3,
+							  },
+						  },
+						  */
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+				},
+				//普通状态第二段
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"scale": 1.0,
+							"height": 2.0,
+							"centerYOffset": 0.0,
+							"offsetZ": 0.0,
+							"fanAngle": 360.0,
+							"radius": 3.5,
+							"followRootNodeY": false,
+							"followTransformY": false,
+							"offsetAngle": 0.0,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"offset":
+								{
+									"x": 0.0,
+									"y": -0.5,
+									"z": 0.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag": "FallingAttack",
+							"attackProperty":
+							{
+								"damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+								"strikeType": "Pierce",
+								"attackType": "Melee",
+								"elementType": "None",
+								"elementDurability": 25,
+								"enBreak": 100,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "none",
+								"hitImpulseType":"LV3",
+								"retreatType": "ByAttacker",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.1,
+								"muteHitText": false
+							},
+							/*
+						  "forceCameraShake": false,
+						  "cameraShake":
+						  {
+							  "shakeType": "CustomVector",
+							  "shakeRange": 0.08,
+							  "shakeTime": 0.06,
+							  "shakeDistance": 15,
+							  "shakeDir":
+							  {
+								  "x": 0,
+								  "y": 1,
+								  "z": 1,
+							  },
+							  "extension":
+							  {
+								  "baseCycle": 0.4,
+								  "cycleDamping": 0,
+								  "rangeAttenuation": 0.3,
+							  },
+						  },
+						  */
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"forceByCaster": true,
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+				//普通状态第一段
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_01",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"forceByCaster": true,
+							"value": 0,
+							"compareType": "NoneOrEqual",
+						},
+					],
+				},
+				//普通状态第二段
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Avatar_Bow_FallAnthem_Strike_02",
+					"predicates":
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"forceByCaster": true,
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"FallingAnthem_AttachEffect_BS_01":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Bow_FallAnthem_BS_01",
+						},
+					],
+				},
+				"FallingAnthem_BS_Material":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Bow_FallAnthem_BS",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "ActCameraRadialBlur",
+							"cameraRadialBlur":
+							{
+								"power": 0.3,
+								"blurTime": 0.3,
+								"fadeTime": 0.15,
+							},
+						},
+					],
+				},
+				"FallingAnthem_BS_VelocityForce_Initialize":
+				{
+					"properties":
+					{
+						"Actor_AddGravityScale": -2,
+					},
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces":
+							[
+								"RushMoveType"
+							],
+						},
+					],
+				},
+				"FallingAnthem_LoopDamage":
+				{
+					"thinkInterval": 0.3,
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"triggerType": "TriggerNoRepeat",
+									"radius": 1.0,
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										}
+									}
+								},
+								"attackInfo":
+								{
+									"attackTag": "FallingAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+										"strikeType": "Pierce",
+										"attackType": "Melee",
+										"elementType": "None",
+                                		"elementDurability": 0,
+										"enBreak": 10,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0,
+										"hitHaltTimeScale": 0.02,
+										"muteHitText": false
+									},
+								},
+							},
+						},
+					],
+				},
+				"FallingAnthem_FallingDamageImmune_01":
+				{
+					"onAdded":[
+						{
+						  "$type": "ClearGlobalValue",
+						  "key": "_ABILITY_FallingAttack_Altitude",
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv0",
+									"logic": "LesserOrEqual",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv1",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv0",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv2",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv1",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv3",
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv2",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": "%FallingAnthem_Altitude_Lv3",
+									"logic": "Greater",
+								},
+							],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+					],					
+				},
+				"FallingAnthem_FallingDamageImmune_02":
+				{
+					"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+					],
+				},
+				"FallingAnthem_FallingDamageImmune_03":
+				{
+
+					"properties":
+					{
+						"Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+					},
+				},
+				"FallingAnthem_Loop_Normal":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Bow_FallAnthem_Loop_02",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_FallingAnthem_UseCamera",
+									"forceByCaster": true,
+									"value": 1,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+				//水平惯性继承
+				"Inertia":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ApplyInertiaVelocityMixin",
+							"damping": 0,
+							"useXZ": false,
+							"useY": false,
+						},
+					],
+				},
+				"FallingAnthem_Height_Detect":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 5,
+							"useLimitRange": true,
+							"maxValue": 1,
+							"minValue": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "Greater",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 0,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "LesserOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 2.4,
+									"logic": "Greater",
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetAnimatorFloat",
+							"floatID": "FallingAnthem_UseCamera",
+							"value": 0,
+						},
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAnthem_UseCamera",
+							"value": 0,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+						},
+					],
+				},
+				"FallingAnthem_OverHead_Camera":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 4.5,
+								"forceRadiusDuration": 0.2,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorFloat",
+									"parameter": "FallingAnthem_UseCamera",
+									"value": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"FallingAnthem_OverHead_Camera_Remover":
+				{
+					"onAdded":
+					[
+						{
+							"doOffStage": true,
+							"$type": "AvatarExitCameraShot",
+						},
+					],
+				},
+				"FallingAnthem_Landed_Camera":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"lockParam": false,
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 0.1,
+								"shouldKeepForceRadius": true,
+							},
+							"predicates":
+							[
+								{
+									"$type": "ByAnimatorFloat",
+									"parameter": "FallingAnthem_UseCamera",
+									"value": 1,
+									"logic": "Equal",
+								},
+							],
+						},
+					],
+				},
+				"FallingAnthem_ClearVelocityForce":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces":
+							[
+								"RushMoveType",
+								"InertiaType"
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+		},
+	},
+
+]

@@ -1,0 +1,1864 @@
+[
+//////////////////////////////////
+//
+//  试玩活动——追踪机关（基础）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Ability",
+			"abilitySpecials":
+			{
+				"CDTime": 60,
+			},
+			"onAdded":
+			[
+				{
+	              "$type": "AttachAbilityStateResistance",
+	              "resistanceListID": 11001,
+	            },
+				{
+					"$type" : "SetGlobalValue",
+					"key": "_Gear_State",// -1 => Stop/ 0=> Close / 1=>Start
+					"value": 0,
+				},
+				{
+					"$type" : "SetGlobalValue",
+					"key": "_Avatar_Enter_Field",// 1 => Enter/ 0=> Exit
+					"value": 0,
+				},
+			],
+			"onFieldEnter":
+			[
+				{
+					"$type" : "Predicated",
+					"target": "Target",
+					"targetPredicates" :
+					[
+						{
+							"$type" : "ByEntityTypes",
+							"entityTypes" : ["Avatar"],
+						},
+						{
+							"$type" : "ByIsLocalAvatar",
+						},													
+					],
+					"successActions" :
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Self",
+							"key": "_Avatar_Enter_Field",// >1 => Enter/ 0=> Exit
+							"value": 1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": 1,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Gear_State",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"onFieldExit":
+			[
+				{
+					"$type" : "Predicated",
+					"target": "Target",
+					"targetPredicates" :
+					[
+						{
+							"$type" : "ByEntityTypes",
+							"entityTypes" : ["Avatar"],
+						},
+						{
+							"$type" : "ByIsLocalAvatar",
+						},												
+					],
+					"successActions" :
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Self",
+							"key": "_Avatar_Enter_Field",
+							"value": -1,
+							"useLimitRange":true,
+							"minValue":0,
+						},
+					],
+				},
+			],	
+			"abilityMixins" : 
+			[
+				{	// -1 => Stop/ 0=> Close / 1=>Start
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_Gear_State",
+					"valueSteps" : [-1.5,-0.5, 0.5, 1.5],
+					"modifierNameSteps" : [
+						"Gear_Stop",
+						"Gear_Close",
+						"Gear_Start",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Gear_Stop":
+				{
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "State",
+							"value": 0,
+						},
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 202,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Avatar_Enter_Field",
+									"value": 0,
+									"compareType": "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": 1,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_Avatar_Enter_Field",
+									"value": 1,
+									"compareType": "MoreThanAndEqual",
+								},
+							],
+						},
+					],
+				},
+				"Gear_Close":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "State",
+							"value": 0,
+						},
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 0,
+						},
+					],
+				},
+				"Gear_Start":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "State",
+							"value": 201,
+						},
+						{
+							"$type": "ExecuteGadgetLua",
+							"param1": 201,
+						},
+					],
+				},
+			},
+		},
+	},	
+//////////////////////////////////
+//
+//  试玩活动——追踪机关（火属性,初始化，核心暴露后逻辑）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Fire_Ability",
+			"abilitySpecials":
+			{
+				"ElementDurability":50,
+				"FirstChargeTime": 2,
+				"EachAttackTime": 2,
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type" : "SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByLCTrigger",
+						"campTargetType": "Enemy",
+						"sortType": "Random",
+						"topLimit": 1,
+					},
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{	//根据Field随机选择1个目标发射70350221子弹
+					"$type": "TriggerBullet",
+					"bulletID": 70350221,//试玩地城_追踪机关子弹_火
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "EffectPoint",
+						"offset": {
+							"x": 0.0,
+							"y": 1.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type":"ConfigDirectionByAttackTarget",
+						},
+					},
+					"predicates": 
+					[
+						{
+							"$type": "ByHasAttackTarget",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Avatar_Enter_Field",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "SetAnimatorInt",
+					"intID": "Element",
+					"value": 2,//From 1 Start, 风、火、冰、水、雷
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_Gear_Charge_Over",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ChargetOverState",
+				},
+			],
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close","Idle"],
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "FirstCharge",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close"],
+					"modifierName": "CloseState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "ShowCore",
+				},
+			],
+			"modifiers":
+			{
+				"ChargetOverState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_Gear_Charge_Over",
+							"valueSteps" : [-0.5,0.5,1.5],
+							"modifierNameSteps" : ["NoShooting","IntervalShooting"],
+						},
+					],
+				},
+				"UNIQUE_CoreElment":
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"elementType": "Fire",
+					"elementDurability": "%ElementDurability",
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": -1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"FirstCharge":
+				{
+					"duration":"%FirstChargeTime",
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Fire_Ability",
+							"target": "Self",
+						},
+
+					],
+				},				
+				"IdleState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01_Idle",
+							"effectTempleteID": 101,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+					],
+				},
+				"CloseState":
+				{
+					"onAdded":
+					[						
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"NoShooting":{},
+				"IntervalShooting":
+				{
+					"thinkInterval":"%EachAttackTime",
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Fire_Ability",
+							"target": "Self",
+						},
+					],
+				},
+				"ShowCore":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01",
+							"effectTempleteID": 101,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_CoreElment",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  试玩活动——追踪机关（水属性,初始化，核心暴露后逻辑）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Water_Ability",
+			"abilitySpecials":
+			{
+				"ElementDurability":50,
+				"FirstChargeTime": 2,
+				"EachAttackTime": 5,
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type" : "SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByLCTrigger",
+						"campTargetType": "Enemy",
+						"sortType": "Random",
+						"topLimit": 1,
+					},
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{	//根据Field随机选择1个目标发射70350222子弹
+					"$type": "TriggerBullet",
+					"bulletID": 70350222,//试玩地城_追踪机关子弹_水	
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "EffectPoint",
+						"offset": {
+							"x": 0.0,
+							"y": 1.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type":"ConfigDirectionByAttackTarget",
+						},
+					},
+					"predicates": 
+					[
+						{
+							"$type": "ByHasAttackTarget",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Avatar_Enter_Field",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "SetAnimatorInt",
+					"intID": "Element",
+					"value": 4,//From 1 Start, 风、火、冰、水、雷
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_Gear_Charge_Over",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ChargetOverState",
+				},
+
+			],
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close","Idle"],
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "FirstCharge",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close"],
+					"modifierName": "CloseState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "ShowCore",
+				},
+			],			
+			"modifiers":
+			{
+				"ChargetOverState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_Gear_Charge_Over",
+							"valueSteps" : [-0.5,0.5,1.5],
+							"modifierNameSteps" : ["NoShooting","IntervalShooting"],
+						},
+					],
+				},
+				"UNIQUE_CoreElment":
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"elementType": "Water",
+					"elementDurability": "%ElementDurability",
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+					],
+					"onBeingHit":
+					[
+						//针对水与雷，特殊反应关系的处理。（Field不能被正确上modifier）
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElement",
+									"element": "Electric",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddElementDurability",
+									"value" : -25,
+									"modifierName":"UNIQUE_CoreElment",
+									"elementType" : "Water",
+									"useLimitRange": true,
+									"minValue": 0.0,
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": -1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"FirstCharge":
+				{
+					"duration":"%FirstChargeTime",
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Water_Ability",
+							"target": "Self",
+						},
+
+					],
+				},				
+				"IdleState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01_Idle",
+							"effectTempleteID": 104,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+					],
+				},
+				"CloseState":
+				{
+					"onAdded":
+					[						
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"NoShooting":{},
+				"IntervalShooting":
+				{
+					"thinkInterval":"%EachAttackTime",
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Water_Ability",
+							"target": "Self",
+						},
+					],
+				},
+				"ShowCore":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01",
+							"effectTempleteID": 104,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_CoreElment",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  试玩活动——追踪机关（冰属性,初始化，核心暴露后逻辑）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Ice_Ability",
+			"abilitySpecials":
+			{
+				"ElementDurability":50,
+				"FirstChargeTime": 2,
+				"EachAttackTime": 2,
+			},
+			"onAdded":
+			[
+				{
+					"$type": "SetAnimatorInt",
+					"intID": "Element",
+					"value": 3,//From 1 Start, 风、火、冰、水、雷
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_Gear_Charge_Over",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ChargetOverState",
+				},
+
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByLCTrigger",
+						"campTargetType": "Enemy",
+						"sortType": "Random",
+						"topLimit": 1,
+					},
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{	//根据Field随机选择1个目标发射70350223子弹
+					"$type": "TriggerBullet",
+					"bulletID": 70350223,//试玩地城_追踪机关子弹_冰
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "EffectPoint",
+						"offset": {
+							"x": 0.0,
+							"y": 1.0,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type":"ConfigDirectionByAttackTarget",
+						},
+					},
+					"predicates": 
+					[
+						{
+							"$type": "ByHasAttackTarget",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Avatar_Enter_Field",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+							"compareType": "Equal",
+						},
+					],
+				},
+			],
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close","Idle"],
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "FirstCharge",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close"],
+					"modifierName": "CloseState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "ShowCore",
+				},
+			],
+			"modifiers":
+			{
+				"ChargetOverState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_Gear_Charge_Over",
+							"valueSteps" : [-0.5,0.5,1.5],
+							"modifierNameSteps" : ["NoShooting","IntervalShooting"],
+						},
+					],
+				},
+				"UNIQUE_CoreElment":
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"elementType": "Ice",//对应属性：冰
+					"elementDurability": "%ElementDurability",
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": -1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"FirstCharge":
+				{
+					"duration":"%FirstChargeTime",
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Ice_Ability",
+							"target": "Self",
+						},
+
+					],
+				},
+				"IdleState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01_Idle",
+							"effectTempleteID": 102,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+					],
+				},
+				"CloseState":
+				{
+					"onAdded":
+					[						
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"NoShooting":{},
+				"IntervalShooting":
+				{
+					"thinkInterval":"%EachAttackTime",
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Ice_Ability",
+							"target": "Self",
+						},
+					],
+				},
+				"ShowCore":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01",
+							"effectTempleteID": 102,//from 100 Start,风、火、冰、雷、水
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_CoreElment",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  试玩活动——追踪机关（雷属性）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Thunder_Ability",
+			"abilitySpecials":
+			{
+				"ElementDurability":50,
+				"FirstChargeTime": 2,
+				"EachAttackTime": 3,
+				"EachAttackTime_ThunderFall": 5,
+				"DamagePercentage":2.0,
+				"LevelEntity_AvatarDot_SystemValue":1.0,
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type" : "SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByLCTrigger",
+						"campTargetType": "Enemy",
+						"sortType": "Random",
+						"topLimit": 1,
+					},
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{
+					"$type" : "Predicated",
+					"predicates":
+					[
+						{
+							"$type": "ByHasAttackTarget",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Avatar_Enter_Field",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+							"compareType": "Equal",
+						},	
+					],
+					"successActions" :
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_SceneObj_TowerElectric_Fire",
+							"born": 
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+								"offset": {
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "ConductShock",
+							"target":"SelfAttackTarget",
+						},
+					],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "SetAnimatorInt",
+					"intID": "Element",
+					"value": 5,//From 1 Start, 风、火、冰、水、雷
+				},
+				{
+					"$type": "SetGlobalValue",
+					"target": "Self",
+					"key": "_Gear_Charge_Over",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "ChargetOverState",
+				},
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "LevelEntity_AvatarDot_SystemValue",
+			        "type": "ElementLevelCo",
+		        },
+			],
+			"abilityMixins" : 
+			[
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close","Idle"],
+					"modifierName": "IdleState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "FirstCharge",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Close"],
+					"modifierName": "CloseState",
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["Open","Loop"],
+					"modifierName": "ShowCore",
+				},
+			],
+			"modifiers":
+			{
+				"ChargetOverState":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", 
+							"globalValueKey": "_Gear_Charge_Over",
+							"valueSteps" : [-0.5,0.5,1.5],
+							"modifierNameSteps" : ["NoShooting","IntervalShooting"],
+						},
+					],
+				},
+				"UNIQUE_CoreElment":
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"elementType": "Electric",
+					"elementDurability": "%ElementDurability",
+					"state" : "Limbo",
+					"modifierMixins":
+					[
+						{
+							"$type": "ShieldBarMixin",
+						},
+					],
+					"onBeingHit":
+					[
+						//针对水与雷，特殊反应关系的处理。（Field不能被正确上modifier）
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByHitElement",
+									"element": "Water",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type" : "AddElementDurability",
+									"value" : -25,
+									"modifierName":"UNIQUE_CoreElment",
+									"elementType" : "Electric",
+									"useLimitRange": true,
+									"minValue": 0.0,
+								},
+							],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_State",
+							"value": -1,
+						},
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"FirstCharge":
+				{
+					"duration":"%FirstChargeTime",
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Thunder_Ability",
+							"target": "Self",
+						},
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_ThunderFall_Ability",
+							"target": "Self",
+						},
+
+					],
+				},				
+				"IdleState":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01_Idle",
+							"effectTempleteID": 105,//from 100 Start,风、火、水、雷(105)、冰
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+					],
+				},
+				"CloseState":
+				{
+					"onAdded":
+					[						
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_Gear_Charge_Over",
+							"value": 0,
+						},
+					],
+				},
+				"NoShooting":{},
+				"IntervalShooting":
+				{
+					"thinkInterval":"%EachAttackTime",
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "IntervalShooting_ThunderFall",
+							"target": "Self",
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Thunder_Ability",
+							"target": "Self",
+						},
+					],
+				},
+				"IntervalShooting_ThunderFall":
+				{
+					"thinkInterval":"%EachAttackTime_ThunderFall",
+					"onThinkInterval":
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_ThunderFall_Ability",
+							"target": "Self",
+						},
+					],
+				},
+				"ShowCore":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrgan_01",
+							"effectTempleteID": 105,//from 100 Start,风、火、水、雷(105)、冰
+							"born":
+							{
+								"$type": "ConfigBornByAttachPoint",
+								"attachPointName": "EffectPoint",
+							},
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_CoreElment",
+						},
+					],
+				},
+				"ConductShock":
+				{
+					"duration": 0.2,
+					"onAdded":
+					[
+						//闪电链特效
+						{
+							"$type" : "AttachEffect",
+							"effectPattern" : "Eff_SceneObj_TowerElectric_01",
+							"target" : "Self",
+							"born" :
+							{
+								"$type":"ConfigBornByAttachPoint",
+								"attachPointName":"EffectPoint",
+								"attachPointTargetType":"Applier",
+								"offset": {
+									"x": 0.0,
+									"y": 1.0,
+									"z": 0.0,
+								},
+							},
+						},
+						//闪电链伤害
+						{
+							"$type" : "DamageByAttackValue",
+							"target" : "Self",
+							"attacker": "Caster",
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage":0.0,
+									"damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+									"strikeType": "Default",
+									"elementType": "Electric",
+									"elementDurability": 50,
+									"elementRank": 1.5,
+									"enBreak": 10,
+									"ignoreAttackerProperty": true,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "Eff_SceneObj_TowerElectric_01_Hit",
+									"hitImpulseType":"LV1",
+									"reboundRatio" : 0,
+									"hitHaltTime" : 0.0,
+									"hitHaltTimeScale" : 0.05,
+									"muteHitText" : false,
+								},
+							},
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////
+//
+//  试玩活动——追踪机关 落雷（严格依赖SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_Thunder_Ability）
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Ani_Prop_TrackingOrgan_01_ThunderFall_Ability",
+			"abilitySpecials":
+			{
+				"Hit_Delay":1.0,
+				"DamagePercentage":2.0,
+				"LevelEntity_AvatarDot_SystemValue":1.0,
+			},
+			"onAdded":
+			[
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "LevelEntity_AvatarDot_SystemValue",
+			        "type": "ElementLevelCo",
+		        },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type" : "SetSelfAttackTarget",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByLCTrigger",
+						"campTargetType": "Enemy",
+						"sortType": "Random",
+						"topLimit": 1,
+					},
+					"targetPredicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": ["Avatar"],
+						},
+					],
+				},
+				{
+					"$type" : "Predicated",
+					"predicates":
+					[
+						{
+							"$type": "ByHasAttackTarget",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Avatar_Enter_Field",
+							"value": 1,
+							"compareType": "MoreThanAndEqual",
+						},
+						{
+							"$type": "ByTargetGlobalValue",
+							"key": "_Gear_Charge_Over",
+							"value": 1,
+							"compareType": "Equal",
+						},	
+					],
+					"successActions" :
+					[
+						{
+							"$type": "SetGlobalPos",
+							"key": "ThunderPos01",
+							"target": "SelfAttackTarget",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 2,
+									"maxRandomRange": 2,
+								},
+							},
+							"setTarget": false,
+						},
+						{
+							"$type": "SetGlobalPos",
+							"key": "ThunderPos02",
+							"target": "SelfAttackTarget",
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								"bornRandom" :
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 2,
+									"maxRandomRange": 2,
+								},
+							},
+							"setTarget": false,
+						},
+						{
+							"$type": "ApplyModifier",						
+							"modifierName": "Thunder_Hit01",//延时落雷
+						},
+						{
+							"$type": "ApplyModifier",							
+							"modifierName": "Thunder_Hit02",//延时落雷
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Thunder_Hit01":
+				{
+					"duration": "%Hit_Delay",
+					"onAdded":
+					[
+						//预警特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							//"target":"SelfAttackTarget",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos01",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						//落雷特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							//"target":"SelfAttackTarget",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos01",
+							},
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos01",
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Thuner_Falling",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+							            "damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+							            "strikeType": "Default",
+							            "elementType": "Electric",
+							            "elementDurability": 50,
+							            "enBreak": 500.0,
+							            "ignoreAttackerProperty": true,
+									},
+									"hitPattern" :
+									{
+										"hitImpulseType":"LV4",	
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+										"retreatType":"ByHitDirection"
+									},
+								},
+							},
+						},
+					],
+				},
+				"Thunder_Hit02":
+				{
+					"duration": "%Hit_Delay",
+					"onAdded":
+					[
+						//预警特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Ambor_AlertCircle",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos02",
+							},
+						},
+					],
+					"onRemoved":
+					[
+						//落雷特效
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_ThunderFall_01",
+							"born":
+							{
+								"$type": "ConfigBornByGlobalValue",
+								"positionKey": "ThunderPos02",
+							},
+						},
+						{
+							"$type" : "TriggerAttackEvent",
+							"targetType" : "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern" : 
+								{
+									"$type" : "ConfigAttackSphere",
+									"triggerType" : "TriggerNoRepeat",
+									"radius" : 2.5,
+									"born":
+									{
+										"$type": "ConfigBornByGlobalValue",
+										"positionKey": "ThunderPos02",
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "Thuner_Falling",
+									"attackProperty":
+									{
+										"damagePercentage": 0.0,
+							            "damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+							            "strikeType": "Default",
+							            "elementType": "Electric",
+							            "elementDurability": 50,
+							            "enBreak": 500.0,
+							            "ignoreAttackerProperty": true,
+									},
+									"hitPattern" :
+									{
+										"hitImpulseType":"LV4",
+										"reboundRatio" : 0,
+										"hitHaltTime" : 0.0,
+										"hitHaltTimeScale" : 0.05,
+										"muteHitText" : false,
+										"retreatType":"ByHitDirection"
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		},
+	},			
+//////////////////////////////////
+//
+//  试玩活动——追踪机关 火属性 子弹 (复用Ability： SceneObj_Gear_TowerDefence_FireBullet)
+//
+//////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Prop_TrackingOrganBullet_01_Fire_Ability",
+			"abilitySpecials":
+			{
+				"BombRadius": 1.2,
+				"DamagePercentage":3.0,
+				"LevelEntity_AvatarDot_SystemValue":1.0,
+			},
+			"onAdded":
+			[
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "LevelEntity_AvatarDot_SystemValue",
+			        "type": "ElementLevelCo",
+		        },
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "FireMaterial",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_SceneObj_TowerFire_01_Hit",
+				},
+				//造成范围伤害
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern" :
+						{
+							"$type" : "ConfigAttackSphere",
+							"triggerType" : "TriggerNoRepeat",
+							"radius": "%BombRadius",
+							"born":
+							{
+								"$type": "ConfigBornByCollisionPoint",
+							},
+						},
+						"attackInfo":
+						{
+							"attackProperty":
+							{
+								"damagePercentage":0.0,
+								"damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+								"elementType": "Fire",
+								"strikeType": "Default",
+								"elementDurability": 50,
+								"elementRank" : 600,
+								"enBreak": 0,
+								"ignoreAttackerProperty": true,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "",
+								"hitImpulseType":"LV1",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.05,
+								"muteHitText": false
+							},
+						}
+					},
+				},
+			],
+			"modifiers":
+			{			
+				"FireMaterial":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TowerFire_01_Bullet",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TowerFire_01_Bullet_Trail",
+						},
+					],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////	
+//
+// 试玩活动——追踪机关 水属性 子弹 (复用Ability： SceneObj_Gear_TowerDefence_Water_Blister)
+//
+//////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Prop_TrackingOrganBullet_01_Water_Ability",
+			"abilitySpecials":
+			{
+				"StruggleTime": 3,
+				"DamagePercentage":3.0,
+				"LevelEntity_AvatarDot_SystemValue":1.0,
+			},
+			"onAbilityStart":
+			[
+				{
+					"$type" : "DamageByAttackValue",
+					"target" : "Target",
+					"attacker": "Caster",
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage":0.0,
+							"damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+							"strikeType": "Default",
+							"elementType": "Water",
+							"elementDurability": 50,
+							"elementRank": 1.5,
+							"enBreak": 200,
+							"ignoreAttackerProperty": true,
+						},
+						"hitPattern" :
+						{
+							"hitImpulseType":"LV1",
+							"reboundRatio" : 0,
+							"hitHaltTime" : 0.0,
+							"hitHaltTimeScale" : 0.05,
+							"muteHitText" : false,
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"target": "Target",
+							"entityTypes": ["Avatar"],
+						},
+						{
+                            "$type": "ByTargetWeight",
+                            "target": "Target",
+                            "logic": "Lesser",
+                            "weight": 100,
+                        },
+					],
+				},
+				{
+					"$type":"ApplyModifier",
+					"target": "Target",
+					"modifierName":	"Blister",
+					"predicates":
+					[
+						{
+							"$type": "ByEntityTypes",
+							"target": "Target",
+							"entityTypes": ["Avatar"],
+						},
+						{
+                            "$type": "ByTargetWeight",
+                            "target": "Target",
+                            "logic": "Lesser",
+                            "weight": 100,
+                        },
+					],
+				},
+			],
+			"onKill":
+			[
+				{
+	        		"$type": "FireEffect",
+	        		"effectPattern": "Eff_SceneObj_TowerWater_03_Bubble_Die",
+	        	},
+			],
+			"onAdded":
+			[
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "LevelEntity_AvatarDot_SystemValue",
+			        "type": "ElementLevelCo",
+		        },
+			],
+			"modifiers":
+			{	
+				"Blister":
+				{
+					"duration": "%StruggleTime",
+			        "state": "Struggle",
+			        "stacking": "Refresh",
+			        "properties":
+			        {
+			           "Actor_AddGravityScale": -2,
+			        },
+			        "onAdded":
+			        [
+			        	{
+			        		"$type": "AttachEffect",
+			        		"effectPattern": "Eff_SceneObj_TowerWater_03_Bubble",
+			        	},
+			        ],
+			        "onRemoved":
+			        [
+			        	{
+			        		"$type": "FireEffect",
+			        		"effectPattern": "Eff_SceneObj_TowerWater_03_Bubble_Die",
+			        	},
+			        ],
+				},
+			},
+		},
+	},
+//////////////////////////////////////////////////////////////////	
+//
+// 试玩活动——追踪机关 冰属性 子弹 (复用Ability： SceneObj_Gear_TowerDefence_IceBullet)
+//
+//////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "SceneObj_Level_Common_Property_Prop_TrackingOrganBullet_01_Ice_Ability",
+			"abilitySpecials":
+			{
+				"DamagePercentage":3.0,
+				"LevelEntity_AvatarDot_SystemValue":1.0,
+			},
+			"onAdded":
+			[
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "IceMaterial",
+				},
+				{
+			        "$type": "SetSystemValueToOverrideMap",
+			        "key": "LevelEntity_AvatarDot_SystemValue",
+			        "type": "ElementLevelCo",
+		        },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_SceneObj_TowerIce_01_Hit",
+					"born":
+					{
+						"$type": "ConfigBornByCollisionPoint",
+					},
+				},
+				//造成单体伤害
+				{
+					"$type" : "DamageByAttackValue",
+					"target" : "Target",
+					"attacker": "Caster",
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage":0.0,
+							"damageExtra": "%LevelEntity_AvatarDot_SystemValue*%DamagePercentage",
+							"elementType": "Ice",
+							"strikeType": "Default",
+							"elementDurability": 50,
+							"enBreak": 0,
+							"ignoreAttackerProperty": true,
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "none",
+							"hitImpulseType":"LV1",
+							"reboundRatio": 0,
+							"canBeDefenceHalt": false,
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.05,
+							"muteHitText": false
+						},
+					},
+				},
+			],
+			"modifiers":
+			{			
+				"IceMaterial":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TrackingOrganBullet_01_IceBullet",
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_SceneObj_TowerIce_01_Bullet_Trail",
+						},
+					],
+				},
+			},
+		},
+	},				
+]

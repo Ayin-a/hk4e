@@ -1,0 +1,2885 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack For Bennett
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10321,
+					"chargeTime": 0.12,
+					"secondChargeTime": 0.2,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseSecondCharged":
+					[
+
+					],
+					"chargeStateIDs": [ "Attack01","Attack02","Attack03","Attack04","Run"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					// "duration": 0.2,
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10001,
+							"costStaminaRatio":"%ExtraAttack_Sword_Stamina_Cost",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Sword_Stamina_Cost": 0, //故意少判了一点点体力，为了顾及一部分网络延迟
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+
+//蓄力完成时进行震动。
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_Shake",
+			"onAbilityStart":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Bennett_ElementalArt_Level",
+					"value":1,
+					"useLimitRange":true,
+					"maxValue":2,
+				},
+				{
+					"$type":"ActCameraShake",
+					"cameraShake":
+					{
+						"shakeType": "Center",
+						"shakeRange": 0.3,
+						"shakeTime": 0.09,
+						"shakeDistance": 2,
+						"extension":
+						{
+							"baseCycle": 0.08,
+							"cycleDamping": -0.04,
+						},
+					},
+				},
+			],
+		},
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  小技能，蓄力+爆炸  兼顾了突破4的不被击飞globalvalue控制。
+//
+/////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Handler",
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"GenerateElemBall_ElementalArt", //掉球常驻
+				},
+				{
+					"$type": "SetGlobalValue",//初始化突4的不被吹飞效果
+					"key": "_ABILITY_Talent_Bennett_DonotBlow",
+					"value": 0,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Bennett_Talent_Globalvalue_Control",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type" : "AttachToStateIDMixin",
+					"stateIDs" : ["BennettElementalArt_BS","BennettElementalArt_01","BennettElementalArt_02","BennettElementalArt_03","BennettElementalArt_Strike01","BennettElementalArt_Strike02","BennettElementalArt_Strike02_01","BennettElementalArt_Strike03","BennettElementalArt_Strike03_01"],
+					"modifierName" : "ElementalArt_CD_Protect",//用于如果被打断的cd计算
+				},
+				// {
+				// 	"$type" : "AttachToStateIDMixin",
+				// 	"stateIDs" : ["BennettElementalArt_Strike01",],
+				// 	"modifierName" : "GenerateElemBall_ElementalArt1", //掉元素球6点，另外会负责计算技能cd。
+				// },
+				// {
+				// 	"$type" : "AttachToStateIDMixin",
+				// 	"stateIDs" : ["BennettElementalArt_Strike02","BennettElementalArt_Strike02_01"],
+				// 	"modifierName" : "GenerateElemBall_ElementalArt2",//掉元素球9点，另外会负责计算技能cd。
+				// },
+				// {
+				// 	"$type" : "AttachToStateIDMixin",
+				// 	"stateIDs" : ["BennettElementalArt_Strike03","BennettElementalArt_Strike03_01"],
+				// 	"modifierName" : "GenerateElemBall_ElementalArt3",//掉元素球9点，另外会负责计算技能cd。
+				// },
+				{
+					"$type":"AvatarSteerByCameraMixin",
+					"stateIDs": ["BennettElementalArt_Strike02","BennettElementalArt_Strike02_01","BennettElementalArt_Strike03","BennettElementalArt_Strike03_01"],
+					"angularSpeed" : 360,
+				},
+				{
+					"$type": "SkillButtonHoldChargeMixin",
+					"skillID": 10322,
+					"beforeStateIDs": ["BennettElementalArt_BS",],//如果发生了退出beforeState，那么被看做退出蓄力，endHoldtrigger和NextLoopTrigger都会失效。
+																  //但是这个state不写mixin又不干活。只能创造一个state了。
+
+					// "beforeHoldDuration" : 0.6,  //按住超过这个时长时才会出现NextLoopTrigger（生效1次）,如果达不到，endhold和nextloop都不会出现。
+												 //有时候其实根本没有配置BS，这个就需要是0，保证触发endhold。
+					"chargeLoopStateIDs":["BennettElementalArt_01","BennettElementalArt_02","BennettElementalArt_03" ],  //逻辑state。
+
+					"chargeLoopDurations" : [ 0.55, 1.1, 0.3 ],  //这个duration必须在chargeloop的stateID中才会开始计时，并发送NextLoopTrigger和endHoldTrigger事件(这个两个事件和松开的endHoldTrigger不同，只生效1次）。
+												 //数组和loopState需要一一对应。1、2、3号loopState内呆的时间达到数值后会发送nextLoopTrigger事件，最后一号对应的loopState呆的时间到对应数值之后，会发送endHoldTrigger。（如果不对称，按照最小的数量发送end）
+												//不过这里有一个问题，这个state计时其实并不需要在对应的stateID内，只需要在ChargeLoop列表中的任何一个state即可,所以时间是叠加的，后面的数字必然比前面大。
+					"nextLoopTriggerID": "NextLoopTrigger",
+												//NextLoopTrigger只出现一次，在进入beforeState后按住时长超过beforeHoldDuration的的那一次,用于beforeState的循环，或者进入loopState用。
+												//在beforeState出去前（需要不放手）是不会消失的。
+					"endHoldTrigger": "EndHoldTrigger",
+												//这个trigger不知道为什么不会因为被使用一次而消失。在BeforeState和ChrageLoop出来前这个trigger永远存在。退出loop的第一次仍然存在。
+				},
+			],
+			"modifiers":
+			{
+				"ElementalArt_CD_Protect":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Boy_Sword_Bennett_ElementalArt_ChargeLoop",
+						},
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Bennett_ElementalArt_Level",
+							"value":0,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+						},
+					],
+					//参考了蓄力的安柏，被打断不进入cd，这里也做成不进入cd了。2020.6.18
+					// "onRemoved": //结束蓄力时计算cd，先计算1倍cd的。被打断、自打断都是1倍cd。
+					// [
+					// 	{
+					// 		"$type":"Predicated",
+					// 		"target":"Self",
+					// 		"targetPredicates":
+					// 		[
+					// 			{
+					// 				"$type":"ByTargetGlobalValue",
+					// 				"key":"_ABILITY_Talent_Bennett_DonotBlow",
+					// 				"value":1,
+					// 				"compareType":"Equal",
+					// 			},
+					// 		],
+					// 		"successActions":
+					// 		[
+					// 			{
+					// 				"$type":"AvatarSkillStart", //cd无法被覆盖，所以退出cd需要在所有cd计算完之后再补这个cd。先触发这个cd的话后面1.5倍和2倍都无法触发。
+					// 				"skillID":10322,
+					// 				"cdRatio":0.5,
+					// 				"predicates":
+					// 				[
+					// 					{
+					// 						"$type":"BySkillReady",
+					// 						"skillID":10322,
+					// 					},
+					// 				],
+					// 			},
+					// 		],
+					// 		"failActions":
+					// 		[
+					// 			{
+					// 				"$type":"AvatarSkillStart",
+					// 				"skillID":10322,
+					// 				"cdRatio":1,
+					// 				"predicates":
+					// 				[
+					// 					{
+					// 						"$type":"BySkillReady",
+					// 						"skillID":10322,
+					// 					},
+					// 				],
+					// 			},
+					// 		],
+					// 	},
+					// ],
+				},
+				"GenerateElemBall_ElementalArt":
+				{
+					"stacking":"Unique",
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type" : "ByAttackTags",
+									"attackTags" : ["Elemental_Art"],
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster"],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier", //点击
+									"modifierName": "Ball1",
+									"target": "Self",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"value":0,
+											"key":"_ABILITY_Bennett_ElementalArt_Level",
+											"compareType":"NoneOrEqual",
+										},
+									],
+								},
+								{
+									"$type": "ApplyModifier", //蓄力
+									"modifierName": "Ball2",
+									"target": "Self",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetGlobalValue",
+											"value":0,
+											"key":"_ABILITY_Bennett_ElementalArt_Level",
+											"compareType":"MoreThan",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"Ball1":  //1段掉6点球
+				{
+					"duration": 0.3,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type" : "Randomed",
+							"chance" : 1.0,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2017,
+									"baseEnergy": 6,
+									"ratio": "%GetElementRatio",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+						{
+							"$type" : "Randomed",
+							"chance" : 0.25,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2017,
+									"baseEnergy": 3,
+									"ratio": "%GetElementRatio",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Ball2":  //无论2段还是三段都掉9个球
+				{
+					"duration": 1.5,//整个连击只会掉1次  计算出来1段3连从第一击命中到最后一击命中是67帧。2段3连动作和1段其实一样的。大约68帧。可以用一个
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type" : "Randomed",
+							"chance" : 1,
+							"successActions":
+							[
+								{
+									"$type": "GenerateElemBall",
+									"configID": 2017,
+									"baseEnergy": 9,
+									"ratio": "%GetElementRatio",
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+										"offset" :
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 1.0,
+										},
+									},
+								},
+							],
+						},
+					],
+				},
+				"Bennett_Talent_Globalvalue_Control":
+				{
+					"duration":2.1,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"value":0,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"GetElementRatio":1,
+			},
+		},
+	},
+
+/////单点攻击，1倍cd 发动攻击再进cd，打断不计cd。
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike01_01",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				//在攻击时才进入cd会导致手感很奇怪。后来放到了蓄力loop的attach的modifier保证cd
+				//出手就cd被打断太难受了，还是改回来了，攻击盒出现再cd。2020.6.19
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":0.5,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":1,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height":2.5,
+							"fanAngle": 270,
+							"radius": 2.5,//3.5,
+							"radiusRatio": 0.0,
+							"massiveAttackRatio":0.4,
+							"detectDirection": "Counterclockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.7,
+									"z" : 0.8,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_01",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 50,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+                                "hitImpulseType":"LV4",
+         //                        "overrideHitImpulse":
+         //                        {
+									// "hitLevel": "Heavy",
+									// "hitImpulseX": 600,	//hitlevel = 5
+									// "hitImpulseY": 0,	//
+         //                        },
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.09,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.09,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":0.3,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"Strike_01":0,
+			},
+		},
+	},
+
+/////蓄力攻击 1.5倍cd，由于cd在命中时才计算，打断不计cd
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike02_01",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":0.75,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":1.5,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height":2.5,
+							"fanAngle": 360.0,
+							"radius": 2.5,//3.5,
+							"radiusRatio": 0.0,
+							"massiveAttackRatio":0.8,
+							"detectDirection": "Counterclockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.7,
+									"z" : 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_02_01",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+                                "hitImpulseType":"LV3",
+        //                         "overrideHitImpulse":
+        //                         {
+								// 	"hitLevel": "Heavy",	//hitlevel = 6
+								// 	"hitImpulseX": 680,	//
+								// 	"hitImpulseY": 0,	//
+								// },
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.09,//0.09感觉很好，就是比较慢
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.09,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":-0.2,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"Strike_02_01":0,
+			},
+		},
+	},
+//蓄力攻击第二击
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike02_02",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size":
+							{
+								"x":3,
+								"y":3,
+								"z":3,
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+								"offset" :
+								{
+									"x":0,
+									"y":1.2,
+									"z":0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_02_02",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+                                "hitImpulseType":"LV7",
+                                "overrideHitImpulse":
+                                {
+									"hitLevel": "Air",	//hitlevel = 6
+									"hitImpulseX": 300,	//hitlevel = 6
+									"hitImpulseY": 900,	//hitlevel = 6
+								},
+								"retreatType":"ByHitDirection",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.09, //0.12感觉很好，就是比较慢
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.09,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":-1,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"Strike_02_02":0,
+			},
+		},
+	},
+//蓄力攻击第三击
+	{
+
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike02_03",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size":
+							{
+								"x":3,
+								"y":2.5,
+								"z":4,
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+								"offset" :
+								{
+									"x":0,
+									"y":1,
+									"z":-1,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_02_02*%Ratio_Of_Strike02_02",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+								"hitImpulseType":"LV6",
+								// "overrideHitImpulse":
+								// {
+								// 	"hitLevel": "Air",
+								// 	"hitImpulseX": 600,
+								// 	"hitImpulseY": 600,
+								// },
+								// "retreatType":"ByHitDirection", //默认是byattacker
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.12,//0.12挺好的就是比较慢
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.35,
+								"shakeTime": 0.24,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":-1,
+								},
+							},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Strike_02_02":0,  //第二击的系数
+				"Ratio_Of_Strike02_02":0, //来自天赋4 1.35
+			},
+		},
+	},
+
+
+//二段蓄力攻击，2倍cd。发动攻击盒时才记cd，
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike03_01",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"Predicated",
+					"target":"Self",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"value":1,
+							"compareType":"Equal",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":1,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"AvatarSkillStart",
+							"skillID":10322,
+							"cdRatio":2,
+							"predicates":
+							[
+								{
+									"$type":"BySkillReady",
+									"skillID":10322,
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height":2.5,
+							"fanAngle": 360.0,
+							"radius": 2.5,//3.5,
+							"radiusRatio": 0.0,
+							"massiveAttackRatio":0.6,
+							"detectDirection": "Counterclockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.7,
+									"z" : 0.5,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_03_01",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+								"hitImpulseType":"LV3",
+								// "overrideHitImpulse":
+								// {
+								// 	"hitLevel": "Heavy",	//hitlevel = 6
+								// 	"hitImpulseX": 680,	//
+								// 	"hitImpulseY": 0,	//
+								// },
+								// "retreatType":"ByHitDirection",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.09,//0.09感觉很好，就是比较慢
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.09,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":1,
+									"y":-0.2,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"Strike_03_01":0,
+			},
+		},
+	},
+//过蓄力第二击上挑
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Strike03_02",
+			"abilityMixins":
+			[
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size":
+							{
+								"x":3,
+								"y":4,
+								"z":3,
+							},
+							"born":
+							{
+								"$type":"ConfigBornByTarget",
+								"offset" :
+								{
+									"x":0,
+									"y":1.5,
+									"z":0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_03_02",
+								"strikeType": "Slash",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 100,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+								"hitImpulseType":"LV6",
+								"overrideHitImpulse":
+								{
+									"hitLevel": "Air",	//hitlevel = 6
+									"hitImpulseX": 300,	//hitlevel = 6
+									"hitImpulseY": 900,	//hitlevel = 6
+								},
+								"retreatType":"ByHitDirection",
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.09, //0.12感觉很好，就是比较慢
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.09,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":-1,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+			},
+			"abilitySpecials":
+			{
+				"Strike_03_02":0,
+			},
+		},
+	},
+//过蓄力第三击，爆炸攻击
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalArt_Explode", //蓄力过渡爆炸
+			"onAbilityStart":
+			[
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height":2.5,
+							"fanAngle": 360.0,
+							"radius": 3.5,//3.5,
+							"radiusRatio": 0.0,
+							"massiveAttackRatio":0.5,
+							// "detectDirection": "Clockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.7,
+									"z" : 1,
+								},
+							},
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Art",
+							"attackProperty":
+							{
+								"damagePercentage": "%Strike_03_03",
+								// "strikeType": "Slash",
+								"strikeType": "None",
+								"elementType":"Fire",
+								"elementDurability": 25,
+								"enBreak" : 250,
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "Eff_Diluc_FireBlade_Hit_01",
+								"hitImpulseType":"LV8",
+								// "hitLevel": "Air",	//hitlevel = 6
+								// "hitImpulseX": 795,	//hitlevel = 6
+								// "hitImpulseY": 900,	//hitlevel = 6
+								"reboundRatio": 0,
+								"canBeDefenceHalt": true,
+								"hitHaltTime": 0.0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.35,
+								"shakeTime": 0.3,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+				//命中并击飞自己。
+				{
+					"$type":"TriggerAttackEvent",
+					"targetType":"Self",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"height":2.5,
+							"fanAngle": 360.0,
+							"radius": 3.5,//3.5,
+							// "detectDirection": "Clockwise",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : -0.7,
+									"z" : 1.0,
+								},
+							},
+						},
+						"attackInfo":
+						{
+/*							"attackTag":"Elemental_Art",*/
+							"attackProperty":
+							{
+								"damagePercentage": 0,
+								"strikeType": "None",
+								"enBreak" : 250, //需要保证打断。如果有盾增加霸体就可以不被打断。需要再算一次打断。
+								"attackType": "Melee",
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV8",
+								"overrideHitImpulse":
+								{
+									"hitLevel": "Air",	//hitlevel = 6
+									"hitImpulseX": 650,	//hitlevel = 6
+									"hitImpulseY": 950,	//hitlevel = 6
+								},
+								"reboundRatio": 0,
+								// "canBeDefenceHalt": true,
+								"hitHaltTime": 0.00,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							/*"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.21,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+							},*/
+						},
+					},
+					"predicates":
+					[
+						{
+							"$type":"ByTargetGlobalValue",
+							"key":"_ABILITY_Talent_Bennett_DonotBlow",
+							"target":"Self",
+							"value":0,
+							"compareType":"NoneOrEqual",
+						},
+					],
+				},
+			],
+			"abilitySpecials":
+			{
+				"Strike_03_03":0,
+			},
+		},
+	},
+///////////////////////////////////////////////////////////////
+//
+// 充能技，回血加攻
+//
+// Strike是打击相关ability
+// ElementalBurst是控制机制和法阵生成的ability
+// gadget是法阵相关ability
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalBurst_Strike",
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart",
+					"skillID": 10323,
+				},
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Boy_Sword_Bennett_ElementalBurst",
+				},
+				{
+					"$type" : "TriggerAttackEvent",
+					"targetType" : "Enemy",
+					"attackEvent":
+					{
+						"attackPattern":
+						{
+							"$type": "ConfigAttackCircle",
+							"triggerType": "TriggerNoRepeat",
+							"fanAngle": 360.0,
+							"radius": 6,//保证范围和特效一致
+							"checkHitScene": true,
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"offset":
+								{
+									"x" : 0.0,
+									"y" : 0.0,
+									"z" : 0.5,//之前偏移1.5的话贴身会将怪象自己方向打，有问题
+								},
+							},
+							"ignoreMassive":true,
+						},
+						"attackInfo":
+						{
+							"attackTag":"Elemental_Burst",
+							"attackProperty":
+							{
+								"damagePercentage": "%Burst_DMG",
+								"elementType": "Fire",
+								"strikeType":"Default",
+								"elementDurability": 50,
+								"enBreak": 200,
+							},
+							"hitPattern":
+							{
+								"onHitEffectName": "default",
+								"hitImpulseType":"LV4",
+								// "hitLevel": "Heavy",	//hitlevel = 4
+								// "hitImpulseX": 800,	//hitlevel = 4
+								// "hitImpulseY": 0,	//hitlevel = 4
+								"retreatType": "ByHitDirection",
+								"reboundRatio": 0,
+								"hitHaltTime": 0,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": true,
+							"cameraShake":
+							{
+								"shakeType": "CustomVector",
+								"shakeRange": 0.45,
+								"shakeTime": 0.24,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x":0,
+									"y":1,
+									"z":0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"abilitySpecials":
+			{
+				"Burst_DMG":0
+			},
+		},
+	},
+
+// ElementalBurst是控制和生成gadget相关ability
+//
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalBurst",
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["WarmField",],
+					"modifierName":"isGhost",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["WarmField",],
+					"modifierName":"invincible",
+				},
+				{
+					"$type":"AttachToStateIDMixin",
+					"stateIDs":["WarmField"],
+					"modifierName":"WarmField_WeaponFade",
+				},
+				// {
+				// 	"$type":"AttachToNormalizedTimeMixin",
+				// 	"stateID":"WarmField",
+				// 	"modifierName":"Camera",
+				// 	"normalizeStart":0.1,
+				// 	"normalizeEnd":1,
+				// },
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Bennett_WarmField_BaseAttack",
+					"value":1,
+					"useLimitRange":true,
+					"maxValue":"%FIGHT_PROP_BASE_ATTACK",
+					"minValue":"%FIGHT_PROP_BASE_ATTACK",
+				},
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41032002,
+					"campID": 1001,
+					"campTargetType": "Alliance",
+					"born":
+					{
+						"$type": "ConfigBornByTarget",
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 1.5,//因为拳头标记不在落点，只能生成远一点。
+						}
+					}
+				},
+			],
+			"modifiers":
+			{
+				"isGhost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"invincible":
+				{
+					"state": "Invincible",
+				},
+				"WarmField_WeaponFade" :
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01","sheathPoint"],
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": true,
+							"partNames": ["equip01","sheathPoint"],
+						},
+					],
+				},
+				/*"Camera"://效果不好
+				{
+					"onAdded":
+					[
+						{
+							"$type": "AvatarEnterCameraShot",
+							"cameraMoveCfgPath": "Camera_Razor_LycanMode_In",
+						},
+						// {
+						// 	"$type": "AvatarEnterCameraShot",
+						// 	"cameraMoveCfgPath": "CameraElementalBurst_In_Angle",
+						// },
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AvatarEnterCameraShot",
+							"cameraMoveCfgPath": "Camera_Razor_LycanMode_Out",
+						},
+						// {
+						// 	"$type": "AvatarEnterCameraShot",
+						// 	"cameraMoveCfgPath": "CameraElementalBurst_Out_Angle",
+						// },
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 1,//这个duration无效了，功能变成了单纯的镜头距离锁定。
+								"shouldKeepForceRadius": true,
+							},
+						},
+					],
+					"onAvatarOut":
+					[
+						{
+							"$type": "AvatarCameraParam",
+							"cameraParam":
+							{
+								"forceRadius": 6.0,
+								"forceRadiusDuration": 1,
+								"shouldKeepForceRadius": true,
+							},
+						},
+					],
+				},*/
+			},
+			"abilitySpecials":
+			{
+			},
+		},
+	},
+///////////////////////////////////////////////////////////////
+//
+//  充能技gadget相关ability
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_ElementalBurst_Gadget",
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValueToOverrideMap",
+					"isFromOwner":true,
+					"globalValueKey":"_ABILITY_Bennett_WarmField_BaseAttack",
+					"overrideMapKey":"Bennett_WarmField_BaseAttack",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"WarmField_Handler",
+				},
+				{
+					"$type":"AttachEffect",
+					"effectPattern":"Eff_Avatar_Boy_Sword_Bennett_ElementalBurst_Field",
+				},
+			],
+			"modifiers":
+			{
+				"WarmField_Handler"://回血间隔1秒。
+				{
+					"duration":12.5,
+					"thinkInterval":1,
+					"onThinkInterval":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"WarmField_Modifier",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_WarmField_FireBuff",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+						{
+							"$type":"HealHP",
+							"amountByCasterMaxHPRatio":"%HealMaxHpRatio",
+							"amount":"%HealConst",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+								{
+									"$type":"ByTargetHPRatio",
+									"HPRatio":"%HPTreshhold",
+									"logic":"LesserOrEqual"
+								},
+							],
+						},
+					],
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"WarmField_Modifier",
+							"otherTargets":
+							{
+								"$type": "SelectTargetsByShape",
+								"shapeName": "CircleR6",
+								"centerBasedOn": "Self",
+								"campTargetType": "Alliance",
+								"campBasedOn": "Self",
+							},
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Avatar",],
+								},
+							],
+						},
+					],
+				},
+				"WarmField_Modifier"://加到角色身上的modifier，回血和加攻同一个modifier执行，节约行数。
+				{
+					"duration":0.5,
+					"onAdded":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_WarmField_AttackUp",
+							"predicates":
+							[
+								{
+									"$type":"ByAny",
+									"predicates":
+									[
+										{
+											"$type":"ByTargetHPRatio",
+											"HPRatio":"%AttackTreshhold",
+											"logic":"Greater"
+										},
+										{
+											"$type":"ByUnlockTalentParam",
+											"talentParam":"Unlock_AttackUp",
+										},
+
+									],
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Talent_Avatar_FireUp",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									// "target":"Caster",//这样的话判断就到了角色身上，可能会有点问题。
+									"talentParam":"Unlock_FireEnhance"
+								},
+							],
+						},
+						{
+							"$type":"ApplyModifier",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames":["equip01","sheathPoint"],
+							},
+							"modifierName":"UNIQUE_Talent_Weapon_FireEnhanced",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									// "target":"Caster",//这样的话判断就到了角色身上，可能会有点问题。
+									"talentParam":"Unlock_FireEnhance"
+								},
+								{
+									"$type":"ByAvatarWeaponType",
+									"target":"Self",
+									"weaponTypes":["WEAPON_SWORD_ONE_HAND","WEAPON_CLAYMORE","WEAPON_POLE"],
+								},
+							],
+						},
+						// {
+						// 	"$type":"ApplyModifier",
+						// 	"modifierName":"WarmField_ElementalArtDonotBlow",
+						// 	"predicates":
+						// 	[
+						// 		{
+						// 			"$type":"ByUnlockTalentParam",
+						// 			//"target":"Target",         //想要有天赋的bennett在别人（无天赋）bennett阵里也能获得效果，但是target目前有问题，先不用。 
+						// 			"talentParam":"Donot_Blow_Self"
+						// 		},
+						// 	],
+						// },
+						{
+							"$type":"TriggerAbility",
+							"target":"Self",
+							"abilityName":"Avatar_Bennett_ElementalArt_Handler",
+							"predicates":
+							[
+								{
+									"$type":"ByUnlockTalentParam",
+									//"target":"Target",         //这个predicate的target写死了Caster，无法修改。所以实际上只有释放法阵的bennett有天赋才能有效。
+									"talentParam":"Donot_Blow_Self"
+								},
+								{
+									"$type":"ByHasFeatureTag",//只对班尼特触发。
+									"featureTagIDs":[10032],
+								},
+							],
+
+						},
+					],
+				},
+				"UNIQUE_WarmField_AttackUp":
+				{
+					"duration":2.1,//久一点体感好一些。
+					"isUnique":true,
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackExtraDelta" : "%AttackUpRatio*%Bennett_WarmField_BaseAttack",//改成了用班尼特攻击值计算出的攻击增量。
+					},
+				},
+				"UNIQUE_WarmField_FireBuff":
+				{
+					"isUnique": true,
+					"duration": 2.1,
+					"stacking": "Refresh",
+					"state": "ElementFire",
+					"elementType": "Fire",
+					"elementDurability": 25,
+				},
+				"UNIQUE_Talent_Avatar_FireUp":
+				{
+					"duration":2.1,
+					"isUnique":true,
+					"properties":
+					{
+						"Actor_FireAddHurtDelta":"%FireUp",
+					},
+				},
+				"UNIQUE_Talent_Weapon_FireEnhanced": //武器上的附魔modifier
+				{
+					"duration":2.1,
+					"isUnique":true,
+					"stacking" : "Refresh",
+					"overrideWeaponElement" : true,
+					"elementType" : "Fire",
+					"elementDurability" : 25,
+				},
+				// "WarmField_ElementalArtDonotBlow":
+				// {
+				// 	"duration":2.1,
+				// 	// "state":"DefenseUp",
+				// 	"stacking" : "Refresh",
+				// 	"onAdded":
+				// 	[
+				// 		{
+				// 			"$type":"AddGlobalValue",
+				// 			"key":"_ABILITY_Talent_Bennett_DonotBlow",
+				// 			"value":1,
+				// 			"useLimitRange":true,
+				// 			"maxValue":1,
+				// 			"minValue":1,
+				// 		},
+				// 	],
+				// 	"onRemoved":
+				// 	[
+				// 		{
+				// 			"$type":"AddGlobalValue",
+				// 			"key":"_ABILITY_Talent_Bennett_DonotBlow",
+				// 			"value":0,
+				// 			"useLimitRange":true,
+				// 			"maxValue":0,
+				// 			"minValue":0,
+				// 			"doOffStage":true,
+				// 		},
+				// 	],
+				// },
+			},
+			"abilitySpecials":
+			{
+				// "BurstHeal":4.5,
+				// "Burn_Damage":0.7,
+				"HealMaxHpRatio":0,
+				"HealConst":0,
+				"HPTreshhold":0.7,
+				"AttackTreshhold":0.7,
+				"AttackUpRatio":0,
+				"FireUp":0,
+				"Bennett_WarmField_BaseAttack":0,
+			},
+		},
+	},
+
+
+///////////////////////////////////////////////////////////////
+//
+//  下面是天赋相关的：
+//
+//  普攻数值提取
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Bennett_NormalAttackDamage",
+			"abilityMixins":
+			[
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK01"],
+					"damagePercentage": "%Attack01",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK02"],
+					"damagePercentage": "%Attack02",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK03"],
+					"damagePercentage": "%Attack03",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK04"],
+					"damagePercentage": "%Attack04",
+				},
+				{
+					"$type": "ModifyDamageMixin",
+					"animEventNames": ["ATK05"],
+					"damagePercentage": "%Attack05",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_1"],
+					"damagePercentage":"%ExtraAttack1",
+				},
+				{
+					"$type":"ModifyDamageMixin",
+					"animEventNames":["ExtraAttack_2"],
+					"damagePercentage":"%ExtraAttack2",
+				},
+			],
+			"abilitySpecials":
+			{
+				"Attack01": 0,
+				"Attack02": 0,
+				"Attack03": 0,
+				"Attack04": 0,
+				"Attack05": 0,
+				"ExtraAttack1": 0,
+				"ExtraAttack2": 0,
+			},
+		},
+	},
+// 队长技 全队火属性角色攻击力提升。 另外最大生命值提升（血量部分填表完成）
+// 最后发现填表有筛选，节约很多modifier，改成纯填表了。
+/*{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Avatar_Bennett_CoreSkill",
+		"abilityMixins":
+		[
+			{
+				"$type":"DoActionByTeamStatusMixin",
+				"actions":
+				[
+					{
+						"$type":"AttachModifier",
+						"modifierName":"UNIQUE_Bennett_CoreSkill_BS",
+						"target":"AllPlayerAvatars",
+						"doOffStage":true,
+					},
+				],
+			},
+		],
+		"modifiers":
+		{
+			"UNIQUE_Bennett_CoreSkill_BS":
+			{
+				"isUnique":true,
+				"onAdded":
+				[
+					{
+						"$type":"AttachModifier",
+						"modifierName":"UNIQUE_Bennett_CoreSkill",
+						"doOffStage":true,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetElement",
+								"elementType":"Fire",
+							},
+						],
+					},
+				],
+			},
+			"UNIQUE_Bennett_CoreSkill":
+			{
+				"isUnique":true,
+				"isLimitedProperties":true,
+				"properties":
+				{
+					"Actor_AttackRatio":"%AttackUp",
+				},
+			},
+		},
+		"abilitySpecials":
+		{
+			"AttackUp":0,
+		},
+	},
+},*/
+
+////////////////////////////////////////////////////////////////
+//
+//  天赋 电容效应 血量在70%以下时，充能效率提升
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type" : "ConfigAbility",
+			"abilityName" : "Avatar_Bennett_Talent_Capacitor",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToPredicateMixin", //不能用doaction那个，因为需要不满足时去掉modifier，用那个非常冗余。
+					"onEvent":"HP",
+					"modifierName":"Capacitor_EnergyGain_Up",
+					"predicates":
+					[
+						{
+							"$type":"ByTargetHPRatio",
+							"HPRatio":"%HPRatio",
+							"logic":"LesserOrEqual",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Capacitor_EnergyGain_Up":
+				{
+					"isLimitedProperties" : true,
+					"properties" :
+					{
+						"Actor_ChargeEfficiencyDelta" : "%Rate",
+					},
+
+				},
+			},
+			"abilitySpecials":
+			{
+				"HPRatio":0,
+				"Rate":0
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Bennett_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5032010,
+                    "flySkillID": 5032010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce_AS",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_AttachWeaponEffect",
+                },
+    			{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                                "elementDurability": 25,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachWeaponEffect":
+                {
+                    "onAdded":
+                    [
+	                    {
+	                    	"$type":"AttachEffect",
+	                    	"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+	                    },
+                    ],
+                },
+                "FallingAnthem_CameraRadialBlur":
+                {
+					"duration":0.23,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+		                                "elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                               			"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce_AS":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+]

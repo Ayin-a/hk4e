@@ -1,0 +1,2011 @@
+[
+////////////////////////////////////////////////////////////////
+//
+//  Pose
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_PoseHandler",
+		"onAdded": 
+		[
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_Limbo",
+			},
+			{
+				"$type" : "ApplyModifier",
+				"modifierName":"UNIQUE_Sylph_ChargeBar",
+			},
+			{
+				"$type":"SetGlobalValue",
+				"key":"_SYLPH_DEATH_TAG_",
+				"value":0,
+			},
+		],
+		"abilityMixins": 
+		[
+			// _SYLPH_POSE_TAG_
+			// 0:未激活
+			// 1:激活
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_SYLPH_POSE_TAG_",
+				"defaultGlobalValueOnCreate":0,
+				"removeAppliedModifier": true,
+				"valueSteps": [-0.5, 0.5, 1.5],
+				"modifierNameSteps": ["Pose_None", "Pose_Activated"],
+			},
+			{
+				"$type":"AttachModifierToHPPercentMixinV2",
+				"valueSteps":[0.02],
+				"modifierNameSteps":["Sylph_Empty","Sylph_DyingPoseState"]
+			},
+		],
+		"modifiers": 
+		{
+			"UNIQUE_Sylph_Limbo":
+			{
+				"isUnique": true,
+				"state" : "Limbo",
+				"properties" :
+				{
+					"Actor_HpThresholdRatio": 0.0,
+				},
+			},
+			"Empty": {},
+			"Achieve_Moniter": {
+				"onKill": [
+					{
+						"$type": "DoWatcherSystemAction",
+						"watcherId": 82125,
+						"inThreatListOnly": true
+					}
+				]
+			},
+			"UNIQUE_Sylph_ChargeBar":
+			{
+				"isUnique": true,
+				"onAdded": 
+				[
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+				],
+				"modifierMixins":
+				[
+					{
+						"$type": "ChargeBarMixin",
+						"chargeBarElementType": "None",
+						"chargeBarIconID": 2,
+						"initialValue": 0,
+						"maxValue": 100,
+					},
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_CHARGEBAR_VALUE",
+						"valueSteps": [-0.5, 0.5, 99.5, 100.5],
+						"removeAppliedModifier": true,
+						"modifierNameSteps": ["Achieve_Moniter", "Empty", "ChargeActivated"],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.1875,
+						"valueMax": 0.3125,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":20,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.3125,
+						"valueMax": 0.4375,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":40,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.4375,
+						"valueMax": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":70,
+							},
+						],
+					},
+					{
+						"$type": "DoActionByDamageReceivedMixin",
+						"paramType": "HPMaxPercent",
+						"valueMin": 0.5625,
+						"actionQueue": 
+						[
+							{
+								"$type": "AddChargeBarValue",
+								"value":100,
+							},
+						],
+					},
+				],
+			},
+			// 通过充能条来控制怪物激活/未激活的pose切换
+			"ChargeActivated":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_POSE_TAG_",
+						"value":0,
+					},
+					{
+						"$type": "ResetAnimatorTrigger",
+						"triggerID": "NormalToActivated",
+					},
+				],
+			},
+			"Pose_None":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+				],
+			},
+			"Pose_Activated":
+			{
+				"modifierMixins": 
+				[
+					{
+						"$type": "VelocityForceMixin",
+						"excludeForces": ["WindZoneType", "AirflowType", "RetreatAirType"],
+					},
+				],
+				"properties":
+				{
+					"Entity_WeightRatio": 2.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": true,
+					},
+					{
+						"$type":"SetAISkillCDAvailableNow",
+						"skillIDs":[601],
+					},
+					{
+						"$type": "ReTriggerAISkillInitialCD",
+						"skillIDs": [601],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false,
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider_Activated"],
+						"setEnable": true,
+					},
+				],
+			},
+			// 通过血量来控制怪物是否进入濒死pose
+			"Sylph_DyingPoseState":
+			{
+				"state": "DenyLockOn",
+				"properties" :
+				{
+					"Actor_EndureDelta":0,
+					"Actor_SubHurtDelta":1.0,
+				},
+				"onAdded": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": true,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":false,
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":1,
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToAllied",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_IsGhostToEnemy",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_LockHP",
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Dying_NoHeal",
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"EnableHitBoxByName",
+						"hitBoxNames":["HitBoxBody_Activated"],
+						"setEnable":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SYLPH_DEATH_TAG_",
+						"value":0,
+					},
+				],
+			},
+			"Dying_IsGhostToAllied":
+			{
+				"state": "IsGhostToAllied",
+			},
+			"Dying_IsGhostToEnemy":
+			{
+				"state": "IsGhostToEnemy",
+			},
+			"Dying_LockHP":
+			{
+				"state": "LockHP",
+			},
+			"Dying_NoHeal":
+			{
+				"state": "NoHeal",
+			},
+			"Sylph_Empty":
+			{
+
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_PoseAction",
+		"abilityMixins": 
+		[
+			// Pose驱动动画状态
+			// 如果用SetAISkillCDAvailableNow，不会立刻退出当前技能状态并执行亡语
+			// 限制是，技能配置中的modifier要做好生命周期管理，避免亡语的时候有没下掉的modifier
+			{
+				"$type": "AttachToPoseIDMixin",
+				"poseIDs": [211, 311],
+				"modifierName": "Sylph_DyingAnimState",
+			},
+		],
+		"modifiers": 
+		{
+			// Pose用一个参数就可以控制了，但是由于AnimatorController是从anystate拉线，所以需要区分两种trigger参数
+			"Sylph_DyingAnimState":
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":true,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"thinkInterval": 0.2,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "RemoveModifierByAbilityStateResistanceID",
+						"resistanceListID": 13002,
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"DeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"ActivatedDeathTag",
+						"value":false,
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Steer
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_Steer",
+		"abilityMixins": 
+		[
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_Standby"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Warning"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 150,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["WindBullet"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.12,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["WindBullet"],
+				"startNormalizedTime" : 0.25,
+				"endNormalizedTime" : 0.44,
+				"angularSpeed" : 90,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["WindBullet"],
+				"startNormalizedTime" : 0.9,
+				"endNormalizedTime" : 1,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.3,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["FlyHigh"],
+				"startNormalizedTime" : 0.9,
+				"endNormalizedTime" : 1.0,
+				"angularSpeed" : 240,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+			{
+				"$type": "SteerAttackMixin",
+				"steerStateIDs": ["Activated_AirGun"],
+				"startNormalizedTime" : 0.0,
+				"endNormalizedTime" : 0.3,
+				"angularSpeed" : 120,
+				"attackTrigger" : "",
+				"attackDistance" : 0,
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  ExitBattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_ExitBattle",
+		"abilityMixins": 
+		[
+			{
+				"$type":"AttachToPoseIDMixin",
+				"poseIDs":[901],
+				"modifierName":"ExitBattle",
+			},
+		],
+		"modifiers": 
+		{
+			"ExitBattle":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "ActivatedToNormal",
+						"predicates": 
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_SYLPH_POSE_TAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "SetGlobalValue",
+						"key": "_SYLPH_POSE_TAG_",
+						"value": 0,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "DyingState",
+						"value": false,
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "ActivatedTag",
+						"value": false,
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value":0,
+					},
+					{
+						"$type": "RemoveUniqueModifier",
+						"modifierName": "UNIQUE_Sylph_Face",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  WindBullet
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_WindBullet_First",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42006301,
+				"target": "SelfAttackTarget",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletAttachPoint1",
+					"attachPointTargetType": "Caster",
+				},
+				"trackTarget": "SelfAttackTarget",
+			},
+		],
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_WindBullet_Second",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42006302,
+				"target": "SelfAttackTarget",
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName" : "BulletAttachPoint2",
+					"attachPointTargetType": "Caster",
+				},
+				"trackTarget": "SelfAttackTarget",
+			},
+		],
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_WindBullet_Hit",
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_WindBullet_Loop",
+			},
+		],
+		"onKill": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_WindBullet_AS",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 0.5,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 0.8,
+							"strikeType": "Blunt",
+							"enBreak": 10.0,
+							"elementDurability":25,
+							"elementType": "Wind",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName" : "none",
+							"hitImpulseType":"LV2",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type":"KillSelf",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FlyHor
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_FlyHor",
+		"abilityMixins": 
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["FlyHor_BS"],
+				"modifierName": "FlyHor_Turn",
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["FlyHor_Loop"],
+				"modifierName": "FlyHor_Actions",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type": "TriggerBullet",
+				"bulletID": 42006303,
+				"born":
+				{
+					"$type": "ConfigBornByAttachPoint",
+					"attachPointName": "RootNode",
+					"offset":
+					{
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0,
+					},
+				},
+			},
+		],
+		"modifiers": 
+		{
+			"FlyHor_Turn":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "TurnDirectionToPos",
+						"target": "SelfAttackTarget",
+						"toPos":
+						{
+							"$type": "ConfigBornByTarget",
+						},
+					},
+					{
+						"$type":"TryFindBlinkPointByBorn",
+						"target":"Self",
+						"hitSceneTest":true,
+						"hitSceneType":"BlinkHitSceneTestByThreeSegments",
+						"limitY": 10,
+						"born":
+						{
+							"$type":"ConfigBornByTargetLinearPoint",
+							"linearOffset": -10,
+							"linearXZ":false,
+						},
+					},
+				],
+			},
+			"FlyHor_Actions":
+			{
+				"onAdded": 
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Fly_Loop",
+					},
+					{
+						"$type":"FixedMonsterRushMove",
+						"timeRange":1,
+						"animatorStateIDs":["FlyHor_Loop"],
+						"target":"Self",
+						"isInAir":true,
+						"toPos":
+						{
+							"$type":"ConfigBornByTeleportToPoint",
+						},
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_ElementBullet_Hit",
+		"onAdded": 
+		[
+			{
+				"$type": "AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_ElementBullet",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" : 
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius" : 2.75,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 0.8,
+							"strikeType": "None",
+							"elementType":"Wind",
+							"elementDurability": 25,
+							"enBreak" : 0,
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName": "",
+							"hitImpulseType": "LV3",
+							"retreatType":"ByHitDirection",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.0,
+							"muteHitText": false,
+						},
+						"forceCameraShake": false,
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_ElementBullet_AS",	
+				"scale": 2.0,
+			},
+			{
+				"$type": "KillSelf",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  FlyHigh
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_FlyHigh",
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern":
+					{
+						"$type": "ConfigAttackSphere",
+						"triggerType": "TriggerNoRepeat",
+						"radius": 4.0,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Blunt",
+							"enBreak": 50.0,
+							"elementDurability":50,
+							"elementType": "Wind",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName" : "default",
+							"hitImpulseType":"LV4",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_ElementBoom_Damage",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Deathrattle"],
+				"modifierName": "Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006307,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_DeathPosAction",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Deathrattle_LifeHandler",
+			},
+		],
+		"modifiers": 
+		{
+			"Deathrattle_Timer" :
+			{
+				"duration": 1.2,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Deathrattle_Actions",
+					},
+				],
+			},
+			"Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 2.5,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.0,
+									"strikeType": "Blunt",
+									"enBreak": 10.0,
+									"elementDurability":25,
+									"elementType": "Wind",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV4",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+				],
+			},
+			"Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_AirGun
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_Activated_AirGun",
+		"onAbilityStart": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_AirGun_01",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_AirGun_02",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_AirGun_03",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_AirGun_01":
+			{
+				"duration": 0.2,
+				"onAdded": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42006304,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "BulletAttachPoint3",
+							"attachPointTargetType": "Caster",
+						},
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_AirGun_Launch",
+					},
+				],
+			},
+			"Activated_AirGun_02":
+			{
+				"duration": 0.4,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42006304,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "BulletAttachPoint4",
+							"attachPointTargetType": "Caster",
+						},
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_AirGun_Launch",
+					},
+				],
+			},
+			"Activated_AirGun_03":
+			{
+				"duration": 0.8,
+				"onRemoved": 
+				[
+					{
+						"$type": "TriggerBullet",
+						"bulletID": 42006304,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName" : "BulletAttachPoint5",
+							"attachPointTargetType": "Caster",
+						},
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_AirGun_Launch",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_Activated_AirGun_Hit",
+		"onAdded":
+		[
+			{
+				"$type":"AttachEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_Activated_AirGun_Bullet",
+			},
+		],
+		"onKill": 
+		[
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Monster_Sylph_Wind_Activated_AirGun_Bullet_AS",
+			},
+		],
+		"onAbilityStart": 
+		[
+			{
+				"$type" : "TriggerAttackEvent",
+				"targetType" : "Enemy",
+				"attackEvent": 
+				{
+					"attackPattern" :
+					{
+						"$type" : "ConfigAttackSphere",
+						"triggerType" : "TriggerNoRepeat",
+						"radius": 1.2,
+						"born":
+						{
+							"$type": "ConfigBornByCollisionPoint",
+						},
+					},
+					"attackInfo":
+					{
+						"canBeModifiedBy": "OriginOwner",
+						"attackProperty":
+						{
+							"damagePercentage": 1.0,
+							"strikeType": "Blunt",
+							"enBreak": 100.0,
+							"elementDurability":50,
+							"elementType": "Wind",
+						},
+						"hitPattern" :
+						{
+							"onHitEffectName" : "none",
+							"hitImpulseType":"LV4",
+							"hitHaltTime": 0.0,
+							"hitHaltTimeScale": 0.01,
+							"muteHitText": false,
+						},
+					},
+				},
+			},
+			{
+				"$type":"KillSelf",
+			},
+		],
+	},
+},
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Sylph_Wind_Activated_Deathrattle",
+		"abilityMixins":
+		[
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Activated_Deathrattle"],
+				"modifierName": "Activated_Deathrattle_Pos",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Pos" :
+			{
+				"onAdded": 
+				[
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006306,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 0,
+								"compareType": "NoneOrEqual",
+							},
+						],
+					},
+					// 2.3导能原盘复刻
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006309,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+						"predicates":
+						[
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"RemoveUniqueModifier",
+						"target":"Self",
+						"modifierName":"UNIQUE_Sylph_Limbo",
+					},
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_Activated_DeathPosAction",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_LifeHandler",
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Timer" :
+			{
+				"duration": 1.8,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Activated_Deathrattle_Actions",
+					},
+				],
+			},
+			"Activated_Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"modifierMixins": 
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5H10",
+						"strength" : 5,
+						"attenuation" : 1.2,
+						"innerRadius" :1.5,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+						},
+						"targetType": "Enemy",
+						"predicates" :
+						[
+							{
+								"$type" : "ByTargetWeight",
+								"logic" : "LesserOrEqual",
+								"weight" : 100.0,
+							},
+						],
+					},
+				],
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 5.0,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.2,
+									"strikeType": "Blunt",
+									"enBreak": 100.0, // 虽然不向外击飞，但是感觉可以清空enbreak
+									"elementDurability":25,
+									"elementType": "Wind",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV0",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006305,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+				],
+			},
+			"Activated_Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_Activated_WindZone",
+		"onAdded":
+		[
+			{
+				"$type": "AttachModifier",
+				"modifierName": "WindZone_Handler",
+			},
+		],
+		"modifiers":
+		{
+			"WindZone_Handler":
+			{
+				"duration": 10.0,
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_Deathrattle_WindZone",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"thinkInterval": 0.5,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 4.6,
+								"fanAngle": 360.0,
+								"radius": 2.5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : -2.3,
+										"z" : 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackProperty":
+								{
+									"damagePercentage": 0.4,
+									"strikeType": "Default",
+									"elementType":"Wind",
+									"elementDurability": 25,
+									"enBreak" : 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV0",
+									"retreatType":"ByHitDirection",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					},
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR2.5H5",
+						"strength" : 5,
+						"attenuation" : 1.2,
+						"innerRadius" :1.0,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x" : 0.0,
+								"y" : -2.5,
+								"z" : 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates" :
+						[
+							{
+								"$type" : "ByTargetWeight",
+								"logic" : "LesserOrEqual",
+								"weight" : 100.0,
+							},
+						],
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+// 2.3导能原盘复刻
+////////////////////////////////////////////////////////////////
+//
+//  Activated_Deathrattle
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default": 
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_Elite_Activated_DeathPosAction",
+		"onAdded": 
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_Timer",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Activated_Deathrattle_LifeHandler",
+			},
+			// 加个中间变量，防止后面爆炸的时候Owner已经无了
+			{
+				"$type":"SetGlobalValue",
+				"key":"_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_GADGETTAG_",
+				"value":1,
+				"predicates": 
+				[
+					{
+						"$type": "ByTargetGlobalValue",
+						"target": "Owner",
+						"key": "_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_",
+						"value": 1,
+						"compareType": "Equal",
+					},
+				],
+			},
+		],
+		"modifiers": 
+		{
+			"Activated_Deathrattle_Timer" :
+			{
+				"duration": 1.8,
+				"onAdded": 
+				[
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_Deathrattle",
+					},
+				],
+				"onRemoved":
+				[
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Activated_Deathrattle_Actions",
+					},
+				],
+			},
+			"Activated_Deathrattle_Actions" :
+			{
+				"duration": 0.2,
+				"modifierMixins": 
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR5H10",
+						"strength" : 5,
+						"attenuation" : 1.2,
+						"innerRadius" :1.5,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+						},
+						"targetType": "Enemy",
+						"predicates" :
+						[
+							{
+								"$type" : "ByTargetWeight",
+								"logic" : "LesserOrEqual",
+								"weight" : 100.0,
+							},
+						],
+					},
+				],
+				"onAdded": 
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackSphere",
+								"triggerType": "TriggerNoRepeat",
+								"radius": 5.0,
+								"born":
+								{
+									"$type": "ConfigBornByAttachPoint",
+									"attachPointName": "RootNode",
+									"offset":
+									{
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"attackProperty":
+								{
+									"damagePercentage": 1.2,
+									"strikeType": "Blunt",
+									"enBreak": 100.0, // 虽然不向外击飞，但是感觉可以清空enbreak
+									"elementDurability":25,
+									"elementType": "Wind",
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName" : "default",
+									"hitImpulseType":"LV0",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.01,
+									"muteHitText": false,
+								},
+							},
+						},
+					},
+					{
+						"$type":"CreateGadget",
+						"gadgetID":42006308,
+						"byServer": true,
+						"lifeByOwnerIsAlive": false,
+						"campID":4001,
+						"born":
+						{
+							"$type": "ConfigBornByAttachPoint",
+							"attachPointName": "RootNode",
+							"offset":
+							{
+								"x" :0,
+								"y" :0,
+								"z" :0,
+							},
+						},
+					},
+					{
+						"$type": "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "All",
+							"campBasedOn": "Self",
+							"sortType": "Default",
+						},
+						"targetPredicates":
+						[
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes":
+								[
+									"Monster"
+								],
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Target",
+								"key": "_CHANNELLERSLAB_SYLPH_ELITETAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"target": "Self",
+								"key": "_CHANNELLERSLAB_SYLPH_DEATHRATTLECHARGE_GADGETTAG_",
+								"value": 1,
+								"compareType": "Equal",
+							},
+						],
+						"successActions":
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Activated_Deathrattle_DeathrattleChargeUp",
+								"target": "Target",
+							},
+						],
+					},
+				],
+			},
+			"Activated_Deathrattle_DeathrattleChargeUp" :
+			{
+				"duration": 0.1,
+				"onAdded":
+				[
+					{
+						"$type": "AddChargeBarValue",
+						"value": "%DeathrattleChargeUp",
+						"target": "Self",
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Monster_Common_AddChargeValue",
+						"target": "Self",
+					},
+				],
+			},
+			"Activated_Deathrattle_LifeHandler" :
+			{
+				"duration": 5.0,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+		"abilitySpecials": 
+		{
+			"DeathrattleChargeUp": 0.0, 
+		},
+	},
+},
+{
+	"Default":
+	{
+		"$type": "ConfigAbility",
+		"abilityName": "Sylph_Wind_Elite_Activated_WindZone",
+		"onAdded":
+		[
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "WindZone_Handler",
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "WindZone_LifeHandler",
+			},
+		],
+		"modifiers":
+		{
+			"WindZone_Handler":
+			{
+				"onAdded":
+				[
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Monster_Sylph_Wind_Activated_Deathrattle_WindZone",
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+						},
+					},
+				],
+				"thinkInterval": 0.5,
+				"onThinkInterval":
+				[
+					{
+						"$type" : "TriggerAttackEvent",
+						"targetType" : "Enemy",
+						"attackEvent": 
+						{
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height": 4.6,
+								"fanAngle": 360.0,
+								"radius": 2.5,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : -2.3,
+										"z" : 0.0,
+									},
+								},
+							},
+							"attackInfo":
+							{
+								"canBeModifiedBy": "OriginOwner",
+								"attackProperty":
+								{
+									"damagePercentage": 0.4,
+									"strikeType": "Default",
+									"elementType":"Wind",
+									"elementDurability": 25,
+									"enBreak" : 0,
+								},
+								"hitPattern" :
+								{
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV0",
+									"retreatType":"ByHitDirection",
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false,
+								},
+								"forceCameraShake": false,
+							},
+						},
+					},
+				],
+				"modifierMixins": 
+				[
+					{
+						"$type": "WindZoneMixin",
+						"shapeName": "CircleR2.5H5",
+						"strength" : 5,
+						"attenuation" : 1.2,
+						"innerRadius" :1.0,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x" : 0.0,
+								"y" : -2.5,
+								"z" : 0.0,
+							},
+						},
+						"targetType": "Enemy",
+						"predicates" :
+						[
+							{
+								"$type" : "ByTargetWeight",
+								"logic" : "LesserOrEqual",
+								"weight" : 100.0,
+							},
+						],
+					},
+				],
+				"onRemoved": 
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+			"WindZone_LifeHandler" :
+			{
+				"thinkInterval": 1.5,
+				"onThinkInterval": 
+				[
+					{
+						"$type": "Predicated",
+						"otherTargets":
+						{
+							"$type": "SelectTargetsByShape",
+							"shapeName": "CircleR50",
+							"centerBasedOn": "Self",
+							"campTargetType": "All",
+							"campBasedOn": "Self",
+						},
+						"targetPredicates":
+						[							
+							{
+								"$type": "ByEntityTypes",
+								"entityTypes": ["Monster"],
+							},
+						],
+						"successActions": 
+						[
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "WindZone_LifeTimer",
+							},
+						],
+					},
+				],
+			},
+			"WindZone_LifeTimer" :
+			{
+				"stacking": "Refresh",
+				"duration": 3.5,
+				"onRemoved":
+				[
+					{
+						"$type": "KillSelf",
+					},
+				],
+			},
+		},
+	},
+},
+]

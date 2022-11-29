@@ -1,0 +1,7964 @@
+[
+	///触发字典：
+	///   能量堆满
+	///   能量获得
+	///   血量比例
+	///   元素
+	///   攻击命中
+	///   受击
+	///   攻击次数/技能次数   堆叠
+	///   某行为之后
+	///   内置cd
+	///   上下场
+	///   缓慢获得
+	///   队友有火/水/xx属性
+	///   使用者是xx属性
+	///   使用者是蒙德/璃月
+	///   队友来自蒙德/璃月
+	///   角色触发了元素反应
+	///   队伍触发元素反应
+	///   触发了指定元素反应
+	///   敌人有xx元素
+	///   受到xx属性伤害
+	///   受到xx元素反应。例如受到冰冻时恢复xx血量。可以成为某些地城的对策。
+	///   x秒内命中多个怪物。
+	///   身边存在x个怪物。
+	///   周围存在燃烧/xx/xx反应时，
+	///
+
+
+	///效果字典：
+	///   回血/缓慢持续回血
+	///   全队回血
+	///   最大生命提升
+	///   为血量最低队友回血
+	///   体力恢复速度变化
+	///   暴击伤害变化
+	///   体力恢复
+	///   体力上限
+	///   攻击/防御/速度提升
+	///   全队攻击/防御/速度提升
+	///   受治疗提升
+	///   治疗效果提升
+	///   伤害减轻，xx元素伤害减轻。
+	///   能量获得率提升
+	///   获得能量，释放消耗能量减轻
+	///   获得护盾/元素盾
+	///   攻击提升（堆叠
+	///   全伤提升
+	///   属性伤害提升（类似丹朱圣痕
+	///   体力恢复加快
+	///   技能冷却减少（-20%这种，不是每次-1s这种）
+	///   攻击附带伤害
+	///   给敌人debuff
+	///   爬山速度提高？
+	///   重攻击消耗体力减少（大剑）
+	///
+	///   如果类似fgo，dnf的数值维度。至少应该有
+	///   攻击力，暴击，爆伤，
+	///   伤害增加（黄字）
+	///   宝具威力增加（技能攻击力）
+	///   某属性伤害增加（属强，红魔放）
+	///
+	///   招个特效卖卖萌，实际还是上buff。
+	///   招个怪卖卖萌，实际还是法术场。
+	///
+	///   一些负面效果，例如减少攻速/移速/血量
+	///   例如血量永远在50%，高于则燃烧，低于则回血低加成。
+	///
+	///
+
+	///设计手段：
+	///   积累一个效果，当xxx时消耗并触发效果
+
+
+	///圣遗物效果：
+	/// 触发以受击、血量触发为主
+	/// 探索中发动。战斗类：探索/辅助/防御=2:8，
+	/// buff为主，数值变化。不太会有打击向。
+	/// 有套路的效果。   普攻+100%，技能伤害-50%。
+	/// Build：
+	/// 自身回血时，对周围敌人造成伤害。
+	/// 特效套，攻击附带特效技能。
+	/// 强化某种单属性伤害。
+	///
+	///负面效果：
+	///   速度下降
+	///   cd变长
+	///   受伤增加等
+
+
+	///橙装字典：
+	///   将敌人弹开
+	///   持续伤害敌人
+	///   能量/血量缓慢恢复
+	///   增加箭的伤害（大概可行
+	///
+
+	//PS：武器的ability是加在角色身上的。可以考虑从天赋里拿创意到武器
+
+
+	//代码规范：
+	//1、attachmodifier。自己加的modifier需要在换武器的时候回收。
+	//2、不得在remove时添加modifier，会导致武器卸下后重新上modifier。（不得modifier之间循环调用；A添加B，B添加A需要避免）
+	//3、武器技能cd可以用10101技能cd控制，这样就不必添用uniquemodifier的durating控制触发频率了。触发行为应当加检测技能cd的predicates，使得冷却期间不进入具体行为，减少程序消耗。
+	//4、实在难以移除的modifier可以在ability的onRemoved中移除。
+
+
+	//cd检测中
+	//普攻叠加类buff一般来说间隔0.3比较舒服，大剑类则是0.5可以保证每次叠上
+
+
+
+	//这里开始为正式技能
+	//////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////
+	//
+	//
+	// 11301  冷刃
+	//
+	// 对水、冰附着单位增加20%伤害  本身无cd的不建议做不触发效果。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_DamageUpToEnemy",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_DamageUpToEnemy_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_DamageUpToEnemy_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							"damagePercentageRatio": "%Rate",
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									// "target":"Target",//默认就是target
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+											"element": "Water",
+										},
+										{
+											"$type": "ByHasElement",
+											"element": "Ice",
+										},
+										{
+											"$type": "ByHasElement", //Frozen没有寒元素，但是被算入受到冰影响。
+											"element": "Frozen",
+										},
+									],
+								}
+							],
+						},
+					],
+					"isUnique": true,
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11302 黎明神剑
+	//
+	//  90%以上生命值暴击率提升
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_FullHPCriticUp",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToPredicateMixin",
+					"modifierName": "UNIQUE_Sword_FullHPCriticUp",
+					// "onEvent":"HP",//写了触发太少，会导致刚装备时不生效。所以保留原样。
+					"predicates":
+					[
+						{
+							"$type": "ByTargetHPRatio",
+							"HPRatio": 0.9,
+							"logic": "GreaterOrEqual",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_FullHPCriticUp": //控制一下效果触发的周期
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"elementType": "None",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CriticalDelta": "%Rate",
+					},
+					// "onAdded":
+					// [
+					// 	{
+					// 		"$type": "AttachModifier",
+					// 		"modifierName": "UNIQUE_Sword_FullHPCriticUp_Effect",
+					// 	},
+					// ],
+				},
+				// "UNIQUE_Sword_FullHPCriticUp_Effect":
+				// {
+				// 	"duration": 1, //事实上这个特效一直在的话也挺烦的,所以就亮一下。亮一下也有疑惑，不亮了。
+				// 	"isUnique": true,
+				// 	"state": "AttackUp",
+				// },
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11303 旅行剑
+	//
+	//  每次获得元素能量球时，恢复自身【x】点生命值；
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_OnGainEnergyHealHP",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_OnGainEnergyHealHP_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_OnGainEnergyHealHP_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByEnergyChangeMixin",
+							"elementTypes":
+							[
+								"Electric",
+								"Fire",
+								"Water",
+								"Grass",
+								"Ice",
+								"Wind",
+								"Rock"
+							],
+							"doWhenEnergyMax": true,
+							"onGainEnergyByBall":
+							[
+								{//去掉了cd控制，改成直接回血
+									"$type": "HealHP",
+									"amountByTargetMaxHPRatio": "%HealHP",
+									"target": "Self",
+								},
+							],
+						},
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"HealHP": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	// 11304 暗铁剑
+	//
+	// 主要是元素附着和元素反应。,触发后增加“攻击”即可
+	// 触发雷系相关反应，提升攻击20%~40%，持续12秒。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_AttacktUpAfterReaction",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_AttacktUpAfterReaction_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_AttacktUpAfterReaction_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20, //这个就是默认值
+							"entityTypes":
+							[
+								"Monster",
+							],
+							"reactionTypes":["Explode","Shock","Superconductor","SwirlElectric","Overdose","OverdoseElectric","OvergrowMushroomElectric"], //雷相关 3.0版本增加了激化,激化雷，蔓生雷
+							"actions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Sword_AttacktUpAfterReaction",
+								}
+							],
+						}, //一个检测发生了元素反应的mixin
+					],
+					"isUnique": true,
+				},
+				"UNIQUE_Sword_AttacktUpAfterReaction":
+				{
+					"duration": "%BuffTime",
+					"state": "AttackUp",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"BuffTime": 0,
+			},
+		},
+		//这个列表是所有元素反应["Explode","Stream","Burning","Melt","Freeze","Shock","Superconductor","SwirlFire","SwirlWater","SwirlElectric","SwirlIce",],
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	// 11305 吃虎鱼刀
+	//
+	// 攻击时10%概率对目标造成额外333%攻击力伤害，冷却时间10秒。 单机已过
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_ExtraDamageWhenCDReady",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_ExtraDamageWhenCDReady",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps":
+					[
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_ExtraDamageWhenCDReady_CD",
+						"UNIQUE_Sword_ExtraDamageWhenCDReady_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_ExtraDamageWhenCDReady_Handler":
+				{
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByEquipAffixReady",
+									"equipAffixDataID": 111305,
+									"target": "Self",
+								},
+							],
+							"successActions": //在success里嵌套predicated会有问题，因为丢失target了。
+							[
+								{
+									"$type": "Randomed",
+									"target": "Target",
+									"chance": "%C_Rate",
+									"successActions":
+									[
+										{
+											"$type": "FireEffect",
+											"target": "Target",
+											"born":
+											{
+												// "$type": "ConfigBornByTarget",
+                                                 "$type": "ConfigBornByHitPoint",
+											},
+											"effectPattern": "Eff_Weapon_Blast_Small",
+										},
+										{
+											"$type": "DamageByAttackValue", //这个效果格挡后伤害仍然会给出，但是打元素盾后伤害不会出现，因为元素盾主人是锁血状态。
+											"target": "Target",
+											"born":
+											{
+												"$type": "ConfigBornByTarget",
+											},
+											"attackInfo":
+											{
+												"attackProperty":
+												{
+													"damagePercentage": "%D_Rate",
+													"elementType": "None",
+													"strikeType": "Default",
+													"enBreak": 50,
+												},
+												"hitPattern":
+												{
+													"onHitEffectName": "default",
+													"hitImpulseType":"Default",
+													"reboundRatio": 0,
+													"hitHaltTime": 0.0,
+													"hitHaltTimeScale": 0.01,
+													"muteHitText": false,
+												},
+												"forceCameraShake": false,
+											},
+										},
+										{
+											"$type": "AddGlobalValue",
+											"target": "Self",
+											"key": "_ABILITY_Weapon_Sword_ExtraDamageWhenCDReady",
+											"value": -1,
+											"useLimitRange": true,
+											"maxValue": -1,
+											"minValue": -1,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_ExtraDamageWhenCDReady_CD":
+				{
+					"isUnique": true,
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"EquipAffixStart",
+							"CD":"%CDTime",
+							"equipAffixDataID":111305,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_ExtraDamageWhenCDReady",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"C_Rate": 0,
+				"D_Rate": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11306 飞天御剑
+	//
+	//  释放充能技后大幅提升攻速移速 ok
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_MoveSpeedAfterULT",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Sword_MoveSpeedAfterULT",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_MoveSpeedAfterULT":
+				{
+					"duration": "%BuffTime",
+					// "stacking": "Unique",
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"state": "AttackUp",
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+						"Animator_MoveSpeedRatio": "%Rate",
+					},
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Weapon_Sword_MoveSpeedAfterULT_SpeedUpState",   //多播一个加速特效
+						},
+					],
+				},
+				"Weapon_Sword_MoveSpeedAfterULT_SpeedUpState":
+				{
+					"state": "SpeedUp",
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"BuffTime": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11401 西风剑
+	//
+	//  造成的伤害暴击时，有【X%】的概率制造一个通用原子能量球。 需内置cd。 ok
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_GenerateBallWhenCritic",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_GenerateBallWhenCritic_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_GenerateBallWhenCritic_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Randomed",
+							"target": "Target",
+							"chance": "%Rate",
+							"predicates":
+							[
+								{
+									"$type": "ByHitCritical",
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+								{
+								   "$type":"ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByEquipAffixReady",
+									"equipAffixDataID": 111401,
+									"target": "Self",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Sword_GenerateBallWhenCritic",
+									"target": "Self",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_GenerateBallWhenCritic":
+				{
+					"duration": "%CDTime",
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type":"EquipAffixStart",
+							"CD":"%CDTime",
+							"equipAffixDataID":111401,
+						},
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Weapon_ExtraElementBall",//考虑了下，在自己身上播特效比较容易看到。
+                        },
+                        {
+                            "$type": "GenerateElemBall",
+                            "configID": 2024,
+                            "baseEnergy": 6,
+                            "ratio": 1,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset" :
+                                {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": -1,
+                                },
+                                "bornRandom" :
+                                {
+                                    "$type": "BornRandomFromCenter",
+                                    "minRandomRange":0,
+                                    "maxRandomRange":0.5,
+                                },
+                            },
+                        },
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11402 笛剑
+	//
+	//  普通攻击和重攻击，累计音乐标记，完成时爆炸 触发间隔0.5秒 ok
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_MusicBlast",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT", //默认应该会置0
+					"valueSteps":
+					[
+						-0.5,
+						4.5,
+						6,
+						100
+					],
+					"removeAppliedModifier": false, //不移除
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_MusicBlast_Handler",
+						"UNIQUE_Sword_MusicBlast",
+						"UNIQUE_Sword_MusicBlast"
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT", //默认应该会置0
+					"valueSteps":
+					[
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+						4.5,
+						5.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_MusicBlast_Buff1",
+						"UNIQUE_Sword_MusicBlast_Buff2",
+						"UNIQUE_Sword_MusicBlast_Buff3",
+						"UNIQUE_Sword_MusicBlast_Buff4",
+						"UNIQUE_Sword_MusicBlast_Buff5"
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_MusicBlast_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags":
+									[
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack"
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "Randomed",
+									"chance": "%Chance",
+									"successActions":
+									[
+										{
+											"$type": "AttachModifier",
+											"target": "Self",
+											"modifierName": "UNIQUE_Sword_MusicBlast_Add",
+										},
+										{
+											"$type": "AttachModifier",
+											"target": "Self",
+											"modifierName": "UNIQUE_Sword_MusicBlast_Timer",
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Timer":
+				{
+					"duration": 30,
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT",
+							"value": -10,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 0,
+							"doOffStage": true,
+						}
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Add":
+				{
+					"duration": 0.5,
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT",
+							"value": 1,
+							"target": "Self",
+
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast": //攻击速度提升
+				{
+					"duration": 0.2, //关系到buff5的清除速度。特效能残留多久
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_MusicBlast",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type": "ConfigAttackSphere",
+									"duration": 0.0,
+									"triggerType": "TriggerNoRepeat",
+									"radius": 4,
+									"born":
+									{
+										"$type": "ConfigBornByTarget",
+									},
+								},
+								"attackInfo":
+								{
+									"attackProperty":
+									{
+										"damagePercentage": "%Rate",
+										"strikeType": "Default",
+										"elementType": "None",
+										"enBreak":100,
+									},
+									"hitPattern":
+									{
+										"onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT",
+							"value": -10,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_MusicTag1",
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_MusicTag2",
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_MusicTag3",
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Buff4":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_MusicTag4",
+						},
+					],
+				},
+				"UNIQUE_Sword_MusicBlast_Buff5":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_MusicTag5",
+						},
+					],
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_WEAPONSKILL_MusicBlast_COUNT",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Chance": 0,
+				"Rate": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//
+	//
+	//  受击时获得最大血量%rate的护盾
+	//  (词缀暂时废弃,备用)
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_GetShieldBeingHit",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)，初始globalvalue会被设成0.
+					"globalValueKey": "_ABILITY_Weapon_Sword_GetShieldBeingHit", //不配置初始值的话默认为0
+					"valueSteps":
+					[
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_GetShieldBeingHit_CD",
+						"UNIQUE_Sword_GetShieldBeingHit_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_GetShieldBeingHit_Handler": //控制一下效果触发的周期
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onBeingHit":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_GetShieldBeingHit",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": -1,
+							"minValue": -1,
+							"predicates":
+							[
+								{
+									"$type":"ByEquipAffixReady",
+									"equipAffixDataID":111403,
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater",
+								},
+							]
+						}
+					],
+				},
+				"UNIQUE_Sword_GetShieldBeingHit_CD":
+				{
+					"duration": "%CDTime",
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"EquipAffixStart",
+							"CD":"%CDTime",
+							"equipAffixDataID":111403,
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_GetShieldBeingHit_Shield",
+						}
+					],
+					"onRemoved": //在ability移除的时候，还会把key重置为0.所以一定要注意remove时一定是恢复全局值到默认值（0）
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_GetShieldBeingHit",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Sword_GetShieldBeingHit_Shield":
+				{
+					"duration": "%BuffTime",
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Properties_Shield",
+						},
+					],
+					"modifierMixins":
+					[
+						{
+							"$type": "EliteShieldMixin",
+							"elementType": "None",
+							"shieldHPRatio": "%Rate",
+							// "costShieldRatioName" : "costShieldRatio",
+							"showDamageText": "INFO_ELITE_DEFENCE",
+                            // "targetMuteHitEffect":false, //即使盾的受击不明显，也不应该播普通受击特效，特效太大了。
+							"onShieldBroken":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Properties_Shield_AS",
+								},
+							],
+						},
+					],
+                    "onBeingHit":
+                    [
+                        {
+                            "$type": "Predicated",
+                            "target": "Target",
+                            "targetPredicates":
+                            [
+                                {
+                                  "$type": "ByHitEnBreak",
+                                  "enBreak": 0,
+                                  "logic": "Greater",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                // {
+                                //     "$type": "SetGlobalDir",
+                                //     "target": "Target",
+                                //     "key": "_ABILITY_Sword_GetShieldBeingHit_HitDirection",   //方向适配，表现不那么好
+                                //     "born":
+                                //     {
+                                //         "$type": "ConfigBornBySelf",
+                                //         "direction":
+                                //         {
+                                //             "$type": "ConfigDirectionByLookAtEntity",
+                                //         },
+                                //     },
+                                //     "setTarget": false,
+                                // },
+                                {
+                                    "$type":"ApplyModifier",
+                                    "modifierName":"Sword_GetShieldBeingHit_HitEffect",
+                                },
+                            ],
+                            // "failActions":
+                            // [
+                            //     // {
+                            //     //     "$type": "SetGlobalDir",
+                            //     //     "target": "TargetOriginOwner", //如果被子弹打了。
+                            //     //     "key": "_ABILITY_Sword_GetShieldBeingHit_HitDirection",   //方向适配
+                            //     //     "born":
+                            //     //     {
+                            //     //         "$type": "ConfigBornBySelf",
+                            //     //         "direction":
+                            //     //         {
+                            //     //             "$type": "ConfigDirectionByLookAtEntity",
+                            //     //         },
+                            //     //     },
+                            //     //     "setTarget": false,
+                            //     // },
+                            //     {
+                            //         "$type":"ApplyModifier",
+                            //         "modifierName":"UNIQUE_Hit_Effect",
+                            //     },
+                            // ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Properties_Shield_AS",
+                        },
+                    ],
+					"onKill":
+					[
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Sword_GetShieldBeingHit_Shield",
+						},
+					],
+	                "properties": //需要注意护盾没加上霸体。
+	                {
+	                  "Actor_EndureDelta": 0,
+	                },
+				},
+                "Sword_GetShieldBeingHit_HitEffect":
+                {
+                    "stacking":"Unique",
+                    "duration":0.3,
+                    "onAdded":
+                    [
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Avatar_Properties_Shield_Hit_Invalid",
+                            "born":
+                            {
+                                "$type": "ConfigBornBySelf",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": 0,
+                                    "z": 0.0,
+                                },
+                                // "direction":
+                                // {
+                                //     "$type": "ConfigDirectionByGlobalValue",
+                                //     "directionKey": "_ABILITY_Sword_GetShieldBeingHit_HitDirection",
+                                // },
+                            },
+                        },
+                    ],
+                },
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"BuffTime": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+
+	///////////////////////////////////////////////////////////////////
+	//
+	//  11403 祭礼剑
+	//
+	//  小技能每次造成的伤害时，有【X%】的概率重置该技能cd。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_ResetCDWhenSkillHit",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_ResetCDWhenSkillHit",
+					"valueSteps":
+					[
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_ResetCDWhenSkillHit_CD",
+						"UNIQUE_Sword_ResetCDWhenSkillHit_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_ResetCDWhenSkillHit_Handler": //控制一下效果触发的周期
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster",],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater"
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["Elemental_Art",],//Elemental_Art_Hold和Elemental_Art_Extra的时候并未进入cd，不该触发减cd效果。
+								},
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":111403,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"target":"Self",
+									"modifierName":"UNIQUE_Sword_ResetCDWhenSkillHit_SanCheck",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_ResetCDWhenSkillHit_SanCheck":
+				{
+					"duration": 1.9,
+					"stacking": "Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 3,
+					},
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "Randomed",
+							"chance": "%Rate",
+							"successActions":
+							[
+								{
+									"$type": "AddGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Weapon_Sword_ResetCDWhenSkillHit",
+									"value": -1,
+									"useLimitRange": true,
+									"maxValue": -1,
+									"minValue": -1,
+									// "doOffStage":true, //这个可选，后台的话触不触发都可接受。
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_ResetCDWhenSkillHit_CD":
+				{
+					"duration": "%CDTime",
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAdded":
+					[
+                        {
+                            "$type":"FireEffect",
+                            "effectPattern":"Eff_Weapon_ResetCD",
+                        },
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":111403,
+                        },
+						{
+							"$type": "ModifyAvatarSkillCD",
+							"skillSlot":
+							[
+								2,
+							],
+							"cdRatio": -1,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_ResetCDWhenSkillHit",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	// 11404 宗室长剑
+	//
+	// 每次攻击暴击增加%Rate，发动暴击后解除。 OK 计算所有攻击。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_CritUpWhenHitNoCrit",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_CritUpWhenHitNoCrit_Handler"
+				}
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_CritUpWhenHitNoCrit_Handler":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByNot",
+									"predicates":
+									[
+										{
+											"$type": "ByHitCritical",
+										},
+									],
+								},
+							],
+							"successActions": //在success里嵌套predicated会有问题，因为丢失target了。
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Sword_CritUpWhenHitNoCrit_CD",
+									"doOffStage": true,
+								},
+							],
+						},
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByHitDamage",
+									"damage": 0,
+									"logic": "Greater",
+								},
+								{
+									"$type": "ByHitCritical",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "RemoveModifier",
+									"modifierName": "UNIQUE_Sword_CritUpWhenHitNoCrit",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_CritUpWhenHitNoCrit_CD":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_CritUpWhenHitNoCrit",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_CritUpWhenHitNoCrit":
+				{
+					"stacking": "Multiple",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 5,
+					},
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_CriticalDelta": "%Rate",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "UNIQUE_Sword_CritUpWhenHitNoCrit",
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11405 匣里龙吟
+	//
+	//  对带有火、雷的单位伤害提高30%
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_DamageUpToWindEnemy",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_DamageUpToWindEnemy_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_DamageUpToWindEnemy_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "ModifyDamageMixin",
+							"ignoreEventInfo": true,
+							// "bonusCritical":"%Rate",
+							"damagePercentageRatio": "%Rate", //暴击率太弟弟了,不用
+							"predicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									// "target":"Target",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+											// "target":"Target",
+											"element": "Electric",
+										},
+										{
+											"$type": "ByHasElement", //Predicate的目标默认是Target，就是传进来的参数.
+											// "target":"Target",
+											"element": "Fire",
+										},
+									],
+								}
+							],
+						},
+					],
+					"isUnique": true,
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11406 试作斩岩
+	//
+	//  普攻和重攻击 命中提升攻防，叠加4层。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_AttackGainAKTDEFBuff",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPONSKILL_AttackGainAKTDEFBuff_COUNT", //默认应该会置0
+					"valueSteps":[0.5,1.5,2.5,3.5,4.5,],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":["UNIQUE_Sword_AttackGainAKTDEFBuff_Buff1","UNIQUE_Sword_AttackGainAKTDEFBuff_Buff2","UNIQUE_Sword_AttackGainAKTDEFBuff_Buff3","UNIQUE_Sword_AttackGainAKTDEFBuff_Buff4",],
+				},
+			],
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_AttackGainAKTDEFBuff_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_Handler":
+				{
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster"
+									],
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags":
+									[
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack"
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"target": "Self",
+									"modifierName": "UNIQUE_Sword_AttackGainAKTDEFBuff_CD",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_CD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": 0.3,
+					"onAdded":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_WEAPONSKILL_AttackGainAKTDEFBuff_COUNT",
+							"value": 1,
+							"useLimitRange":true,
+							"maxValue":4,
+						},
+						{
+							"$type":"ApplyModifier",
+							"target": "Self",
+							"modifierName":"UNIQUE_Sword_AttackGainAKTDEFBuff_Timer",
+						},
+					],
+				},
+				 "UNIQUE_Sword_AttackGainAKTDEFBuff_Timer":
+				{
+					"duration": 6,
+					"isUnique": true,
+					"stacking": "Refresh",
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_WEAPONSKILL_AttackGainAKTDEFBuff_COUNT",
+							"value": -10,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 0,
+							"doOffStage": true,
+						}
+					],
+				},
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack1",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+						"Actor_DefenceRatio": "%Rate",
+					},
+				},
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack2",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*2",
+						"Actor_DefenceRatio": "%Rate*2",
+					},
+				},
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack3",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*3",
+						"Actor_DefenceRatio": "%Rate*3",
+					},
+				},
+				"UNIQUE_Sword_AttackGainAKTDEFBuff_Buff4":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack4",
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*4",
+						"Actor_DefenceRatio": "%Rate*4",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_WEAPONSKILL_AttackGainAKTDEFBuff_COUNT",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11407 铁蜂刺
+	//
+	//  元素伤害命中提升全伤，叠加2层。 OK  所有攻击
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_AttackGainFullDamgeUpBuff",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_AttackGainFullDamgeUpBuff_Handler"
+				},
+			],
+			"abilityMixins":
+            [
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+                    "globalValueKey": "_ABILITY_Sword_AttackGainFullDamgeUpBuff", //默认应该会置0
+                    "valueSteps":[ 0.5,1.5,2.5 ],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps":
+                    [
+                    	"UNIQUE_Sword_AttackGainFullDamgeUpBuff1",
+                    	"UNIQUE_Sword_AttackGainFullDamgeUpBuff2",
+                    ],
+                },
+            ],
+			"modifiers":
+			{
+				"UNIQUE_Sword_AttackGainFullDamgeUpBuff_Handler":
+				{
+					"isUnique": true,
+					"onAttackLanded":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates":
+							[
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes":
+									[
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByHitElement",
+											"element": "Wind",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Fire",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Water",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Ice",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Electric",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Rock",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Grass",
+										},
+									],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Sword_AttackGainFullDamgeUpBuff_CD",
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_AttackGainFullDamgeUpBuff_CD":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Inter_CD",
+					"onAdded":
+					[
+                        {
+                            "$type":"AddGlobalValue",
+                            "value":1,
+                            "key":"_ABILITY_Sword_AttackGainFullDamgeUpBuff",
+                            "useLimitRange":true,
+                            "maxValue":2,
+                            "minValue":0,
+                        },
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "UNIQUE_Sword_AttackGainFullDamgeUpBuff_Timer",
+                        },
+					],
+				},
+                "UNIQUE_Sword_AttackGainFullDamgeUpBuff_Timer":
+                {
+                    "isUnique": true,
+                    "duration": "%Time",
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"AddGlobalValue",
+                            "value":-2,
+                            "key":"_ABILITY_Sword_AttackGainFullDamgeUpBuff",
+                            "useLimitRange":true,
+                            "maxValue":0,
+                            "minValue":0,
+                            "doOffStage":true,
+                        },
+                    ],
+                },
+                "UNIQUE_Sword_AttackGainFullDamgeUpBuff1":
+                {
+                    "isUnique": true,
+                    "onAdded":
+                    [
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern":"Eff_Weapon_Attack_Stack1",
+                        },
+                    ],
+                    "isLimitedProperties": true,
+                    "properties":
+                    {
+                        "Actor_AddHurtDelta": "%Rate",
+                    },
+                },
+                "UNIQUE_Sword_AttackGainFullDamgeUpBuff2":
+                {
+                    "isUnique": true,
+                    "onAdded":
+                    [
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern":"Eff_Weapon_Attack_Stack2",
+                        },
+                    ],
+                    "isLimitedProperties": true,
+                    "properties":
+                    {
+                        "Actor_AddHurtDelta": "%Rate*2",
+                    },
+                },
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_Sword_AttackGainFullDamgeUpBuff",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"Inter_CD": 0,
+				"Time": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11408 黑岩长剑
+	//
+	//  击败敌人后获得15%攻击力提升，持续30秒，最多叠加3层。每层时间独立 2020.3.26 测试完成
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Blackrock",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin", // 类似于一个永续的转换器，每次全局值变动就会apply一个modifier.(并不是只在apply时生效一次)
+					"globalValueKey": "_ABILITY_WEAPON_Blackrock_COUNT", //默认应该会置0
+					"valueSteps":
+					[
+                        // -0.5
+						0.5,
+						1.5,
+						2.5,
+						3.5,
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+                        // "Weapon_Blank",
+						"UNIQUE_Sword_Blackrock_Buff1",
+						"UNIQUE_Sword_Blackrock_Buff2",
+						"UNIQUE_Sword_Blackrock_Buff3",
+					],
+				},
+				{
+					"$type":"DoActionByKillingMixin",
+					"detectWindow":0.6,
+					"onKill":
+					[
+						{
+							"$type":"Predicated", //务必要用这个写法，不然other无法传递给predicate
+							"target":"Other",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"target":"Target",
+									"entityTypes":["Monster",],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Sword_Blackrock_Timer_Ind",
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+									"value": 1,
+									"useLimitRange": true,
+									"maxValue": 3,
+									"minValue": 0,
+									"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_Blackrock_Timer_Ind": //独立计时，每次失效就会减少1层
+				{
+					"isUnique":true,
+					"duration":"%Dua",
+					"stacking": "MultipleRefresh",
+					"state":"AttackUp",
+					"stackingOption":
+					{
+						"maxModifierNumForMultipleType": 3,
+					},
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+							"value": -1,
+							"useLimitRange": true,
+							"maxValue": 3,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+				"UNIQUE_Sword_Blackrock_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Blackrock1_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate",
+					},
+				},
+				"UNIQUE_Sword_Blackrock_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock2_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*2",
+					},
+				},
+				"UNIQUE_Sword_Blackrock_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Blackrock3_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+						},
+					],
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackRatio": "%Rate*3",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					//Ability卸除时需要重置全局变量值
+					"$type": "AddGlobalValue",
+					"key": "_ABILITY_WEAPON_Blackrock_COUNT",
+					"useLimitRange": true,
+					"minValue": 0,
+					"maxValue": 0,
+					"doOffStage": true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"Rate": 0,
+				"Dua": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//   11409  黑剑
+	//
+	//   普攻伤害提升，暴击后获得xx的治疗。  //测试2020.4.27
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Bloodstained",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type" : "AttachModifier",
+					"modifierName":"UNIQUE_Sword_Bloodstained",
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+					"damagePercentageRatio":"%Rate",
+				},
+			],
+			"modifiers"://
+			{
+				"UNIQUE_Sword_Bloodstained"://
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+									"$type":"ByHitCritical",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"Randomed",
+									"chance":"%Chance",
+									"successActions":
+									[
+										{
+											"$type":"ApplyModifier",
+											"modifierName":"UNIQUE_Sword_Bloodstained_Heal"
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_Bloodstained_Heal"://结束sprint时上一个别的buff
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"HealHP",
+							"amountByCasterAttackRatio":"%HealRate",
+						}
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Rate":0,
+				"HealRate":0,
+				"CDTime":0,
+				"Chance":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//   11410 暗巷闪光 (旧)
+	//
+	//   疾跑1秒后会获得40%攻击力提升效果  测试完成2020.4.27
+	//
+	///////////////////////////////////////////////////////////////
+	// {
+	// 	"Default":
+	// 	{
+	// 		"$type": "ConfigAbility",
+	// 		"abilityName": "Weapon_Sword_AfterSprint",
+	// 		"isDynamicAbility":true,
+	// 		"abilityMixins":
+	// 		[
+	// 			{
+	// 				"$type":"AttachToStateIDMixin",
+	// 				"stateIDs":["SprintBS","Sprint",],//去除了替代冲刺技能，水激流等。
+	// 				"modifierName":"UNIQUE_Sword_InSprint"
+	// 			},
+	// 		],
+	// 		"onRemoved":
+	// 		[
+	// 			{
+	// 				"$type":"RemoveUniqueModifier",
+	// 				"modifierName":"UNIQUE_Sword_AttackUp_AfterSprint",
+	// 				"doOffStage":true,
+	// 			},
+	// 		],
+	// 		"modifiers":
+	// 		{
+	// 			"UNIQUE_Sword_InSprint"://跑动中进行计时
+	// 			{
+	// 				"isUnique":true,
+	// 				"thinkInterval":"%Time",//1秒手感正正好。单次跑不会触发，双跑可以触发，持续跑一小会儿可以触发。
+	// 				"onThinkInterval":
+	// 				[
+	// 					{
+	// 						"$type":"AttachModifier",
+	// 						"modifierName":"UNIQUE_Sword_AttackUp_InSprint"
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Sword_AttackUp_InSprint"://疾跑时不消耗持续时间，结束sprint时上一个别的buff,持续6秒。
+	// 			{
+	// 				"state":"AttackUp",
+	// 				"isUnique":true,
+	// 				"onRemoved":
+	// 				[
+	// 					{
+	// 						"$type":"ApplyModifier",
+	// 						"modifierName":"UNIQUE_Sword_AttackUp_AfterSprint",
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Sword_AttackUp_AfterSprint":
+	// 			{
+	// 				"duration":"%Dura",
+	// 				"isUnique":true,
+	// 				"state":"AttackUp",
+	// 				"properties":
+	// 				{
+	// 					"Actor_AttackRatio":"%Rate",
+	// 				}
+	// 			},
+	// 		},
+	// 		"abilitySpecials":
+	// 		{
+	// 			"Time":0,
+	// 			"Rate":0,
+	// 			"Dura":0,
+	// 		},
+	// 	},
+	// },
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   11410 暗巷闪光
+	//
+	//   伤害提升XX%，受到伤害（伤害需要大于0）时该效果失效XX秒，此后恢复伤害加成
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Outlaw",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Sword_Outlaw",
+					"value": 1,
+					"doOffStage": true,
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Sword_Outlaw_Handler",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Sword_Outlaw",
+					"removeAppliedModifier": true,
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps":
+					[
+						"Blank",
+						"UNIQUE_Sword_Outlaw_Buff",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"Blank":{},
+				"UNIQUE_Sword_Outlaw_Handler":  //受击处理器，受到伤害时改变globalvalue
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"onBeingHit":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Hit_Timer",
+							"predicates":
+							[
+								{
+									"$type": "ByHitDamage",   //还是加个伤害判定，造成伤害才消失
+									"damage": 0,
+									"logic": "Greater",
+								},
+							],
+						},
+					],
+				},
+				"Hit_Timer":   //受击Timer，控制buff失效时长
+				{
+					"stacking": "Refresh",
+					"duration": "%Timer",
+					"onAdded":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Outlaw",
+							"value": 0,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Outlaw",
+							"value": 1,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Outlaw_Buff":    //对应的武器Buff加成
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					// "state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AddHurtDelta": "%Hurt_Rate",
+					},
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_Sword_Outlaw_Tip",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Hurt_Rate": 0.0,
+				"Timer": 0.0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   11411 碎星
+	//
+	//   自己受到任意元素影响时，对应元素抗性提升20%，攻击提升40%，持续5秒；当受到不同元素影响时，新的元素抗性替代旧的元素抗性；
+	//   (5.21 单机测试完毕)   写得略微复杂了，后续迭代可以去看relic里同效果的那套写法，用的同一个modifier，只传递不同数值。 by htc  2020.6.29
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Sword_ElmDmgEnhanceEleResistAtk",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Sword_ElmDmgEnhanceEleResistAtk_Handler",
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_ElmDmgEnhanceEleResistAtk_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onBeingHit":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByNot",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"None",
+										},
+									],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":1,
+									"logic":"GreaterOrEqual",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementFireResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Fire",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Water",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Grass",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Electric",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementIceResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Ice",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementWindResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Wind",
+										},
+									],
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_ElementRockResistAtkUp",
+									"predicates":
+									[
+										{
+											"$type":"ByHitElement",
+											"element":"Rock",
+										},
+									],
+								},
+								{
+									//同时提升攻击力百分比
+									"$type":"AttachModifier",
+									"modifierName":"UNIQUE_Sword_ElmDmgEnhanceAtk",
+								}
+							],
+						},
+					],
+				},
+				"UNIQUE_ElementFireResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_FireSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementWaterResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_WaterSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementWindResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_WindSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementElectricResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_ElecSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementIceResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_IceSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementRockResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_RockSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_ElementGrassResistAtkUp":
+				{
+					"duration":"%BuffTime",
+					"isUnique":true,
+					"stacking":"Refresh",
+					"onAdded":
+					[
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementFireResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementWindResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementIceResistAtkUp",
+						},
+						{
+							"$type":"RemoveModifier",
+							"modifierName":"UNIQUE_ElementRockResistAtkUp",
+						},
+					],
+					"state":"DefenseUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_GrassSubHurtDelta":"%ResistUp",
+					},
+				},
+				"UNIQUE_Sword_ElmDmgEnhanceAtk":
+				{
+					"stacking":"Refresh",
+					"isUnique":true,
+					"duration":"%BuffTime",
+					"state":"AttackUp",
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%AtkUpRate",
+					},
+				},
+			},
+			"onRemoved":
+			[
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementFireResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementWaterResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementWindResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementElectricResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementGrassResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementRockResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_ElementIceResistAtkUp",
+					"doOffStage":true,
+				},
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName":"UNIQUE_Sword_ElmDmgEnhanceAtk",
+					"doOffStage":true,
+				},
+			],
+			"abilitySpecials":
+			{
+				"ResistUp": 0,
+				"AtkUpRate": 0,
+				"BuffTime": 0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//   11412 降临之剑     （5.13测试完毕  待更改攻击为固定数值）
+	//   普攻和重击命中时20%概率触发小范围物理伤害，cd为10s；
+	//   男女主装备时，能额外提升20点攻击力（固定数值，不可增长）
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Sword_Psalmus",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Sword_Psalmus_Atk",
+					"predicates":
+					[
+						{
+							"$type":"ByHasFeatureTag",
+							"featureTagIDs":[1011],
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Sword_Psalmus",
+					"removeAppliedModifier":true,
+					"valueSteps":[-1.5,-0.5,0.5],
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_Psalmus_CD",
+						"UNIQUE_Sword_Psalmus_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_Psalmus_Atk":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackDelta":"%Atk",
+					},
+				},
+				"UNIQUE_Sword_Psalmus_CD":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"duration":"%CDTime",
+					"onAdded":
+					[
+						{
+                            "$type":"EquipAffixStart",
+                            "CD":"%CDTime",
+                            "equipAffixDataID":111412,
+                        },
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Sword_Psalmus",
+							"value":1,
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Psalmus_Handler":
+				{
+					"stacking":"Unique",
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Randomed",
+							"chance":"%ChanceProb",
+							"target":"Target",
+							"predicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+								{
+									"$type":"ByAttackTags",
+									"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"],
+								},
+								{
+									"$type":"ByHitDamage",
+									"damage":0,
+									"logic":"Greater",
+								},
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":111412,
+                                    "target":"Self",
+                                },
+							],
+							"successActions":
+							[
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Weapon_Psalmus",
+									"born":
+									{
+										"$type":"ConfigBornByHitPoint",
+										"offset":
+										{
+											"x":0.0,
+											"y":0.4,
+											"z":0.0,
+										},
+										"direction":
+										{
+											"$type":"ConfigDirectionByEntity",
+										},
+									},
+								},
+								{
+									"$type":"TriggerAttackEvent",
+									"targetType":"Enemy",
+									"attackEvent":
+									{
+										"attackPattern":
+										{
+											"$type":"ConfigAttackCircle",
+											"triggerType":"TriggerNoRepeat",
+											"fanAngle":360,
+											"radius":1.5,        //需要测试调整
+											"born":
+											{
+												"$type":"ConfigBornByHitPoint",
+												"offset":
+												{
+													"x":0.0,
+													"y":0.0,
+													"z":0.0,
+												},
+											},
+										},
+										"attackInfo":
+										{
+											"attackTag":"WeaponSkill",
+											"attackProperty":
+											{
+												"damagePercentage":"%AtkRate",
+												"bonusCritical":0,
+												"bonusCriticalHurt":0,
+												"enBreak":25,
+											},
+											"hitPattern":
+											{
+							                    "onHitEffectName" : "none",
+							                    "hitImpulseType":"LV2",
+                                        	    "reboundRatio" : 0,
+                                            	"hitHaltTime" : 0.0,
+                                            	"hitHaltTimeScale" : 0.01,
+                                            	"muteHitText" : false,
+											},
+											"forceCameraShake":false,
+										},
+									},
+								},
+								{
+									"$type":"AddGlobalValue",
+									"key":"_ABILITY_Sword_Psalmus",
+									"value":-1,
+									"useLimitRange":true,
+									"maxValue":-1,
+									"minValue":-1,
+								},
+							],
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ChanceProb":0,
+				"AtkRate":0,
+				"CDTime":0,
+				"Atk":0,
+			},
+		},
+	},
+
+
+	////////////////////////////////////////////////////////////////
+	//
+	// 11413  腐殖之剑
+	//
+	// 装备时有一个globalvalue   _Weapon_EquipMagnum =1
+	//
+	// 元素战技伤害+25%，暴击率额外提升8%。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Magnum",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValue",
+					"key":"_Weapon_EquipMagnum",
+					"value":1,
+					"doOffStage":true,
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type":"SetGlobalValue",
+					"key":"_Weapon_EquipMagnum",
+					"value":0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"ModifyDamageMixin",
+					"attackTags": ["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra",],
+					"damagePercentageRatio":"%Damage_Rate",
+					"bonusCritical":"%Crit_Rate",
+				},
+			],
+			"abilitySpecials":
+			{
+				"Damage_Rate":0,
+				"Crit_Rate":0,
+			},
+		},
+	},
+	//橙色武器都是不能复用的。所以都写死了。
+
+	////////////////////////////////////////////////////////////////
+	//
+	// 11501 风鹰剑
+	//
+	// 攻击提高（excel表实现），受伤时会生成一只风鹰特效，治疗角色xx%生命，并将周围敌人击退。 OK
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Legend_Falcon",
+			"isDynamicAbility":true,
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_Legend_Falcon",
+					"valueSteps":
+					[
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_Legend_Falcon_CD",
+						"UNIQUE_Sword_Legend_Falcon_Handler",
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_Legend_Falcon_Handler":
+				{
+					"isUnique": true,
+					"onBeingHit":
+					[
+                        {
+                            "$type":"Predicated",
+                            "target":"Target",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":111501,
+                                    "target":"Self",
+                                },
+                                {
+                                    "$type": "ByHitDamage", //考虑到描述是受伤，从受冲量调整为受到伤害。避免玩家误解。
+                                    "damage": 0,
+                                    "logic": "Greater",
+                                },
+                            ],
+							"successActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Weapon_Falcon",
+									"born":
+									{
+										// "$type": "ConfigBornByTarget",//其实默认target是self，所以还是会播self上。
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x": 0,
+											"y": 0,
+											"z": 0
+										},
+									},
+								},
+								{
+									"$type":"FireEffect",
+									"effectPattern":"Eff_Weapon_Falcon_Head",
+								},
+								{
+									"$type" : "TriggerAttackEvent",
+									"targetType" : "Enemy",
+									"attackEvent":
+									{
+										"attackPattern":
+										{
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"radius": 6,
+											"born":
+											{
+												"$type": "ConfigBornByHitPoint",
+												"offset" :
+												{
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+												"direction":
+												{
+													"$type" : "ConfigDirectionByEntity",
+												},
+											},
+										},
+										"attackInfo":
+										{
+											"attackTag":"WeaponSkill",
+											"attackProperty":
+											{
+												"damagePercentage": "%D_Rate",
+								 				"bonusCritical": 0,
+								 				"bonusCriticalHurt": 0,
+								 				"enBreak" : 25,
+											},
+											"hitPattern":
+											{
+										  		"onHitEffectName": "default",
+										  		"hitImpulseType":"LV3",
+												"retreatType": "ByHitDirection",
+										  		"reboundRatio": 0,
+										  		"hitHaltTime": 0.0,
+										  		"hitHaltTimeScale": 0.01,
+										  		"muteHitText": false
+											},
+											"forceCameraShake": true,
+											"cameraShake":
+											{
+												"shakeType": "CustomVector",
+												"shakeRange": 0.15,
+												"shakeTime": 0.12,
+												"shakeDistance": 30,
+												"shakeDir":
+												{
+													"x":0,
+													"y":0,
+													"z":-1,
+												},
+											},
+										},
+									},
+								},
+								{
+									"$type": "HealHP",
+									"amountByCasterAttackRatio": "%H_Rate"
+								},
+								{
+                                    "$type":"EquipAffixStart",
+                                    "CD":"%CDTime",
+                                    "equipAffixDataID":111501,
+                                },
+								{
+									"$type": "AddGlobalValue",
+									"key": "_ABILITY_Weapon_Sword_Legend_Falcon",
+									"value": -1,
+									"useLimitRange": true,
+									"maxValue": -1,
+									"minValue": -1,
+								},
+							],
+                        },
+					],
+				},
+				"UNIQUE_Sword_Legend_Falcon_CD":
+				{
+					"duration": "%CDTime",
+					"isUnique": true,
+					"onRemoved":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_Legend_Falcon",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": 0,
+							"minValue": 0,
+							"doOffStage": true, //这个非常重要。。必须场下也能改回去。
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Atk_Rate": 0,
+				"H_Rate": 0,
+				"D_Rate": 0,
+				"CDTime": 0,
+			},
+		},
+	},
+
+
+    ////////////////////////////////////////////////////////////////
+    //
+    // 11502  天空之刃
+    //
+    // 释放元素爆发后，进入20秒攻速移速提升，普攻重击附带30%攻击力伤害，持续15秒。
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Weapon_Sword_Legend_Dvalin",
+            "isDynamicAbility":true,
+            "abilityMixins":
+            [
+                {
+                    "$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+                    "onTriggerUltimateSkill":
+                    [
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Sword_Legend_Dvalin_MoveSpeed_Up",
+                            "predicates":
+                            [
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":111502,
+                                    "target":"Self",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifier",
+                            "modifierName": "UNIQUE_Sword_Legend_Dvalin",
+                            "predicates":
+                            [
+								{
+                                    "$type":"ByEquipAffixReady",
+                                    "equipAffixDataID":111502,
+                                    "target":"Self",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Sword_Legend_Dvalin_MoveSpeed_Up":
+                {
+                    "state":"SpeedUp",
+                    "isUnique":true,
+                    "duration":"%Time",
+                    "isLimitedProperties":true,
+                    "properties":
+                    {
+                        "Animator_MoveSpeedRatio" : "%Speed",
+                        "Animator_AttackSpeedRatio" : "%AtkSpeed",
+                    },
+                },
+                "UNIQUE_Sword_Legend_Dvalin":
+                {
+                    "isUnique":true,
+                    "duration":"%Time",
+                    "onAdded":
+                    [
+                    	{
+                            "$type":"EquipAffixStart",
+                            "CD":"%Time",
+                            "equipAffixDataID":111502,
+                        },
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern":"Eff_Weapon_Dvalin_Sword",
+                            "otherTargets":
+                            {
+                                "$type":"SelectTargetsByEquipParts",
+                                "equipPartNames" : ["equip01","equip02","sheathPoint"],
+                            },
+                        },
+                    ],
+                    "onAttackLanded":
+                    [
+                        {
+                            "$type":"Predicated",
+                            "target":"Target",
+                            "targetPredicates":
+                            [
+                                {
+                                    "$type":"ByEntityTypes",
+                                    "entityTypes":["Monster",],
+                                },
+                                {
+                                    "$type":"ByAttackTags",
+                                    "attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+                                },
+                                {
+                                    "$type": "ByHitDamage",
+                                    "damage": 0,
+                                    "logic": "Greater",
+                                },
+                            ],
+                            "successActions":
+                            [
+                                {
+                                    "$type":"DamageByAttackValue",  //这个效果格挡后伤害仍然会给出，但是打元素盾后伤害不会出现，因为元素盾主人是锁血状态。
+                                    "target":"Target",
+                                    "born":
+                                    {
+                                        "$type":"ConfigBornByTarget",
+                                        "offset":
+                                        {
+                                            "x":0,
+                                            "y":0,
+                                            "z":0,
+                                        },
+                                    },
+                                    "attackInfo":
+                                    {
+                                        "attackProperty":
+                                        {
+                                            "damagePercentage": "%ExtraDamge",
+                                            "elementType":"None",
+                                            "strikeType":"Default",
+                                            "enBreak" : 0,
+                                        },
+                                        "hitPattern" :
+                                        {
+                                            "onHitEffectName" : "none",
+                                            "hitImpulseType":"Default",
+                                            "reboundRatio" : 0,
+                                            "hitHaltTime" : 0.0,
+                                            "hitHaltTimeScale" : 0.01,
+                                            "muteHitText" : false,
+                                        },
+                                        "forceCameraShake": false,
+                                    },
+                                },
+                            ]
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials":
+            {
+            	"Crit": 0,
+                "Speed":0,
+                "AtkSpeed":0,
+                "ExtraDamge":0,
+                "Time":0,
+            },
+        },
+    },
+
+
+///////////////////////////////////////////////////////////////
+//
+//  11503 苍古自由之誓
+//  某项数值能力提升XX
+//  触发元素反应时叠层，叠满2层时获得全队Buff，普攻、重击、下落攻击 + 攻击力提升   【3.0修正】：新增草元素相关反应
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Widsith",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Widsith",
+        			"value":0,
+				},
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Widsith_Check",
+        			"value":0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Weapon_Sword_Widsith_Check",
+                    "valueSteps":[-1.5, -0.5, 0.5],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps":
+                    [
+                    	"UNIQUE_Weapon_Sword_Widsith_CD",
+                    	"UNIQUE_Weapon_Sword_Widsith_Handler",
+                    ],
+                },
+                {
+                	//这里考虑叠2层就能触发效果，可根据反馈适当调整
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Weapon_Sword_Widsith",
+                    "valueSteps":[-0.5, 0.5, 1.5, 100],
+                    "removeAppliedModifier": true,
+                    "modifierNameSteps":
+                    [
+                    	"UNIQUE_Weapon_Sword_Widsith_0",
+                    	"UNIQUE_Weapon_Sword_Widsith_1",
+                    	"UNIQUE_Weapon_Sword_Widsith_Full",
+                    ],
+                },
+			],
+			"modifiers":
+			{
+                "UNIQUE_Weapon_Sword_Widsith_CD":
+                {
+                	"isUnique":true,
+                	"duration":"%CDTime",
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"SetGlobalValue",
+                            "key":"_ABILITY_Weapon_Sword_Widsith",
+                            "value":0,
+                            "doOffStage":true,
+                        },
+                        {
+                        	"$type":"SetGlobalValue",
+		        			"key":"_ABILITY_Weapon_Sword_Widsith_Check",
+		        			"value":0,
+		        			"doOffStage":true,
+                        },
+                    ],
+                },
+				"UNIQUE_Weapon_Sword_Widsith_Handler":   //检测自身触发元素反应
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20, //装备统一使用默认值20
+							"entityTypes": ["Monster"],
+							"reactionTypes":
+							[
+								"Explode",
+								"Stream",
+								"Burning",
+								"Melt",
+								"Freeze",
+								"Shock",
+								"Superconductor",
+								"SwirlFire",
+								"SwirlWater",
+								"SwirlElectric",
+								"SwirlIce",
+								"CrystallizeFire",
+								"CrystallizeWater",
+								"CrystallizeElectric",
+								"CrystallizeIce",
+								"Overdose",
+								"OverdoseElectric",
+								"OverdoseGrass",
+								"Overgrow",
+								"OvergrowMushroomFire",
+								"OvergrowMushroomElectric"  //【3.0修正】：新增草元素相关反应
+							],
+							"actions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Weapon_Sword_Widsith_AddGlobalvalue",
+									"doOffStage": true,
+									"predicates":
+									[
+										{
+											"$type": "ByEquipAffixReady",
+											"target": "Self",
+											"equipAffixDataID": 111503,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Widsith_AddGlobalvalue":
+				{
+					"stacking": "Unique",
+					"isUnique": true,
+					"duration": "%TriggerCD", //内置触发cd。
+					"onAdded":
+					[
+						{
+	                        "$type": "AddGlobalValue",
+	                        "key":"_ABILITY_Weapon_Sword_Widsith",
+	                        "value":1,
+	                        "useLimitRange":true,
+	                        "maxValue":2,
+							"doOffStage":true,
+	                    },
+	                    {
+	                    	"$type":"ApplyModifier",
+	                    	"modifierName":"UNIQUE_Weapon_Sword_Widsith_Timer",
+							"doOffStage":true,
+	                    },
+	                    {
+	                    	"$type":"Predicated", //下面部分改为1次执行，防止断线重连重新触发。
+	                    	"doOffStage":true,
+	                    	"targetPredicates":
+	                    	[
+	                    		{
+	                    			"$type":"ByTargetGlobalValue",
+	                    			"value":2,
+	                    			"key":"_ABILITY_Weapon_Sword_Widsith",
+	                    			"compareType":"MoreThanAndEqual"
+	                    		}
+	                    	],
+	                    	"successActions":
+	                    	[
+		                        {
+		                            "$type":"EquipAffixStart",
+		                            "CD":"%CDTime",
+		                            "equipAffixDataID":111503,
+		                            "doOffStage":true,
+		                        },
+		                        {
+		                        	//关闭叠层检测
+		                        	"$type":"SetGlobalValue",
+				        			"key":"_ABILITY_Weapon_Sword_Widsith_Check",
+				        			"value":-1,
+				        			"doOffStage":true,
+		                        },
+		                        {
+		                            "$type":"FireEffect",
+		                            "effectPattern":"Eff_Weapon_Widsith_Sword_Burst",
+		                            "doOffStage":true,
+		                        },
+		                        {
+		                        	//这个buff会成长，所以需要移除再加。如果不成长其实可以不移除再加。
+		                        	"$type":"RemoveUniqueModifier",
+		                        	"target": "AllPlayerAvatars",
+		                        	"modifierName":"UNIQUE_Weapon_Widsith_CommonBuff",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+		                        },
+		                        {
+		                        	//这个buff会成长，所以需要移除再加。
+		                        	"$type":"RemoveUniqueModifier",
+		                            "target":"AllPlayerAvatars",
+		                        	"modifierName":"UNIQUE_Weapon_Sword_Widsith_SwordBuff",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+		                        },
+		                        {
+		                        	"$type":"ApplyModifier",
+		                            "target":"AllPlayerAvatars",
+		                        	"modifierName":"UNIQUE_Weapon_Widsith_CommonBuff",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+		                        },
+		                        {
+		                        	"$type":"ApplyModifier",
+		                            "target":"AllPlayerAvatars",
+		                        	"modifierName":"UNIQUE_Weapon_Sword_Widsith_SwordBuff",
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+		                        },
+		                        {
+		                        	"$type":"ApplyModifier",
+		                            "target":"AllPlayerAvatars",
+		                        	"modifierName":"UNIQUE_Weapon_Sword_Widsith_BuffEffect", //处理重连做的修改。但影响可读可改性。后续不建议再为重连特殊修改了。
+									"doOffStage":true,
+									"predicates":
+									[
+										{
+											"$type":"ByTargetPositionToSelfPosition",
+											"compareType":"XZ",
+											"value":40,
+											"logic": "LesserOrEqual",
+										},
+									],
+		                        },
+	                    	],
+	                    },
+					],
+				},
+				 "UNIQUE_Weapon_Sword_Widsith_Timer":
+                {
+                    "duration": 30,   //这一系列的相思之符持续时间都会比较久
+                    "isUnique": true,
+                    "onRemoved":
+                    [
+                        {
+                            "$type":"SetGlobalValue",
+	                        "key":"_ABILITY_Weapon_Sword_Widsith",
+                            "value":0,
+                     	    "doOffStage":true, //恢复的操作必须是offstage
+                            "predicates":
+                            [
+                            	{
+                            		"$type":"ByTargetGlobalValue",
+	                        		"key":"_ABILITY_Weapon_Sword_Widsith", //当4的时候已经触发buff了，就不该清除了。
+                            		"value":1,
+                            		"compareType":"LessAndEqual",
+                            	},
+                            ],
+                        },
+                    ],
+                },
+				"UNIQUE_Weapon_Sword_Widsith_0":
+				{
+                    "isUnique":true,
+				},
+				"UNIQUE_Weapon_Sword_Widsith_1":
+                {
+                    "isUnique":true,
+                    "onAdded":
+                    [
+                        {
+                            "$type":"AttachEffect",
+                            "effectPattern":"Eff_Weapon_EnergyPoem_Stack1",
+                            "doOffStage":true,
+                        },
+                    ],
+                },
+                "UNIQUE_Weapon_Sword_Widsith_Full"://不需要执行行为了，防止断线时重新onadded一遍
+                {
+                	"isUnique":true,
+                },
+                "UNIQUE_Weapon_Widsith_CommonBuff": //这个套装buff效果
+                {
+                	"isUnique": true,
+                	"duration": "%Dura",
+                	"isLimitedProperties": true,
+                	"state": "AttackUp",
+                	"buffID": 10001,
+                	"properties":
+                	{
+						"Actor_AttackRatio": "%CommonBuff",
+                	},
+                },
+                "UNIQUE_Weapon_Sword_Widsith_SwordBuff":  //这个是单个武器buff效果
+                {
+                	"isUnique": true,
+                	"stacking": "Refresh",
+                	"duration": "%Dura",
+                	"modifierMixins":
+                	[
+                		{
+							"$type":"ModifyDamageMixin",
+							"attackTags":
+							[
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+								"ExtraAttack",
+								"FallingAttack",
+							],
+							"damagePercentageRatio":"%SwordBuff",
+                		},
+                	],
+                },
+                "UNIQUE_Weapon_Sword_Widsith_BuffEffect":
+                {
+                	"isUnique":true,
+                	"duration":0.3,
+                	"onAdded":
+                	[
+                		{
+                			"$type":"FireEffect",
+                			"effectPattern":"Eff_Weapon_Widsith_Common_TeamBuff",
+                		},
+                		{
+                			"$type":"FireEffect",
+                			"effectPattern": "Eff_Weapon_Widsith_Sword_TeamBuff",
+                		},
+                	],
+                },
+			},
+            "abilitySpecials":
+            {
+                "TriggerCD":0, //触发间隔
+                "Dura":0,    //buff持续时间
+            	"SwordBuff":0,  //单手剑buff数值
+                "CommonBuff":0, //commonBuff强度，尽量避免精炼会升级导致来回覆盖。
+                "CDTime":0, //buff的cd
+            },
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  11504 斫峰之刃
+//
+//  基础数值：护盾强效+XX%
+//  攻击命中敌人时，提升自身攻击力X%，持续10s，最多叠加5层
+//  角色如果拥有护盾，则提升效果翻倍
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Kunwu_DamageUpWithShield",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Sword_Kunwu_DamageUpWithShield_Handler",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName":"UNIQUE_Weapon_Sword_Kunwu_BuffEffHandler",
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Sword_Kunwu_BuffLevel",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+				{
+					"$type":"AddGlobalValue",
+					"key":"_ABILITY_Sword_Kunwu_IsHasShield",
+					"useLimitRange" : true,
+					"maxValue" : 0,
+					"minValue" : 0,
+					"doOffStage":true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Sword_Kunwu_IsHasShield",
+					"valueSteps":[-0.5,0.5,1.5],
+					"modifierNameSteps":["UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff","UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff"],
+				},
+				{
+					"$type": "AttachModifierToPredicateMixin",
+					"type": "Current",
+					"modifierName": "UNIQUE_Weapon_Sword_Kunwu_CheckShield",
+					"predicates":
+					[
+						{
+							"$type": "ByHasShield",
+							"type": "All",
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				//攻击命中叠层判定
+				"UNIQUE_Weapon_Sword_Kunwu_DamageUpWithShield_Handler":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type":"Predicated",
+							"target":"Target",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByEntityTypes",
+									"entityTypes":["Monster"],
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"modifierName":"UNIQUE_Weapon_Sword_Kunwu_AddCount",
+									"target":"Self",
+								},
+							],
+						},
+					],
+				},
+				//实时检测自身是否有盾,并上个Tag
+				"UNIQUE_Weapon_Sword_Kunwu_CheckShield":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Sword_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":1,
+							"minValue":1,
+							"doOffStage":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Sword_Kunwu_IsHasShield",
+							"useLimitRange":true,
+							"maxValue":0,
+							"minValue":0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//Buff叠层计数器
+				"UNIQUE_Weapon_Sword_Kunwu_AddCount":
+				{
+					"isUnique":true,
+					"stacking":"Unique",
+					"duration":0.3,
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Sword_Kunwu_BuffLevel",
+							"value":1,
+							"useLimitRange" : true,
+							"maxValue" : 5,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"UNIQUE_Weapon_Sword_Kunwu_BuffTimer",
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_BuffTimer":
+				{
+					"isUnique":true,
+					"stacking":"Refresh",
+					"duration":"%Timer",
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key":"_ABILITY_Sword_Kunwu_BuffLevel",
+							"useLimitRange" : true,
+							"maxValue" : 0,
+							"minValue" : 0,
+							"doOffStage":true,
+						},
+					],
+				},
+				//无盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Sword_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Blank",
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level01",
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level02",
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level03",
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level04",
+								"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*3",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_NoShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*5",
+					},
+				},
+				//有盾时Buff加成，实时变化
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Sword_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Blank",
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level01",
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level02",
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level03",
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level04",
+								"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level05",
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Blank":
+				{
+					"isUnique":true,
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level01":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*2",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level02":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*4",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level03":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*6",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level04":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*8",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Kunwu_HasShieldBuff_Level05":
+				{
+					"isUnique":true,
+					"isLimitedProperties":true,
+					"properties":
+					{
+						"Actor_AttackRatio":"%Dmg_Rate*10",
+					},
+				},
+				//实时检测自身Buff对应的特效层数
+				"UNIQUE_Weapon_Sword_Kunwu_BuffEffHandler":
+				{
+					"isUnique":true,
+					"modifierMixins":
+					[
+						{
+							"$type":"AttachModifierToSelfGlobalValueMixin",
+							"globalValueKey":"_ABILITY_Sword_Kunwu_BuffLevel",
+							"valueSteps":[-0.5,0.5,1.5,2.5,3.5,4.5,5.5],
+							"modifierNameSteps":
+							[
+								"Weapon_Sword_Kunwu_Eff_Blank",
+								"Weapon_Sword_Kunwu_Eff_1",
+								"Weapon_Sword_Kunwu_Eff_2",
+								"Weapon_Sword_Kunwu_Eff_3",
+								"Weapon_Sword_Kunwu_Eff_4",
+								"Weapon_Sword_Kunwu_Eff_5",
+							],
+						},
+					],
+				},
+				"Weapon_Sword_Kunwu_Eff_Blank":
+				{},
+				"Weapon_Sword_Kunwu_Eff_1":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_01",
+						},
+					],
+				},
+				"Weapon_Sword_Kunwu_Eff_2":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_02",
+						},
+					],
+				},
+				"Weapon_Sword_Kunwu_Eff_3":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_03",
+						},
+					],
+				},
+				"Weapon_Sword_Kunwu_Eff_4":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_04",
+						},
+					],
+				},
+				"Weapon_Sword_Kunwu_Eff_5":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Weapon_Kunwu_Stack_05",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Shield_Up": 0,
+				"Dmg_Rate":0,
+				"Timer":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11505 磐岩结绿 Equip_Sword_Morax
+	//  角色最大生命值转化为攻击力
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Morax_HpToAtk",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Sword_Morax_Last_MaxHp",
+					"value": "%FIGHT_PROP_MAX_HP",
+					"doOffStage": true,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Morax_Handler",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"DoActionByEventMixin",
+					"type" : "Both",
+					"onEvent":"HP",   //血量变动时还会再做一次检测。
+					"actions" :
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Morax_Last_MaxHp",
+							"value": "%FIGHT_PROP_MAX_HP",
+							"doOffStage": true,
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Sword_Morax_HpToAtk_Buff",
+							"doOffStage": true,
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Sword_Morax_HpToAtk_Buff",
+							"doOffStage": true,
+						},
+					],
+					"predicates":
+					[
+						{
+							"$type":"ByNot",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Sword_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+						},
+					],
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_Morax_Handler":    //生命转换器
+				{
+					"isUnique": true,
+					"thinkInterval": 2.0,
+					"onAdded":
+					[
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Sword_Morax_HpToAtk_Buff",
+						},
+					],
+					"onThinkInterval":
+					[
+						{
+							"$type": "Predicated",
+							"target": "Self",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Sword_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"compareType": "Equal",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Sword_Morax_Last_MaxHp",
+									"value": "%FIGHT_PROP_MAX_HP",
+									"doOffStage": true,
+								},
+								{
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Sword_Morax_HpToAtk_Buff",
+									"doOffStage": true,
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Sword_Morax_HpToAtk_Buff",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Sword_Morax_HpToAtk_Buff":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_AttackExtraDelta": "%FIGHT_PROP_MAX_HP*%HptoAtk_Factor",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"Hp_Rate": 0,
+				"HptoAtk_Factor": 0,
+			},
+		},
+	},
+
+	///////////////////////////////////////////////////////////////
+	//
+	//  11414 幕府套剑 Equip_Sword_Bakufu
+	//  1.每次使用元素战技获得一层充能，持续30秒，最多获得3层充能； //加了0.1秒内置cd防止可莉这种白嫖，暂不支持后场
+	//  2.使用元素爆发后消耗所有充能层数，在2秒后基于层数为持有者回复元素能量。
+	//
+	///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Bakufu",
+			"isDynamicAbility": true,
+			"abilityMixins":
+			[
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Bakufu_Stack_Adder",
+							"doOffStage": true,
+						},
+					],
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Bakufu_EnergyReviver",
+							"doOffStage": true,
+						},
+					]
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_Bakufu", //默认会置0
+					"valueSteps":[0.5,1.5,2.5,100],
+					"removeAppliedModifier": true,
+					"modifierNameSteps":
+					[
+						"UNIQUE_Sword_Bakufu_Buff1",
+						"UNIQUE_Sword_Bakufu_Buff2",
+						"UNIQUE_Sword_Bakufu_Buff3",
+					],
+				},
+			],
+			"onRemoved":
+			[
+				{
+					"$type":"RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Weapon_Sword_Bakufu_Stack_Adder",
+					// "doOffStage": true, //不过onRemoved本来就是doOffstage？
+				},
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Bakufu",
+					"value": 0,
+					// "doOffStage": true,
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Weapon_Sword_Bakufu_Stack_Adder":
+				{
+					"isUnique": true,
+					"stacking":"Unique",
+					"duration": "%CDTime",
+					"onAdded":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_Bakufu",
+							"value":1,
+							"maxValue": "%MaxStack",
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+						{
+							"$type": "ApplyModifier", //注意下移除武器还有没有留下modifier。会，apply会不回收。手动回收了
+							"modifierName": "UNIQUE_Weapon_Sword_Bakufu_Timer",
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Weapon_Sword_Bakufu_Timer":
+				{
+					"duration": "%Dura",
+					"isUnique": true,
+					/*"stacking": "MultipleAllRefresh",//如果改成多层独立时间，就每次onRemoved时-1
+					"stackingOption":
+					{
+						"$type": "ConfigModifierStackingOption",
+						"maxModifierNumForMultipleType": "%MaxStack",
+					},*/
+					"onRemoved":
+					[
+						{
+							"$type":"SetGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_Bakufu",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Sword_Bakufu_Buff1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Bakufu1_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Bakufu_Buff2":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Bakufu2_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Bakufu_Buff3":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+                            "effectPattern": "Eff_Weapon_Bakufu3_Sword",
+							"otherTargets":
+							{
+								"$type":"SelectTargetsByEquipParts",
+								"equipPartNames" : ["equip01","equip02","sheathPoint"],
+							},
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Bakufu_EnergyReviver": //如果按照默认后一个覆盖前一个，会导致连续放会不回能。//不友好，改为不会再次触发。
+				{
+					"duration": 2,
+					"isUnique": true,
+					"stacking": "Unique",
+					"onAdded":
+					[
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Weapon_Sword_Bakufu",
+							"overrideMapKey": "NowStack",
+							"doOffStage": true,
+						},
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName":"UNIQUE_Weapon_Sword_Bakufu_Timer",
+							"doOffStage": true,
+						},
+						{
+							"$type":"SetGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_Bakufu",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ReviveElemEnergy",
+							"value": "%EnergyPerStack*%NowStack",
+							"doOffStage": true,
+						},
+						// {
+						// 	"$type":"FireEffect",
+						// 	"effectPattern": "Eff_Weapon_Bakufu_GainEnergy",
+						// 	"doOffStage": true,
+						// },
+					]
+				},
+			},
+			"abilitySpecials":
+			{
+				"Dura":0,
+				"MaxStack":0,
+				"CDTime":0,
+				"EnergyPerStack":0,
+				"NowStack":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11509 魔神套剑 Equip_Sword_Narukami
+	//  默认提升全元素伤害。
+	//  特定情况下强化属性。
+	//  1、能量不满
+	//  2、普攻和重击造成元素伤害时 //单手剑，暂不dooffstage
+	//  3、元素爆发释放
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Narukami",
+			"isDynamicAbility": true,
+			"onAdded":
+			[
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Sword_Narukami_BuffLevel",
+					"value": 0,
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Sword_Narukami_Check",
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Sword_Narukami_WeaponBaseBuff",
+				},
+				{//上的时候预先检测一次属性。
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Electric",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Electric",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Fire",
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Fire",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Fire",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Wind"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Wind",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Wind",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Ice"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Ice",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Ice",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Water"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Water",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Water",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Grass"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Grass",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Grass",
+							"value":0
+						},
+					],
+				},
+				{
+					"$type":"Predicated",
+					"targetPredicates":
+					[
+						{
+							"$type":"ByTargetElement",
+							"elementType": "Rock"
+						},
+					],
+					"successActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Rock",
+							"value": 1
+						},
+					],
+					"failActions":
+					[
+						{
+							"$type":"SetOverrideMapValue",
+							"overrideMapKey": "Rock",
+							"value":0
+						},
+					],
+				},
+			],
+			"onRemoved": //下武器的时候不会自动清除value，得手动清除。还有种办法是mixin里初始化。
+			[
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Sword_Narukami_BuffLevel",
+					"value": 0,
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type":"AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey":"_ABILITY_Sword_Narukami_BuffLevel",
+					"valueSteps":[0.5,1.5,2.5,3.5], //0的时候不写，也会正确卸掉modifier。
+					"modifierNameSteps":
+					[
+						"UNIQUE_Weapon_Sword_Narukami_Buff1",
+						"UNIQUE_Weapon_Sword_Narukami_Buff2",
+						"UNIQUE_Weapon_Sword_Narukami_Buff3",
+					],
+				},
+				{//此处如果选用DoActionByEnergyChangeMixin会发现扣除能量时不会执行。那个mixin只监视增加
+					"$type":"AttachModifierToPredicateMixin",
+					"modifierName": "UNIQUE_Sword_Narukami_Mark1",
+					// "onEvent": "None",
+					"type": "Both",
+					"predicates":
+					[
+						{
+							"$type": "ByEnergyRatio",
+							"ratio": 1,
+							"logic": "Lesser",
+						},
+					]
+				},
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerUltimateSkill":
+					[
+						{
+							"$type":"AttachModifier",
+							"modifierName": "UNIQUE_Sword_Narukami_Mark3",
+							"doOffStage": true,
+						},
+					]
+				},
+			],
+			"modifiers":
+			{
+				"UNIQUE_Sword_Narukami_WeaponBaseBuff":
+				{
+					"isUnique":true,
+					"isLimitedProperties": true,
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta":"%BaseBuff",
+						"Actor_FireAddHurtDelta":"%BaseBuff",
+						"Actor_WindAddHurtDelta":"%BaseBuff",
+						"Actor_IceAddHurtDelta":"%BaseBuff",
+						"Actor_WaterAddHurtDelta":"%BaseBuff",
+						"Actor_GrassAddHurtDelta":"%BaseBuff",
+						"Actor_RockAddHurtDelta":"%BaseBuff",
+					},
+				},
+				"UNIQUE_Sword_Narukami_Check":
+				{
+					"isUnique":true,
+					"onAttackLanded":
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",
+							"doOffStage": true,
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack"]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+								{
+									"$type":"ByAny",
+									"predicates":
+									[
+										{
+											"$type": "ByHitElement",
+											"element": "Wind",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Fire",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Water",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Ice",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Electric",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Rock",
+										},
+										{
+											"$type": "ByHitElement",
+											"element": "Grass",
+										},
+									]
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"ApplyModifier",
+									"doOffStage": true,
+									"modifierName": "UNIQUE_Sword_Narukami_Mark2",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Sword_Narukami_Mark1":
+				{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type":"Predicated",//考虑到后场变不了属性，不易触发buff，不加dooffstage了。（太长而且浪费算力）
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Wind"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Ice"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Water"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Grass"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Rock"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"value": 1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"value": -1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Sword_Narukami_Mark2":
+				{
+					"isUnique": true,
+					"duration": "%Dura2",
+					"onAdded":
+					[
+						{
+							"$type":"Predicated",//考虑到后场变不了属性，不易触发buff，不加dooffstage了。（太长而且浪费算力）
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Wind"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Ice"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Water"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Grass"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Rock"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"value": 1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"value": -1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Sword_Narukami_Mark3":
+				{
+					"isUnique": true,
+					"duration": "%Dura3",
+					"onAdded":
+					[
+						{
+							"$type":"Predicated",//考虑到后场变不了属性，不易触发buff，不加dooffstage了。（太长而且浪费算力）
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Electric", //排序为elemPrority，在GlobalCombat里，应该用这个排序。
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Electric",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Fire",
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Fire",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Wind"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Wind",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Ice"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Ice",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Water"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Water",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Grass"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Grass",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByTargetElement",
+									"elementType": "Rock"
+								},
+							],
+							"successActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value": 1
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type":"SetOverrideMapValue",
+									"overrideMapKey": "Rock",
+									"value":0
+								},
+							],
+						},
+						{
+							"$type":"AddGlobalValue",
+							"value": 1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"AddGlobalValue",
+							"value": -1,
+							"key": "_ABILITY_Sword_Narukami_BuffLevel",
+							"maxValue": 3,
+							"minValue": 0,
+							"useLimitRange": true,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Weapon_Sword_Narukami_Buff1":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"onAdded": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Narukami_Buff1_EffectDelay", //仅buff1有这个问题，刚装备时武器还未加载。需要延迟给武器挂特效
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Narukami_Buff1_Effect",
+							"doOffStage": true,
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta":"%Rate1*%Electric",
+						"Actor_FireAddHurtDelta":"%Rate1*%Fire",
+						"Actor_WindAddHurtDelta":"%Rate1*%Wind",
+						"Actor_IceAddHurtDelta":"%Rate1*%Ice",
+						"Actor_WaterAddHurtDelta":"%Rate1*%Water",
+						"Actor_GrassAddHurtDelta":"%Rate1*%Grass",
+						"Actor_RockAddHurtDelta":"%Rate1*%Rock",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Narukami_Buff1_EffectDelay": {
+					"isUnique": true,
+					"duration": 5.5, //程序推荐的极限时长
+					"onAdded": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Narukami_Buff1_Effect",
+							"doOffStage": true,
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+					"thinkInterval": 1.0,
+					"onThinkInterval": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Narukami_Buff1_Effect",
+							"doOffStage": true,
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Narukami_Buff1_Effect": {
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_NarukamiBuff_Sword_1", //天空球，嫣朵拉这些位置已经占了，武器不可以占据身体外位置。
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Narukami_Buff2":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_NarukamiBuff_Sword_2",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta":"%Rate2*%Electric",
+						"Actor_FireAddHurtDelta":"%Rate2*%Fire",
+						"Actor_WindAddHurtDelta":"%Rate2*%Wind",
+						"Actor_IceAddHurtDelta":"%Rate2*%Ice",
+						"Actor_WaterAddHurtDelta":"%Rate2*%Water",
+						"Actor_GrassAddHurtDelta":"%Rate2*%Grass",
+						"Actor_RockAddHurtDelta":"%Rate2*%Rock",
+					},
+				},
+				"UNIQUE_Weapon_Sword_Narukami_Buff3":
+				{
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect",
+							"doOffStage": true,
+							"effectPattern": "Eff_Weapon_NarukamiBuff_Sword_3",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+					"properties":
+					{
+						"Actor_ElecAddHurtDelta":"%Rate3*%Electric",
+						"Actor_FireAddHurtDelta":"%Rate3*%Fire",
+						"Actor_WindAddHurtDelta":"%Rate3*%Wind",
+						"Actor_IceAddHurtDelta":"%Rate3*%Ice",
+						"Actor_WaterAddHurtDelta":"%Rate3*%Water",
+						"Actor_GrassAddHurtDelta":"%Rate3*%Grass",
+						"Actor_RockAddHurtDelta":"%Rate3*%Rock",
+					},
+				},
+			},
+			"abilitySpecials":
+			{
+				"BaseBuff":0,
+				"Rate1":0,
+				"Rate2":0,
+				"Rate3":0,
+				"Dura2":0,
+				"Dura3":0,
+				"Electric":0,
+				"Fire":0,
+				"Wind":0,
+				"Ice":0,
+				"Water":0,
+				"Grass":0,
+				"Rock":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11415 雪山剑  Equip_Sword_Opus
+	//
+	//  依赖角色防御力一定比例提升小技能的附加伤害。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Opus",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "SetGlobalValue", //武器有个bug是onAdded时间比overrideMap设置早，但目前看读取没有问题？
+					"key": "_ABILITY_Weapon_Sword_Opus_MaxExtraDamage",
+					"value": "%MaxExtraDamage",
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Opus_Zero",
+					"value": 0,
+				},
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Opus_Enable",
+					"value": 0,
+				},
+			],
+			"onRemoved": [
+				{
+					"$type": "RemoveUniqueModifier",
+					"modifierName": "UNIQUE_Weapon_Sword_Opus_CD",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_Opus_Enable", //0的时候计时
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						// "UNIQUE_Weapon_Sword_Opus_CD",  //这个cd计算导致误差严重。必须触发瞬间同时开始记cd。
+						"UNIQUE_Weapon_Sword_Opus_Mixin",
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Weapon_Sword_Opus_Mixin": {
+					"isUnique": true,
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"Elemental_Art",
+								"Elemental_Art_Hold",
+								"Elemental_Art_Extra",
+							],
+							"damageExtra": "%DefToArtRatio*%FIGHT_PROP_CUR_DEFENSE", //但是实际上作为伤害，应该用面板值。用了extra也不会导致重复叠加。已确认这个不属于属性转属性。
+							"predicates": [ //值必须在0和max之间才会有增益。
+								{
+									"$type": "ByTargetGlobalValue", //不能使用overrideMap，因为mixin不支持
+									"target": "Self",
+									"key": "_ABILITY_Weapon_Sword_Opus_MaxExtraDamage",
+									"value": "%DefToArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+									"compareType": "MoreThan",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Weapon_Sword_Opus_Zero",
+									"value": "%DefToArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"Elemental_Art",
+								"Elemental_Art_Hold",
+								"Elemental_Art_Extra",
+							],
+							"damageExtra": "%MaxExtraDamage",
+							"predicates": [ //超过上限，使用上限
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Weapon_Sword_Opus_MaxExtraDamage",
+									"value": "%DefToArtRatio*%FIGHT_PROP_CUR_DEFENSE",
+									"compareType": "LessAndEqual",
+								},
+							],
+						},
+					],
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"doOffStage": true,
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"Elemental_Art",
+										"Elemental_Art_Hold",
+										"Elemental_Art_Extra"
+									],
+								},
+								{
+									"$type": "ByHitDamage", //描述是“造成伤害后”，有伤害才会消耗次数
+									"damage": 0,
+									"logic": "Greater"
+								},
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier", //尽早开始算cd
+									"modifierName": "UNIQUE_Weapon_Sword_Opus_CD",
+									"doOffStage": true,
+								},
+								{
+									"$type": "AttachModifier",
+									"modifierName": "UNIQUE_Weapon_Sword_Opus_MixinCountDown",
+									"doOffStage": true,
+								},
+							],
+						},
+					],
+				},
+				"UNIQUE_Weapon_Sword_Opus_MixinCountDown": {
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%Dura", //保持一段时间mixin增伤，然后再去除。
+					"timeScale": "Level", //不受卡帧影响
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue", //必须上成功了再关掉caster的check
+							"target": "Caster",
+							"key": "_ABILITY_Weapon_Sword_Opus_Enable",
+							"value": -1,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Weapon_Sword_Opus_CD": {
+					"isUnique": true,
+					"duration": "%CDTime",
+					"stacking": "Unique",
+					"timeScale": "Level",
+					"thinkInterval": "%CDTime",
+					"onThinkIntervalIsFixedUpdate": true,
+					"onThinkInterval": [
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Weapon_Sword_Opus_CD",
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [ //无论是interval生效还是duration生效都能正常执行。
+						{
+							"$type": "SetGlobalValue",
+							"target": "Caster",
+							"key": "_ABILITY_Weapon_Sword_Opus_Enable",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+			},
+			"abilitySpecials": {
+				"DefToArtRatio": 0,
+				"MaxExtraDamage": 0,
+				"CDTime": 0, //CDTime尤其在后场，计时有延迟，经测试1.5秒仍然可能无法触发阿贝多花。所以1要不受卡帧2可能要减少0.1秒。
+				"Dura": 0,
+			}
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11416 妖刀  Equip_Sword_Youtou  //还会有enchanted版和Shattered版
+	//
+	//  普攻、重击、下落攻击命中产生额外aoe。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Youtou", //由于配置太多，会共用modifier和GV名，仅修改ability名、特效名，affixid
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Sword_Youtou",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Youtou_EffectDelay",//初始化需要一直挂特效。
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Sword_Youtou",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Sword_Youtou_CD",
+						"UNIQUE_Sword_Youtou_Handler"
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Sword_Youtou_EffectDelay": //一直给武器挂特效，由于武器加载比ability慢。不多加几次会丢
+				{
+					"isUnique": true,
+					"duration": 5.5,
+					"onAdded": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_Youtou_Effect_Init", //用modifier是因为不会重复上，effect会。
+							"doOffStage": true,
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+					"thinkInterval": 1.0,
+					"onThinkInterval": [
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_Youtou_Effect_Init",
+							"doOffStage": true,
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_Effect_Init":{
+					"isUnique": true,
+					"onAdded":
+					[
+						{
+							"$type": "AttachEffect", 
+							"effectPattern": "Eff_Weapon_Sword_Youtou_Ready",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_Handler": {
+					"isUnique": true,
+					"onAdded": [ //注意初始化的时候必定武器未加载导致没法上特效。所以这个是第二次之后生效的逻辑。
+						{
+							"$type":"AttachEffect",//考虑没有砍出去的时候武器上应该有对应颜色特效。
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"effectPattern": "Eff_Weapon_Sword_Youtou_Ready",
+							"doOffStage": true,
+						},
+					],
+					"onAttackLanded": [
+						{
+							"$type": "Predicated", //必须在场攻击。但不要求造成伤害时
+							"target": "Other",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack",
+										"FallingAttack",
+									],
+								},
+								{
+									"$type": "ByEquipAffixReady",
+									"equipAffixDataID": 111416,
+									"target": "Self",
+								},
+							],
+							"successActions": [
+								{ //把初始化的内容清除掉。
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Sword_Youtou_Effect_Init",
+									"otherTargets": {
+										"$type": "SelectTargetsByEquipParts",
+										"equipPartNames": [
+											"equip01",
+											"equip02",
+											"sheathPoint"
+										],
+									},
+								},
+								{ //把初始化的内容清除掉。
+									"$type": "RemoveUniqueModifier",
+									"modifierName": "UNIQUE_Sword_Youtou_EffectDelay",
+								},
+								{
+									"$type": "FireEffect",
+									"target": "Target",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"effectPattern": "Eff_Weapon_Sword_Youtou_AOE",
+								},
+								{
+									"$type":"ApplyModifier",
+									"modifierName": "UNIQUE_Sword_Youtou_Buff",
+								},
+								{
+									"$type": "TriggerAttackEvent",
+									"target": "Self", //需要注意这个target不是目标，而是攻击者。需要self进行攻击。
+									"targetType": "Enemy",
+									"attackEvent": {
+										"attackPattern": {
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"radius": 3,
+											"born": {
+												"$type": "ConfigBornByHitPoint",
+												"offset": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+												"direction": {
+													"$type": "ConfigDirectionByEntity",
+												},
+											},
+										},
+										"attackInfo": {
+											"attackTag": "WeaponSkill",
+											"attackProperty": {
+												"damagePercentage": "%D_Rate",
+												"elementType": "None",
+												"strikeType": "Default",
+												"enBreak": 100,
+											},
+											"hitPattern": {
+												"onHitEffectName": "default",
+												"hitImpulseType": "LV2",
+												"canBeDefenceHalt": false,
+												"hitHaltTime": 0.0,
+												"hitHaltTimeScale": 0.01,
+												"muteHitText": false
+											},
+											"forceCameraShake": false,
+										},
+									},
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Sword_Youtou", //最后再干掉自己
+									"value": -1,
+									"doOffStage": true,
+								},
+							]
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_CD": {
+					"duration": "%CDTime",
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "EquipAffixStart",
+							"CD": "%CDTime",
+							"equipAffixDataID": 111416,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Youtou",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_Buff":{
+					"isUnique": true,
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AttackRatio":"%Attack_Ratio",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"D_Rate": 0,
+				"Attack_Ratio":0,
+				"Dura":0,
+				"CDTime": 0,
+			},
+		},
+	},
+	//子弹Ability配置, 考虑所有妖刀读取同一个，节约配置  记得删除
+	/*{
+		"$type": "TriggerBullet",
+		"bulletID": 40010016,
+		"born": {
+			"$type": "ConfigBornBySelf",
+			"offset": {
+				"x": 0.0,
+				"y": 1.2,
+				"z": 0.5,
+			},
+		},
+	},
+	{
+		"$type": "SetGlobalValue",
+		"key": "_ABILITY_Sword_Youtou",
+		"value": -1,
+		"doOffStage": true,
+	},*/
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Youtou_Bullet_Material",
+			"onAbilityStart": [
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates": [
+						{
+							"$type": "ByEntityTypes",
+							"entityTypes": [
+								"MonsterEquip"
+							],
+						},
+					],
+					"successActions": [
+						{
+							"$type": "DamageByAttackValue",
+							"target": "Target",
+							"attackInfo": {
+								"canBeModifiedBy": "OriginOwner",
+								"attackTag": "WeaponSkill",
+								"attackProperty": {
+									"damagePercentage": "%D_Rate",
+									"strikeType": "None",
+									"attackType": "Default",
+									"enBreak": 50,
+								},
+								"hitPattern": {
+									"onHitEffectName": "default",
+									"hitImpulseType": "LV2",
+									"canBeDefenceHalt": false,
+									"hitHaltTime": 0.0,
+									"hitHaltTimeScale": 0.05,
+									"muteHitText": false
+								},
+								"forceCameraShake": false,
+							},
+						},
+					],
+					"failActions": [
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size": {
+										"x": 0.1,
+										"y": 0.1,
+										"z": 0.1,
+									},
+									"born": {
+										"$type": "ConfigBornByCollisionPoint",
+										"offset": {
+											"x": 0,
+											"y": 0,
+											"z": 0,
+										},
+									},
+								},
+								"attackInfo": {
+									"canBeModifiedBy": "OriginOwner",
+									"attackTag": "WeaponSkill",
+									"attackProperty": {
+										"damagePercentage": "%D_Rate",
+										"strikeType": "None",
+										"attackType": "Default",
+										"enBreak": 50,
+									},
+									"hitPattern": {
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV2",
+										"reboundRatio": 0,
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			],
+			"abilitySpecials": {
+				"D_Rate": 1,
+			}
+		},
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Youtou_Bullet_FX1", //可以分别有1、2、3种不同特效
+			"onAdded": [
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Weapon_Youtou_Bullet",
+				},
+			],
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11419 妖刀  Equip_Sword_YoutouEnchanted  
+	//
+	//  命中产生额外aoe。魔刀版本，伤害较低但会吸血。例如命中会为自己恢复xx攻击力的血量。黑剑。
+	//	
+	//	Weapon_Sword_YoutouEnchanted02的天赋使用同一个ability，仅参数不同。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_YoutouEnchanted",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Sword_Youtou",
+					"value": 0,
+				},
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Sword_Youtou_DamageDown",
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Sword_Youtou",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Sword_Youtou_CD",
+						"UNIQUE_Sword_Youtou_Handler"
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Sword_Youtou_Handler": {
+					"isUnique": true,
+					"onAttackLanded": [
+						{
+							"$type": "Predicated", //必须在场攻击。但不要求造成伤害时
+							"target": "Other",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack",
+										"FallingAttack",
+									],
+								},
+								{
+									"$type": "ByEquipAffixReady",
+									"equipAffixDataID": 111419,
+									"target": "Self",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "FireEffect",
+									"target": "Target",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"effectPattern": "Eff_Weapon_Sword_YoutouEnchanted_AOE",
+									"predicates": [
+										{
+											"$type": "ByTargetOverrideMapValue",
+											"target": "Self",
+											"targetAbilityName": "Weapon_Sword_YoutouEnchanted",
+											"targetKey": "FX_Type",
+											"targetValue": 0,
+											"logic": "Equal",
+										},
+									]
+								},
+								{
+									"$type": "FireEffect",
+									"target": "Target",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"effectPattern": "Eff_Weapon_Sword_YoutouEnchanted02_AOE",
+									"predicates": [
+										{
+											"$type": "ByTargetOverrideMapValue",
+											"target": "Self",
+											"targetAbilityName": "Weapon_Sword_YoutouEnchanted",
+											"targetKey": "FX_Type",
+											"targetValue": 1,
+											"logic": "Equal",
+										},
+									]
+								},
+								{
+									"$type": "HealHP",
+									"target": "Self",
+									"amountByCasterAttackRatio": "%Heal_Ratio",
+								},
+								{
+									"$type": "TriggerAttackEvent",
+									"target": "Self", //需要注意这个target不是目标，而是攻击者。需要self进行攻击。
+									"targetType": "Enemy",
+									"attackEvent": {
+										"attackPattern": {
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"radius": 3,
+											"born": {
+												"$type": "ConfigBornByHitPoint",
+												"offset": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+												"direction": {
+													"$type": "ConfigDirectionByEntity",
+												},
+											},
+										},
+										"attackInfo": {
+											"attackTag": "WeaponSkill",
+											"attackProperty": {
+												"damagePercentage": "%D_Rate",
+												"elementType": "None",
+												"strikeType": "Default",
+												"enBreak": 100,
+											},
+											"hitPattern": {
+												"onHitEffectName": "default",
+												"hitImpulseType": "LV2",
+												"canBeDefenceHalt": false,
+												"hitHaltTime": 0.0,
+												"hitHaltTimeScale": 0.01,
+												"muteHitText": false
+											},
+											"forceCameraShake": false,
+										},
+									},
+								},
+								{
+									"$type": "SetGlobalPos",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"key": "_ABILITY_Weapon_Sword_Youtou_Pos",
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Sword_Youtou", //最后再干掉自己
+									"value": -1,
+									"doOffStage": true,
+								},
+							]
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_CD": {
+					"duration": "%CDTime",
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "EquipAffixStart",
+							"CD": "%CDTime",
+							"equipAffixDataID": 111419,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Youtou",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_DamageDown":{//state缺少攻击下降提示，不加了。
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AddHurtDelta": "%AddHurt",
+					}
+				},
+			},
+			"abilitySpecials": {
+				"D_Rate":0,
+				"Heal_Ratio": 0,
+				"CDTime": 0,
+				"AddHurt": 0,
+				"FX_Type":0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11420 妖刀  Equip_Sword_YoutouShattered
+	//
+	//  命中产生额外aoe。破刀版本，伤害较低且无任何效果
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_YoutouShattered",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Sword_Youtou",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Youtou_DamageDown",
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Sword_Youtou",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-1.5,
+						-0.5,
+						0.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Sword_Youtou_CD",
+						"UNIQUE_Sword_Youtou_Handler"
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Sword_Youtou_Handler": {
+					"isUnique": true,
+					"onAttackLanded": [
+						{
+							"$type": "Predicated", //必须在场攻击。但不要求造成伤害时
+							"target": "Other",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										"ExtraAttack",
+										"FallingAttack",
+									],
+								},
+								{
+									"$type": "ByEquipAffixReady",
+									"equipAffixDataID": 111420,
+									"target": "Self",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "FireEffect",
+									"target": "Target",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"effectPattern": "Eff_Weapon_Sword_YoutouShattered_AOE",
+								},
+								{
+									"$type": "TriggerAttackEvent",
+									"target": "Self", //需要注意这个target不是目标，而是攻击者。需要self进行攻击。
+									"targetType": "Enemy",
+									"attackEvent": {
+										"attackPattern": {
+											"$type": "ConfigAttackCircle",
+											"triggerType": "TriggerNoRepeat",
+											"fanAngle": 360.0,
+											"radius": 3,
+											"born": {
+												"$type": "ConfigBornByHitPoint",
+												"offset": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0,
+												},
+												"direction": {
+													"$type": "ConfigDirectionByEntity",
+												},
+											},
+										},
+										"attackInfo": {
+											"attackTag": "WeaponSkill",
+											"attackProperty": {
+												"damagePercentage": "%D_Rate",
+												"elementType": "None",
+												"strikeType": "Default",
+												"enBreak": 100,
+											},
+											"hitPattern": {
+												"onHitEffectName": "default",
+												"hitImpulseType": "LV2",
+												"canBeDefenceHalt": false,
+												"hitHaltTime": 0.0,
+												"hitHaltTimeScale": 0.01,
+												"muteHitText": false
+											},
+											"forceCameraShake": false,
+										},
+									},
+								},
+								{
+									"$type": "SetGlobalPos",
+									"born": {
+										"$type": "ConfigBornByHitPoint",
+									},
+									"key": "_ABILITY_Weapon_Sword_Youtou_Pos",
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Sword_Youtou", //最后再干掉自己
+									"value": -1,
+									"doOffStage": true,
+								},
+							]
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_CD": {
+					"duration": "%CDTime",
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "EquipAffixStart",
+							"CD": "%CDTime",
+							"equipAffixDataID": 111420,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Youtou",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_Youtou_DamageDown": { 
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_AddHurtDelta": "%AddHurt",
+					}
+				},
+			},
+			"abilitySpecials": {
+				"D_Rate": 0,
+				"CDTime": 0,
+				"AddHurt": 0,
+			},
+		},
+	},
+	////////////////////////////////////////////////////////////////
+	//
+	//  11421 妖刀  Equip_Sword_YoutouEnchanted02 较弱版
+	// 
+	//  不配置，直接沿用11419的，参数进行变化
+	////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	//
+	//  11510  绫人剑 Equip_Sword_Amenoma
+	//
+	//    	   队友施放元素战技给绫人buff，2层。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Amenoma",
+			"isDynamicAbility": true,
+			"onAdded":[
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Sword_Amenoma_NormalAttack_Counter",//监视队友普攻命中敌人
+				},
+				{
+					"$type":"SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Amenoma_Level", //先申明
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Amenoma_WeaponBaseBuff", //武器被动
+				},
+			],
+			"onRemoved": [
+				{
+					"$type": "ClearGlobalValue", //清除，不然下次装备时容易先执行当前GV值的逻辑才回到0.
+					"key": "_ABILITY_Weapon_Sword_Amenoma_Level",
+					"doOffStage": true,
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type":"OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill": [
+						{
+							"$type":"Predicated",
+							"targetPredicates": [
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ABILITY_Weapon_Sword_Amenoma_Level",
+									"value": 0,
+									"compareType": "MoreThan", //大于0再上buff，不然0buff也有attackup特效会很奇怪。而且不能因为刻晴施放2次就干掉原效果。
+								},
+							],
+							"successActions": [
+								{
+									"$type": "SetGlobalValueToOverrideMap",//由于damagemixin是实时读取DF值的，所以0的时候也不应该修改参数(会导致直接生效)
+									"globalValueKey": "_ABILITY_Weapon_Sword_Amenoma_Level",
+									"overrideMapKey": "GV_Level",
+								},
+								// {
+								// 	"$type":"RemoveUniqueModifier", 
+								// 	"modifierName": "UNIQUE_Sword_Amenoma_ExtraBuff",
+								// },
+								{
+									"$type": "AttachModifier",//由于mixin实时更新数值，只需要刷新时长并修改override就能生效。
+									"modifierName": "UNIQUE_Sword_Amenoma_ExtraBuff",
+								},
+								{
+									"$type": "SetGlobalValue",
+									"key": "_ABILITY_Weapon_Sword_Amenoma_Level", //清零
+									"value": 0,
+								},
+							],
+						},
+					],
+				},
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_Amenoma_Level", //默认会置0
+					"valueSteps": [
+						0.5,
+						1.5,
+						// 2.5,
+						// 3.5,
+						// 4.5,
+						100
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Sword_AmenomaEff1",
+						"UNIQUE_Sword_AmenomaEff2",
+						// "UNIQUE_Sword_AmenomaEff3",
+						// "UNIQUE_Sword_AmenomaEff4",
+						// "UNIQUE_Sword_AmenomaEff5",
+					],
+				},
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Sword_Amenoma_WeaponBaseBuff": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Actor_ElecAddHurtDelta": "%BaseBuff",
+						"Actor_FireAddHurtDelta": "%BaseBuff",
+						"Actor_WindAddHurtDelta": "%BaseBuff",
+						"Actor_IceAddHurtDelta": "%BaseBuff",
+						"Actor_WaterAddHurtDelta": "%BaseBuff",
+						"Actor_GrassAddHurtDelta": "%BaseBuff",
+						"Actor_RockAddHurtDelta": "%BaseBuff",
+					},
+				},
+				"UNIQUE_Sword_AmenomaEff1": { 
+					"isUnique": true,
+				},
+				// "UNIQUE_Sword_AmenomaEff5": {
+				// 	"isUnique": true,
+				// },
+				// "UNIQUE_Sword_AmenomaEff3": {
+				// 	"isUnique": true,
+				// },
+				// "UNIQUE_Sword_AmenomaEff4": {
+				// 	"isUnique": true,
+				// },
+				"UNIQUE_Sword_AmenomaEff2": {//仅满层特效提示。1、头顶特效。2、手上特效
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Amenoma_Hand",
+							"doOffStage": true,
+						},
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "UNIQUE_Sword_AmenomaEff2_HeadEff",
+							"target": "CurLocalAvatar",
+							"doOffStage": true,
+						},
+					],
+				},
+				"UNIQUE_Sword_AmenomaEff2_HeadEff":
+				{
+					"isUnique": true,
+					"duration": 0.1,//足够短便于移除
+					"onAdded": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_Amenoma_Head",
+						},
+					],
+				},
+				"UNIQUE_Sword_Amenoma_NormalAttack_Counter"://用于给周围队友上modifier监视攻击
+				{
+					"isUnique": true,
+					"thinkInterval": 2,
+					"onThinkInterval": [
+						{
+							"$type":"AttachModifier",
+							"modifierName": "Sword_Amenoma_NormalAttack_Counter_Each",
+							"target": "AllPlayerAvatars",
+							"doOffStage": true,
+							"predicates": [
+								{
+									"$type": "ByTargetPositionToSelfPosition",
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByNot", //不用给自己加
+									"predicates": [
+										{
+											"$type": "ByTargetType",
+											"targetType": "Caster",
+										},
+									]
+								},
+							],
+						},
+					]
+				},
+				"Sword_Amenoma_NormalAttack_Counter_Each":{//每个角色身上,非unique
+					"duration": 10,
+					// "onAttackLanded": [
+					// 	{
+					// 		"$type": "Predicated",//打出普攻的人应该在场。
+					// 		"target": "Other",//近战可以用target和other，但弓箭类必须用other。所以other可以通用。
+					// 		"targetPredicates": [
+					// 			{
+					// 				"$type": "ByEntityTypes",
+					// 				"entityTypes": [
+					// 					"Monster"
+					// 				],
+					// 			},
+					// 			{
+					// 				"$type": "ByTargetGlobalValue",
+					// 				"key": "_ANIMAL_ENTITY_TYPE",
+					// 				"value": 0,
+					// 				"compareType": "NoneOrEqual",
+					// 			},
+					// 			{
+					// 				"$type": "ByAttackTags",
+					// 				"attackTags": [
+					// 					"NormalAttack_01",
+					// 					"NormalAttack_02",
+					// 					"NormalAttack_03",
+					// 					"NormalAttack_04",
+					// 					"NormalAttack_05",
+					// 					"NormalAttack_06",
+					// 				],
+					// 			},//不要求造成伤害
+					// 		],
+					// 		"successActions": [
+					// 			{
+					// 				"$type": "ApplyModifier",
+					// 				"target": "Caster",
+					// 				"modifierName": "UNIQUE_Sword_Amenoma_GV_Adder",
+					// 			},
+					// 		],
+					// 	},
+					// ],
+					"modifierMixins": [
+						{
+							"$type":"OnAvatarUseSkillMixin",
+							"clearSkillIdDelay": 0.2,
+							"onTriggerSkill": [
+								{
+									"$type": "ApplyModifier",
+									"target": "Caster",
+									"modifierName": "UNIQUE_Sword_Amenoma_GV_Adder",
+								},
+							]
+							
+						},
+					]
+				},
+				"UNIQUE_Sword_Amenoma_GV_Adder":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%CDTime",
+					"onAdded": [
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Weapon_Sword_Amenoma_Level", //先申明
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": "%MaxLevel",
+							"minValue": 0,
+							"doOffStage": true,
+						},
+					],
+					// "thinkInterval": "%CDTime", //简化
+					// "onThinkIntervalIsFixedUpdate": true,
+					// "onThinkInterval": [
+					// 	{
+					// 		"$type":"RemoveModifier",
+					// 		"modifierName": "UNIQUE_Sword_Amenoma_GV_Adder",
+					// 		"doOffStage": true,
+					// 	},
+					// ]
+				},
+				"UNIQUE_Sword_Amenoma_ExtraBuff":
+				{
+					"isUnique": true,
+					"state": "AttackUp",
+					"duration": "%Dura",
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",//瞬水剑tag也在里面
+							"attackTags": [
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+							],
+							"damagePercentageRatio": "%Buff_PerLevel*%GV_Level", //这个mixin是实时的。
+						},
+					],
+				},
+			},
+			"abilitySpecials": 
+			{
+				"BaseBuff": 0,
+				"MaxLevel":0,
+				"CDTime":0,
+				"Buff_PerLevel": 0.0,
+				"Dura": 0,
+				"GV_Level":0,
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11417  3.0锻造单手剑 Weapon_Sword_Arakalari
+	//	产生草元素相关反应时掉落buff球，拾取buff球的角色元素精通提升20点，持续12秒，该效果每20秒至多触发一次。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type":"ConfigAbility",
+			"abilityName":"Weapon_Sword_Arakalari",
+			"isDynamicAbility":true,
+			"onAdded":
+			[
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Weapon_Sword_Arakalari_CD_Mark",
+					"value": 0,
+				}
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"globalValueKey": "_ABILITY_Weapon_Sword_Arakalari_CD_Mark",
+					"defaultGlobalValueOnCreate": 0,
+					"valueSteps": [
+						-0.5,0.5,1.5
+					],
+					"removeAppliedModifier": true,
+					"modifierNameSteps": [
+						"UNIQUE_Weapon_Sword_Arakalari_Handler",
+						"UNIQUE_Weapon_Sword_Arakalari_CD_Set"
+					],
+				},
+		
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Weapon_Sword_Arakalari_Handler":
+				{
+					"isUnique": true,
+					"modifierMixins": 
+					[
+						{
+							"$type":"DoActionByElementReactionMixin",
+							"reactionTypes": ["Burning","Overdose","Overgrow","OverdoseElectric","OverdoseGrass","OvergrowMushroomElectric","OvergrowMushroomFire"],
+							"entityTypes": 
+							[
+								"Monster"
+							],				
+							"actions": 
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "Weapon_Sword_Arakalari_Gadget_Creator",
+									"target": "CurLocalAvatar",
+									"doOffStage": true,
+									"predicates": 
+									[
+										{
+											"$type": "ByEquipAffixReady",
+											"equipAffixDataID": 11417,
+											"target": "Self",
+										}
+									]									
+								},
+								{
+									"$type": "SetGlobalValue",
+									"doOffStage": true,
+									"key": "_ABILITY_Weapon_Sword_Arakalari_CD_Mark",
+									"value": 1,
+									"predicates": 
+									[
+										{
+											"$type": "ByEquipAffixReady",
+											"equipAffixDataID": 11417,
+											"target": "Self",
+										}
+									]
+								},
+								
+							],
+						}
+					]
+				},
+				"Weapon_Sword_Arakalari_Gadget_Creator":
+				{
+					"duration": 0.5,
+					"onAdded": 
+					[
+						{
+							"$type": "CreateGadget",
+							"gadgetID": 40020008,
+							"doOffStage": true,
+							"ownerIs": "Caster",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"bornRandom":
+								{
+									"$type": "BornRandomFromCenter",
+									"minRandomRange": 0.5,
+									"maxRandomRange": 1.5,
+								},"onGround": true,
+								"onGroundRaycastUpDist": 3,
+								"offset": 
+								{
+									"x": 0,
+									"y": 0.7,
+									"z": 2,
+								},
+							},
+						}
+					]
+				},
+				"UNIQUE_Weapon_Sword_Arakalari_CD_Set":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%ColdDown",
+					"onAdded": 
+					[
+						{
+							"$type": "EquipAffixStart",
+							"CD": "%ColdDown",
+							"equipAffixDataID": 111417,
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"target": "Self",
+							"key": "_ABILITY_Weapon_Sword_Arakalari_CD_Mark",
+							"value": 0,
+							"doOffStage": true
+						}
+					],
+				}
+			},
+			"abilitySpecials": 
+			{
+				"ColdDown":0
+			}
+		}
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Ability_Weapon_Sword_Arakalari_Trigger",
+			"onAdded": 
+			[
+				{
+                    "$type":"AttachModifier",
+                    "modifierName":"Weapon_Sword_Arakalari_EFF",
+                },
+			],
+			"onKill": 
+			[
+				{
+                    "$type":"FireEffect",
+                    "effectPattern":"Eff_Weapon_ArakalariBuff_Ball_1_Dissipate",
+                },
+			],
+			"onFieldEnter": 
+			[
+				{
+					"$type": "Predicated",
+					"target": "Target",
+					"targetPredicates": 
+					[
+						{
+                            "$type":"ByEntityTypes",
+                            "target":"Target",
+                            "entityTypes":["Avatar"],
+                        }, 
+					],
+					"successActions": 
+					[	
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Weapon_Arakalari_Mastery_Up",							
+							"target": "Target",							
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Weapon_Arakalari_Mastery_Up",							
+							"target": "Target",							
+						},
+						{
+							"$type": "ApplyModifier",
+							"target": "Target",
+							"modifierName": "Weapon_Arakalari_Mastery_Up_Absorb_Eff"
+						},						
+						{
+							"$type":"KillSelf",
+							"duration":0.15,
+						},
+					]
+				},
+				
+			],
+			"modifiers": 
+			{
+				"Weapon_Sword_Arakalari_EFF":
+				{
+					"duration": "%TriggerDuration",//时间需要可控
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_ArakalariBuff_Ball_1",
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "KillSelf"
+						},						
+					]
+				},
+				"UNIQUE_Weapon_Arakalari_Mastery_Up":
+				{
+					"isUnique": true,
+					"duration": "%BuffTime",
+					"stacking": "Refresh",
+					"state": "AttackUp",
+					"properties": 
+                    {
+                        "Actor_ElemMasteryDelta":"%MasteryDelta",
+                    },
+				},
+				"Weapon_Arakalari_Mastery_Up_Absorb_Eff":
+				{
+					"duration": 0.7,
+					"onAdded": 
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_ArakalariBuff_Ball_1_Absorb"
+						}
+					]
+				}
+				
+			},
+			"abilitySpecials": 
+			{
+				"BuffTime":0,
+				"MasteryDelta":0,
+				"TriggerDuration":0
+			}
+		}
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  11511  赤王单手剑 Weapon_Sword_Deshret
+	//	生命值上限+xx%，每次元素战技造成伤害提升装备者元素精通，数值为装备者生命上限的X%
+	//  持续XX秒，每0.X秒只能触发一次，该效果最多叠加3层, 层数达到3层时会使队伍中附近角色元素精通提升，持续12s
+	//  数值为装备者生命上限的X%
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Deshret",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Deshret_Handler",
+					"doOffStage": true
+				}
+			],
+			"onRemoved": 
+			[
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "Sword_Deshret_Stack_Reset",
+					"doOffStage": true,
+				},
+				{
+					"$type": "RemoveModifier",
+					"modifierName": "UNIQUE_Sword_Deshret_Stack_MasteryUp",
+					"doOffStage": true,
+				}
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Sword_Deshret_Handler":
+				{
+					"isUnique": true,
+					"modifierMixins": 
+					[
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin",
+							"defaultGlobalValueOnCreate": 0,
+							"globalValueKey": "_ABILITY_Sword_Deshret_Stack",
+							"valueSteps":
+							[
+								0.5,1.5,2.5,3.5
+							],
+							"removeAppliedModifier": true,
+							"modifierNameSteps":
+							[
+								"Sword_Deshret_EFF_1",
+								"Sword_Deshret_EFF_2",
+								"Sword_Deshret_EFF_3",								
+							],
+						}
+					],
+					"onAttackLanded": 
+					[
+						{
+							"$type" : "Predicated",
+							"target" : "Target",			//不加dooffstage，后台不生效				
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackTags",
+									"attackTags": ["Elemental_Art","Elemental_Art_Hold","Elemental_Art_Extra",]
+								},
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster",],
+								},
+								{
+				                	"$type": "ByTargetGlobalValue",
+				                	"key": "_ANIMAL_ENTITY_TYPE",
+				                	"value": 0,
+				                	"compareType": "NoneOrEqual",
+				                },
+							],
+							"successActions":
+							[
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Sword_Deshret_CD_Set",
+									"target": "Caster",
+									"doOffStage": true,
+								}
+							],
+						},
+					]
+				},
+				"UNIQUE_Sword_Deshret_CD_Set":
+				{
+					"isUnique": true,
+					"stacking": "Unique",
+					"duration": "%ReTriggerCD",
+					"onAdded": 
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Sword_Deshret_Stack",
+							"target": "Self",
+							"doOffStage": true,
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 3,							
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Sword_Deshret_Stack",
+							"doOffStage": true,
+							"overrideMapKey": "Stack",
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Sword_Deshret_Stack_MasteryUp",
+							"target": "Self",
+							"doOffStage": true
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_Deshret_Stack_MasteryUp",
+							"target": "Self",
+							"doOffStage": true
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Sword_Deshret_Stack_Reset",//用于重置层数
+							"target": "Self",
+							"doOffStage": true
+						},
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Sword_Deshret_MasteryUp_Team",
+							"doOffStage": true,
+							"target": "AllPlayerAvatars",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Caster",
+									"key": "_ABILITY_Sword_Deshret_Stack",
+									"value": 3,
+									"compareType": "Equal"
+								}
+							]
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_Deshret_MasteryUp_Team",
+							"doOffStage": true,
+							"target": "AllPlayerAvatars",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Caster",
+									"key": "_ABILITY_Sword_Deshret_Stack",
+									"value": 3,
+									"compareType": "Equal"
+								}
+							]
+						},	
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Sword_Deshret_Stack_MasteryUp_Eff",
+							"doOffStage": true,
+							"target": "AllPlayerAvatars",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Caster",
+									"key": "_ABILITY_Sword_Deshret_Stack",
+									"value": 3,
+									"compareType": "Equal"
+								}
+							]
+						},											
+					]
+				},
+				"UNIQUE_Sword_Deshret_Stack_MasteryUp":
+				{
+					"isUnique": true,
+					"stacking": "Refresh",
+					"duration": "%Duration",					
+					"isLimitedProperties": true,
+                    "properties": 
+                    {
+                        "Actor_ElemMasteryExtraDelta":"%FIGHT_PROP_MAX_HP*%MaxHPTransformRatio*%Stack",
+                    },									
+				},
+				"Sword_Deshret_Stack_Reset":
+				{
+					"stacking": "Refresh",
+					"duration": "%Duration",
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Sword_Deshret_Stack",
+							"value": 0,
+							"doOffStage": true
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Sword_Deshret_Stack",
+							"doOffStage": true,
+							"overrideMapKey": "Stack",
+						},
+					]				
+				},
+				"UNIQUE_Sword_Deshret_MasteryUp_Team":
+				{
+					"isUnique": true,
+					"stacking": "Refresh",					
+					"duration": "%DurationForTeam",					
+					"isLimitedProperties": true,
+                    "properties": 
+                    {
+                        "Actor_ElemMasteryExtraDelta":"%FIGHT_PROP_MAX_HP*%MaxHPTransformRatioForTeam",
+                    },									
+				},
+				"UNIQUE_Sword_Deshret_Stack_MasteryUp_Eff":
+				{
+					"isUnique": true,
+					"stacking": "RefreshUniqueDurability",//允许大家刷新特效
+					"duration": "%DurationForTeam",
+					"state": "AttackUp",
+				},				
+				"Sword_Deshret_EFF_1":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack1_Deshret",
+						}
+					]
+				},
+				"Sword_Deshret_EFF_2":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack2_Deshret",
+						}
+					]
+				},
+				"Sword_Deshret_EFF_3":
+				{
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Weapon_Attack_Stack3_Deshret",
+						}
+					]
+				},
+			},
+			"abilitySpecials": 
+			{				
+				"MaxHPTransformRatio":0,
+				"Duration":0,
+				"ReTriggerCD":0,
+				"Stack":0,
+				"MaxHPTransformRatioForTeam":0,
+				"DurationForTeam":0,
+			}
+		},
+
+	},
+
+///////////////////////////////////////////////////////////////
+//
+//  11418 教令院单手剑
+//  
+//  每X秒使自身元素充能效率提升，数值为元素精通的xx%，持续x秒
+//  附近的角色获得这个buffXX%的效果
+//
+///////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Sword_Pleroma",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[				
+				{
+					"$type": "SetGlobalValue",
+					"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+					"value": 0,
+				},
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Pleroma_Delay"
+				},
+				
+			],
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Sword_Pleroma_Handler",	
+					"doOffStage": true				
+				},
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Sword_Pleroma_Delay"://延迟后触发第一次效果，保证副属性数值先加载
+				{
+					"isUnique": true,
+					"duration": 1,
+					"onRemoved": 
+					[
+						{
+							"$type": "TriggerAbility",
+							"abilityName": "Weapon_Sword_Pleroma",
+							"doOffStage": true,
+						}
+					]
+				},
+				"UNIQUE_Sword_Pleroma_Handler":
+				{
+					"isUnique": true,
+					"onAdded": 
+					[
+						{
+							"$type": "SetOverrideMapValue",  //元素精通大于9就存缓存里，否则就用0的数值
+							"doOffStage": true,
+							"overrideMapKey": "MasteryCache",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY*0.01",
+						},
+						{
+                            "$type": "SetOverrideMapValue",
+                            "doOffStage": true,
+                            "overrideMapKey": "MasteryCache",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+									"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+									"compareType": "MoreThanAndEqual"
+								}
+							]
+                        },
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Sword_Pleroma_Buff_Self",
+							"doOffStage": true,						
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Sword_Pleroma_Buff_Self",
+							"doOffStage": true,						
+						},						
+					],
+					"thinkInterval": "%Tick",
+					"onThinkInterval": 
+					[
+						{
+							"$type": "SetOverrideMapValue",  //元素精通大于9就存缓存里，否则就用0的数值
+							"doOffStage": true,
+							"overrideMapKey": "MasteryCache",
+							"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY*0.01",
+						},
+						{
+                            "$type": "SetOverrideMapValue",
+                            "doOffStage": true,
+                            "overrideMapKey": "MasteryCache",
+							"value": 0,
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Self",
+									"key": "_ABILITY_Pleroma_Mastery_Lower_Limit",
+									"value": "%FIGHT_PROP_NONEXTRA_ELEMENT_MASTERY",
+									"compareType": "MoreThanAndEqual"
+								}
+							]
+                        },
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Sword_Pleroma_Buff_Self",
+							"doOffStage": true,						
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Sword_Pleroma_Buff_Self",
+							"doOffStage": true,						
+						},
+					]
+				},
+				"Sword_Pleroma_Buff_Self"://这套武器设计上互相之间可以叠加，因此不用uniquemodifier
+				{
+					"duration": "%Duration",
+					// "state": "AttackUp",//测试过所有人给attackup，结果是角色永远有up特效，影响了角色平时表现，也导致需要观测（短覆盖）的效果无法观测。
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_ChargeEfficiencyExtraDelta":"%MasteryCache*%MasteryTransformRatio"
+					},
+					"onAdded": 
+					[						
+						{
+							"$type": "AttachModifier",
+							"doOffStage": true,
+							"target": "AllPlayerAvatars",
+							"modifierName": "Sword_Pleroma_Buff_Other",
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetIsSelf","isSelf": false,
+								},
+								{
+									"$type": "ByTargetPositionToSelfPosition",	//给40米内的队伍加
+									"compareType": "XZ",
+									"value": 40,
+									"logic": "LesserOrEqual",
+								},
+							]
+						}
+					]
+				},
+				"Sword_Pleroma_Buff_Other":
+				{
+					"duration": "%Duration",
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_ChargeEfficiencyExtraDelta":"%MasteryCache*%MasteryTransformRatio*%TeamInheritRatio"
+					},
+				}
+			},
+			"abilitySpecials": 
+			{
+				"MasteryCache":0,
+				"MasteryTransformRatio":0,
+				"Tick":0,
+				"Duration":0,
+				"TeamInheritRatio":0
+			}
+		}
+	}
+
+
+///////////////////////////////////////////////////////////////
+//
+//  (待定）   5.18测试完毕
+//  普攻和重击伤害提升20%，被重击命中的敌人在身上形成一个定时炸弹，1s后爆炸造成AOE伤害，技能CD为10s
+//
+///////////////////////////////////////////////////////////////
+	// {
+	// 	"Default":
+	// 	{
+	// 		"$type":"ConfigAbility",
+	// 		"abilityName":"Weapon_Sword_Morax",
+	// 		"abilityMixins":
+	// 		[
+	// 			{
+	// 				"$type":"AttachModifierToSelfGlobalValueMixin",
+	// 				"globalValueKey":"_ABILITY_Sword_Morax",
+	// 				"removeAppliedModifier":true,
+	// 				"valueSteps":[-1.5,-0.5,0.5,],
+	// 				"modifierNameSteps":
+	// 				[
+	// 				 	"UNIQUE_Sword_Morax_CD",
+	// 					"UNIQUE_Sword_Morax_Handler",
+	// 				],
+	// 			},
+	// 			{
+	// 				"$type":"ModifyDamageMixin",
+	// 				"attackTags":["NormalAttack_01","NormalAttack_02","NormalAttack_03","NormalAttack_04","NormalAttack_05","NormalAttack_06","ExtraAttack",],
+	// 				"damagePercentage":"%Atk_Rate",
+	// 			},
+	// 		],
+
+	// 		"modifiers":
+	// 		{
+	// 			"UNIQUE_Sword_Morax_CD":
+	// 			{
+	// 				"stacking":"Unique",
+	// 				"isUnique":true,
+	// 				"duration":"%CDTime",
+	// 				"onAdded":
+	// 				[
+	// 					{
+	// 						"$type":"AvatarSkillStart",
+	// 						"skillID":10101,
+	// 						"cdRatio":"%CDTime*0.1",
+	// 					},
+	// 				],
+	// 				"onRemoved":
+	// 				[
+	// 					{
+	// 						//重置技能CD，必须后台也能检测
+	// 						"$type":"AddGlobalValue",
+	// 						"key":"_ABILITY_Sword_Morax",
+	// 						"value":1,
+	// 						"useLimitRange":true,
+	// 						"maxValue":0,
+	// 						"minValue":0,
+	// 						"doOffStage":true,
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Sword_Morax_Handler":
+	// 			{
+	// 				"stacking":"Unique",
+	// 				"isUnique":true,
+	// 				"onAttackLanded":
+	// 				[
+	// 					{
+	// 						"$type":"Predicated",
+	// 						"target":"Target",
+	// 						"targetPredicates":
+	// 						[
+	// 							{
+	// 								"$type":"ByEntityTypes",
+	// 								"entityTypes":["Monster"],
+	// 							},
+	// 							{
+	// 								"$type":"ByAttackTags",
+	// 								"attackTags":["ExtraAttack"],
+	//							},
+	//							{
+	//								"$type":"BySkillReady",
+	//								"target":"Self",
+	//								"skillID":10101,
+	//							},
+	// 						],
+	// 						"successActions":
+	// 						[
+	// 							{
+	// 								"$type":"ApplyModifier",
+	// 								"modifierName":"UNIQUE_Sword_Morax_EffRel",
+	// 								"target":"Target",
+	// 							},
+	// 				        	{
+	// 								"$type":"AddGlobalValue",
+	// 								"key":"_ABILITY_Sword_Morax",
+	// 								"value":-1,
+	// 								"useLimitRange":true,
+	// 								"maxValue":-1,
+	// 								"minValue":-1,
+	// 							},
+	// 						],
+	// 					},
+	// 				],
+	// 			},
+	// 			"UNIQUE_Sword_Morax_EffRel":
+	// 			{
+	// 				"stacking":"Unique",
+	// 				"isUnique":true,
+	// 				"duration":1,
+	// 				"onRemoved":
+	// 				[
+	// 					{
+	// 						"$type":"FireEffect",
+	// 						"effectPattern":"Eff_Weapon_Blast_R20",
+	// 						"born":
+	// 						{
+	// 							"$type": "ConfigBornByAttachPoint",
+	// 							"attachPointName":"RootNode",
+	// 							"offset":
+	// 							{
+	// 								"x":0,
+	// 								"y":0,
+	// 								"z":0,
+	// 							},
+	// 							"direction":
+	// 							{
+	// 								"$type":"ConfigDirectionByEntity",
+	// 								"angleOffset":
+	// 								{
+	// 									"x":0,
+	// 									"y":0,
+	// 									"z":0,
+	// 								},
+	// 							},
+	// 						},
+	// 					},
+	// 					{
+	// 						"$type": "TriggerAttackEvent",
+	// 						"targetType": "SelfCamp",
+	// 						"attackEvent":
+	// 						{
+	// 							"attackPattern":
+	// 							{
+	// 								"$type": "ConfigAttackCircle",
+	// 								"triggerType": "TriggerNoRepeat",
+	// 								"fanAngle":360,
+	// 								"radius":2,
+	// 								"born":
+	// 								{
+	// 									"$type": "ConfigBornByAttachPoint",
+	// 									"attachPointName":"RootNode",
+	// 									"offset":
+	// 									{
+	// 										"x":0,
+	// 										"y":0,
+	// 										"z":0,
+	// 									},
+	// 								},
+	// 							},
+	// 							"attackInfo":
+	// 							{
+	// 	                            "attackTag":"WeaponSkill",
+	// 								"attackProperty":
+	// 								{
+	// 									"damagePercentage": "%Bomb_Rate",
+	// 									"strikeType": "None",
+	// 									"attackType": "Default",
+	// 									"enBreak": 50,
+	// 								},
+	// 								"hitPattern":
+	// 								{
+	// 									"onHitEffectName": "default",
+	// 									"hitLevel": "Light", //hitlevel = 2
+	// 									"hitImpulseX": 200, //hitlevel = 2
+	// 									"hitImpulseY": 0, //hitlevel = 2
+	// 									"reboundRatio": 0,
+	// 									"canBeDefenceHalt": false,
+	// 									"hitHaltTime": 0.0,
+	// 									"hitHaltTimeScale": 0.05,
+	// 									"muteHitText": false,
+	// 								},
+	// 								"forceCameraShake": false,
+	// 							},
+	// 						},
+	// 					},
+	// 				],
+	// 			},
+	// 		},
+	// 		"abilitySpecials":
+	// 		{
+	// 			"CDTime":5,
+	// 			"Atk_Rate":0.2,
+	// 			"Bomb_Rate":0.5,
+	// 		},
+	// 	},
+	// },
+
+//Ability结尾
+]

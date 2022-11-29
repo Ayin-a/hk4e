@@ -1,0 +1,3610 @@
+[
+//Index
+//
+//*************************  普通攻击  ****************************************************
+//Avatar_Layla_ExtraAttack
+//
+//*************************  元素战技  ********* *******************************************
+//Avatar_Layla_ElementalArt                             攻击事件，以及武器隐藏内容
+//Avatar_Layla_ElementalArt_Handler                     盾管理，上盾点和技能触发点。技能盾和天赋盾是分开的2个mixin。晚星的生成，突1都在这里。
+//Avatar_Layla_ElementalArt_Bullet_Material             元素战技发射的飞星，负责伤害和掉球。
+//
+//*************************  元素爆发  ****************************************************
+//Avatar_Layla_ElementalBurst                           爆发的各种逻辑，镜头表现
+//Avatar_Layla_ElementalBurst_Gadget                    元素爆发gadget灯，负责发射子弹，快照
+//Avatar_Layla_ElementalBurst_Bullet1_Material          元素爆发的子弹，负责伤害
+
+//*************************  天赋命之座新增 *************************************************
+//普攻伤害管理：Avatar_Layla_NormalAttack_DamageHandler
+//突1护盾强效：Avatar_Layla_ElementalArt_Handler   和Layla_Skill1_Param关联的配置
+//突2冰晶增伤：Avatar_Layla_ArtAndBurst_DamageExtra
+//命1护盾提升：Avatar_Layla_ElementalArt_Handler   和Layla_Talent1_Param关联的位置
+//命2命中回能：Avatar_Layla_ArtAndBurst_ReviveEnergy
+//命4全队增伤：Avatar_Layla_Shoot_TeamBuff
+//命6冰晶百分比增伤：Avatar_Layla_ArtAndBurst_DamageUp
+
+
+//*************************  莱依拉的GV统计 *************************************************
+// Team：
+// _ABILITY_Avatar_Layla_HasTeamShield        存在小技能盾标记
+// _ABILITY_Avatar_Layla_IceShield_GV_Count   晚星数量标记
+// _ABILITY_Avatar_Layla_IceShield_Can_Count  可以积累晚星标记
+// Gadget：
+// _ABILITY_Avatar_Layla_IceShield_GV_Gadget  飞星数量标记
+
+//*************************  子弹实时/快照说明 ***********************************************
+
+//战技是子弹发射时读取角色数值。   实时。
+//爆发是gadget创建时读取角色数值。 快照
+
+
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Layla_ExtraAttack",
+            "abilityMixins":
+            [
+                {
+                    "$type": "ButtonHoldChargeMixin",
+                    "skillID": 10741,
+                    "chargeTime": 0.12, //
+                    "secondChargeTime": 0.2, //
+                    "OnBeginUncharged": [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 99,
+                            "predicates": [
+                                {
+                                    "$type": "ByAny",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 0,
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                        {
+                                            "$type": "ByAnimatorInt",
+                                            "value": 3,//注意实际段数
+                                            "parameter": "ComboCount",
+                                            "logic": "Equal",
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseUncharged": [
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginCharged": [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": true,
+                        },
+                    ],
+                    "OnReleaseCharged": [
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 1,
+                        },
+                    ],
+                    "OnBeginSecondCharged": [
+                        {
+                            "$type": "SetAnimatorTrigger",
+                            "triggerID": "DoSkill",
+                            "predicates": [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorInt",
+                            "intID": "SkillID",
+                            "value": 6,
+                            "predicates": [
+                                {
+                                    "$type": "ByLocalAvatarStamina",
+                                    "stamina": "%ExtraAttack_Sword_Stamina_Cost+%Flexible_Stamina",
+                                    "logic": "GreaterOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorBool",
+                            "boolID": "IsCharging",
+                            "value": false,
+                        },
+                    ],
+                    "OnReleaseSecondCharged": [],
+                    "chargeStateIDs": [
+                        "Attack01",
+                        "Attack02",
+                        "Attack03",
+                        "Run"
+                    ],
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ExtraAttack"
+                    ],
+                    "modifierName": "ExtraAttack_StaminaCost",
+                },
+            ],
+            "modifiers": {
+                "ExtraAttack_StaminaCost": {
+                    "onAdded": [
+                        {
+                            "$type": "AvatarSkillStart",
+                            "skillID": 10001,
+                            "costStaminaRatio": "%ExtraAttack_Sword_Stamina_Cost"
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				//故意少判了一点点体力，为了顾及一部分网络延迟
+				"ExtraAttack_Sword_Stamina_Cost": 0,
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  小技能攻击点：Avatar_Layla_ElementalArt
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalArt",
+            "onAdded": [
+                {
+                    "$type": "SetGlobalValue",
+                    "target": "Team",
+                    "value": 0,
+                    "key": "_ABILITY_Avatar_Layla_HasTeamShield", //先初始化个变量。
+                },
+            ],
+            "onAbilityStart": [
+                {   //但是不上冰的话大世界解谜就废了。过河也是问题。建议至少需要有一次冰！
+                    "$type": "TriggerAttackEvent",//用来挤开敌人的攻击盒
+                    "targetType": "Enemy",
+                    "attackEvent": {
+                        "attackPattern": {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "height": 1.5,
+                            "radius": 2.5,
+                            "born":{
+                                "$type": "ConfigBornBySelf",
+                                "offset": {
+                                    "x": 0,
+                                    "y": -0.5,
+                                    "z": 0,
+                                }
+                            },
+                        },
+                        "attackInfo": {
+                            "canBeModifiedBy": "OriginOwner",
+                            "attackTag":"Elemental_Art",//2022.7.27，得有附着满足大世界需求。
+                            "attackProperty": {
+                                "damagePercentage": "%Damage",
+                                "elementType": "Ice",
+                                "elementDurability": 25,
+                                "enBreak": 30,
+                                "strikeType": "Default",
+                                "attackType": "None",
+                            },
+                            "hitPattern": {
+                                "onHitEffectName": "default",
+                                "hitImpulseType": "LV3", //伤害还可以，还是击退吧
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false,
+                            },
+                            "forceCameraShake": false, //不震屏
+                        },
+                    },
+                },
+            ],
+            "abilityMixins": [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalArt",
+                        "ElementalArt_LoopBS",
+                        "ElementalArt_Loop",
+                        "ElementalArt_AS",
+                        "ElementalBurst",
+                        "ElementalBurst_AS",
+                    ],
+                    "modifierName": "Layla_WeaponHider", //控制隐藏武器,包括小技能和大招
+                },
+            ],
+            "modifiers": {
+                "Layla_WeaponHider": {
+                    "onAdded": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": false,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "sheathPoint"
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": [
+                                "equip01",
+                                "equip02",
+                                "sheathPoint"
+                            ],
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+            },
+            "abilitySpecials": {
+                "Damage": 0.0,
+            },
+        },
+    }, //Avatar_Layla_ElementalArt
+
+    ////////////////////////////////////////////////////////////////
+    //
+    //  Avatar_Layla_ElementalArt_Handler
+    //
+    //  因为需要处理叠加，modifier必须依赖同一ability。全技能的盾逻辑,所有盾归于此ability。
+    //  Team记录GV，因为大招要给别的team加，只能搜到team。
+    //  但子弹那要独立，所以搜到怪后立刻生成2.5秒的gadget自己管理gv和xxx。
+    //  然后team等待gv恢复后再接受加的消息。
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalArt_Handler",
+            "onAbilityStart": [
+                {
+                    "$type": "AvatarSkillStart",
+                    "skillID": 10742,
+                },
+                //小技能上盾流程,无需dooffstage
+                { //将数值设置成技能数值
+                    "$type": "SetOverrideMapValue",
+                    "value": "%ShieldHPRatio_Skill*%ShieldUp",
+                    "overrideMapKey": "ShieldHPRatio",
+                },
+                {
+                    "$type": "SetOverrideMapValue",
+                    "value": "%ShieldHPConst_Skill*%ShieldUp",
+                    "overrideMapKey": "ShieldHPConst",
+                },
+                {
+                    "$type": "SetOverrideMapValue",
+                    "value": "%Dura_Skill",
+                    "overrideMapKey": "Dura",
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Team",
+                    "targetPredicates": [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_HasTeamShield", //专用标记，识别是否已存在小技能盾。
+                            "compareType": "NoneOrEqual",
+                            "value": 0,
+                        },
+                    ],
+                    "successActions": [ //无技能盾，移除talent盾，正常执行加盾流程。
+                        {
+                            "$type": "SetGlobalValue", //需要开启能加梦星的gv。
+                            "target": "Team",
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                        },
+                        {
+                            "$type": "RemoveUniqueModifier", 
+                            "target": "Team",
+                            "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent",
+                        },
+                        {
+                            "$type": "AttachModifier", 
+                            "target": "Team",
+                            "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team",
+                        },
+                    ],
+                    "failActions": [ //有技能盾，需要执行刷新盾值和时长的操作，且注意不能打断发射流程。
+                        {
+                            "$type": "ChangeShieldValue",
+                            "target": "Team",
+                            "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team",
+                            "shieldHPRatio": "%ShieldHPRatio",
+                            "shieldHP": "%ShieldHPConst",
+                            "maxShieldByHPRatio": "%ShieldHPRatio", //盾值不会超出。
+                            "maxShieldHP": "%ShieldHPConst",
+                            "refreshTime": true,
+                        },
+                        {
+                            "$type": "SetGlobalValue", //如果是处在“发射状态”，不做处理，发射结束自己会set的。不然就和主动上盾一样，设置成可以count。
+                            "target": "Team",
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "predicates": [
+                                {
+                                    "$type":"ByHasChildGadget",
+                                    "configIdArray": [41074001],
+                                    "compareType": "NoneOrEqual",
+                                    "value": 0,
+                                },
+                            ],
+                        },
+                    ],
+                },
+                //命座为队友上盾流程
+                {
+                    "$type": "Predicated",//如果解锁了命1.
+                    "targetPredicates": [
+                        {
+                            "$type": "ByUnlockTalentParam",
+                            "talentParam": "Layla_Talent1_Param",
+                        },
+                    ],
+                    "successActions": [
+                        { //将数值设置成命座效果数值
+                            "$type": "SetOverrideMapValue",
+                            "value": "%ShieldHPRatio_Skill*%ShieldUp*%Talent_Ratio",
+                            "overrideMapKey": "ShieldHPRatio",
+                        },
+                        {
+                            "$type": "SetOverrideMapValue",
+                            "value": "%ShieldHPConst_Skill*%ShieldUp*%Talent_Ratio",
+                            "overrideMapKey": "ShieldHPConst",
+                        },
+                        {
+                            "$type": "SetOverrideMapValue",
+                            "value": "%Dura_Talent",
+                            "overrideMapKey": "Dura",
+                        },
+                        {
+                            "$type": "Predicated",
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR40",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Alliance", //不包括自己
+                                "campBasedOn": "Self",
+                            },
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "TargetTeam", //指得目标所在team
+                                    "key": "_ABILITY_Avatar_Layla_HasTeamShield", //如果不存在大盾
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": [ //无盾，正常执行加盾操作,有盾则不操作
+                                {
+                                    "$type": "RemoveUniqueModifier", //移除旧的添加新的。（对于无功能盾总是如此操作）
+                                    "target": "TargetTeam",
+                                    "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent",
+                                },
+                                {
+                                    "$type": "AttachModifier",
+                                    "target": "TargetTeam",
+                                    "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent",
+                                },
+                            ],
+                        },
+                    ]
+                },
+                { //仅在释放小技能时，为自己附加冰附着。
+                    "$type": "AttachModifier",
+                    "modifierName": "UNIQUE_Layla_ElementalArt_FrozenBuff", //上的时候有一次清buff效果
+                },
+            ],
+            "modifiers": {
+                "UNIQUE_Layla_ElementalArt_FrozenBuff": { //Ice会被冻住，要用Frozen
+                    "isUnique": true,
+                    "duration": 0.1,
+                    "elementType": "Frozen",
+                    "elementDurability": 25,
+                },
+                "UNIQUE_Layla_ElementalArt_IceShield_Team": //
+                {
+                    "isUnique": true,
+                    "duration": "%Dura",
+                    "onReconnect": [
+                        {
+                            "$type": "SetGlobalValue", //由于重连时gadget销毁走不到onRemove，所以需要手动恢复能加梦星的gv。
+                            "target": "Team",          //这次是因为固定之所以直接设置，如果以后需要计算效果，可以配置"useDummyAbility"。让gadget赋予一个modifier，modifier的action上配置"useDummyAbility",这样gadget找不到了也能执行onRemoved。
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "doOffStage": true,
+                        },
+                    ],
+                    "modifierMixins": [
+                        {
+                            "$type": "GlobalMainShieldMixin",
+                            "shieldType": "Avatar_Ice",
+                            "shieldHPRatio": "%ShieldHPRatio",
+                            "shieldHP": "%ShieldHPConst",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_IceShield",
+                            "showDamageText": "INFO_ELITE_DEFENCE",
+                            "childShieldModifierName": "UNIQUE_Layla_ElementalArt_IceShield_Child",
+                            "onShieldBroken":
+                            [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team"
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AttachModifierToGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "valueSteps": [
+                                -0.5,
+                                0.5,
+                                1.5,
+                                2.5,
+                                3.5,
+                                4.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps": [
+                                "Layla_IceShield_0",
+                                "Layla_IceShield_1",
+                                "Layla_IceShield_2",
+                                "Layla_IceShield_3",
+                                "Layla_IceShield_4",
+                            ],
+                            "actionQueues": [
+                                [
+                                ],
+                                [
+                                    {
+                                        "$type": "AttachModifier",//是team执行的，所以直接target：self就行
+                                        "target": "Self",
+                                        "modifierName": "Layla_IceShield_Eff1",
+                                    },
+                                ],
+                                [
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff1",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff2",
+                                    },
+                                ],
+                                [
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff1",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff2",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff3",
+                                    },
+                                ],
+                                [
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff1",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff2",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff3",
+                                    },
+                                    {
+                                        "$type": "AttachModifier",
+                                        "modifierName": "Layla_IceShield_Eff4",
+                                    },
+                                ],
+                            ]
+                        },
+                        {//控制能否按时间积累梦星
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "defaultGlobalValueOnCreate": 0,
+                            "valueSteps": [
+                                0.5,
+                                1.5,
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps": [
+                                "UNIQUE_Layla_ElementalArt_IceShield_Count",
+                            ],
+                        },
+                        {//突1的护盾强效，和其他功能独立。
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_Avatar_Layla_ToughShield_Level",
+                            "defaultGlobalValueOnCreate": 0,
+                            "valueSteps": [
+                                0.5,
+                                1.5,
+                                2.5,
+                                3.5,
+                                4.5,
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps": [
+                                "Layla_ToughShield_L1_Handler",
+                                "Layla_ToughShield_L2_Handler",
+                                "Layla_ToughShield_L3_Handler",
+                                "Layla_ToughShield_L4_Handler",
+                            ],
+                        },
+                    ],
+                    "onAdded": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Layla_HasTeamShield", //保持一个标记，便于确定是刷新盾还是新增盾。
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "value": 0,
+                            "key": "_ABILITY_Avatar_Layla_ToughShield_Level", //盾的强效重置为0.
+                        },
+                    ],
+                    "onRemoved": [//team是永远onstage的
+                        {
+                            "$type": "SetGlobalValue",
+                            "value": 0,
+                            "key": "_ABILITY_Avatar_Layla_HasTeamShield",
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "value": 0,
+                            "key": "_ABILITY_Avatar_Layla_ToughShield_Level",
+                        },
+                        {
+                            "$type": "SetGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_IceShield_Die",
+                        },
+                    ],
+                },
+                "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent": {//命座1的盾
+                    "isUnique": true,
+                    "duration": "%Dura",
+                    "modifierMixins": [
+                        {
+                            "$type": "GlobalMainShieldMixin",
+                            "shieldType": "Avatar_Ice",
+                            "shieldHPRatio": "%ShieldHPRatio",
+                            "shieldHP": "%ShieldHPConst",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_IceShield",
+                            "showDamageText": "INFO_ELITE_DEFENCE",
+                            "childShieldModifierName": "UNIQUE_Layla_ElementalArt_IceShield_Child_Talent",
+                            "onShieldBroken": [
+                                {
+                                    "$type": "RemoveUniqueModifier",
+                                    "modifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent"
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Layla_ElementalArt_IceShield_Child_Talent": //命座盾的子盾
+                {
+                    "isUnique": true,
+                    "modifierMixins": [
+                        {
+                            "$type": "GlobalSubShieldMixin",
+                            "mainShieldModifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team_Talent",
+                        },
+                    ],
+                    "onBeingHit": [
+                        {
+                            "$type": "Predicated",
+                            "target": "Target",
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByAny", //和钟离一致。
+                                    "predicates": [
+                                        {
+                                            "$type": "ByHitDamage",
+                                            "damage": 0,
+                                            "logic": "Greater"
+                                        },
+                                        {
+                                            "$type": "ByHitEnBreak",
+                                            "enBreak": 0,
+                                            "logic": "Greater",
+                                        },
+                                    ],
+                                },
+                            ],
+                            "successActions": [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "target": "Team",
+                                    "modifierName": "UNIQUE_Layla_Shield_Hit_Handler",
+                                },
+                            ],
+                        },
+                    ],
+                    "properties": {
+                        "Actor_EndureDelta": 0,
+                    },
+                },
+                "UNIQUE_Layla_ElementalArt_IceShield_Child": //技能的子盾
+                {
+                    "isUnique": true,
+                    "modifierMixins": [
+                        {
+                            "$type": "GlobalSubShieldMixin",
+                            "mainShieldModifierName": "UNIQUE_Layla_ElementalArt_IceShield_Team",
+                        },
+                        {
+                            "$type":"OnAvatarUseSkillMixin",
+                            "clearSkillIdDelay": 0.2,
+                            "onTriggerSkill": [
+                                {
+                                    "$type":"ApplyModifier",
+                                    "target":"Team",
+                                    "modifierName": "Layla_IceShield_GV_Count_SkillAdd",
+                                    "predicates": [//要允许积累才能触发。
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "target": "Team",
+                                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                                            "value": 1,
+                                            "compareType": "Equal"
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                    "onBeingHit": [
+                        {
+                            "$type": "Predicated",
+                            "target": "Target",
+                            "targetPredicates": [
+                                {
+                                    "$type": "ByAny", //和钟离一致。
+                                    "predicates": [
+                                        {
+                                            "$type": "ByHitDamage",
+                                            "damage": 0,
+                                            "logic": "Greater"
+                                        },
+                                        {
+                                            "$type": "ByHitEnBreak",
+                                            "enBreak": 0,
+                                            "logic": "Greater",
+                                        },
+                                    ],
+                                },
+                            ],
+                            "successActions": [
+                                {
+                                    "$type": "ApplyModifier",
+                                    "target": "Team",
+                                    "modifierName": "UNIQUE_Layla_Shield_Hit_Handler",
+                                },
+                            ],
+                        },
+                    ],
+                    "properties": {
+                        "Actor_EndureDelta": 0,
+                    },
+                },
+                "UNIQUE_Layla_ElementalArt_IceShield_Count": {
+                    "isUnique": true,
+                    "thinkInterval": "%Interval",
+                    "onThinkInterval": [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_ToughShield_Level",
+                            "value": 1,
+                            "maxValue": 4,
+                            "useLimitRange": true,
+                            "predicates": [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Layla_Skill1_Param",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "Layla_IceShield_GV_Count_SkillAdd":{//同ability的modifier是不会绕过stacking叠加的。不需冠名UNIQUE
+                    "stacking": "Unique",
+                    "duration": "%Trigger_CD",    
+                    "onAdded": [
+                        {
+                            "$type": "AddGlobalValue", //如果触发过于频繁，就增加modifier控制频率。
+                            "doOffStage": true,
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "value": 2,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "target": "Team",
+                            "value": 2,
+                            "key": "_ABILITY_Avatar_Layla_ToughShield_Level",
+                            "maxValue": 4,
+                            "useLimitRange": true,
+                            "predicates": [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Layla_Skill1_Param",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "UNIQUE_Layla_Shield_Hit_Handler": {
+                    "isUnique": true,
+                    "duration": 0.5,
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "SendEffectTrigger",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_IceShield",
+                            "parameter": "BeHit",
+                        },
+                    ],
+                },
+                "Layla_IceShield_Eff1": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",//这里是必须target：self就行，用tagert:team联机时重连会找错team。联机相关尽量避免Team、Localavatar指代。
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_1",
+                        },
+                    ]
+                },
+                "Layla_IceShield_Eff2": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_2",
+                        },
+                    ]
+                },
+                "Layla_IceShield_Eff3": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_3",
+                        },
+                    ]
+                },
+                "Layla_IceShield_Eff4": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_4",
+                        },
+                    ],
+                },
+                "Layla_IceShield_0":
+                {
+                    "onAdded": [//其实就是0的时候特效清理逻辑。未不写到actionQueue是为了actionQueue易于阅读一些。
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Layla_IceShield_Eff1",
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Layla_IceShield_Eff2",
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Layla_IceShield_Eff3",
+                        },
+                        {
+                            "$type": "RemoveModifier",
+                            "modifierName": "Layla_IceShield_Eff4",
+                        },
+                    ],
+                },
+                "Layla_IceShield_1": {},
+                "Layla_IceShield_2": {},
+                "Layla_IceShield_3": {},
+                "Layla_IceShield_4":
+                {
+                    "thinkInterval": 0.1,//一直检查是否有敌人。但要注意team无法SetSelfAttacktarget，team不是一个能攻击的entity，阵营也不是玩家阵营。所以实际攻击还是要交给gadget
+                    "onThinkInterval": [
+                        {
+                            "$type": "Predicated",
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Caster",
+                                "topLimit": 1,
+                                "entityTypePriority": [
+                                    "Monster",
+                                    "Gadget"
+                                ],
+                            },
+                            "targetPredicates": [], //已经根据toplimit=1和Predicate筛过怪了，不用再判
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Gadget"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": [
+                                {
+                                    "$type": "CreateGadget",
+                                    // "ownerIsTarget": true,//来自程序注释：是否把技能的Target作为owner(仅ServerGadget用)
+                                                             //另外ownerIs(仅LocalGadget用),所以这里不能用ownerIsTarget
+                                    "propOwnerIs": "Caster",
+                                    "ownerIs": "Caster", //如果owner不写成莱依拉就会变成当前角色的art伤害
+                                    "gadgetID": 41074001,
+                                },
+                                {
+                                    "$type": "SetOverrideMapValue",//需求每轮只掉1次球形成的配置：通过变成1和-1，让发射的子弹每轮只和自己计算掉球cd，不会和下一轮子弹计算cd。
+                                    "target": "Caster",
+                                    "overrideMapKey": "DropBall_Type",
+                                    "value": "-%DropBall_Type",
+                                },
+                                {
+                                    "$type": "SetGlobalValue",//清空Team上效果
+                                    "target": "Team",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                                    "value": 0,
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "Layla_ToughShield_L1_Handler": {
+                    "stacking": "Unique",
+                    "modifierMixins": [
+                        {
+                            "$type": "CurLocalAvatarMixinV2",
+                            "modifierName": "Layla_ToughShield_L1",
+                        },
+                    ],
+                },
+                "Layla_ToughShield_L2_Handler": {
+                    "stacking": "Unique",
+                    "modifierMixins": [
+                        {
+                            "$type": "CurLocalAvatarMixinV2",
+                            "modifierName": "Layla_ToughShield_L2",
+                        },
+                    ],
+                },
+                "Layla_ToughShield_L3_Handler": {
+                    "stacking": "Unique",
+                    "modifierMixins": [
+                        {
+                            "$type": "CurLocalAvatarMixinV2",
+                            "modifierName": "Layla_ToughShield_L3",
+                        },
+                    ],
+                },
+                "Layla_ToughShield_L4_Handler": {
+                    "stacking": "Unique",
+                    "modifierMixins": [
+                        {
+                            "$type": "CurLocalAvatarMixinV2",
+                            "modifierName": "Layla_ToughShield_L4",
+                        },
+                    ],
+                },
+                "Layla_ToughShield_L1": {
+                    "stacking": "Unique",
+                    "isLimitedProperties": true,
+                    "properties": {
+                        "Actor_ShieldCostMinusRatio": "%ShieldCostMinusRatio",
+                    },
+                },
+                "Layla_ToughShield_L2": {
+                    "stacking": "Unique",
+                    "isLimitedProperties": true,
+                    "properties": {
+                        "Actor_ShieldCostMinusRatio": "%ShieldCostMinusRatio*2",
+                    },
+                },
+                "Layla_ToughShield_L3": {
+                    "stacking": "Unique",
+                    "isLimitedProperties": true,
+                    "properties": {
+                        "Actor_ShieldCostMinusRatio": "%ShieldCostMinusRatio*3",
+                    },
+                },
+                "Layla_ToughShield_L4": {
+                    "stacking": "Unique",
+                    "isLimitedProperties": true,
+                    "properties": {
+                        "Actor_ShieldCostMinusRatio": "%ShieldCostMinusRatio*4",
+                    },
+                },
+            },
+            "abilitySpecials": {
+                "ShieldHPRatio": 0,
+                "ShieldHPConst": 0,
+                "ShieldHPRatio_Skill": 0,
+                "ShieldHPConst_Skill": 0,
+                "Dura": 0,
+                "Dura_Skill":0,
+                "Dura_Talent":0,
+                "Interval":1.5,//生成慢一些才能看清,至少1.5。
+                "ShieldCostMinusRatio":0.0,
+                "Trigger_CD": 0.3, //通过队友E技能加梦星的cd。
+                "DropBall_Type":1,
+                "ShieldUp":1,//盾百分比，命座还会提升盾值百分比。所以初始为1.
+                "Talent_Ratio":0,//命座给队友盾的百分比。
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //  Avatar_Layla_ElementalArt_Gadget
+    //  Gadget本身逻辑。由于索敌加攻击必须gadget执行，所以减星星逻辑必然在这里。
+    //
+    //  由于显示位置相同，发动发射逻辑时，阻止所有增加逻辑。所以发射这件事本身还是得另外的gadget进行执行，一旦发射就要全部执行。不然剩下1、2、3个非常难看。发射结束再干掉自己。
+    //  因为要求没找到怪就保持，所以发射逻辑迭代成：存活时长和盾相同，但当10米内有目标就触发追踪逻辑，2秒内将所有子弹都打出去。
+    //  如果10米内有其他monster就重新搜索“最近”的monster，如果没有则按之前的target发射，即使目标已死亡（情况应该不多）
+    //  已生成完毕的子弹，和打出去过程子弹不会被盾消失逻辑干掉。一旦触发就一定会打完。//生成完毕的子弹如果盾没了，可以考虑提早结束生命。
+    //  简而言之，星星的增加是和盾相关的。星星一旦生成成星刺，消耗则和盾无关。//所以逻辑上发射的时候还是要有单独的子弹。//所以以前写的逻辑对的，优化下就行。1个跟随盾的特效显示，1个索敌后触发的发射子弹。如不触发就跟着盾消失.
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalArt_Gadget",//Gadget会有维护问题，重连会导致gadget消失。 注意处理下。
+            "onAdded": [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Find_Delay",
+                },
+            ],
+            "abilityMixins": [
+                {
+                    "$type": "AttachModifierToSelfGlobalValueMixin",
+                    "globalValueKey": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                    "defaultGlobalValueOnCreate": 4,
+                    "valueSteps": [
+                        -0.5,
+                        0.5,
+                        1.5,
+                        2.5,
+                        3.5,
+                        4.5
+                    ],
+                    "modifierNameSteps": [
+                        "Blank",
+                        "Blank",
+                        "Blank",
+                        "Blank",
+                        "Blank",
+                    ],
+                    "actionQueues": [ //这里处理所有的特效增减逻辑。
+                        [
+                            {
+                                "$type": "RemoveModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_1",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "RemoveModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_2",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "RemoveModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_3",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "RemoveModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_4",
+                            },
+                        ],
+                        [
+                            {
+                                "$type": "AttachModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_1",
+                            },
+                            {
+                                "$type": "AttachModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_2",
+                            },
+                            {
+                                "$type": "AttachModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_3",
+                            },
+                            {
+                                "$type": "AttachModifier",
+                                "modifierName": "Layla_ElementalArt_Star_EFF_4",
+                            },
+                        ],
+                    ]
+                },
+            ],
+            "modifiers": {
+                "Blank":{},
+                "Find_Delay":{
+                    "stacking": "Unique",
+                    "duration": 0.5,//控制延迟的时间
+                    "onAdded": [
+                        {
+                            "$type": "SetGlobalValue", //出现时，阻止shield进行count增加变化。减少和set基本是清零和恢复用，不进行阻碍。
+                            "target": "Team",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "value": 0,
+                        },
+                        {//防止经过0.5秒后发射的时候没有目标，先找一次目标。减少出现找不到目标乱飞的情况。
+                            "$type": "SetSelfAttackTarget", //这个情况如果没set到，应该可以用旧的attacktarget进行锁定。
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit": 1,
+                                "sortType": "Nearest",
+                                "entityTypePriority": [ //需要能找到gadget便于打无相系列
+                                    "Monster",
+                                    "Gadget",
+                                ]
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Gadget"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "Find_And_Shoot",
+                        },
+                    ],
+                },
+                "Find_And_Shoot": {
+                    "stacking": "Unique",
+                    "duration": 2.5, //相当于生存时间,这段时间必须发射完
+                    "onAdded": [//等一次interval比较不好控制，需要onadded直接生效。
+                        {
+                            "$type": "SetGlobalValue", //出现时，阻止shield进行count增加变化。减少和set基本是清零和恢复用，不进行阻碍。//需要确认重连的情况
+                            "target": "Team",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "value": 0,
+                        },
+                        {//命4，首次发射时，给全队生命值%的damageExtra
+                            "$type": "TriggerAbility",
+                            "target": "OriginOwner",
+                            "abilityName": "Avatar_Layla_Shoot_TeamBuff",
+                            "predicates": [
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Layla_Talent4_Param",
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "SetSelfAttackTarget", //这个情况如果没set到，应该可以用旧的attacktarget进行锁定。
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit": 1,
+                                "sortType": "Nearest",
+                                "entityTypePriority": [ //需要能找到gadget便于打无相系列
+                                    "Monster",
+                                    "Gadget",
+                                ]
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Gadget"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetRandomOverrideMapValue", //让子弹左右进行一些随机，防止轨迹太单一。
+                            "overrideMapKey": "RandomAngleY",
+                            "valueRangeMax": 90,
+                            "valueRangeMin": 45,
+                        },
+                        {
+                            "$type": "SetRandomOverrideMapValue", //让子弹上下进行一些随机，防止轨迹太单一。
+                            "overrideMapKey": "RandomAngleX",
+                            "valueRangeMax": 30,
+                            "valueRangeMin": 15,
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Shoot",
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet4", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                            },
+                        },
+                        {
+                            "$type": "TriggerBullet", //发追踪子弹
+                            "ownerIs": "OriginOwner", //视作角色发射//属性也不快照
+                            "propOwnerIs": "OriginOwner",
+                            "bulletID": 41074002,
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet4", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                                "direction": {
+                                    "$type": "ConfigDirectionByAttackTarget",
+                                    "angleOffset": {
+                                        "x": "-%RandomAngleX",
+                                        "y": "%RandomAngleY"
+                                    }
+                                },
+                            },
+                            "trackTarget": "SelfAttackTarget",
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                            "value": -1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                    ],
+                    "thinkInterval": 0.45, //每0.5秒必定发射一个。
+                    "onThinkInterval": [
+                        {
+                            "$type": "SetSelfAttackTarget", //这个情况如果没set到，应该可以用旧的attacktarget进行锁定。
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR10H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit": 1,
+                                "sortType": "Nearest",
+                                "entityTypePriority": [ //需要能找到gadget便于打无相系列
+                                    "Monster",
+                                    "Gadget",
+                                ]
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Gadget"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetRandomOverrideMapValue",//让子弹左右进行一些随机，防止轨迹太单一。
+                            "overrideMapKey": "RandomAngleY",
+                            "valueRangeMax": 90,
+                            "valueRangeMin": 45,
+                        },
+                        {
+                            "$type": "SetRandomOverrideMapValue", //让子弹上下进行一些随机，防止轨迹太单一。
+                            "overrideMapKey": "RandomAngleX",
+                            "valueRangeMax": 30,
+                            "valueRangeMin": 15,
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Shoot",
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet3", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 3
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "TriggerBullet", //发追踪子弹
+                            "ownerIs": "OriginOwner", //视作角色发射//属性也不快照
+                            "propOwnerIs": "OriginOwner",
+                            "bulletID": 41074002,
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet3", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                                "direction":{
+                                    "$type":"ConfigDirectionByAttackTarget",
+                                    "angleOffset": {
+                                        "x": "-%RandomAngleX",
+                                        "y": "-%RandomAngleY"
+                                    }
+                                },
+                            },
+                            "trackTarget": "SelfAttackTarget",
+                            "predicates": [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 3
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Shoot",
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet2", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 2
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "TriggerBullet", //发追踪子弹
+                            "ownerIs": "OriginOwner", //视作角色发射//属性也不快照
+                            "propOwnerIs": "OriginOwner",
+                            "bulletID": 41074002,
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet2", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                                "direction":{
+                                    "$type":"ConfigDirectionByAttackTarget",
+                                    "angleOffset": {
+                                        "x": "-%RandomAngleX-15",
+                                        "y": "%RandomAngleY"
+                                    }
+                                },
+                            },
+                            "trackTarget": "SelfAttackTarget",
+                            "predicates": [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 2
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Shoot",
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet1", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                            },
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 1
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "TriggerBullet", //发追踪子弹
+                            "ownerIs": "OriginOwner", //视作角色发射//属性也不快照
+                            "propOwnerIs": "OriginOwner",
+                            "bulletID": 41074002,
+                            "born": {
+                                "$type": "ConfigBornByAttachPoint",
+                                "attachPointName": "Bullet1", //后面优化成跟随gadget上挂点
+                                "attachPointTargetType": "Self",
+                                "direction": {
+                                    "$type": "ConfigDirectionByAttackTarget",
+                                    "angleOffset": {
+                                        "x": "-%RandomAngleX-15",
+                                        "y": "-%RandomAngleY"
+                                    }
+                                },
+                            },
+                            "trackTarget": "SelfAttackTarget",
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 1
+                                },
+                            ]
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                            "value": -1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                        },
+                        {
+                            "$type": "RemoveModifier", //减到0的话就移除自己。
+                            "modifierName": "Find_And_Shoot",
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Self",
+                                    "compareType": "Equal",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_GV_Gadget",
+                                    "value": 0
+                                },
+                            ]
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "SetGlobalValue",
+                            "target": "Team",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count", //回到0，重新开始计时。要注意interval也应该重新开始。需要迭代。
+                            "value": 0,
+                        },
+                        {
+                            "$type": "SetGlobalValue", //移除时恢复计数
+                            "target": "Team",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                            "value": 1,
+                        },
+                        {
+                            "$type": "KillSelf",
+                        },
+                    ],
+                },
+                "Layla_ElementalArt_Star_EFF_1": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_1",
+                        },
+                    ],
+                },
+                "Layla_ElementalArt_Star_EFF_2": {
+                    "onAdded": [
+
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_2",
+                        },
+                    ],
+                },
+                "Layla_ElementalArt_Star_EFF_3": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_3",
+                        },
+                    ],
+                },
+                "Layla_ElementalArt_Star_EFF_4": {
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_StackNum_4",
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials": {
+                "RandomAngleY": 0,
+                "RandomAngleX": 0,
+            },
+        },
+    },
+    ////////Avatar_Layla_ElementalArt_Bullet_Material
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalArt_Bullet_Material",
+            "onAdded": [
+                {
+                    "$type": "SetRandomOverrideMapValue", //转向时间进行一些随机,太久会导致近距离追踪不到怪。
+                    "overrideMapKey": "RandomTime",
+                    "valueRangeMax": 0.1,
+                    "valueRangeMin": 0.1,
+                },
+                {
+                    "$type":"AttachModifier",
+                    "modifierName": "Bullet_FX",
+                },
+                {
+                    "$type": "ApplyModifier", //需要先飞行一会儿再追踪
+                    "modifierName": "Timer",
+                },
+            ],
+            "onAbilityStart": [
+                {
+                    "$type":"FireEffect",
+                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Hit",//因为可能无法命中scene，所以不用能hitscene
+                },
+                {
+                    "$type":"Predicated",
+                    "target":"Other",//子弹触发时会记下触发的目标类型
+                    "targetPredicates":[
+                        {
+                            "$type":"ByTargetOverrideMapValue",//需求每轮只掉1次球，所以通过变成1和-1，进入suc和fail两个流程分别计算掉球cd。
+                            "targetAbilityName": "Avatar_Layla_ElementalArt_Handler",
+                            "target": "OriginOwner",
+                            "targetKey": "DropBall_Type",
+                            "targetValue": -1,
+                            "logic": "Equal",
+                        },
+                    ],
+                    "predicates": [ //非怪就不掉球了，既不进suc也不进fail
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": [
+                                "Monster"
+                            ],
+                        },
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ANIMAL_ENTITY_TYPE",
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                    "successActions":[
+                        {
+                            "$type": "TriggerAbility", //命2回能
+                            "target": "OriginOwner",
+                            "abilityName": "Avatar_Layla_ArtAndBurst_ReviveEnergy",
+                            "predicates": [ //解锁命2再走这流程
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Layla_Talent2_Param",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "ApplyModifier",//掉球分组A
+                            "target": "OriginOwner",
+                            "modifierName": "UNIQUE_Ball_1",
+                        },
+                    ],
+                    "failActions": [
+                        {
+                            "$type": "TriggerAbility", //命2回能
+                            "target": "OriginOwner",
+                            "abilityName": "Avatar_Layla_ArtAndBurst_ReviveEnergy",
+                            "predicates": [ //解锁命2再走这流程
+                                {
+                                    "$type": "ByUnlockTalentParam",
+                                    "talentParam": "Layla_Talent2_Param",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "ApplyModifier",//掉球分组B
+                            "target": "OriginOwner",
+                            "modifierName": "UNIQUE_Ball_2",
+                        },
+                    ],
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent": {
+                        "attackPattern": {
+                            "$type": "ConfigAttackSphere",
+                            "triggerType": "TriggerNoRepeat",
+                            "radius": 0.8, //0.5偏小，1偏大
+                            "born": {
+                                // "$type": "ConfigBornByCollisionPoint",
+                                "$type": "ConfigBornBySelf",
+                            },
+                            "checkHitLayerType": "Both",
+                        },
+                        "attackInfo": {
+                            "canBeModifiedBy": "OriginOwner",
+                            "attackTag": "Elemental_Art",
+                            "attenuationTag": "Elemental_Art",
+                            "attenuationGroup": "Layla_ElementalArt_Bullet",
+                            "attackProperty": {
+                                "damagePercentage": "%Bullet_Damage",
+                                "strikeType": "Default",
+                                "attackType": "Default",
+                                "elementType": "Ice",
+                                "elementDurability": 25,
+                                "enBreak": 15,
+                            },
+                            "hitPattern": {
+                                "onHitEffectName": "",
+                                "hitImpulseType": "LV2",
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                },
+            ],
+            "modifiers":
+            {
+                "Timer": {
+                    "duration": "%RandomTime",
+                    "onRemoved": [
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "AngularVelocityUp",
+                        },
+                    ],
+                },
+                "Bullet_FX":{
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet",
+                        },
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalArt_Bullet_Trail",
+                        },
+                    ]
+                },
+                "AngularVelocityUp": {
+                    "properties": {
+                        "Actor_BulletMoveAngularVelocityRatio": 49,
+                    },
+                },
+                "UNIQUE_Ball_1": {
+                    "isUnique": true,
+                    "duration": "%DropBall_CD",//同时限制了命中多个怪，和同组命中。
+                    "timeScale": "Level",
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "Randomed",//100%掉1球，2/3概率再掉1球。
+                            "chance": 1.0,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "target": "Caster",
+                                    "configID": 2022,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornByTarget",//注意不能是self，因为莱依拉在后台不更新位置。
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "Randomed",
+                            "chance": 0.33,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "target": "Caster",
+                                    "configID": 2022,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornByTarget",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "UNIQUE_Ball_2": {
+                    "isUnique": true,
+                    "duration": "%DropBall_CD",
+                    "timeScale": "Level",
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type": "Randomed", //100%掉1球，2/3概率再掉1球。
+                            "chance": 1.0,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "target": "Caster",
+                                    "configID": 2022,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornByTarget",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "Randomed",
+                            "chance": 0.33,
+                            "successActions": [
+                                {
+                                    "$type": "GenerateElemBall",
+                                    "target": "Caster",
+                                    "configID": 2022,
+                                    "baseEnergy": 3,
+                                    "ratio": 1,
+                                    "born": {
+                                        "$type": "ConfigBornByTarget",
+                                        "offset": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1.0,
+                                        },
+                                    },
+                                    "doOffStage": true,
+                                },
+                            ],
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+            },
+            "abilitySpecials": {
+                "Bullet_Damage": 0,
+                "HealHPRatio": 0,
+                "RandomTime":0.1,
+                "DropBall_CD":3.5,
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //	元素爆发,生成一个gagdet。 控制镜头、无敌、表情
+    //
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalBurst",
+            "abilityMixins": [
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                    ],
+                    "modifierName": "ElementalBurst_Protection",//包括了skillstart
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs": [
+                        "ElementalBurst",
+                        "ElementalBurst_AS",
+                    ],
+                    "modifierName": "ElementalBurst_Camera_Handler",
+                },
+                { //生成时间5%，需要给gadget清除留一点时间。
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalBurst",
+                    "modifierName": "Layla_ElementalBurst_Gadget_Born&Drop",
+                    "normalizeStart": 0.05, //需要等销毁再生成  //具体也要配合动作
+                    "normalizeEnd": 0.55,
+                },
+                { //镜头恢复
+                    "$type": "AttachToNormalizedTimeMixin",
+                    "stateID": "ElementalBurst",
+                    "modifierName": "Layla_ElementalBurst_Camera_On&Recover",
+                    "normalizeStart": 0.0,
+                    "normalizeEnd": 0.55,
+                },
+            ],
+            "modifiers": {
+                "ElementalBurst_Protection": { //无敌和推人配置，以及技能触发
+                    "state": "Invincible",
+                    "duration": 2, //加个限定时间，防止摆pose很久了还无敌
+                    "onAdded": [
+                        {
+                            "$type": "AttachAbilityStateResistance",
+                            "resistanceListID": 11002,
+                        },
+                        {
+                            "$type": "AvatarSkillStart", //需要0点进cd
+                            "skillID": 10745,
+                        },
+                        {
+                            "$type": "KillGadget", //试下来和create太近的话部分逻辑会错。例如天黑。
+                            "gadgetInfo": {
+                                "$type": "SelectTargetsByChildren",
+                                "configID": 41074011,
+                                "sortType": "Default",
+                                "topLimit": 1,//安全起见别把新生成的干掉了。
+                            },
+                        },
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Cast",
+                        },
+                    ],
+                    "modifierMixins": [
+                        {
+                            "$type": "WindZoneMixin",
+                            "shapeName": "CircleR3",
+                            "strength": -3,
+                            "attenuation": 2,
+                            "born": {
+                                "$type": "ConfigBornByTarget",
+                                "offset": {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0,
+                                },
+                            },
+                            "targetType": "Enemy",
+                            "predicates": [
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster",
+                                        "Grass"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetWeight", //WindZoneLevel = 2
+                                    "logic": "LesserOrEqual", //WindZoneLevel = 2
+                                    "weight": 250.0, //WindZoneLevel = 2
+                                },
+                            ],
+                        },
+                    ]
+                },
+                "ElementalBurst_Camera_Handler": {
+                    "onAdded": [
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": false,
+                            "blend": false,
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                    ],
+                },
+                "Layla_ElementalBurst_Camera_On&Recover":
+                {
+                    "onAdded": [//拉远镜头
+                        {
+                            "$type": "AvatarEnterCameraShot",
+                            "cameraMoveCfgPath": "Camera_Layla_ElementalBurst_Out",
+                        },
+                    ],
+                    "onRemoved": [
+                        { 
+                            "$type": "ActCameraRadialBlur",
+                            "cameraRadialBlur": {
+                                "power": 0.8,
+                                "blurTime": 0.3,
+                                "fadeTime": 0.15,
+                            },
+                        },
+                        {
+                            "$type": "AvatarCameraParam", //由于新的制作需要，现在恢复镜头都得在镜头结束前（不然镜头结束了还会再播这个恢复），然后等镜头时长结束完美恢复到这个6米。
+                            "cameraParam": {
+                                "forceRadius": 6,
+                                "forceRadiusDuration": 1, //这个恢复很突兀，需要慢一些。
+                                "shouldKeepForceRadius": true,
+                            },
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "AvatarEnterCameraShot",
+                            "cameraMoveCfgPath": "Camera_Layla_ElementalBurst_In",//虽然马上退出了，但有必要
+                        },
+                        {
+                            "$type": "AvatarExitCameraShot",
+                            "doOffStage": true,
+                        },
+                        {
+                            "$type": "EnableHeadControl",
+                            "enable": true,
+                            "doOffStage": true,
+                        },
+                    ]
+                },
+                "Layla_ElementalBurst_Gadget_Born&Drop": { //gadget创生时点，以及技能发力展开领域时点。
+                    "onAdded": [
+                        {
+                            "$type": "CreateGadget",
+                            "gadgetID": 41074011,
+                            "campID": 1001,
+                            "born": {
+                                "$type": "ConfigBornBySelf",
+                                "offset": {
+                                    "z": 1,
+                                },
+                                "onGround": true,
+                            },
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Area",
+                        },
+                    ]
+                },
+            },
+        },
+    },
+    ////////////////////////////////////////////////////////////////
+    //
+    //	元素爆发领域的gadget
+    //
+    //  目前都是gagdet干活，快照
+    ////////////////////////////////////////////////////////////////
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_ElementalBurst_Gadget",
+            "onAdded": [
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Layla_ElementalBurst_Gadget_Weather",
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Layla_ElementalBurst_Gadget_BulletTrigger_Modifier",
+                },
+                {
+                    "$type": "AttachModifier",
+                    "modifierName": "Gadget_Fx",
+                },
+            ],
+            "onKill": [
+                {
+                    "$type":"RemoveModifier",
+                    "modifierName": "Gadget_Fx",
+                },
+                {
+                    "$type": "SetAnimatorTrigger", //播放消散相关的。
+                    "triggerID": "End",
+                    "MPTriggerOnRemote": true, //trigger只对baseLayer同步，其他layer要同步需要补这项。
+                },
+                {
+                    "$type": "FireEffect", //播放消散相关的。
+                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Gadget_Die",
+                },
+            ],
+            "modifiers": {
+                "Gadget_Fx":{
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Gadget_In",
+                        },
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Gadget_Alert",
+                        },
+                    ]
+                },
+                "Layla_ElementalBurst_Gadget_Weather": { //天黑效果
+                    "modifierMixins": [
+                        {
+                            "$type": "TriggerWeatherMixin",
+                            "type": "Skill",
+                            "weatherPattern": "Weather_Layla_ElementalBurst_Keep",
+                            "transDuration": 1,
+                            "duration": 13,
+                        },
+                    ],
+                },
+                "Layla_ElementalBurst_Gadget_BulletTrigger_Modifier":{
+                    "duration": "%Dura",
+                    "thinkInterval": "%Interval",
+                    "onAdded": [
+                        {
+                            "$type":"SetOverrideMapValue",
+                            "overrideMapKey": "ShootPointNum",
+                            "value": 1,
+                        },
+                    ],
+                    "onThinkInterval": [
+                        {
+                            "$type": "Predicated",
+                            "otherTargets": {
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR12H10",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "Enemy",
+                                "campBasedOn": "Self",
+                                "topLimit": 1,
+                                "sortType": "Nearest",
+                                "entityTypePriority": ["Monster","Gadget"]
+                            },
+                            "targetPredicates": [],
+                            "predicates": [ //只有predicates可以配置selectByShape，先筛选target。//这种predicate如果不满足是走不到failure的注意下。
+                                {
+                                    "$type": "ByEntityTypes",
+                                    "entityTypes": [
+                                        "Monster","Gadget"
+                                    ],
+                                },
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "key": "_ANIMAL_ENTITY_TYPE",
+                                    "value": 0,
+                                    "compareType": "NoneOrEqual",
+                                },
+                            ],
+                            "successActions": [//发射子弹攻击敌人
+                                {
+                                    "$type": "SetAnimatorTrigger", //播放攻击特效动画
+                                    "triggerID": "Attack",
+                                    "MPTriggerOnRemote": true,
+                                },
+                                {
+                                    "$type": "SetSelfAttackTarget",
+                                    "otherTargets": {
+                                        "$type": "SelectTargetsByShape",
+                                        "shapeName": "CircleR12H10",
+                                        "centerBasedOn": "Self",
+                                        "campTargetType": "Enemy",
+                                        "campBasedOn": "Self",
+                                        "topLimit": 1,
+                                        "sortType": "Nearest",
+                                        "entityTypePriority": [
+                                            "Monster",
+                                            "Gadget"
+                                        ],
+                                    },
+                                    "predicates": [
+                                        {
+                                            "$type": "ByEntityTypes",
+                                            "entityTypes": [
+                                                "Monster",
+                                                "Gadget"
+                                            ],
+                                        },
+                                        {
+                                            "$type": "ByTargetGlobalValue",
+                                            "key": "_ANIMAL_ENTITY_TYPE",
+                                            "value": 0,
+                                            "compareType": "NoneOrEqual",
+                                        },
+                                    ],
+                                },
+                                {//让子弹左右进行一些随机，防止轨迹太单一。选择顺时针旋转
+                                    "$type": "SetRandomOverrideMapValue",
+                                    "overrideMapKey": "RandomAngle",
+                                    "valueRangeMax": -80,
+                                    "valueRangeMin": -100,
+                                },
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_ShootEffect", //发射特效
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot1",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                    },
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 1,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "TriggerBullet", //发射子弹攻击1
+                                    "bulletID": 41074012,
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot1",
+                                        "offset": {
+                                            "x": -0.25,//x轴向上
+                                        },
+                                        "direction": {
+                                            "$type": "ConfigDirectionByAttackTarget",//不直接飞向目标，略微拉开一点表现空间。
+                                            // "$type": "ConfigDirectionByDefault", //挂点的正面为切线向后（逆时针），总之试过就是不好用挂点朝向。
+                                            "angleOffsetCorrect": {
+                                                "y": "%RandomAngle",
+                                            }
+                                        },
+                                    },
+                                    "trackTarget": "SelfAttackTarget",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 1,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_ShootEffect", //发射特效
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot2",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                    },
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 2,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "TriggerBullet", //发射子弹攻击2
+                                    "bulletID": 41074012,
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot2",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                        "direction": {
+                                            "$type": "ConfigDirectionByAttackTarget",
+                                            "angleOffsetCorrect": {
+                                                "y": "%RandomAngle",
+                                            }
+                                        },
+                                    },
+                                    "trackTarget": "SelfAttackTarget",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 2,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_ShootEffect", //发射特效
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot3",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                    },
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 3,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "TriggerBullet", //发射子弹攻击3
+                                    "bulletID": 41074012,
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot3",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                        "direction": {
+                                            "$type": "ConfigDirectionByAttackTarget",
+                                            // "$type": "ConfigDirectionByDefault",
+                                            "angleOffsetCorrect": {
+                                                "y": "%RandomAngle",
+                                            }
+                                        },
+                                    },
+                                    "trackTarget": "SelfAttackTarget",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 3,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "FireEffect",
+                                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_ShootEffect", //发射特效
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot4",
+                                        "offset": {
+                                            "x": -0.25,
+                                        }
+                                    },
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 4,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "TriggerBullet", //发射子弹攻击4
+                                    "bulletID": 41074012,
+                                    "born": {
+                                        "$type": "ConfigBornByAttachPoint",
+                                        "attachPointName": "Shoot4",
+                                        "offset": {
+                                            "x": -0.25,
+                                        },
+                                        "direction": {
+                                            "$type": "ConfigDirectionByAttackTarget",
+                                            // "$type": "ConfigDirectionByDefault",
+                                            "angleOffsetCorrect": {
+                                                "y": "%RandomAngle",
+                                            }
+                                        },
+                                    },
+                                    "trackTarget": "SelfAttackTarget",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "Equal",
+                                            "targetValue": 4,
+                                        },
+                                    ],
+                                },
+                                {
+                                    "$type": "SetOverrideMapValue",
+                                    "value": "%ShootPointNum+1",
+                                    "overrideMapKey": "ShootPointNum",
+                                },
+                                {
+                                    "$type": "SetOverrideMapValue", //超出重置为1
+                                    "value": 1,
+                                    "overrideMapKey": "ShootPointNum",
+                                    "predicates": [
+                                        {
+                                            "$type": "ByTargetOverrideMapValue",
+                                            "targetKey": "ShootPointNum",
+                                            "logic": "GreaterOrEqual",
+                                            "targetValue": 5,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type":"SetAnimatorTrigger",//播放消散相关的。
+                            "triggerID": "End",
+                            "MPTriggerOnRemote": true,//trigger只对baseLayer同步，其他layer要同步需要补这项。
+                        },
+                        {
+                            "$type": "FireEffect", //播放消散相关的。
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Gadget_Die",
+                        },
+                    ]
+                },
+            },
+            "abilitySpecials": {
+                "RandomAngle":0,
+                "ShootPointNum":1,
+                "Dura":1,//补充1秒时长
+                "Interval":1.5,
+            },
+        },
+    },
+    //////生成的子弹的ability
+    {
+        "Default": {
+            "$type": "ConfigAbility",
+            "abilityName":"Avatar_Layla_ElementalBurst_Bullet1_Material",
+            "onAdded": [
+                {
+                    "$type": "SetRandomOverrideMapValue", //转向时间进行一些随机,太久会导致近距离追踪不到怪。
+                    "overrideMapKey": "RandomTime",
+                    "valueRangeMax": 0.15,
+                    "valueRangeMin": 0.15,
+                },
+                {
+                    "$type":"AttachModifier",
+                    "modifierName": "Bullet_Fx",
+                },
+                {
+                    "$type": "ApplyModifier", //需要先飞行一会儿再追踪
+                    "modifierName": "Timer",
+                },
+            ],
+            "onAbilityStart": [
+                { //发动时机还是需要判断一下的。到底生成时有效，还是命中时。
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_Layla_AddTeamGlobalvalue",
+                    "otherTargets": {
+                        "$type": "SelectTargetsByShape",
+                        "shapeName": "CircleR40",
+                        "centerBasedOn": "Self",
+                        "campTargetType": "SelfCamp",
+                        "campBasedOn": "Self",
+                    },
+                    "predicates": [
+                        {
+                            "$type": "ByEntityTypes",
+                            "entityTypes": [
+                                "Avatar",
+                            ],
+                        },
+                    ],
+                },
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_Hit", //因为可能无法命中scene，所以不用能hitscene
+                },
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent": {
+                        "attackPattern": {
+                            "$type": "ConfigAttackSphere",
+                            "triggerType": "TriggerNoRepeat",
+                            "radius": 1.5,
+                            "born": {
+                                "$type": "ConfigBornBySelf",
+                            },
+                            "checkHitLayerType": "Both",
+                        },
+                        "attackInfo": {
+                            "canBeModifiedBy": "OriginOwner",
+                            "attackTag": "Elemental_Burst",
+                            "attenuationTag": "Elemental_Burst",
+                            "attackProperty": {
+                                "damageExtra": "%DamageByHPRatio*%FIGHT_PROP_MAX_HP",
+                                "strikeType": "Default",
+                                "attackType": "Default",
+                                "elementType": "Ice",
+                                "elementDurability": 25,
+                                "enBreak": 20,
+                            },
+                            "hitPattern": {
+                                "onHitEffectName": "",
+                                "hitImpulseType": "LV2",
+                                "hitHaltTime": 0.0,
+                                "hitHaltTimeScale": 0.01,
+                                "muteHitText": false,
+                            },
+                            "canHitHead": false,
+                        },
+                    },
+                },
+            ],
+            "modifiers":
+            {
+                "UNIQUE_Layla_AddTeamGlobalvalue":{
+                    "isUnique": true,
+                    "duration": "%Trigger_CD", //让0.5秒最多只能触发1次，即使多个莱依拉开大。
+                    "stacking": "Unique",
+                    "onAdded": [
+                        {
+                            "$type":"AddGlobalValue",
+                            "target": "Team",
+                            "key": "_ABILITY_Avatar_Layla_IceShield_GV_Count",
+                            "value": 1,
+                            "useLimitRange": true,
+                            "maxValue": 4,
+                            "minValue": 0,
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Team",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                                    "value": 1,
+                                    "compareType": "Equal",//如果没这参数不应该加。
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "target": "Team",
+                            "value": 1,
+                            "key": "_ABILITY_Avatar_Layla_ToughShield_Level",
+                            "maxValue": 4,
+                            "useLimitRange": true,
+                            "predicates": [
+                                {
+                                    "$type": "ByTargetGlobalValue",
+                                    "target": "Team",
+                                    "key": "_ABILITY_Avatar_Layla_IceShield_Can_Count",
+                                    "value": 1,
+                                    "compareType": "Equal", //如果没这参数不应该加。
+                                },
+                                {
+                                    "$type": "ByUnlockTalentParam",//应该能找到originowner，施法者
+                                    "talentParam": "Layla_Skill1_Param",
+                                },
+                            ],
+                        },
+                    ]
+                },
+                "Timer": {
+                    "duration": "%RandomTime",
+                    "onRemoved": [
+                        {
+                            "$type": "ApplyModifier",
+                            "modifierName": "AngularVelocityUp",
+                        },
+                    ],
+                },
+                "Bullet_Fx":{
+                    "onAdded": [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet",
+                        },
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Girl_Sword_Layla_ElementalBurst_Bullet_Trail",
+                        },
+                    ]
+                },
+                "AngularVelocityUp": {
+                    "properties": {
+                        "Actor_BulletMoveAngularVelocityRatio": 49,
+                    },
+                },
+            },
+            "abilitySpecials": {
+                "DamageByHPRatio":0.0,
+                "Trigger_CD":0.5, //盾0.5秒只会被大招加1次梦星。
+                "RandomTime":0.15,
+            },
+        },
+    },
+////////////////////////////////////////////////////////////////
+//
+//  以下为突破、命之座相关Ability
+//
+////////////////////////////////////////////////////////////////
+////普攻重击伤害替换
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Layla_NormalAttack_DamageHandler",
+        "abilityMixins": [
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": [
+                    "ATK01"
+                ],
+                "damagePercentage": "%Attack_01",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": [
+                    "ATK02"
+                ],
+                "damagePercentage": "%Attack_02",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": [
+                    "ATK03"
+                ],
+                "damagePercentage": "%Attack_03",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": [
+                    "ExtraAttack_1"
+                ],
+                "damagePercentage": "%ExtraAttack1",
+            },
+            {
+                "$type": "ModifyDamageMixin",
+                "animEventNames": [
+                    "ExtraAttack_2"
+                ],
+                "damagePercentage": "%ExtraAttack2",
+            },
+        ],
+        "abilitySpecials": {
+            "Attack_01": 0,
+            "Attack_02": 0,
+            "Attack_03": 0,
+            "ExtraAttack1": 0,
+            "ExtraAttack2": 0,
+        },
+    },
+},
+
+
+////////////////////////////////////////////////////////////////
+//  突破2，对冰晶进行extra，依据生命值。 小技能发动那下写成了none，可以predicate掉
+///////////////////////////////////////////////////////////////
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Layla_ArtAndBurst_DamageExtra",
+        "isDynamicAbility": true,
+        "abilityMixins": [
+            {
+                "$type": "ModifyDamageMixin",
+                "attackTags": ["Elemental_Art"],
+                "damageExtra": "%FIGHT_PROP_MAX_HP*%Ratio",
+                "predicates": [
+                    {
+                        "$type": "ByAttackType",
+                        "attackType": "Default",
+                    },
+                ],
+            },
+        ],
+        "abilitySpecials": {
+            "Ratio":0.0,
+        }
+    },
+},
+////////////////////////////////////////////////////////////////
+//  命2，子弹命中回能
+///////////////////////////////////////////////////////////////
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Layla_ArtAndBurst_ReviveEnergy",
+        "isDynamicAbility": true,
+        "onAbilityStart": [
+            {
+                "$type": "ReviveElemEnergy",
+                "value": "%Energy",
+                "doOffStage": true,
+            },
+        ],
+        "abilitySpecials": {
+            "Energy": 0,
+        }
+    },
+},
+
+////////////////////////////////////////////////////////////////
+//  命4，全队普攻重击增加damageExtra
+///////////////////////////////////////////////////////////////
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Layla_Shoot_TeamBuff",
+        "isDynamicAbility": true,
+        "onAbilityStart": [
+            {
+                "$type": "RemoveUniqueModifier",
+                "modifierName": "UNIQUE_Avatar_Layla_Talent4_Buff",
+                "target": "AllPlayerAvatars",
+                "doOffStage": true,
+                "predicates": [
+                    {
+                        "$type": "ByTargetPositionToSelfPosition", //要测试下会不会是未更新的自己的位置。角色在后台位置可能不更新
+                        "compareType": "XZ",
+                        "value": 40,
+                        "logic": "LesserOrEqual",
+                    },
+                ],
+            },
+            {
+                "$type": "AttachModifier",
+                "modifierName": "UNIQUE_Avatar_Layla_Talent4_Buff",
+                "target": "AllPlayerAvatars",
+                "doOffStage": true,
+                "predicates": [
+                    {
+                        "$type": "ByTargetPositionToSelfPosition",
+                        "compareType": "XZ",
+                        "value": 40,
+                        "logic": "LesserOrEqual",
+                    },
+                ],
+            },
+        ],
+        "modifiers": {
+            "UNIQUE_Avatar_Layla_Talent4_Buff":{
+                "isUnique": true,
+                "duration": "%Dura",
+                "state": "AttackUp",
+                "modifierMixins": [
+                    {
+                        "$type": "ModifyDamageMixin",
+                        "attackTags": [
+                            "NormalAttack_01",
+                            "NormalAttack_02",
+                            "NormalAttack_03",
+                            "NormalAttack_04",
+                            "NormalAttack_05",
+                            "NormalAttack_06",
+                            "ExtraAttack"
+                        ],
+                        "damageExtra": "%HP2ExtraRatio*%FIGHT_PROP_MAX_HP",//读取的abilityOwner，即caster的HP
+                    },
+                ],
+                "onAttackLanded": [
+                    {
+                        "$type": "Predicated",
+                        "target": "Other", //非caster的target是会指向self的。
+                        "doOffStage": true,
+                        "targetPredicates": [
+                            {
+                                "$type": "ByEntityTypes",
+                                "entityTypes": [
+                                    "Monster",
+                                ],
+                            },
+                            {
+                                "$type": "ByTargetGlobalValue",
+                                "key": "_ANIMAL_ENTITY_TYPE",
+                                "value": 0,
+                                "compareType": "NoneOrEqual",
+                            },
+                            {
+                                "$type": "ByAttackTags",
+                                "attackTags": [
+                                    "NormalAttack_01",
+                                    "NormalAttack_02",
+                                    "NormalAttack_03",
+                                    "NormalAttack_04",
+                                    "NormalAttack_05",
+                                    "NormalAttack_06",
+                                    "ExtraAttack"
+                                ],
+                            },
+                            {
+                                "$type": "ByHitDamage", //描述是“造成伤害后”，有伤害才会消耗次数
+                                "damage": 0,
+                                "logic": "Greater"
+                            },
+                        ],
+                        "successActions": [
+                            {
+                                "$type": "AttachModifier",
+                                "modifierName": "UNIQUE_Avatar_Layla_Talent4_MixinCountDown",
+                                "doOffStage": true,
+                            },
+                        ],
+                    },
+                ],
+            },
+            "UNIQUE_Avatar_Layla_Talent4_MixinCountDown": {
+                "isUnique": true,
+                "stacking": "Unique",
+                "duration": "%Keep_Time", //保持一段时间mixin增伤，然后再去除。
+                "timeScale": "Level", //不受卡帧影响
+                "onRemoved": [
+                    {
+                        "$type": "RemoveUniqueModifier",
+                        "modifierName": "UNIQUE_Avatar_Layla_Talent4_Buff",
+                        "doOffStage": true,
+                    },
+                ],
+            },
+        },
+        "abilitySpecials": {
+            "HP2ExtraRatio":0.0,
+            "Dura":0,
+            "Keep_Time":0
+        }
+    },
+},
+
+
+////////////////////////////////////////////////////////////////
+//  Tlanet6，对冰晶进行固定百分比增伤
+///////////////////////////////////////////////////////////////
+{
+    "Default": {
+        "$type": "ConfigAbility",
+        "abilityName": "Avatar_Layla_ArtAndBurst_DamageUp",
+        "isDynamicAbility": true,
+        "abilityMixins": [
+            {
+                "$type": "ModifyDamageMixin",
+                "attackTags": [
+                    "Elemental_Art",
+                    "Elemental_Burst"
+                ],
+                "damagePercentageRatio": "%DamageUp",
+                "predicates": [
+                    {
+                        "$type":"ByAttackType",
+                        "attackType": "Default",
+                    },
+                ],
+            },
+        ],
+        "abilitySpecials": {
+            "DamageUp": 0,
+        }
+    },
+},
+
+////////////////////////////////////////////////////////////////
+//
+//  空中攻击
+//
+////////////////////////////////////////////////////////////////
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Layla_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5074010,
+                    "flySkillID": 5074010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_Loop_Normal",
+                },
+                {
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs":
+					[
+						"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+					],
+
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce_AS",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "FallingAnthem_AttachWeaponEffect",
+                },
+    			{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["FallingAnthem_BS_2"],
+					"modifierName": "FallingAnthem_CameraRadialBlur",
+				},
+            ],
+            "onAdded":
+            [
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV4",
+                                // "hitLevel": "Heavy", //hitlevel = 4
+                                // "hitImpulseX": 800, //hitlevel = 4
+                                // "hitImpulseY": 0, //hitlevel = 4
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 5.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 1.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+                                "overrideByWeapon": true,
+                                "strikeType": "Blunt",
+                                "attackType": "Melee",
+                                "elementType": "None",
+                        		"elementDurability": 25,
+                                "elementRank": 1.0,
+                                "enBreak": 150,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+                                "hitImpulseType":"LV7",
+                                // "hitLevel": "Air", //hitlevel = 7
+                                // "hitImpulseX": 0, //hitlevel = 7
+                                // "hitImpulseY": 800, //hitlevel = 7
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_01",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Sword_FallAnthem_Strike_02",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "FallingAnthem_AttachWeaponEffect":
+                {
+                    "onAdded":
+                    [
+	                    {
+	                    	"$type":"AttachEffect",
+	                    	"effectPattern":"Eff_Avatar_Sword_FallAnthem_Self_01",
+	                    },
+                    ],
+                },
+                "FallingAnthem_CameraRadialBlur":
+                {
+					"duration":0.23,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_BS",
+                        },
+                    ],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.0,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 1
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+                                        "strikeType": "Slash",
+                                        "overrideByWeapon": true,
+                                        "attackType": "Melee",
+                                        "elementType": "None",
+                                		"elementDurability": 0,
+                                        "enBreak": 25,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+                               			"hitImpulseType":"LV2",
+                                        // "hitLevel": "Light", //hitlevel = 2
+                                        // "hitImpulseX": 200, //hitlevel = 2
+                                        // "hitImpulseY": 0, //hitlevel = 2
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                "FallingAnthem_Loop_Normal":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "AttachModifierToSelfGlobalValueMixin",
+                            "globalValueKey": "_ABILITY_FallingAnthem_UseCamera",
+                            "valueSteps":
+                            [
+                                -1,
+                                0.5,
+                                1.5
+                            ],
+                            "removeAppliedModifier": true,
+                            "modifierNameSteps":
+                            [
+                                "FallingAnthem_Loop_Normal_Rank_1",
+                                "FallingAnthem_Loop_Normal_Rank_2"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_1":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_01",
+                        },
+                    ],
+                },
+                "FallingAnthem_Loop_Normal_Rank_2":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AttachEffect",
+                            "effectPattern": "Eff_Avatar_Sword_FallAnthem_Loop_02",
+                        },
+                    ],
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce_AS":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                },
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+]

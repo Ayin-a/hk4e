@@ -5,8 +5,9 @@ import (
 )
 
 type StaminaInfo struct {
-	PrevState proto.MotionState
-	PrevPos   *Vector
-	CurState  proto.MotionState
-	CurPos    *Vector
+	PrevState    proto.MotionState
+	PrevPos      *Vector
+	CurState     proto.MotionState
+	CurPos       *Vector
+	RestoreDelay uint8
 }

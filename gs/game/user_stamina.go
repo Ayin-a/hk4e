@@ -12,18 +12,35 @@ import (
 func (g *GameManager) HandleStamina(player *model.Player, motionState proto.MotionState) {
 	logger.LOG.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
 
+	staminaInfo := player.StaminaInfo
+
 	// 记录玩家的此时状态
-	player.StaminaInfo.CurState = motionState
-	player.StaminaInfo.CurPos = &model.Vector{
+	staminaInfo.CurState = motionState
+	staminaInfo.CurPos = &model.Vector{
 		X: player.Pos.X,
 		Y: player.Pos.Y,
 		Z: player.Pos.Z,
 	}
 
+	// 未改变状态不消耗耐力
+	if motionState == staminaInfo.PrevState {
+		return
+	}
+
 	// 根据玩家的状态消耗耐力
 	switch motionState {
 	case proto.MotionState_MOTION_STATE_CLIMB:
+		// 攀爬
 		g.UpdateStamina(player, constant.StaminaCostConst.CLIMB_START)
+	case proto.MotionState_MOTION_STATE_DASH_BEFORE_SHAKE:
+		// 冲刺
+		g.UpdateStamina(player, constant.StaminaCostConst.SPRINT)
+	case proto.MotionState_MOTION_STATE_CLIMB_JUMP:
+		// 攀爬跳跃
+		g.UpdateStamina(player, constant.StaminaCostConst.CLIMB_JUMP)
+	case proto.MotionState_MOTION_STATE_SWIM_DASH:
+		// 游泳冲刺开始
+		g.UpdateStamina(player, constant.StaminaCostConst.SWIM_DASH_START)
 	}
 }
 
@@ -41,6 +58,8 @@ func (g *GameManager) StaminaHandler(player *model.Player) {
 	if isMoving || curStamina < maxStamina {
 		var staminaConst int32
 
+		// 根据状态决定要修改的耐力
+		// TODO 角色天赋 食物 会影响耐力消耗
 		switch staminaInfo.CurState {
 		case proto.MotionState_MOTION_STATE_CLIMB:
 			// 攀爬
@@ -48,11 +67,31 @@ func (g *GameManager) StaminaHandler(player *model.Player) {
 				staminaConst = constant.StaminaCostConst.CLIMBING
 			}
 		case proto.MotionState_MOTION_STATE_DASH:
-			// 短跑
+			// 跑步加速
 			staminaConst = constant.StaminaCostConst.DASH
-		case proto.MotionState_MOTION_STATE_RUN:
-			// 跑步
-			staminaConst = constant.StaminaCostConst.RUN
+		case proto.MotionState_MOTION_STATE_FLY, proto.MotionState_MOTION_STATE_FLY_FAST, proto.MotionState_MOTION_STATE_FLY_SLOW:
+			// 飞行
+			staminaConst = constant.StaminaCostConst.FLY
+		case proto.MotionState_MOTION_STATE_SWIM_MOVE:
+			// 游泳移动
+			staminaConst = constant.StaminaCostConst.SWIMMING
+		case proto.MotionState_MOTION_STATE_SWIM_DASH:
+			// 游泳加速
+			staminaConst = constant.StaminaCostConst.SWIM_DASH
+		case proto.MotionState_MOTION_STATE_SKIFF_DASH:
+			// 载具加速移动
+			// TODO 玩家使用载具时需要用载具的协议发送prop
+			staminaConst = constant.StaminaCostConst.SKIFF_DASH
+		default:
+			// 回复体力
+			staminaConst = constant.StaminaCostConst.RESTORE
+		}
+
+		// 耐力延迟1s(5 ticks)恢复
+		if staminaConst > 0 && staminaInfo.RestoreDelay < 5 {
+			staminaInfo.RestoreDelay++
+			// 不恢复耐力
+			staminaConst = 0
 		}
 
 		// 更新玩家耐力
@@ -77,9 +116,17 @@ func (g *GameManager) GetPlayerIsMoving(staminaInfo *model.StaminaInfo) bool {
 
 // UpdateStamina 更新耐力 当前耐力值 + 消耗的耐力值
 func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
+	// 耐力增加0是没有意义的
+	if staminaCost == 0 {
+		return
+	}
+	// 消耗耐力重新计算恢复需要延迟的tick
+	if staminaCost < 0 {
+		player.StaminaInfo.RestoreDelay = 0
+	}
+
 	// 玩家最大耐力值
 	maxStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA])
-
 	// 玩家现行耐力值
 	curStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA])
 

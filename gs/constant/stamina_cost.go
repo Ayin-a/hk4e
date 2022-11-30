@@ -3,6 +3,7 @@ package constant
 var StaminaCostConst *StaminaCost
 
 type StaminaCost struct {
+	// 消耗耐力
 	CLIMBING          int32
 	CLIMB_START       int32
 	CLIMB_JUMP        int32
@@ -15,7 +16,13 @@ type StaminaCost struct {
 	SWIMMING          int32
 	TALENT_DASH       int32
 	TALENT_DASH_START int32
-	RESTORE           int32 // 回复体力
+	// 恢复耐力
+	POWERED_FLY   int32
+	POWERED_SKIFF int32
+	RUN           int32
+	SKIFF         int32
+	STANDBY       int32
+	WALK          int32
 }
 
 func InitStaminaCostConst() {
@@ -33,5 +40,10 @@ func InitStaminaCostConst() {
 	StaminaCostConst.SWIMMING = -80
 	StaminaCostConst.TALENT_DASH = -300
 	StaminaCostConst.TALENT_DASH_START = -1000
-	StaminaCostConst.RESTORE = 500
+	StaminaCostConst.POWERED_FLY = 500
+	StaminaCostConst.POWERED_SKIFF = 500
+	StaminaCostConst.RUN = 500
+	StaminaCostConst.SKIFF = 500
+	StaminaCostConst.STANDBY = 500
+	StaminaCostConst.WALK = 500
 }

@@ -41,6 +41,9 @@ require github.com/golang-jwt/jwt/v4 v4.4.0
 // csv
 require github.com/jszwec/csvutil v1.7.1
 
+// hjson
+require github.com/hjson/hjson-go/v4 v4.2.0
+
 require (
 	github.com/byebyebruce/natsrpc v0.5.5-0.20221125150611-56cd29a4e335
 	github.com/spf13/cobra v1.6.1

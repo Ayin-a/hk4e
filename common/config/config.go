@@ -29,6 +29,7 @@ type Hk4e struct {
 	KcpPort            int    `toml:"kcp_port"`
 	KcpAddr            string `toml:"kcp_addr"`
 	ResourcePath       string `toml:"resource_path"`
+	GameDataConfigPath string `toml:"game_data_config_path"`
 	GachaHistoryServer string `toml:"gacha_history_server"`
 }
 

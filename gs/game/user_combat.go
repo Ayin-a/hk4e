@@ -10,7 +10,7 @@ import (
 )
 
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
+	//logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -19,7 +19,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.CombatInvokeEntry]()
 	for _, entry := range req.InvokeList {
-		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
 			scene.AddAttack(&Attack{
@@ -225,6 +225,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		}
 	}
 
+	// 处理转发
 	// PacketCombatInvocationsNotify
 	if invokeHandler.AllLen() > 0 {
 		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
@@ -251,7 +252,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
+	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -278,6 +279,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 		}
 	}
 
+	// 处理转发
 	// PacketAbilityInvocationsNotify
 	if invokeHandler.AllLen() > 0 {
 		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
@@ -304,7 +306,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user client ability ok, uid: %v", player.PlayerID)
+	//logger.LOG.Debug("user client ability init finish, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -331,6 +333,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		}
 	}
 
+	// 处理转发
 	// PacketClientAbilityInitFinishNotify
 	if invokeHandler.AllLen() > 0 {
 		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
@@ -355,6 +358,20 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, world.owner.ClientSeq, clientAbilityInitFinishNotify)
 	}
 }
+
+func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user event do skill success, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.EvtDoSkillSuccNotify)
+	logger.LOG.Debug("EvtDoSkillSuccNotify: %v", req)
+}
+
+func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user client ability change, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
+	logger.LOG.Debug("ClientAbilityChangeNotify: %v", req)
+}
+
+// 泛型通用转发器
 
 type InvokeType interface {
 	proto.AbilityInvokeEntry | proto.CombatInvokeEntry

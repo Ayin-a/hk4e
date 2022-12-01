@@ -69,7 +69,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	// PacketStoreWeightLimitNotify
 	storeWeightLimitNotify := new(proto.StoreWeightLimitNotify)
 	storeWeightLimitNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
-	// TODO 原神背包容量限制 写到配置文件
+	// 背包容量限制
 	storeWeightLimitNotify.WeightLimit = 30000
 	storeWeightLimitNotify.WeaponCountLimit = 2000
 	storeWeightLimitNotify.ReliquaryCountLimit = 1500

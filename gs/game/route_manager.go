@@ -67,6 +67,8 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.CombatInvocationsNotify, r.gameManager.CombatInvocationsNotify)
 	r.registerRouter(cmd.AbilityInvocationsNotify, r.gameManager.AbilityInvocationsNotify)
 	r.registerRouter(cmd.ClientAbilityInitFinishNotify, r.gameManager.ClientAbilityInitFinishNotify)
+	r.registerRouter(cmd.EvtDoSkillSuccNotify, r.gameManager.EvtDoSkillSuccNotify)
+	r.registerRouter(cmd.ClientAbilityChangeNotify, r.gameManager.ClientAbilityChangeNotify)
 	r.registerRouter(cmd.EntityAiSyncNotify, r.gameManager.EntityAiSyncNotify)
 	r.registerRouter(cmd.WearEquipReq, r.gameManager.WearEquipReq)
 	r.registerRouter(cmd.ChangeGameTimeReq, r.gameManager.ChangeGameTimeReq)

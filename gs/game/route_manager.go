@@ -102,6 +102,7 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.ChangeWorldToSingleModeReq, r.gameManager.ChangeWorldToSingleModeReq)
 	r.registerRouter(cmd.SceneKickPlayerReq, r.gameManager.SceneKickPlayerReq)
 	r.registerRouter(cmd.ChangeMpTeamAvatarReq, r.gameManager.ChangeMpTeamAvatarReq)
+	r.registerRouter(cmd.SceneAvatarStaminaStepReq, r.gameManager.SceneAvatarStaminaStepReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *cmd.NetMsg) {

@@ -71,12 +71,13 @@ func (g *GameManager) Start() {
 }
 
 func (g *GameManager) Stop() {
+	// 保存玩家数据
+	g.userManager.SaveUser()
+
 	// 踢出所有在线玩家
 	for userId := range g.userManager.GetAllOnlineUserList() {
 		g.DisconnectPlayer(userId)
 	}
-	// 保存玩家数据
-	g.userManager.SaveUser()
 
 	//g.worldManager.worldStatic.SaveTerrain()
 }

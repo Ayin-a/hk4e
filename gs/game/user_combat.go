@@ -199,7 +199,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				sceneEntity.moveState = uint16(motionInfo.State)
 				sceneEntity.lastMoveSceneTimeMs = entityMoveInfo.SceneTime
 				sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
-				logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
+				//logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
 			}
 
 			// 处理耐力消耗
@@ -261,7 +261,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 
@@ -315,7 +315,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	scene := world.GetSceneById(player.SceneId)
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 

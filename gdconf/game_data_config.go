@@ -7,13 +7,18 @@ import (
 	"strings"
 )
 
+// 游戏数据配置表
+
 var CONF *GameDataConfig = nil
 
 type GameDataConfig struct {
+	// 配置表路径前缀
 	csvPrefix  string
 	jsonPrefix string
-	// 角色
-	AvatarDataMap map[int32]*AvatarData
+	// 配置表数据
+	AvatarDataMap           map[int32]*AvatarData           // 角色
+	AvatarSkillDataMap      map[int32]*AvatarSkillData      // 角色技能
+	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData // 角色技能库
 }
 
 func InitGameDataConfig() {
@@ -51,8 +56,9 @@ func (g *GameDataConfig) loadAll() {
 }
 
 func (g *GameDataConfig) load() {
-	// 角色
-	g.loadAvatarData()
+	g.loadAvatarData()           // 角色
+	g.loadAvatarSkillData()      // 角色技能
+	g.loadAvatarSkillDepotData() // 角色技能库
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

@@ -9,17 +9,19 @@ import (
 	"os"
 )
 
+// 角色配置表
+
 type AvatarData struct {
-	AvatarId      int32   `csv:"AvatarId"`      // ID
-	HpBase        float64 `csv:"HpBase"`        // 基础生命值
-	AttackBase    float64 `csv:"AttackBase"`    // 基础攻击力
-	DefenseBase   float64 `csv:"DefenseBase"`   // 基础防御力
-	Critical      float64 `csv:"Critical"`      // 暴击率
-	CriticalHurt  float64 `csv:"CriticalHurt"`  // 暴击伤害
-	QualityType   int32   `csv:"QualityType"`   // 角色品质
-	ConfigJson    string  `csv:"ConfigJson"`    // 战斗config
-	InitialWeapon int32   `csv:"InitialWeapon"` // 初始武器
-	SkillDepotId  int32   `csv:"SkillDepotId"`  // 技能库ID
+	AvatarId      int32   `csv:"AvatarId"`                // ID
+	HpBase        float64 `csv:"HpBase,omitempty"`        // 基础生命值
+	AttackBase    float64 `csv:"AttackBase,omitempty"`    // 基础攻击力
+	DefenseBase   float64 `csv:"DefenseBase,omitempty"`   // 基础防御力
+	Critical      float64 `csv:"Critical,omitempty"`      // 暴击率
+	CriticalHurt  float64 `csv:"CriticalHurt,omitempty"`  // 暴击伤害
+	QualityType   int32   `csv:"QualityType,omitempty"`   // 角色品质
+	ConfigJson    string  `csv:"ConfigJson,omitempty"`    // 战斗config
+	InitialWeapon int32   `csv:"InitialWeapon,omitempty"` // 初始武器
+	SkillDepotId  int32   `csv:"SkillDepotId,omitempty"`  // 技能库ID
 
 	AbilityHashCodeList []int32
 }
@@ -61,7 +63,7 @@ func (g *GameDataConfig) loadAvatarData() {
 			abilityHashCode := endec.Hk4eAbilityHashCode(configAvatarAbility.AbilityName)
 			avatarData.AbilityHashCodeList = append(avatarData.AbilityHashCodeList, abilityHashCode)
 		}
-
+		// list -> map
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData
 	}
 	logger.LOG.Info("AvatarData count: %v", len(g.AvatarDataMap))

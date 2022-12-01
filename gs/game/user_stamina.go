@@ -16,7 +16,29 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 	switch player.StaminaInfo.State {
 	case proto.MotionState_MOTION_STATE_CLIMB:
 		// 缓慢攀爬
-		g.UpdateStamina(player, constant.StaminaCostConst.CLIMBING)
+
+		// 缓慢攀爬的耐力将根据角度不同而改变
+		// rotX ∈ [0,180) x = rotX
+		// rotX ∈ [180,360) x = rotX - 360.0
+		// x >= 0 y = -x + 10
+		// x < 0 y = -2x + 10
+		// rotX req.Rot.X
+		// y 消耗的耐力修正值
+		// base(-100) + y 消耗的耐力
+		var x int32
+		var costRevise int32 // 攀爬耐力修正值
+		if req.Rot.X >= 0 && req.Rot.X < 180 {
+			x = int32(req.Rot.X)
+		} else if req.Rot.X >= 180 && req.Rot.X < 360 {
+			x = int32(req.Rot.X - 360.0)
+		}
+		if x >= 0 {
+			costRevise = -x + 10
+		} else {
+			costRevise = -(x * 2) + 10
+		}
+		//logger.LOG.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE+costRevise)
+		g.UpdateStamina(player, constant.StaminaCostConst.CLIMBING_BASE+costRevise)
 	case proto.MotionState_MOTION_STATE_SWIM_MOVE:
 		// 缓慢游泳
 		g.UpdateStamina(player, constant.StaminaCostConst.SWIMMING)
@@ -24,10 +46,15 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 
 	// PacketSceneAvatarStaminaStepRsp
 	sceneAvatarStaminaStepRsp := new(proto.SceneAvatarStaminaStepRsp)
-	sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
-	sceneAvatarStaminaStepRsp.UseClientRot = req.UseClientRot
+	// 角度超过范围返回值为错误
+	if (req.Rot.X >= 0 && req.Rot.X < 90) || (req.Rot.X > 270 && req.Rot.X < 360) {
+		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
+	} else {
+		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RETCODE_RET_FAIL)
+	}
+	sceneAvatarStaminaStepRsp.UseClientRot = true
 	sceneAvatarStaminaStepRsp.Rot = req.Rot
-	g.SendMsg(cmd.GetShopRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
+	g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
 }
 
 // HandleStamina 处理即时耐力消耗

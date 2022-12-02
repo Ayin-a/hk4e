@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"hk4e/gdconf"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -30,6 +31,7 @@ func Run(ctx context.Context, configFile string) error {
 	constant.InitConstant()
 
 	gdc.InitGameDataConfig()
+	gdconf.InitGameDataConfig()
 
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
 	if err != nil {

@@ -86,10 +86,13 @@ func (l *Logger) doLog() {
 		}
 		logStr := logHeader + fmt.Sprintf(logInfo.msg, logInfo.param...) + "\n"
 		red := string([]byte{27, 91, 51, 49, 109})
+		green := string([]byte{27, 91, 51, 50, 109})
 		reset := string([]byte{27, 91, 48, 109})
 		if l.method == CONSOLE {
 			if logInfo.logLevel == ERROR {
 				log.Print(red, logStr, reset)
+			} else if logInfo.logLevel == INFO {
+				log.Print(green, logStr, reset)
 			} else {
 				log.Print(logStr)
 			}
@@ -98,6 +101,8 @@ func (l *Logger) doLog() {
 		} else if l.method == BOTH {
 			if logInfo.logLevel == ERROR {
 				log.Print(red, logStr, reset)
+			} else if logInfo.logLevel == INFO {
+				log.Print(green, logStr, reset)
 			} else {
 				log.Print(logStr)
 			}

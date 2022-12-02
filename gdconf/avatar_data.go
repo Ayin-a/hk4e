@@ -21,6 +21,7 @@ type AvatarData struct {
 	QualityType   int32   `csv:"QualityType,omitempty"`   // 角色品质
 	ConfigJson    string  `csv:"ConfigJson,omitempty"`    // 战斗config
 	InitialWeapon int32   `csv:"InitialWeapon,omitempty"` // 初始武器
+	WeaponType    int32   `csv:"WeaponType"`              // 武器种类
 	SkillDepotId  int32   `csv:"SkillDepotId,omitempty"`  // 技能库ID
 
 	AbilityHashCodeList []int32

@@ -262,6 +262,10 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+
+		// 处理能力调用
+		g.HandleAbilityInvoke(player, entry)
+
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 
@@ -316,6 +320,10 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+
+		// 处理能力调用
+		g.HandleAbilityInvoke(player, entry)
+
 		invokeHandler.addEntry(entry.ForwardType, entry)
 	}
 
@@ -363,6 +371,9 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 	logger.LOG.Debug("user event do skill success, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtDoSkillSuccNotify)
 	logger.LOG.Debug("EvtDoSkillSuccNotify: %v", req)
+
+	// 处理技能开始时的耐力消耗
+	g.HandleSkillStartStamina(player, req.SkillId)
 }
 
 func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {

@@ -76,7 +76,11 @@ func (p *Player) InitAvatar(avatar *Avatar) {
 }
 
 func (p *Player) AddAvatar(avatarId uint32) {
-	avatarDataConfig := gdc.CONF.AvatarDataMap[int32(avatarId)]
+	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
+	if !ok {
+		logger.LOG.Error("avatarDataConfig error, avatarId: %v", avatarId)
+		return
+	}
 	skillDepotId := int32(0)
 	// 主角要单独设置
 	if avatarId == 10000005 {

@@ -2,10 +2,13 @@ package game
 
 import (
 	pb "google.golang.org/protobuf/proto"
+	"hk4e/gdconf"
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+	"time"
 )
 
 // SceneAvatarStaminaStepReq 缓慢游泳或缓慢攀爬时消耗耐力
@@ -85,17 +88,43 @@ func (g *GameManager) HandleStamina(player *model.Player, motionState proto.Moti
 		// 攀爬跳跃
 		g.UpdateStamina(player, constant.StaminaCostConst.CLIMB_JUMP)
 	case proto.MotionState_MOTION_STATE_SWIM_DASH:
-		// 游泳冲刺开始
+		// 快速游泳开始
 		g.UpdateStamina(player, constant.StaminaCostConst.SWIM_DASH_START)
 	}
 }
 
-// SetStaminaLastSkill 记录最后释放的技能
-func (g *GameManager) SetStaminaLastSkill(player *model.Player, casterId uint32, skillId uint32) {
-	// TODO 有些角色的重击消耗不同
-	switch skillId {
-
+// HandleSkillSustainStamina 处理技能持续时的耐力消耗
+func (g *GameManager) HandleSkillSustainStamina(player *model.Player) {
+	skillId := player.StaminaInfo.LastSkillId
+	logger.LOG.Error("stamina skill sustain, skillId: %v", skillId)
+	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
+	if !ok {
+		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
+		return
 	}
+	// 距离上次执行过去的时间
+	pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
+	// 根据配置以及距离上次的时间计算消耗的耐力
+	g.UpdateStamina(player, -(int32(pastTime/1000)*avatarSkillConfig.CostStamina)*100)
+
+	// 记录最后释放技能时间
+	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
+}
+
+// HandleSkillStartStamina 处理技能开始时即时耐力消耗
+func (g *GameManager) HandleSkillStartStamina(player *model.Player, skillId uint32) {
+	logger.LOG.Error("stamina skill start, skillId: %v", skillId)
+	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
+	if !ok {
+		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
+		return
+	}
+	// 根据配置消耗耐力
+	g.UpdateStamina(player, -avatarSkillConfig.CostStamina*100)
+
+	// 记录最后释放的技能
+	player.StaminaInfo.LastSkillId = skillId
+	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
 }
 
 // StaminaHandler 处理持续耐力消耗
@@ -103,9 +132,9 @@ func (g *GameManager) StaminaHandler(player *model.Player) {
 	staminaInfo := player.StaminaInfo
 
 	// 添加的耐力大于0为恢复
-	if staminaInfo.Cost > 0 {
+	if staminaInfo.CostStamina > 0 {
 		// 耐力延迟1s(5 ticks)恢复 动作状态为加速将立刻恢复耐力
-		if staminaInfo.RestoreDelay < 5 && staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH {
+		if staminaInfo.RestoreDelay < 5 && (staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH) {
 			//logger.LOG.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.RestoreDelay++
 			return // 不恢复耐力
@@ -113,7 +142,7 @@ func (g *GameManager) StaminaHandler(player *model.Player) {
 	}
 
 	// 更新玩家耐力
-	g.UpdateStamina(player, staminaInfo.Cost)
+	g.UpdateStamina(player, staminaInfo.CostStamina)
 }
 
 // SetStaminaCost 设置动作需要消耗的耐力
@@ -125,38 +154,38 @@ func (g *GameManager) SetStaminaCost(player *model.Player, state proto.MotionSta
 	switch state {
 	// 消耗耐力
 	case proto.MotionState_MOTION_STATE_DASH:
-		// 疾跑
-		staminaInfo.Cost = constant.StaminaCostConst.DASH
+		// 快速跑步
+		staminaInfo.CostStamina = constant.StaminaCostConst.DASH
 	case proto.MotionState_MOTION_STATE_FLY, proto.MotionState_MOTION_STATE_FLY_FAST, proto.MotionState_MOTION_STATE_FLY_SLOW:
-		// 飞行
-		staminaInfo.Cost = constant.StaminaCostConst.FLY
+		// 滑翔
+		staminaInfo.CostStamina = constant.StaminaCostConst.FLY
 	case proto.MotionState_MOTION_STATE_SWIM_DASH:
-		// 游泳加速
-		staminaInfo.Cost = constant.StaminaCostConst.SWIM_DASH
+		// 快速游泳
+		staminaInfo.CostStamina = constant.StaminaCostConst.SWIM_DASH
 	case proto.MotionState_MOTION_STATE_SKIFF_DASH:
-		// 小艇加速移动
+		// 浪船加速
 		// TODO 玩家使用载具时需要用载具的协议发送prop
-		staminaInfo.Cost = constant.StaminaCostConst.SKIFF_DASH
+		staminaInfo.CostStamina = constant.StaminaCostConst.SKIFF_DASH
 	// 恢复耐力
 	case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN:
-		// 跑步
-		staminaInfo.Cost = constant.StaminaCostConst.RUN
+		// 正常跑步
+		staminaInfo.CostStamina = constant.StaminaCostConst.RUN
 	case proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY:
 		// 站立
-		staminaInfo.Cost = constant.StaminaCostConst.STANDBY
+		staminaInfo.CostStamina = constant.StaminaCostConst.STANDBY
 	case proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK:
 		// 走路
-		staminaInfo.Cost = constant.StaminaCostConst.WALK
+		staminaInfo.CostStamina = constant.StaminaCostConst.WALK
 	case proto.MotionState_MOTION_STATE_POWERED_FLY:
-		// 飞行加速 (风圈等)
-		staminaInfo.Cost = constant.StaminaCostConst.POWERED_FLY
+		// 滑翔加速 (风圈等)
+		staminaInfo.CostStamina = constant.StaminaCostConst.POWERED_FLY
 	case proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH:
-		// 小艇加速 (风圈等)
-		staminaInfo.Cost = constant.StaminaCostConst.POWERED_SKIFF
+		// 浪船加速 (风圈等)
+		staminaInfo.CostStamina = constant.StaminaCostConst.POWERED_SKIFF
 	// 缓慢动作将在客户端发送消息后消耗
 	case proto.MotionState_MOTION_STATE_CLIMB, proto.MotionState_MOTION_STATE_SWIM_MOVE:
 		// 缓慢攀爬 或 缓慢游泳
-		staminaInfo.Cost = 0
+		staminaInfo.CostStamina = 0
 	}
 }
 

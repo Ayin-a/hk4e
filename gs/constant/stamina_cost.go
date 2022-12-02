@@ -4,7 +4,7 @@ var StaminaCostConst *StaminaCost
 
 type StaminaCost struct {
 	// 消耗耐力
-	CLIMBING          int32
+	CLIMBING_BASE     int32
 	CLIMB_START       int32
 	CLIMB_JUMP        int32
 	DASH              int32
@@ -28,7 +28,7 @@ type StaminaCost struct {
 func InitStaminaCostConst() {
 	StaminaCostConst = new(StaminaCost)
 
-	StaminaCostConst.CLIMBING = -150
+	StaminaCostConst.CLIMBING_BASE = -100
 	StaminaCostConst.CLIMB_START = -500
 	StaminaCostConst.CLIMB_JUMP = -2500
 	StaminaCostConst.DASH = -360
@@ -37,7 +37,7 @@ func InitStaminaCostConst() {
 	StaminaCostConst.SPRINT = -1800
 	StaminaCostConst.SWIM_DASH_START = -2000
 	StaminaCostConst.SWIM_DASH = -204
-	StaminaCostConst.SWIMMING = -80
+	StaminaCostConst.SWIMMING = -400
 	StaminaCostConst.TALENT_DASH = -300
 	StaminaCostConst.TALENT_DASH_START = -1000
 	StaminaCostConst.POWERED_FLY = 500

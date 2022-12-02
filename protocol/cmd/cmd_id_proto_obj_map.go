@@ -212,6 +212,10 @@ func (a *CmdProtoMap) registerAllMessage() {
 	a.registerMessage(McoinExchangeHcoinReq, &proto.McoinExchangeHcoinReq{}) // 结晶换原石请求
 	a.registerMessage(McoinExchangeHcoinRsp, &proto.McoinExchangeHcoinRsp{}) // 结晶换原石响应
 
+	// 耐力
+	a.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{}) // 缓慢游泳或缓慢攀爬时消耗耐力请求
+	a.registerMessage(SceneAvatarStaminaStepRsp, &proto.SceneAvatarStaminaStepRsp{}) // 缓慢游泳或缓慢攀爬时消耗耐力响应
+
 	// 乱七八糟
 	a.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求
 	a.registerMessage(TowerAllDataReq, &proto.TowerAllDataReq{})                       // 深渊数据请求

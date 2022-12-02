@@ -10,7 +10,7 @@ import (
 
 type AvatarSkillData struct {
 	AvatarSkillId int32 `csv:"AvatarSkillId"`          // ID
-	CostStamina   int32 `csv:"CostStamina"`            // 消耗体力
+	CostStamina   int32 `csv:"CostStamina,omitempty"`  // 消耗体力
 	CostElemType  int32 `csv:"CostElemType,omitempty"` // 消耗能量类型
 	CostElemVal   int32 `csv:"CostElemVal,omitempty"`  // 消耗能量值
 }

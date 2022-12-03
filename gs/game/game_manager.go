@@ -1,6 +1,7 @@
 package game
 
 import (
+	pb "google.golang.org/protobuf/proto"
 	"hk4e/gate/entity/gm"
 	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
@@ -8,8 +9,6 @@ import (
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-
-	pb "google.golang.org/protobuf/proto"
 )
 
 type GameManager struct {
@@ -74,11 +73,6 @@ func (g *GameManager) Stop() {
 	// 保存玩家数据
 	g.userManager.SaveUser()
 
-	// 踢出所有在线玩家
-	for userId := range g.userManager.GetAllOnlineUserList() {
-		g.DisconnectPlayer(userId)
-	}
-
 	//g.worldManager.worldStatic.SaveTerrain()
 }
 
@@ -110,6 +104,7 @@ func (g *GameManager) DisconnectPlayer(userId uint32) {
 	g.SendMsg(cmd.ServerDisconnectClientNotify, userId, 0, new(proto.ServerDisconnectClientNotify))
 }
 
+// 踢出玩家
 func (g *GameManager) KickPlayer(userId uint32) {
 	info := new(gm.KickPlayerInfo)
 	info.UserId = userId

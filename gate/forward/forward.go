@@ -362,10 +362,8 @@ func (f *ForwardManager) recvNetMsgFromGameServer() {
 			protoMsg.HeadMessage = f.getHeadMsg(netMsg.ClientSeq)
 			protoMsg.PayloadMessage = netMsg.PayloadMessage
 			f.protoMsgInput <- protoMsg
-			continue
 		} else {
 			logger.LOG.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
-			continue
 		}
 	}
 }
@@ -500,7 +498,7 @@ func (f *ForwardManager) ChangeGateOpenState(isOpen bool) bool {
 	return true
 }
 
-// 剔除玩家下线
+// 踢出玩家下线
 func (f *ForwardManager) KickPlayer(info *gm.KickPlayerInfo) bool {
 	if info == nil {
 		return false

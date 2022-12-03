@@ -28,7 +28,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	}
 
 	// 传送玩家
-	sceneId := uint32(transPointConfig.PointData.TranSceneId)
+	sceneId := req.SceneId
 	transPos := transPointConfig.PointData.TranPos
 	pos := &model.Vector{
 		X: transPos.X,

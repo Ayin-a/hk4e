@@ -8,6 +8,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,144 +26,141 @@ const (
 	NEITHER int = 4
 )
 
-var LOG *Logger = nil
-
-type Logger struct {
-	level       int
-	method      int
-	trackLine   bool
-	file        *os.File
-	logInfoChan chan *LogInfo
-}
-
-type LogInfo struct {
-	logLevel    int
-	msg         string
-	param       []any
-	fileInfo    string
-	funcInfo    string
-	lineInfo    int
-	goroutineId string
-}
-
-// 日志配置
 type Config struct {
 	Level     string `toml:"level"`
 	Method    string `toml:"method"`
 	TrackLine bool   `toml:"track_line"`
 }
 
+var LOG *Logger = nil
+
+type Logger struct {
+	Level       int
+	Method      int
+	TrackLine   bool
+	File        *os.File
+	LogInfoChan chan *LogInfo
+}
+
+type LogInfo struct {
+	Level       int
+	Msg         string
+	Param       []any
+	FileName    string
+	FuncName    string
+	Line        int
+	GoroutineId string
+	Stack       string
+}
+
 func InitLogger(name string, cfg Config) {
 	log.SetFlags(0)
 	LOG = new(Logger)
-	LOG.level = getLevelInt(cfg.Level)
-	LOG.method = getMethodInt(cfg.Method)
-	LOG.trackLine = cfg.TrackLine
-	LOG.logInfoChan = make(chan *LogInfo, 1000)
-	if LOG.method == FILE || LOG.method == BOTH {
+	LOG.Level = getLevelInt(cfg.Level)
+	LOG.Method = getMethodInt(cfg.Method)
+	LOG.TrackLine = cfg.TrackLine
+	LOG.LogInfoChan = make(chan *LogInfo, 1000)
+	if LOG.Method == FILE || LOG.Method == BOTH {
 		file, err := os.OpenFile("./"+name+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
 			info := fmt.Sprintf("open log file error: %v\n", err)
 			panic(info)
 		}
-		LOG.file = file
+		LOG.File = file
 	}
 	go LOG.doLog()
 }
 
+var GREEN = string([]byte{27, 91, 51, 50, 109})
+var WHITE = string([]byte{27, 91, 51, 55, 109})
+var YELLOW = string([]byte{27, 91, 51, 51, 109})
+var RED = string([]byte{27, 91, 51, 49, 109})
+var BLUE = string([]byte{27, 91, 51, 52, 109})
+var MAGENTA = string([]byte{27, 91, 51, 53, 109})
+var CYAN = string([]byte{27, 91, 51, 54, 109})
+var RESET = string([]byte{27, 91, 48, 109})
+
 func (l *Logger) doLog() {
 	for {
-		logInfo := <-l.logInfoChan
+		logInfo := <-l.LogInfoChan
 		timeNow := time.Now()
 		timeNowStr := timeNow.Format("2006-01-02 15:04:05.000")
-		logHeader := "[" + timeNowStr + "]" + " " +
-			"[" + l.getLevelStr(logInfo.logLevel) + "]" + " "
-		if l.trackLine {
-			logHeader += "[" +
-				"line:" + logInfo.fileInfo + ":" + strconv.FormatInt(int64(logInfo.lineInfo), 10) +
-				" func:" + logInfo.funcInfo +
-				" goroutine:" + logInfo.goroutineId +
-				"]" + " "
+		logHeader := CYAN + "[" + timeNowStr + "]" + RESET + " "
+		if logInfo.Level == DEBUG {
+			logHeader += BLUE + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+		} else if logInfo.Level == INFO {
+			logHeader += GREEN + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+		} else if logInfo.Level == ERROR {
+			logHeader += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
 		}
-		logStr := logHeader + fmt.Sprintf(logInfo.msg, logInfo.param...) + "\n"
-		red := string([]byte{27, 91, 51, 49, 109})
-		green := string([]byte{27, 91, 51, 50, 109})
-		reset := string([]byte{27, 91, 48, 109})
-		if l.method == CONSOLE {
-			if logInfo.logLevel == ERROR {
-				log.Print(red, logStr, reset)
-			} else if logInfo.logLevel == INFO {
-				log.Print(green, logStr, reset)
-			} else {
-				log.Print(logStr)
-			}
-		} else if l.method == FILE {
-			_, _ = l.file.WriteString(logStr)
-		} else if l.method == BOTH {
-			if logInfo.logLevel == ERROR {
-				log.Print(red, logStr, reset)
-			} else if logInfo.logLevel == INFO {
-				log.Print(green, logStr, reset)
-			} else {
-				log.Print(logStr)
-			}
-			_, _ = l.file.WriteString(logStr)
+		if l.TrackLine {
+			logHeader += MAGENTA + "[" +
+				logInfo.FileName + ":" + strconv.Itoa(logInfo.Line) + " " +
+				logInfo.FuncName + "()" + " " +
+				"goroutine:" + logInfo.GoroutineId +
+				"]" + RESET + " "
+		}
+		logStr := logHeader + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + "\n"
+		if logInfo.Level == ERROR {
+			logStr += logInfo.Stack
+		}
+		if l.Method == CONSOLE {
+			log.Print(logStr)
+		} else if l.Method == FILE {
+			_, _ = l.File.WriteString(logStr)
+		} else if l.Method == BOTH {
+			log.Print(logStr)
+			_, _ = l.File.WriteString(logStr)
 		}
 	}
 }
 
 func (l *Logger) Debug(msg string, param ...any) {
-	if l.level > DEBUG {
+	if l.Level > DEBUG {
 		return
 	}
 	logInfo := new(LogInfo)
-	logInfo.logLevel = DEBUG
-	logInfo.msg = msg
-	logInfo.param = param
-	if l.trackLine {
-		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		logInfo.fileInfo = fileInfo
-		logInfo.funcInfo = funcInfo
-		logInfo.lineInfo = lineInfo
-		logInfo.goroutineId = l.getGoroutineId()
+	logInfo.Level = DEBUG
+	logInfo.Msg = msg
+	logInfo.Param = param
+	if l.TrackLine {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
+		logInfo.GoroutineId = l.getGoroutineId()
+		logInfo.Stack = l.Stack()
 	}
-	l.logInfoChan <- logInfo
+	l.LogInfoChan <- logInfo
 }
 
 func (l *Logger) Info(msg string, param ...any) {
-	if l.level > INFO {
+	if l.Level > INFO {
 		return
 	}
 	logInfo := new(LogInfo)
-	logInfo.logLevel = INFO
-	logInfo.msg = msg
-	logInfo.param = param
-	if l.trackLine {
-		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		logInfo.fileInfo = fileInfo
-		logInfo.funcInfo = funcInfo
-		logInfo.lineInfo = lineInfo
-		logInfo.goroutineId = l.getGoroutineId()
+	logInfo.Level = INFO
+	logInfo.Msg = msg
+	logInfo.Param = param
+	if l.TrackLine {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
+		logInfo.GoroutineId = l.getGoroutineId()
+		logInfo.Stack = l.Stack()
 	}
-	l.logInfoChan <- logInfo
+	l.LogInfoChan <- logInfo
 }
 
 func (l *Logger) Error(msg string, param ...any) {
-	if l.level > ERROR {
+	if l.Level > ERROR {
 		return
 	}
 	logInfo := new(LogInfo)
-	logInfo.logLevel = ERROR
-	logInfo.msg = msg
-	logInfo.param = param
-	if l.trackLine {
-		fileInfo, funcInfo, lineInfo := l.getLineInfo()
-		logInfo.fileInfo = fileInfo
-		logInfo.funcInfo = funcInfo
-		logInfo.lineInfo = lineInfo
-		logInfo.goroutineId = l.getGoroutineId()
+	logInfo.Level = ERROR
+	logInfo.Msg = msg
+	logInfo.Param = param
+	if l.TrackLine {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
+		logInfo.GoroutineId = l.getGoroutineId()
+		logInfo.Stack = l.Stack()
 	}
-	l.logInfoChan <- logInfo
+	l.LogInfoChan <- logInfo
 }
 
 func getLevelInt(level string) (ret int) {
@@ -206,20 +204,49 @@ func getMethodInt(method string) (ret int) {
 }
 
 func (l *Logger) getGoroutineId() (goroutineId string) {
-	staticInfo := make([]byte, 32)
-	runtime.Stack(staticInfo, false)
-	staticInfo = bytes.TrimPrefix(staticInfo, []byte("goroutine "))
-	staticInfo = staticInfo[:bytes.IndexByte(staticInfo, ' ')]
-	goroutineId = string(staticInfo)
+	buf := make([]byte, 32)
+	runtime.Stack(buf, false)
+	buf = bytes.TrimPrefix(buf, []byte("goroutine "))
+	buf = buf[:bytes.IndexByte(buf, ' ')]
+	goroutineId = string(buf)
 	return goroutineId
 }
 
-func (l *Logger) getLineInfo() (fileName string, funcName string, lineNo int) {
-	pc, file, line, ok := runtime.Caller(2)
-	if ok {
-		fileName = path.Base(file)
-		funcName = path.Base(runtime.FuncForPC(pc).Name())
-		lineNo = line
+func (l *Logger) getLineFunc() (fileName string, line int, funcName string) {
+	var pc uintptr
+	var file string
+	var ok bool
+	pc, file, line, ok = runtime.Caller(2)
+	if !ok {
+		return "???", -1, "???"
 	}
-	return
+	fileName = path.Base(file)
+	funcName = runtime.FuncForPC(pc).Name()
+	split := strings.Split(funcName, ".")
+	if len(split) != 0 {
+		funcName = split[len(split)-1]
+	}
+	return fileName, line, funcName
+}
+
+func (l *Logger) Stack() string {
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, false)
+		if n < len(buf) {
+			return string(buf[:n])
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+}
+
+func (l *Logger) StackAll() string {
+	buf := make([]byte, 1024*16)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			return string(buf[:n])
+		}
+		buf = make([]byte, 2*len(buf))
+	}
 }

@@ -17,7 +17,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	invokeHandler := NewInvokeHandler[proto.CombatInvokeEntry]()
+	invokeHandler := model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	for _, entry := range req.InvokeList {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		switch entry.ArgumentType {
@@ -205,9 +205,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			// 处理耐力消耗
 			g.HandleStamina(player, motionInfo.State)
 
-			invokeHandler.addEntry(entry.ForwardType, entry)
+			invokeHandler.AddEntry(entry.ForwardType, entry)
 		default:
-			invokeHandler.addEntry(entry.ForwardType, entry)
+			invokeHandler.AddEntry(entry.ForwardType, entry)
 		}
 	}
 
@@ -229,14 +229,14 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	// PacketCombatInvocationsNotify
 	if invokeHandler.AllLen() > 0 {
 		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.entryListForwardAll
+		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardAll
 		for _, v := range surrPlayerList {
 			g.SendMsg(cmd.CombatInvocationsNotify, v.PlayerID, v.ClientSeq, combatInvocationsNotify)
 		}
 	}
 	if invokeHandler.AllExceptCurLen() > 0 {
 		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.entryListForwardAllExceptCur
+		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardAllExceptCur
 		for _, v := range surrPlayerList {
 			if player.PlayerID == v.PlayerID {
 				continue
@@ -246,7 +246,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	}
 	if invokeHandler.HostLen() > 0 {
 		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.entryListForwardHost
+		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardHost
 		g.SendMsg(cmd.CombatInvocationsNotify, world.owner.PlayerID, world.owner.ClientSeq, combatInvocationsNotify)
 	}
 }
@@ -254,58 +254,16 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
-	world := g.worldManager.GetWorldByID(player.WorldId)
-	if world == nil {
-		return
+	if player.AbilityInvokeHandler == nil {
+		player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	}
-	scene := world.GetSceneById(player.SceneId)
-	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
 		// 处理能力调用
 		g.HandleAbilityInvoke(player, entry)
 
-		invokeHandler.addEntry(entry.ForwardType, entry)
-	}
-
-	// 只给附近aoi区域的玩家广播消息
-	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-	for _, entityId := range entityIdList {
-		entity := scene.GetEntity(entityId)
-		if entity == nil {
-			continue
-		}
-		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
-			surrPlayerList = append(surrPlayerList, otherPlayer)
-		}
-	}
-
-	// 处理转发
-	// PacketAbilityInvocationsNotify
-	if invokeHandler.AllLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = invokeHandler.entryListForwardAll
-		for _, v := range surrPlayerList {
-			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
-		}
-	}
-	if invokeHandler.AllExceptCurLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = invokeHandler.entryListForwardAllExceptCur
-		for _, v := range surrPlayerList {
-			if player.PlayerID == v.PlayerID {
-				continue
-			}
-			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
-		}
-	}
-	if invokeHandler.HostLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = invokeHandler.entryListForwardHost
-		g.SendMsg(cmd.AbilityInvocationsNotify, world.owner.PlayerID, world.owner.ClientSeq, abilityInvocationsNotify)
+		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 }
 
@@ -317,14 +275,14 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	invokeHandler := NewInvokeHandler[proto.AbilityInvokeEntry]()
+	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
 		// 处理能力调用
 		g.HandleAbilityInvoke(player, entry)
 
-		invokeHandler.addEntry(entry.ForwardType, entry)
+		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 
 	// 只给附近aoi区域的玩家广播消息
@@ -341,18 +299,43 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		}
 	}
 
-	// 处理转发
+	// AbilityInvocationsNotify转发
+	// PacketAbilityInvocationsNotify
+	if player.AbilityInvokeHandler.AllLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
+		}
+	}
+	if player.AbilityInvokeHandler.AllExceptCurLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
+		}
+	}
+	if player.AbilityInvokeHandler.HostLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.AbilityInvocationsNotify, world.owner.PlayerID, world.owner.ClientSeq, abilityInvocationsNotify)
+	}
+
+	// ClientAbilityInitFinishNotify转发
 	// PacketClientAbilityInitFinishNotify
 	if invokeHandler.AllLen() > 0 {
 		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.entryListForwardAll
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAll
 		for _, v := range surrPlayerList {
 			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, v.ClientSeq, clientAbilityInitFinishNotify)
 		}
 	}
 	if invokeHandler.AllExceptCurLen() > 0 {
 		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.entryListForwardAllExceptCur
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAllExceptCur
 		for _, v := range surrPlayerList {
 			if player.PlayerID == v.PlayerID {
 				continue
@@ -362,7 +345,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	}
 	if invokeHandler.HostLen() > 0 {
 		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.entryListForwardHost
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardHost
 		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, world.owner.ClientSeq, clientAbilityInitFinishNotify)
 	}
 }
@@ -380,57 +363,4 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	logger.LOG.Debug("user client ability change, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
 	logger.LOG.Debug("ClientAbilityChangeNotify: %v", req)
-}
-
-// 泛型通用转发器
-
-type InvokeType interface {
-	proto.AbilityInvokeEntry | proto.CombatInvokeEntry
-}
-
-type InvokeHandler[T InvokeType] struct {
-	entryListForwardAll          []*T
-	entryListForwardAllExceptCur []*T
-	entryListForwardHost         []*T
-}
-
-func NewInvokeHandler[T InvokeType]() (r *InvokeHandler[T]) {
-	r = new(InvokeHandler[T])
-	r.InitInvokeHandler()
-	return r
-}
-
-func (i *InvokeHandler[T]) InitInvokeHandler() {
-	i.entryListForwardAll = make([]*T, 0)
-	i.entryListForwardAllExceptCur = make([]*T, 0)
-	i.entryListForwardHost = make([]*T, 0)
-}
-
-func (i *InvokeHandler[T]) addEntry(forward proto.ForwardType, entry *T) {
-	switch forward {
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL:
-		i.entryListForwardAll = append(i.entryListForwardAll, entry)
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXCEPT_CUR:
-		fallthrough
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXIST_EXCEPT_CUR:
-		i.entryListForwardAllExceptCur = append(i.entryListForwardAllExceptCur, entry)
-	case proto.ForwardType_FORWARD_TYPE_TO_HOST:
-		i.entryListForwardHost = append(i.entryListForwardHost, entry)
-	default:
-		if forward != proto.ForwardType_FORWARD_TYPE_ONLY_SERVER {
-			logger.LOG.Error("forward: %v, entry: %v", forward, entry)
-		}
-	}
-}
-
-func (i *InvokeHandler[T]) AllLen() int {
-	return len(i.entryListForwardAll)
-}
-
-func (i *InvokeHandler[T]) AllExceptCurLen() int {
-	return len(i.entryListForwardAllExceptCur)
-}
-
-func (i *InvokeHandler[T]) HostLen() int {
-	return len(i.entryListForwardHost)
 }

@@ -2,6 +2,7 @@ package model
 
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"hk4e/protocol/proto"
 )
 
 const (
@@ -65,7 +66,8 @@ type Player struct {
 	SceneLoadState        int                   `bson:"-"` // 场景加载状态
 	CoopApplyMap          map[uint32]int64      `bson:"-"` // 敲门申请的玩家uid及时间
 	StaminaInfo           *StaminaInfo          `bson:"-"` // 耐力临时数据
-	ClientSeq             uint32                `bson:"-"`
+	ClientSeq             uint32                `bson:"-"` // 客户端发包请求的序号
+	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry]
 }
 
 func (p *Player) GetNextGameObjectGuid() uint64 {

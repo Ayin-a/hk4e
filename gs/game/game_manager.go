@@ -11,6 +11,8 @@ import (
 	"hk4e/protocol/proto"
 )
 
+var GAME *GameManager = nil
+
 type GameManager struct {
 	dao          *dao.Dao
 	netMsgInput  chan *cmd.NetMsg
@@ -42,7 +44,7 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	r.worldManager = NewWorldManager(r.snowflake)
 	r.tickManager = NewTickManager(r)
 	r.commandManager = NewCommandManager(r)
-
+	GAME = r
 	return r
 }
 

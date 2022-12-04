@@ -58,7 +58,7 @@ func (g *GameDataConfig) loadAvatarData() {
 			panic(info)
 		}
 		if len(configAvatar.Abilities) == 0 {
-			logger.LOG.Error("configAvatar Abilities len is 0, AvatarId: %v", avatarData.AvatarId)
+			logger.LOG.Info("can not find any ability of avatar, AvatarId: %v", avatarData.AvatarId)
 		}
 		for _, configAvatarAbility := range configAvatar.Abilities {
 			abilityHashCode := endec.Hk4eAbilityHashCode(configAvatarAbility.AbilityName)

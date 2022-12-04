@@ -254,9 +254,11 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
+
 	if player.AbilityInvokeHandler == nil {
 		player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	}
+
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
@@ -300,6 +302,9 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	}
 
 	// AbilityInvocationsNotify转发
+	if player.AbilityInvokeHandler == nil {
+		player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
+	}
 	// PacketAbilityInvocationsNotify
 	if player.AbilityInvokeHandler.AllLen() > 0 {
 		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)

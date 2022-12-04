@@ -19,29 +19,29 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 	switch player.StaminaInfo.State {
 	case proto.MotionState_MOTION_STATE_CLIMB:
 		// 缓慢攀爬
-
-		// 缓慢攀爬的耐力将根据角度不同而改变
-		// rotX ∈ [0,180) x = rotX
-		// rotX ∈ [180,360) x = rotX - 360.0
-		// x >= 0 y = -x + 10
-		// x < 0 y = -2x + 10
-		// rotX req.Rot.X
-		// y 消耗的耐力修正值
-		// base(-100) + y 消耗的耐力
-		var x int32
-		var costRevise int32 // 攀爬耐力修正值
-		if req.Rot.X >= 0 && req.Rot.X < 180 {
-			x = int32(req.Rot.X)
-		} else if req.Rot.X >= 180 && req.Rot.X < 360 {
-			x = int32(req.Rot.X - 360.0)
-		}
-		if x >= 0 {
-			costRevise = -x + 10
+		var angleRevise int32 // 角度修正值 归一化为-90到+90范围内的角
+		// rotX ∈ [0,90) angle = rotX
+		// rotX ∈ (270,360) angle = rotX - 360.0
+		if req.Rot.X >= 0 && req.Rot.X < 90 {
+			angleRevise = int32(req.Rot.X)
+		} else if req.Rot.X > 270 && req.Rot.X < 360 {
+			angleRevise = int32(req.Rot.X - 360.0)
 		} else {
-			costRevise = -(x * 2) + 10
+			logger.LOG.Error("invalid rot x angle: %v", req.Rot.X)
 		}
-		//logger.LOG.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE+costRevise)
-		g.UpdateStamina(player, constant.StaminaCostConst.CLIMBING_BASE+costRevise)
+		// 攀爬耐力修正曲线
+		// angle >= 0 cost = -x + 10
+		// angle < 0 cost = -2x + 10
+		var costRevise int32 // 攀爬耐力修正值 在基础消耗值的水平上增加或减少
+		if angleRevise >= 0 {
+			// 普通或垂直斜坡
+			costRevise = -angleRevise + 10
+		} else {
+			// 倒三角 非常消耗体力
+			costRevise = -(angleRevise * 2) + 10
+		}
+		logger.LOG.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
+		g.UpdateStamina(player, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
 	case proto.MotionState_MOTION_STATE_SWIM_MOVE:
 		// 缓慢游泳
 		g.UpdateStamina(player, constant.StaminaCostConst.SWIMMING)

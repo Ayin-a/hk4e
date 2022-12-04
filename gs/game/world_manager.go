@@ -135,6 +135,7 @@ func (w *World) CreateScene(sceneId uint32) *Scene {
 		gameTime:            18 * 60,
 		attackQueue:         alg.NewRAQueue[*Attack](1000),
 		createTime:          time.Now().UnixMilli(),
+		meeoIndex:           0,
 	}
 	w.sceneMap[sceneId] = scene
 	return scene
@@ -169,6 +170,7 @@ type Scene struct {
 	gameTime            uint32
 	attackQueue         *alg.RAQueue[*Attack]
 	createTime          int64
+	meeoIndex           uint32
 }
 
 type AvatarEntity struct {

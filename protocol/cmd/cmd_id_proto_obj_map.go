@@ -93,13 +93,14 @@ func (a *CmdProtoMap) registerAllMessage() {
 	a.registerMessage(HostPlayerNotify, &proto.HostPlayerNotify{})                             // 世界房主玩家信息通知
 
 	// 战斗与技能
-	a.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                 // 角色战斗属性通知
-	a.registerMessage(EntityFightPropUpdateNotify, &proto.EntityFightPropUpdateNotify{})     // 实体战斗属性更新通知
-	a.registerMessage(CombatInvocationsNotify, &proto.CombatInvocationsNotify{})             // 战斗通知 包含场景中实体的移动数据和伤害数据，多人游戏服务器转发
-	a.registerMessage(AbilityInvocationsNotify, &proto.AbilityInvocationsNotify{})           // 技能通知 多人游戏服务器转发
-	a.registerMessage(ClientAbilityInitFinishNotify, &proto.ClientAbilityInitFinishNotify{}) // 客户端技能初始化完成通知 多人游戏服务器转发
-	a.registerMessage(EvtDoSkillSuccNotify, &proto.EvtDoSkillSuccNotify{})                   // 释放技能成功事件通知
-	a.registerMessage(ClientAbilityChangeNotify, &proto.ClientAbilityChangeNotify{})         // 客户端技能改变通知
+	a.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
+	a.registerMessage(EntityFightPropUpdateNotify, &proto.EntityFightPropUpdateNotify{})             // 实体战斗属性更新通知
+	a.registerMessage(CombatInvocationsNotify, &proto.CombatInvocationsNotify{})                     // 战斗通知 包含场景中实体的移动数据和伤害数据，多人游戏服务器转发
+	a.registerMessage(AbilityInvocationsNotify, &proto.AbilityInvocationsNotify{})                   // 技能通知 多人游戏服务器转发
+	a.registerMessage(ClientAbilityInitFinishNotify, &proto.ClientAbilityInitFinishNotify{})         // 客户端技能初始化完成通知 多人游戏服务器转发
+	a.registerMessage(EvtDoSkillSuccNotify, &proto.EvtDoSkillSuccNotify{})                           // 释放技能成功事件通知
+	a.registerMessage(ClientAbilityChangeNotify, &proto.ClientAbilityChangeNotify{})                 // 客户端技能改变通知
+	a.registerMessage(MassiveEntityElementOpBatchNotify, &proto.MassiveEntityElementOpBatchNotify{}) // MEEO通知
 
 	// 队伍
 	a.registerMessage(ChangeAvatarReq, &proto.ChangeAvatarReq{})                             // 更换角色请求 切人
@@ -223,15 +224,15 @@ func (a *CmdProtoMap) registerAllMessage() {
 	a.registerMessage(ServerAnnounceNotify, &proto.ServerAnnounceNotify{})             // 服务器公告通知
 	a.registerMessage(ServerAnnounceRevokeNotify, &proto.ServerAnnounceRevokeNotify{}) // 服务器公告撤销通知
 
-	// TODO
-	a.registerMessage(EvtAiSyncSkillCdNotify, &proto.EvtAiSyncSkillCdNotify{})
-	a.registerMessage(EvtAiSyncCombatThreatInfoNotify, &proto.EvtAiSyncCombatThreatInfoNotify{})
-	a.registerMessage(EntityConfigHashNotify, &proto.EntityConfigHashNotify{})
-	a.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
-	a.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
-	a.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
-	a.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})
-	a.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})
+	//// TODO
+	//a.registerMessage(EvtAiSyncSkillCdNotify, &proto.EvtAiSyncSkillCdNotify{})
+	//a.registerMessage(EvtAiSyncCombatThreatInfoNotify, &proto.EvtAiSyncCombatThreatInfoNotify{})
+	//a.registerMessage(EntityConfigHashNotify, &proto.EntityConfigHashNotify{})
+	//a.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
+	//a.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
+	//a.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
+	//a.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})
+	//a.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})
 
 	// 空消息
 	a.registerMessage(65535, &proto.NullMsg{})

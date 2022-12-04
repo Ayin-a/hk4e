@@ -2,13 +2,12 @@ package game
 
 import (
 	"hk4e/gs/model"
-	"hk4e/pkg/logger"
 	"hk4e/protocol/proto"
 )
 
 // HandleAbilityInvoke 处理能力调用
 func (g *GameManager) HandleAbilityInvoke(player *model.Player, entry *proto.AbilityInvokeEntry) {
-	logger.LOG.Debug("ability invoke handle, entry: %v", entry.ArgumentType)
+	//logger.LOG.Debug("ability invoke handle, entry: %v", entry.ArgumentType)
 
 	switch entry.ArgumentType {
 	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_MIXIN_COST_STAMINA:

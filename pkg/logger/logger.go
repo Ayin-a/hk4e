@@ -100,8 +100,13 @@ func (l *Logger) doLog() {
 				"goroutine:" + logInfo.GoroutineId +
 				"]" + RESET + " "
 		}
-		logStr := logHeader + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + "\n"
+		logStr := logHeader
 		if logInfo.Level == ERROR {
+			logStr += RED + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + RESET + "\n"
+		} else {
+			logStr += fmt.Sprintf(logInfo.Msg, logInfo.Param...) + "\n"
+		}
+		if logInfo.Stack != "" {
 			logStr += logInfo.Stack
 		}
 		if l.Method == CONSOLE {
@@ -126,7 +131,6 @@ func (l *Logger) Debug(msg string, param ...any) {
 	if l.TrackLine {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
-		logInfo.Stack = l.Stack()
 	}
 	l.LogInfoChan <- logInfo
 }
@@ -142,12 +146,26 @@ func (l *Logger) Info(msg string, param ...any) {
 	if l.TrackLine {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
-		logInfo.Stack = l.Stack()
 	}
 	l.LogInfoChan <- logInfo
 }
 
 func (l *Logger) Error(msg string, param ...any) {
+	if l.Level > ERROR {
+		return
+	}
+	logInfo := new(LogInfo)
+	logInfo.Level = ERROR
+	logInfo.Msg = msg
+	logInfo.Param = param
+	if l.TrackLine {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
+		logInfo.GoroutineId = l.getGoroutineId()
+	}
+	l.LogInfoChan <- logInfo
+}
+
+func (l *Logger) ErrorStack(msg string, param ...any) {
 	if l.Level > ERROR {
 		return
 	}

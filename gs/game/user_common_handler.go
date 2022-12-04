@@ -45,10 +45,6 @@ func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Mes
 	logger.LOG.Debug("user entity ai sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EntityAiSyncNotify)
 
-	if len(req.LocalAvatarAlertedMonsterList) == 0 {
-		return
-	}
-
 	// PacketEntityAiSyncNotify
 	entityAiSyncNotify := new(proto.EntityAiSyncNotify)
 	entityAiSyncNotify.InfoList = make([]*proto.AiSyncInfo, 0)

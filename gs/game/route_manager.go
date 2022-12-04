@@ -47,6 +47,8 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 }
 
 func (r *RouteManager) InitRoute() {
+	r.registerRouter(cmd.UnionCmdNotify, r.gameManager.UnionCmdNotify)
+	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, r.gameManager.MassiveEntityElementOpBatchNotify)
 	r.registerRouter(cmd.PlayerSetPauseReq, r.gameManager.PlayerSetPauseReq)
 	r.registerRouter(cmd.EnterSceneReadyReq, r.gameManager.EnterSceneReadyReq)
 	r.registerRouter(cmd.PathfindingEnterSceneReq, r.gameManager.PathfindingEnterSceneReq)

@@ -235,12 +235,12 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 }
 
 func (t *TickManager) onTick100MilliSecond(now int64) {
-	// 伤害处理和转发
-	for _, world := range t.gameManager.worldManager.worldMap {
-		for _, scene := range world.sceneMap {
-			scene.AttackHandler(t.gameManager)
-		}
-	}
+	//// 伤害处理和转发
+	//for _, world := range t.gameManager.worldManager.worldMap {
+	//	for _, scene := range world.sceneMap {
+	//		scene.AttackHandler(t.gameManager)
+	//	}
+	//}
 
 	// 服务器控制的模拟AI移动
 

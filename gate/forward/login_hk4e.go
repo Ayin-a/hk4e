@@ -70,19 +70,19 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 	// 返回响应
 	rsp = new(proto.GetPlayerTokenRsp)
 	rsp.Uid = tokenVerifyRsp.PlayerID
-	// TODO 不同的token
-	rsp.Token = "xxx"
+	rsp.AccountUid = req.AccountUid
+	rsp.Token = req.AccountToken
 	data := make([]byte, 16+32)
 	rand.Read(data)
 	rsp.SecurityCmdBuffer = data[16:]
 	rsp.ClientVersionRandomKey = fmt.Sprintf("%03x-%012x", data[:3], data[4:16])
-	// TODO 要确定一下新注册的号这个值该返回什么
 	rsp.AccountType = 1
 	rsp.IsProficientPlayer = true
 	rsp.PlatformType = 3
 	rsp.ChannelId = 1
-	rsp.CountryCode = "US"
-	rsp.RegPlatform = 3
+	rsp.SubChannelId = 1
+	rsp.RegPlatform = 2
+	rsp.Birthday = "2000-01-01"
 	addr, exist := f.getAddrByConvId(convId)
 	if !exist {
 		logger.LOG.Error("can not find addr by convId")
@@ -146,6 +146,7 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 			logger.LOG.Error("rsa sign error: %v", err)
 			return rsp
 		}
+		rsp.KeyId = req.KeyId
 		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)
 		rsp.Sign = base64.StdEncoding.EncodeToString(seedSign)
 		// 开启发包监听
@@ -159,11 +160,7 @@ func (f *ForwardManager) getPlayerToken(convId uint64, req *proto.GetPlayerToken
 }
 
 func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (rsp *proto.PlayerLoginRsp) {
-	tokenValid := false
-	// TODO 不同的token
-	if req.Token == "xxx" {
-		tokenValid = true
-	}
+	tokenValid := true
 	if !tokenValid {
 		logger.LOG.Error("token error")
 		return nil
@@ -173,8 +170,13 @@ func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (
 	// 返回响应
 	rsp = new(proto.PlayerLoginRsp)
 	rsp.IsUseAbilityHash = true
-	rsp.AbilityHashCode = 1844674
-	rsp.GameBiz = "hk4e_global"
+	rsp.AbilityHashCode = -228935105
+	rsp.GameBiz = "hk4e_cn"
+	rsp.IsScOpen = false
+	rsp.RegisterCps = "taptap"
+	rsp.CountryCode = "CN"
+	rsp.Birthday = "2000-01-01"
+	rsp.TotalTickTime = 1185941.871788
 
 	rsp.ClientDataVersion = f.regionCurr.RegionInfo.ClientDataVersion
 	rsp.ClientSilenceDataVersion = f.regionCurr.RegionInfo.ClientSilenceDataVersion
@@ -184,8 +186,5 @@ func (f *ForwardManager) playerLogin(convId uint64, req *proto.PlayerLoginReq) (
 	rsp.ClientVersionSuffix = f.regionCurr.RegionInfo.ClientVersionSuffix
 	rsp.ClientSilenceVersionSuffix = f.regionCurr.RegionInfo.ClientSilenceVersionSuffix
 
-	rsp.IsScOpen = false
-	rsp.RegisterCps = "mihoyo"
-	rsp.CountryCode = "US"
 	return rsp
 }

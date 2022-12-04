@@ -38,6 +38,10 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
 
+	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
+	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
+	player.ClientAbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
+
 	//// TODO 薄荷标记
 	//if world.IsBigWorld() {
 	//	bigWorld := world.GetSceneById(3)

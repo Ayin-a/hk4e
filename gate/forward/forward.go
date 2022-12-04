@@ -194,7 +194,8 @@ func (f *ForwardManager) Start() {
 	go f.recvNetMsgFromGameServer()
 	// 接收客户端消息
 	cpuCoreNum := runtime.NumCPU()
-	for i := 0; i < cpuCoreNum*10; i++ {
+	_ = cpuCoreNum * 10
+	for i := 0; i < 1; i++ {
 		go f.sendNetMsgToGameServer()
 	}
 }

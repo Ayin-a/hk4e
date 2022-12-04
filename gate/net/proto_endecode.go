@@ -61,11 +61,6 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 			msg.CmdId = protoMessage.cmdId
 			msg.HeadMessage = protoMsg.HeadMessage
 			msg.PayloadMessage = protoMessage.message
-			if protoMessage.cmdId == cmd.UnionCmdNotify {
-				// 聚合消息自身不再往后发送
-				logger.LOG.Debug("[recv union], cmdId: %v, convId: %v, headMsg: %v", msg.CmdId, msg.ConvId, msg.HeadMessage)
-				continue
-			}
 			protoMsgList = append(protoMsgList, msg)
 		}
 	} else {

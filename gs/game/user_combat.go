@@ -9,6 +9,140 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message) {
+	//logger.LOG.Debug("user send union cmd, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.UnionCmdNotify)
+	_ = req
+
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+
+	// 只给附近aoi区域的玩家广播消息
+	surrPlayerList := make([]*model.Player, 0)
+	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	for _, entityId := range entityIdList {
+		entity := scene.GetEntity(entityId)
+		if entity == nil {
+			continue
+		}
+		if entity.avatarEntity != nil {
+			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			surrPlayerList = append(surrPlayerList, otherPlayer)
+		}
+	}
+
+	// CombatInvocationsNotify转发
+	// PacketCombatInvocationsNotify
+	if player.CombatInvokeHandler.AllLen() > 0 {
+		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
+		combatInvocationsNotify.InvokeList = player.CombatInvokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.CombatInvocationsNotify, v.PlayerID, player.ClientSeq, combatInvocationsNotify)
+		}
+	}
+	if player.CombatInvokeHandler.AllExceptCurLen() > 0 {
+		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
+		combatInvocationsNotify.InvokeList = player.CombatInvokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.CombatInvocationsNotify, v.PlayerID, player.ClientSeq, combatInvocationsNotify)
+		}
+	}
+	if player.CombatInvokeHandler.HostLen() > 0 {
+		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
+		combatInvocationsNotify.InvokeList = player.CombatInvokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.CombatInvocationsNotify, world.owner.PlayerID, player.ClientSeq, combatInvocationsNotify)
+	}
+
+	// AbilityInvocationsNotify转发
+	// PacketAbilityInvocationsNotify
+	if player.AbilityInvokeHandler.AllLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, player.ClientSeq, abilityInvocationsNotify)
+		}
+	}
+	if player.AbilityInvokeHandler.AllExceptCurLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, player.ClientSeq, abilityInvocationsNotify)
+		}
+	}
+	if player.AbilityInvokeHandler.HostLen() > 0 {
+		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
+		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.AbilityInvocationsNotify, world.owner.PlayerID, player.ClientSeq, abilityInvocationsNotify)
+	}
+
+	// ClientAbilityInitFinishNotify转发
+	// PacketClientAbilityInitFinishNotify
+	if player.ClientAbilityInvokeHandler.AllLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+		}
+	}
+	if player.ClientAbilityInvokeHandler.AllExceptCurLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+		}
+	}
+	if player.ClientAbilityInvokeHandler.HostLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+	}
+
+	player.CombatInvokeHandler.Clear()
+	player.AbilityInvokeHandler.Clear()
+	player.ClientAbilityInvokeHandler.Clear()
+}
+
+func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
+	//logger.LOG.Debug("user meeo sync, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.MassiveEntityElementOpBatchNotify)
+	ntf := req
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	ntf.OpIdx = scene.meeoIndex
+	scene.meeoIndex++
+	// 只给附近aoi区域的玩家广播消息
+	surrPlayerList := make([]*model.Player, 0)
+	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	for _, entityId := range entityIdList {
+		entity := scene.GetEntity(entityId)
+		if entity == nil {
+			continue
+		}
+		if entity.avatarEntity != nil {
+			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			surrPlayerList = append(surrPlayerList, otherPlayer)
+		}
+	}
+	for _, v := range surrPlayerList {
+		g.SendMsg(cmd.MassiveEntityElementOpBatchNotify, v.PlayerID, player.ClientSeq, ntf)
+	}
+}
+
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
@@ -17,15 +151,14 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	invokeHandler := model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	for _, entry := range req.InvokeList {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		switch entry.ArgumentType {
-		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
-			scene.AddAttack(&Attack{
-				combatInvokeEntry: entry,
-				uid:               player.PlayerID,
-			})
+		//case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
+		//	scene.AddAttack(&Attack{
+		//		combatInvokeEntry: entry,
+		//		uid:               player.PlayerID,
+		//	})
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
@@ -205,60 +338,16 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			// 处理耐力消耗
 			g.HandleStamina(player, motionInfo.State)
 
-			invokeHandler.AddEntry(entry.ForwardType, entry)
+			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		default:
-			invokeHandler.AddEntry(entry.ForwardType, entry)
+			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		}
-	}
-
-	// 只给附近aoi区域的玩家广播消息
-	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-	for _, entityId := range entityIdList {
-		entity := scene.GetEntity(entityId)
-		if entity == nil {
-			continue
-		}
-		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
-			surrPlayerList = append(surrPlayerList, otherPlayer)
-		}
-	}
-
-	// 处理转发
-	// PacketCombatInvocationsNotify
-	if invokeHandler.AllLen() > 0 {
-		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardAll
-		for _, v := range surrPlayerList {
-			g.SendMsg(cmd.CombatInvocationsNotify, v.PlayerID, v.ClientSeq, combatInvocationsNotify)
-		}
-	}
-	if invokeHandler.AllExceptCurLen() > 0 {
-		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardAllExceptCur
-		for _, v := range surrPlayerList {
-			if player.PlayerID == v.PlayerID {
-				continue
-			}
-			g.SendMsg(cmd.CombatInvocationsNotify, v.PlayerID, v.ClientSeq, combatInvocationsNotify)
-		}
-	}
-	if invokeHandler.HostLen() > 0 {
-		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotify.InvokeList = invokeHandler.EntryListForwardHost
-		g.SendMsg(cmd.CombatInvocationsNotify, world.owner.PlayerID, world.owner.ClientSeq, combatInvocationsNotify)
 	}
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
-
-	if player.AbilityInvokeHandler == nil {
-		player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
-	}
-
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
@@ -272,86 +361,13 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user client ability init finish, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
-	world := g.worldManager.GetWorldByID(player.WorldId)
-	if world == nil {
-		return
-	}
-	scene := world.GetSceneById(player.SceneId)
-	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
 		// 处理能力调用
 		g.HandleAbilityInvoke(player, entry)
 
-		invokeHandler.AddEntry(entry.ForwardType, entry)
-	}
-
-	// 只给附近aoi区域的玩家广播消息
-	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-	for _, entityId := range entityIdList {
-		entity := scene.GetEntity(entityId)
-		if entity == nil {
-			continue
-		}
-		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
-			surrPlayerList = append(surrPlayerList, otherPlayer)
-		}
-	}
-
-	// AbilityInvocationsNotify转发
-	if player.AbilityInvokeHandler == nil {
-		player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
-	}
-	// PacketAbilityInvocationsNotify
-	if player.AbilityInvokeHandler.AllLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAll
-		for _, v := range surrPlayerList {
-			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
-		}
-	}
-	if player.AbilityInvokeHandler.AllExceptCurLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAllExceptCur
-		for _, v := range surrPlayerList {
-			if player.PlayerID == v.PlayerID {
-				continue
-			}
-			g.SendMsg(cmd.AbilityInvocationsNotify, v.PlayerID, v.ClientSeq, abilityInvocationsNotify)
-		}
-	}
-	if player.AbilityInvokeHandler.HostLen() > 0 {
-		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
-		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardHost
-		g.SendMsg(cmd.AbilityInvocationsNotify, world.owner.PlayerID, world.owner.ClientSeq, abilityInvocationsNotify)
-	}
-
-	// ClientAbilityInitFinishNotify转发
-	// PacketClientAbilityInitFinishNotify
-	if invokeHandler.AllLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAll
-		for _, v := range surrPlayerList {
-			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, v.ClientSeq, clientAbilityInitFinishNotify)
-		}
-	}
-	if invokeHandler.AllExceptCurLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAllExceptCur
-		for _, v := range surrPlayerList {
-			if player.PlayerID == v.PlayerID {
-				continue
-			}
-			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, v.ClientSeq, clientAbilityInitFinishNotify)
-		}
-	}
-	if invokeHandler.HostLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardHost
-		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, world.owner.ClientSeq, clientAbilityInitFinishNotify)
+		player.ClientAbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 }
 

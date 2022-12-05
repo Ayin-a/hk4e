@@ -216,6 +216,10 @@ func (s *Scene) ChangeGameTime(time uint32) {
 	s.gameTime = time % 1440
 }
 
+func (s *Scene) GetSceneCreateTime() int64 {
+	return s.createTime
+}
+
 func (s *Scene) GetSceneTime() int64 {
 	now := time.Now().UnixMilli()
 	return now - s.createTime

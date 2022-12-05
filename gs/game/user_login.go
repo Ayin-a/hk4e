@@ -40,7 +40,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
-	player.ClientAbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
 	//// TODO 薄荷标记
 	//if world.IsBigWorld() {

@@ -194,8 +194,9 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	if hostWorld.multiplayer == false {
 		g.UserWorldRemovePlayer(hostWorld, hostPlayer)
 
-		hostPlayer.TeamConfig.CurrTeamIndex = 0
-		hostPlayer.TeamConfig.CurrAvatarIndex = 0
+		hostWorld = g.worldManager.CreateWorld(hostPlayer, true)
+		g.UserWorldAddPlayer(hostWorld, hostPlayer)
+		hostPlayer.SceneLoadState = model.SceneNone
 
 		// PacketPlayerEnterSceneNotify
 		hostPlayerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
@@ -207,10 +208,6 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 			hostPlayer.Pos,
 		)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, hostPlayerEnterSceneNotify)
-
-		hostWorld = g.worldManager.CreateWorld(hostPlayer, true)
-		g.UserWorldAddPlayer(hostWorld, hostPlayer)
-		hostPlayer.SceneLoadState = model.SceneNone
 	}
 
 	otherWorld := g.worldManager.GetWorldByID(otherPlayer.WorldId)
@@ -234,8 +231,9 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		Z: hostPlayer.Rot.Z,
 	}
 	otherPlayer.SceneId = hostPlayer.SceneId
-	otherPlayer.TeamConfig.CurrTeamIndex = 0
-	otherPlayer.TeamConfig.CurrAvatarIndex = 0
+
+	g.UserWorldAddPlayer(hostWorld, otherPlayer)
+	otherPlayer.SceneLoadState = model.SceneNone
 
 	// PacketPlayerEnterSceneNotify
 	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
@@ -247,9 +245,6 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		otherPlayerOldPos,
 	)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerEnterSceneNotify)
-
-	g.UserWorldAddPlayer(hostWorld, otherPlayer)
-	otherPlayer.SceneLoadState = model.SceneNone
 }
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {

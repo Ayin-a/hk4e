@@ -117,6 +117,15 @@ func (t *TickManager) onTickMinute(now int64) {
 
 func (t *TickManager) onTick10Second(now int64) {
 	for _, world := range t.gameManager.worldManager.worldMap {
+		for _, scene := range world.sceneMap {
+			for _, player := range scene.playerMap {
+				// PacketSceneTimeNotify
+				sceneTimeNotify := new(proto.SceneTimeNotify)
+				sceneTimeNotify.SceneId = player.SceneId
+				sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
+				GAME.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
+			}
+		}
 		if !world.IsBigWorld() && (world.multiplayer || !world.owner.Pause) {
 			// 刷怪
 			scene := world.GetSceneById(3)

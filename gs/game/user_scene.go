@@ -81,22 +81,14 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	// PacketPlayerWorldSceneInfoListNotify
 	playerWorldSceneInfoListNotify := new(proto.PlayerWorldSceneInfoListNotify)
 	playerWorldSceneInfoListNotify.InfoList = []*proto.PlayerWorldSceneInfo{
-		{SceneId: 1, IsLocked: false, SceneTagIdList: []uint32{}},
-		{SceneId: 3, IsLocked: false, SceneTagIdList: []uint32{102, 113, 117}},
-		{SceneId: 4, IsLocked: false, SceneTagIdList: []uint32{106, 109, 117}},
-		{SceneId: 5, IsLocked: false, SceneTagIdList: []uint32{}},
-		{SceneId: 6, IsLocked: false, SceneTagIdList: []uint32{}},
-		{SceneId: 7, IsLocked: false, SceneTagIdList: []uint32{}},
+		{SceneId: 1, IsLocked: true, SceneTagIdList: []uint32{}},
+		{SceneId: 3, IsLocked: false, SceneTagIdList: []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}},
+		{SceneId: 4, IsLocked: true, SceneTagIdList: []uint32{}},
+		{SceneId: 5, IsLocked: false, SceneTagIdList: []uint32{121, 1031}},
+		{SceneId: 6, IsLocked: false, SceneTagIdList: []uint32{144, 146, 1062, 1063}},
+		{SceneId: 7, IsLocked: true, SceneTagIdList: []uint32{136, 137, 138, 148, 1034}},
+		{SceneId: 9, IsLocked: true, SceneTagIdList: []uint32{1012, 1016, 1021, 1022, 1060, 1077}},
 	}
-	xumi := &proto.PlayerWorldSceneInfo{
-		SceneId:        9,
-		IsLocked:       false,
-		SceneTagIdList: []uint32{},
-	}
-	for i := 0; i < 3000; i++ {
-		xumi.SceneTagIdList = append(xumi.SceneTagIdList, uint32(i))
-	}
-	playerWorldSceneInfoListNotify.InfoList = append(playerWorldSceneInfoListNotify.InfoList, xumi)
 	g.SendMsg(cmd.PlayerWorldSceneInfoListNotify, player.PlayerID, player.ClientSeq, playerWorldSceneInfoListNotify)
 
 	// SceneForceUnlockNotify
@@ -291,11 +283,13 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) PacketPlayerEnterSceneNotify(player *model.Player) *proto.PlayerEnterSceneNotify {
-	player.EnterSceneToken = uint32(random.GetRandomInt32(1000, 99999))
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
 	playerEnterSceneNotify := new(proto.PlayerEnterSceneNotify)
 	playerEnterSceneNotify.SceneId = player.SceneId
 	playerEnterSceneNotify.Pos = &proto.Vector{X: float32(player.Pos.X), Y: float32(player.Pos.Y), Z: float32(player.Pos.Z)}
-	playerEnterSceneNotify.SceneBeginTime = uint64(time.Now().UnixMilli())
+	playerEnterSceneNotify.SceneBeginTime = uint64(scene.GetSceneCreateTime())
 	playerEnterSceneNotify.Type = proto.EnterType_ENTER_TYPE_SELF
 	playerEnterSceneNotify.TargetUid = player.PlayerID
 	playerEnterSceneNotify.EnterSceneToken = player.EnterSceneToken
@@ -307,7 +301,8 @@ func (g *GameManager) PacketPlayerEnterSceneNotify(player *model.Player) *proto.
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +
 		strconv.Itoa(int(player.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
-		"18402"
+		"296359"
+	playerEnterSceneNotify.SceneTagIdList = []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}
 	return playerEnterSceneNotify
 }
 
@@ -329,13 +324,15 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 	prevSceneId uint32,
 	prevPos *model.Vector,
 ) *proto.PlayerEnterSceneNotify {
-	player.EnterSceneToken = uint32(random.GetRandomInt32(1000, 99999))
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
 	playerEnterSceneNotify := new(proto.PlayerEnterSceneNotify)
 	playerEnterSceneNotify.PrevSceneId = prevSceneId
 	playerEnterSceneNotify.PrevPos = &proto.Vector{X: float32(prevPos.X), Y: float32(prevPos.Y), Z: float32(prevPos.Z)}
 	playerEnterSceneNotify.SceneId = player.SceneId
 	playerEnterSceneNotify.Pos = &proto.Vector{X: float32(player.Pos.X), Y: float32(player.Pos.Y), Z: float32(player.Pos.Z)}
-	playerEnterSceneNotify.SceneBeginTime = uint64(time.Now().UnixMilli())
+	playerEnterSceneNotify.SceneBeginTime = uint64(scene.GetSceneCreateTime())
 	playerEnterSceneNotify.Type = enterType
 	playerEnterSceneNotify.TargetUid = targetPlayer.PlayerID
 	playerEnterSceneNotify.EnterSceneToken = player.EnterSceneToken
@@ -345,14 +342,8 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +
 		strconv.Itoa(int(targetPlayer.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
-		"18402"
-
-	//playerEnterSceneNotify.SceneTagIdList = []uint32{102, 107, 109, 113, 117}
-	playerEnterSceneNotify.SceneTagIdList = make([]uint32, 0)
-	for sceneTagId := uint32(0); sceneTagId < 3000; sceneTagId++ {
-		playerEnterSceneNotify.SceneTagIdList = append(playerEnterSceneNotify.SceneTagIdList, sceneTagId)
-	}
-
+		"296359"
+	playerEnterSceneNotify.SceneTagIdList = []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}
 	return playerEnterSceneNotify
 }
 

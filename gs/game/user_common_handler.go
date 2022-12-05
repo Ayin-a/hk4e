@@ -100,3 +100,16 @@ func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
 		g.SendMsg(cmd.ServerAnnounceRevokeNotify, onlinePlayer.PlayerID, 0, serverAnnounceRevokeNotify)
 	}
 }
+
+func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user ttm enter scene, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
+	_ = req
+	g.SendMsg(cmd.ServerAnnounceRevokeNotify, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
+}
+
+func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {
+	logger.LOG.Debug("user set entity client data, uid: %v", player.PlayerID)
+	ntf := payloadMsg.(*proto.SetEntityClientDataNotify)
+	g.SendMsg(cmd.SetEntityClientDataNotify, player.PlayerID, player.ClientSeq, ntf)
+}

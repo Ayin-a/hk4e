@@ -13,7 +13,6 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	//logger.LOG.Debug("user send union cmd, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.UnionCmdNotify)
 	_ = req
-
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -84,34 +83,8 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 		g.SendMsg(cmd.AbilityInvocationsNotify, world.owner.PlayerID, player.ClientSeq, abilityInvocationsNotify)
 	}
 
-	// ClientAbilityInitFinishNotify转发
-	// PacketClientAbilityInitFinishNotify
-	if player.ClientAbilityInvokeHandler.AllLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardAll
-		for _, v := range surrPlayerList {
-			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
-		}
-	}
-	if player.ClientAbilityInvokeHandler.AllExceptCurLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardAllExceptCur
-		for _, v := range surrPlayerList {
-			if player.PlayerID == v.PlayerID {
-				continue
-			}
-			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
-		}
-	}
-	if player.ClientAbilityInvokeHandler.HostLen() > 0 {
-		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
-		clientAbilityInitFinishNotify.Invokes = player.ClientAbilityInvokeHandler.EntryListForwardHost
-		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
-	}
-
 	player.CombatInvokeHandler.Clear()
 	player.AbilityInvokeHandler.Clear()
-	player.ClientAbilityInvokeHandler.Clear()
 }
 
 func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
@@ -125,6 +98,7 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 	scene := world.GetSceneById(player.SceneId)
 	ntf.OpIdx = scene.meeoIndex
 	scene.meeoIndex++
+
 	// 只给附近aoi区域的玩家广播消息
 	surrPlayerList := make([]*model.Player, 0)
 	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
@@ -146,6 +120,7 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
+
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -160,6 +135,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		//		uid:               player.PlayerID,
 		//	})
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
+			if player.SceneLoadState != model.SceneEnterDone {
+				continue
+			}
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
 			if err != nil {
@@ -348,6 +326,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
+
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
@@ -361,13 +340,141 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user client ability init finish, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
+	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 
 		// 处理能力调用
 		g.HandleAbilityInvoke(player, entry)
 
-		player.ClientAbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
+		invokeHandler.AddEntry(entry.ForwardType, entry)
+	}
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+
+	// 只给附近aoi区域的玩家广播消息
+	surrPlayerList := make([]*model.Player, 0)
+	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	for _, entityId := range entityIdList {
+		entity := scene.GetEntity(entityId)
+		if entity == nil {
+			continue
+		}
+		if entity.avatarEntity != nil {
+			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			surrPlayerList = append(surrPlayerList, otherPlayer)
+		}
+	}
+
+	// ClientAbilityInitFinishNotify转发
+	// PacketClientAbilityInitFinishNotify
+	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+			clientAbilityInitFinishNotify.EntityId = req.EntityId
+			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+		}
+	}
+	if invokeHandler.AllLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.EntityId = req.EntityId
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+		}
+	}
+	if invokeHandler.AllExceptCurLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.EntityId = req.EntityId
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.ClientAbilityInitFinishNotify, v.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+		}
+	}
+	if invokeHandler.HostLen() > 0 {
+		clientAbilityInitFinishNotify := new(proto.ClientAbilityInitFinishNotify)
+		clientAbilityInitFinishNotify.EntityId = req.EntityId
+		clientAbilityInitFinishNotify.Invokes = invokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.ClientAbilityInitFinishNotify, world.owner.PlayerID, player.ClientSeq, clientAbilityInitFinishNotify)
+	}
+}
+
+func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
+	//logger.LOG.Debug("user client ability change, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
+	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
+	for _, entry := range req.Invokes {
+		invokeHandler.AddEntry(entry.ForwardType, entry)
+	}
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+
+	// 只给附近aoi区域的玩家广播消息
+	surrPlayerList := make([]*model.Player, 0)
+	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	for _, entityId := range entityIdList {
+		entity := scene.GetEntity(entityId)
+		if entity == nil {
+			continue
+		}
+		if entity.avatarEntity != nil {
+			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			surrPlayerList = append(surrPlayerList, otherPlayer)
+		}
+	}
+
+	// ClientAbilityChangeNotify转发
+	// PacketClientAbilityChangeNotify
+	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
+		clientAbilityChangeNotify := new(proto.ClientAbilityChangeNotify)
+		clientAbilityChangeNotify.EntityId = req.EntityId
+		clientAbilityChangeNotify.IsInitHash = req.IsInitHash
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.ClientAbilityChangeNotify, v.PlayerID, player.ClientSeq, clientAbilityChangeNotify)
+		}
+	}
+	if invokeHandler.AllLen() > 0 {
+		clientAbilityChangeNotify := new(proto.ClientAbilityChangeNotify)
+		clientAbilityChangeNotify.EntityId = req.EntityId
+		clientAbilityChangeNotify.IsInitHash = req.IsInitHash
+		clientAbilityChangeNotify.Invokes = invokeHandler.EntryListForwardAll
+		for _, v := range surrPlayerList {
+			g.SendMsg(cmd.ClientAbilityChangeNotify, v.PlayerID, player.ClientSeq, clientAbilityChangeNotify)
+		}
+	}
+	if invokeHandler.AllExceptCurLen() > 0 {
+		clientAbilityChangeNotify := new(proto.ClientAbilityChangeNotify)
+		clientAbilityChangeNotify.EntityId = req.EntityId
+		clientAbilityChangeNotify.IsInitHash = req.IsInitHash
+		clientAbilityChangeNotify.Invokes = invokeHandler.EntryListForwardAllExceptCur
+		for _, v := range surrPlayerList {
+			if player.PlayerID == v.PlayerID {
+				continue
+			}
+			g.SendMsg(cmd.ClientAbilityChangeNotify, v.PlayerID, player.ClientSeq, clientAbilityChangeNotify)
+		}
+	}
+	if invokeHandler.HostLen() > 0 {
+		clientAbilityChangeNotify := new(proto.ClientAbilityChangeNotify)
+		clientAbilityChangeNotify.EntityId = req.EntityId
+		clientAbilityChangeNotify.IsInitHash = req.IsInitHash
+		clientAbilityChangeNotify.Invokes = invokeHandler.EntryListForwardHost
+		g.SendMsg(cmd.ClientAbilityChangeNotify, world.owner.PlayerID, player.ClientSeq, clientAbilityChangeNotify)
 	}
 }
 
@@ -378,10 +485,4 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 
 	// 处理技能开始时的耐力消耗
 	g.HandleSkillStartStamina(player, req.SkillId)
-}
-
-func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user client ability change, uid: %v", player.PlayerID)
-	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
-	logger.LOG.Debug("ClientAbilityChangeNotify: %v", req)
 }

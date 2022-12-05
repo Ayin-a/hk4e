@@ -1,6 +1,9 @@
 package net
 
-import "hk4e/pkg/logger"
+import (
+	"hk4e/pkg/logger"
+	"reflect"
+)
 
 const (
 	KcpXorKeyChange = iota
@@ -28,7 +31,7 @@ func (k *KcpConnectManager) eventHandle() {
 	// 事件处理
 	for {
 		event := <-k.kcpEventInput
-		logger.LOG.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage: %v", event.ConvId, event.EventId, event.EventMessage)
+		logger.LOG.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage Type: %v", event.ConvId, event.EventId, reflect.TypeOf(event.EventMessage))
 		switch event.EventId {
 		case KcpXorKeyChange:
 			// XOR密钥切换

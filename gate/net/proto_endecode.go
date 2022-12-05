@@ -63,15 +63,22 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 			msg.PayloadMessage = protoMessage.message
 			protoMsgList = append(protoMsgList, msg)
 		}
+		for _, msg := range protoMsgList {
+			cmdName := "???"
+			if msg.PayloadMessage != nil {
+				cmdName = string(msg.PayloadMessage.ProtoReflect().Descriptor().FullName())
+			}
+			logger.LOG.Debug("[RECV UNION CMD], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", msg.CmdId, cmdName, msg.ConvId, msg.HeadMessage)
+		}
 	} else {
 		protoMsg.PayloadMessage = protoMessageList[0].message
 		protoMsgList = append(protoMsgList, protoMsg)
+		cmdName := ""
+		if protoMsg.PayloadMessage != nil {
+			cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
+		}
+		logger.LOG.Debug("[RECV], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	}
-	cmdName := ""
-	if protoMsg.PayloadMessage != nil {
-		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
-	}
-	logger.LOG.Debug("[recv], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	return protoMsgList
 }
 
@@ -103,7 +110,7 @@ func (p *ProtoEnDecode) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	if protoMsg.PayloadMessage != nil {
 		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 	}
-	logger.LOG.Debug("[send], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
+	logger.LOG.Debug("[SEND], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	kcpMsg = new(KcpMsg)
 	kcpMsg.ConvId = protoMsg.ConvId
 	kcpMsg.CmdId = protoMsg.CmdId

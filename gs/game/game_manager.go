@@ -11,25 +11,23 @@ import (
 	"hk4e/protocol/proto"
 )
 
-var GAME *GameManager = nil
+var GAME_MANAGER *GameManager = nil
+var LOCAL_EVENT_MANAGER *LocalEventManager = nil
+var ROUTE_MANAGER *RouteManager = nil
+var USER_MANAGER *UserManager = nil
+var WORLD_MANAGER *WorldManager = nil
+var TICK_MANAGER *TickManager = nil
+var COMMAND_MANAGER *CommandManager = nil
 
 type GameManager struct {
 	dao          *dao.Dao
 	netMsgInput  chan *cmd.NetMsg
 	netMsgOutput chan *cmd.NetMsg
 	snowflake    *alg.SnowflakeWorker
-	// 本地事件队列管理器
-	localEventManager *LocalEventManager
-	// 接口路由管理器
-	routeManager *RouteManager
 	// 用户管理器
 	userManager *UserManager
 	// 世界管理器
 	worldManager *WorldManager
-	// 游戏服务器定时帧管理器
-	tickManager *TickManager
-	// 命令管理器
-	commandManager *CommandManager
 }
 
 func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *GameManager) {
@@ -38,34 +36,36 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	r.netMsgInput = netMsgInput
 	r.netMsgOutput = netMsgOutput
 	r.snowflake = alg.NewSnowflakeWorker(1)
-	r.localEventManager = NewLocalEventManager(r)
-	r.routeManager = NewRouteManager(r)
-	r.userManager = NewUserManager(dao, r.localEventManager.localEventChan)
+	GAME_MANAGER = r
+	LOCAL_EVENT_MANAGER = NewLocalEventManager()
+	ROUTE_MANAGER = NewRouteManager()
+	r.userManager = NewUserManager(dao, LOCAL_EVENT_MANAGER.localEventChan)
+	USER_MANAGER = r.userManager
 	r.worldManager = NewWorldManager(r.snowflake)
-	r.tickManager = NewTickManager(r)
-	r.commandManager = NewCommandManager(r)
-	GAME = r
+	WORLD_MANAGER = r.worldManager
+	TICK_MANAGER = NewTickManager()
+	COMMAND_MANAGER = NewCommandManager()
 	return r
 }
 
 func (g *GameManager) Start() {
-	g.routeManager.InitRoute()
-	g.userManager.StartAutoSaveUser()
+	ROUTE_MANAGER.InitRoute()
+	USER_MANAGER.StartAutoSaveUser()
 	go func() {
 		for {
 			select {
 			case netMsg := <-g.netMsgOutput:
 				// 接收客户端消息
-				g.routeManager.RouteHandle(netMsg)
-			case <-g.tickManager.ticker.C:
+				ROUTE_MANAGER.RouteHandle(netMsg)
+			case <-TICK_MANAGER.ticker.C:
 				// 游戏服务器定时帧
-				g.tickManager.OnGameServerTick()
-			case localEvent := <-g.localEventManager.localEventChan:
+				TICK_MANAGER.OnGameServerTick()
+			case localEvent := <-LOCAL_EVENT_MANAGER.localEventChan:
 				// 处理本地事件
-				g.localEventManager.LocalEventHandle(localEvent)
-			case command := <-g.commandManager.commandTextInput:
+				LOCAL_EVENT_MANAGER.LocalEventHandle(localEvent)
+			case command := <-COMMAND_MANAGER.commandTextInput:
 				// 处理传入的命令 (普通玩家 GM命令)
-				g.commandManager.HandleCommand(command)
+				COMMAND_MANAGER.HandleCommand(command)
 			}
 		}
 	}()
@@ -73,14 +73,14 @@ func (g *GameManager) Start() {
 
 func (g *GameManager) Stop() {
 	// 保存玩家数据
-	g.userManager.SaveUser()
+	USER_MANAGER.SaveUser()
 
 	//g.worldManager.worldStatic.SaveTerrain()
 }
 
-// 发送消息给客户端
+// SendMsg 发送消息给客户端
 func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	if userId < 100000000 {
+	if userId < 100000000 || payloadMsg == nil {
 		return
 	}
 	netMsg := new(cmd.NetMsg)
@@ -106,7 +106,7 @@ func (g *GameManager) DisconnectPlayer(userId uint32) {
 	g.SendMsg(cmd.ServerDisconnectClientNotify, userId, 0, new(proto.ServerDisconnectClientNotify))
 }
 
-// 踢出玩家
+// KickPlayer 踢出玩家
 func (g *GameManager) KickPlayer(userId uint32) {
 	info := new(gm.KickPlayerInfo)
 	info.UserId = userId

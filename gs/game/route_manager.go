@@ -13,14 +13,12 @@ import (
 type HandlerFunc func(player *model.Player, payloadMsg pb.Message)
 
 type RouteManager struct {
-	gameManager *GameManager
 	// k:cmdId v:HandlerFunc
 	handlerFuncRouteMap map[uint16]HandlerFunc
 }
 
-func NewRouteManager(gameManager *GameManager) (r *RouteManager) {
+func NewRouteManager() (r *RouteManager) {
 	r = new(RouteManager)
-	r.gameManager = gameManager
 	r.handlerFuncRouteMap = make(map[uint16]HandlerFunc)
 	return r
 }
@@ -35,11 +33,11 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 		logger.LOG.Error("no route for msg, cmdId: %v", cmdId)
 		return
 	}
-	player := r.gameManager.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		// 临时为了调试便捷搞的重连 生产环境请务必去除 不然新用户会一直重连不能进入
-		//r.gameManager.ReconnectPlayer(userId)
+		//GAME_MANAGER.ReconnectPlayer(userId)
 		return
 	}
 	player.ClientSeq = clientSeq
@@ -47,66 +45,67 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 }
 
 func (r *RouteManager) InitRoute() {
-	r.registerRouter(cmd.UnionCmdNotify, r.gameManager.UnionCmdNotify)
-	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, r.gameManager.MassiveEntityElementOpBatchNotify)
-	r.registerRouter(cmd.ToTheMoonEnterSceneReq, r.gameManager.ToTheMoonEnterSceneReq)
-	r.registerRouter(cmd.PlayerSetPauseReq, r.gameManager.PlayerSetPauseReq)
-	r.registerRouter(cmd.EnterSceneReadyReq, r.gameManager.EnterSceneReadyReq)
-	r.registerRouter(cmd.PathfindingEnterSceneReq, r.gameManager.PathfindingEnterSceneReq)
-	r.registerRouter(cmd.GetScenePointReq, r.gameManager.GetScenePointReq)
-	r.registerRouter(cmd.GetSceneAreaReq, r.gameManager.GetSceneAreaReq)
-	r.registerRouter(cmd.SceneInitFinishReq, r.gameManager.SceneInitFinishReq)
-	r.registerRouter(cmd.EnterSceneDoneReq, r.gameManager.EnterSceneDoneReq)
-	r.registerRouter(cmd.EnterWorldAreaReq, r.gameManager.EnterWorldAreaReq)
-	r.registerRouter(cmd.PostEnterSceneReq, r.gameManager.PostEnterSceneReq)
-	r.registerRouter(cmd.TowerAllDataReq, r.gameManager.TowerAllDataReq)
-	r.registerRouter(cmd.SceneTransToPointReq, r.gameManager.SceneTransToPointReq)
-	r.registerRouter(cmd.MarkMapReq, r.gameManager.MarkMapReq)
-	r.registerRouter(cmd.ChangeAvatarReq, r.gameManager.ChangeAvatarReq)
-	r.registerRouter(cmd.SetUpAvatarTeamReq, r.gameManager.SetUpAvatarTeamReq)
-	r.registerRouter(cmd.ChooseCurAvatarTeamReq, r.gameManager.ChooseCurAvatarTeamReq)
-	r.registerRouter(cmd.GetGachaInfoReq, r.gameManager.GetGachaInfoReq)
-	r.registerRouter(cmd.DoGachaReq, r.gameManager.DoGachaReq)
-	r.registerRouter(cmd.QueryPathReq, r.gameManager.QueryPathReq)
-	r.registerRouter(cmd.CombatInvocationsNotify, r.gameManager.CombatInvocationsNotify)
-	r.registerRouter(cmd.AbilityInvocationsNotify, r.gameManager.AbilityInvocationsNotify)
-	r.registerRouter(cmd.ClientAbilityInitFinishNotify, r.gameManager.ClientAbilityInitFinishNotify)
-	r.registerRouter(cmd.EvtDoSkillSuccNotify, r.gameManager.EvtDoSkillSuccNotify)
-	r.registerRouter(cmd.ClientAbilityChangeNotify, r.gameManager.ClientAbilityChangeNotify)
-	r.registerRouter(cmd.EntityAiSyncNotify, r.gameManager.EntityAiSyncNotify)
-	r.registerRouter(cmd.WearEquipReq, r.gameManager.WearEquipReq)
-	r.registerRouter(cmd.ChangeGameTimeReq, r.gameManager.ChangeGameTimeReq)
-	r.registerRouter(cmd.GetPlayerSocialDetailReq, r.gameManager.GetPlayerSocialDetailReq)
-	r.registerRouter(cmd.SetPlayerBirthdayReq, r.gameManager.SetPlayerBirthdayReq)
-	r.registerRouter(cmd.SetNameCardReq, r.gameManager.SetNameCardReq)
-	r.registerRouter(cmd.SetPlayerSignatureReq, r.gameManager.SetPlayerSignatureReq)
-	r.registerRouter(cmd.SetPlayerNameReq, r.gameManager.SetPlayerNameReq)
-	r.registerRouter(cmd.SetPlayerHeadImageReq, r.gameManager.SetPlayerHeadImageReq)
-	r.registerRouter(cmd.GetAllUnlockNameCardReq, r.gameManager.GetAllUnlockNameCardReq)
-	r.registerRouter(cmd.GetPlayerFriendListReq, r.gameManager.GetPlayerFriendListReq)
-	r.registerRouter(cmd.GetPlayerAskFriendListReq, r.gameManager.GetPlayerAskFriendListReq)
-	r.registerRouter(cmd.AskAddFriendReq, r.gameManager.AskAddFriendReq)
-	r.registerRouter(cmd.DealAddFriendReq, r.gameManager.DealAddFriendReq)
-	r.registerRouter(cmd.GetOnlinePlayerListReq, r.gameManager.GetOnlinePlayerListReq)
-	r.registerRouter(cmd.PlayerApplyEnterMpReq, r.gameManager.PlayerApplyEnterMpReq)
-	r.registerRouter(cmd.PlayerApplyEnterMpResultReq, r.gameManager.PlayerApplyEnterMpResultReq)
-	r.registerRouter(cmd.PlayerGetForceQuitBanInfoReq, r.gameManager.PlayerGetForceQuitBanInfoReq)
-	r.registerRouter(cmd.GetShopmallDataReq, r.gameManager.GetShopmallDataReq)
-	r.registerRouter(cmd.GetShopReq, r.gameManager.GetShopReq)
-	r.registerRouter(cmd.BuyGoodsReq, r.gameManager.BuyGoodsReq)
-	r.registerRouter(cmd.McoinExchangeHcoinReq, r.gameManager.McoinExchangeHcoinReq)
-	r.registerRouter(cmd.AvatarChangeCostumeReq, r.gameManager.AvatarChangeCostumeReq)
-	r.registerRouter(cmd.AvatarWearFlycloakReq, r.gameManager.AvatarWearFlycloakReq)
-	r.registerRouter(cmd.PullRecentChatReq, r.gameManager.PullRecentChatReq)
-	r.registerRouter(cmd.PullPrivateChatReq, r.gameManager.PullPrivateChatReq)
-	r.registerRouter(cmd.PrivateChatReq, r.gameManager.PrivateChatReq)
-	r.registerRouter(cmd.ReadPrivateChatReq, r.gameManager.ReadPrivateChatReq)
-	r.registerRouter(cmd.PlayerChatReq, r.gameManager.PlayerChatReq)
-	r.registerRouter(cmd.BackMyWorldReq, r.gameManager.BackMyWorldReq)
-	r.registerRouter(cmd.ChangeWorldToSingleModeReq, r.gameManager.ChangeWorldToSingleModeReq)
-	r.registerRouter(cmd.SceneKickPlayerReq, r.gameManager.SceneKickPlayerReq)
-	r.registerRouter(cmd.ChangeMpTeamAvatarReq, r.gameManager.ChangeMpTeamAvatarReq)
-	r.registerRouter(cmd.SceneAvatarStaminaStepReq, r.gameManager.SceneAvatarStaminaStepReq)
+	r.registerRouter(cmd.UnionCmdNotify, GAME_MANAGER.UnionCmdNotify)
+	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, GAME_MANAGER.MassiveEntityElementOpBatchNotify)
+	r.registerRouter(cmd.ToTheMoonEnterSceneReq, GAME_MANAGER.ToTheMoonEnterSceneReq)
+	r.registerRouter(cmd.PlayerSetPauseReq, GAME_MANAGER.PlayerSetPauseReq)
+	r.registerRouter(cmd.EnterSceneReadyReq, GAME_MANAGER.EnterSceneReadyReq)
+	r.registerRouter(cmd.PathfindingEnterSceneReq, GAME_MANAGER.PathfindingEnterSceneReq)
+	r.registerRouter(cmd.GetScenePointReq, GAME_MANAGER.GetScenePointReq)
+	r.registerRouter(cmd.GetSceneAreaReq, GAME_MANAGER.GetSceneAreaReq)
+	r.registerRouter(cmd.SceneInitFinishReq, GAME_MANAGER.SceneInitFinishReq)
+	r.registerRouter(cmd.EnterSceneDoneReq, GAME_MANAGER.EnterSceneDoneReq)
+	r.registerRouter(cmd.EnterWorldAreaReq, GAME_MANAGER.EnterWorldAreaReq)
+	r.registerRouter(cmd.PostEnterSceneReq, GAME_MANAGER.PostEnterSceneReq)
+	r.registerRouter(cmd.TowerAllDataReq, GAME_MANAGER.TowerAllDataReq)
+	r.registerRouter(cmd.SceneTransToPointReq, GAME_MANAGER.SceneTransToPointReq)
+	r.registerRouter(cmd.MarkMapReq, GAME_MANAGER.MarkMapReq)
+	r.registerRouter(cmd.ChangeAvatarReq, GAME_MANAGER.ChangeAvatarReq)
+	r.registerRouter(cmd.SetUpAvatarTeamReq, GAME_MANAGER.SetUpAvatarTeamReq)
+	r.registerRouter(cmd.ChooseCurAvatarTeamReq, GAME_MANAGER.ChooseCurAvatarTeamReq)
+	r.registerRouter(cmd.GetGachaInfoReq, GAME_MANAGER.GetGachaInfoReq)
+	r.registerRouter(cmd.DoGachaReq, GAME_MANAGER.DoGachaReq)
+	r.registerRouter(cmd.QueryPathReq, GAME_MANAGER.QueryPathReq)
+	r.registerRouter(cmd.CombatInvocationsNotify, GAME_MANAGER.CombatInvocationsNotify)
+	r.registerRouter(cmd.AbilityInvocationsNotify, GAME_MANAGER.AbilityInvocationsNotify)
+	r.registerRouter(cmd.ClientAbilityInitFinishNotify, GAME_MANAGER.ClientAbilityInitFinishNotify)
+	r.registerRouter(cmd.EvtDoSkillSuccNotify, GAME_MANAGER.EvtDoSkillSuccNotify)
+	r.registerRouter(cmd.ClientAbilityChangeNotify, GAME_MANAGER.ClientAbilityChangeNotify)
+	r.registerRouter(cmd.EntityAiSyncNotify, GAME_MANAGER.EntityAiSyncNotify)
+	r.registerRouter(cmd.WearEquipReq, GAME_MANAGER.WearEquipReq)
+	r.registerRouter(cmd.ChangeGameTimeReq, GAME_MANAGER.ChangeGameTimeReq)
+	r.registerRouter(cmd.GetPlayerSocialDetailReq, GAME_MANAGER.GetPlayerSocialDetailReq)
+	r.registerRouter(cmd.SetPlayerBirthdayReq, GAME_MANAGER.SetPlayerBirthdayReq)
+	r.registerRouter(cmd.SetNameCardReq, GAME_MANAGER.SetNameCardReq)
+	r.registerRouter(cmd.SetPlayerSignatureReq, GAME_MANAGER.SetPlayerSignatureReq)
+	r.registerRouter(cmd.SetPlayerNameReq, GAME_MANAGER.SetPlayerNameReq)
+	r.registerRouter(cmd.SetPlayerHeadImageReq, GAME_MANAGER.SetPlayerHeadImageReq)
+	r.registerRouter(cmd.GetAllUnlockNameCardReq, GAME_MANAGER.GetAllUnlockNameCardReq)
+	r.registerRouter(cmd.GetPlayerFriendListReq, GAME_MANAGER.GetPlayerFriendListReq)
+	r.registerRouter(cmd.GetPlayerAskFriendListReq, GAME_MANAGER.GetPlayerAskFriendListReq)
+	r.registerRouter(cmd.AskAddFriendReq, GAME_MANAGER.AskAddFriendReq)
+	r.registerRouter(cmd.DealAddFriendReq, GAME_MANAGER.DealAddFriendReq)
+	r.registerRouter(cmd.GetOnlinePlayerListReq, GAME_MANAGER.GetOnlinePlayerListReq)
+	r.registerRouter(cmd.PlayerApplyEnterMpReq, GAME_MANAGER.PlayerApplyEnterMpReq)
+	r.registerRouter(cmd.PlayerApplyEnterMpResultReq, GAME_MANAGER.PlayerApplyEnterMpResultReq)
+	r.registerRouter(cmd.PlayerGetForceQuitBanInfoReq, GAME_MANAGER.PlayerGetForceQuitBanInfoReq)
+	r.registerRouter(cmd.GetShopmallDataReq, GAME_MANAGER.GetShopmallDataReq)
+	r.registerRouter(cmd.GetShopReq, GAME_MANAGER.GetShopReq)
+	r.registerRouter(cmd.BuyGoodsReq, GAME_MANAGER.BuyGoodsReq)
+	r.registerRouter(cmd.McoinExchangeHcoinReq, GAME_MANAGER.McoinExchangeHcoinReq)
+	r.registerRouter(cmd.AvatarChangeCostumeReq, GAME_MANAGER.AvatarChangeCostumeReq)
+	r.registerRouter(cmd.AvatarWearFlycloakReq, GAME_MANAGER.AvatarWearFlycloakReq)
+	r.registerRouter(cmd.PullRecentChatReq, GAME_MANAGER.PullRecentChatReq)
+	r.registerRouter(cmd.PullPrivateChatReq, GAME_MANAGER.PullPrivateChatReq)
+	r.registerRouter(cmd.PrivateChatReq, GAME_MANAGER.PrivateChatReq)
+	r.registerRouter(cmd.ReadPrivateChatReq, GAME_MANAGER.ReadPrivateChatReq)
+	r.registerRouter(cmd.PlayerChatReq, GAME_MANAGER.PlayerChatReq)
+	r.registerRouter(cmd.BackMyWorldReq, GAME_MANAGER.BackMyWorldReq)
+	r.registerRouter(cmd.ChangeWorldToSingleModeReq, GAME_MANAGER.ChangeWorldToSingleModeReq)
+	r.registerRouter(cmd.SceneKickPlayerReq, GAME_MANAGER.SceneKickPlayerReq)
+	r.registerRouter(cmd.ChangeMpTeamAvatarReq, GAME_MANAGER.ChangeMpTeamAvatarReq)
+	r.registerRouter(cmd.SceneAvatarStaminaStepReq, GAME_MANAGER.SceneAvatarStaminaStepReq)
+	r.registerRouter(cmd.JoinPlayerSceneReq, GAME_MANAGER.JoinPlayerSceneReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *cmd.NetMsg) {
@@ -114,14 +113,14 @@ func (r *RouteManager) RouteHandle(netMsg *cmd.NetMsg) {
 	case cmd.NormalMsg:
 		r.doRoute(netMsg.CmdId, netMsg.UserId, netMsg.ClientSeq, netMsg.PayloadMessage)
 	case cmd.UserRegNotify:
-		r.gameManager.OnReg(netMsg.UserId, netMsg.ClientSeq, netMsg.PayloadMessage)
+		GAME_MANAGER.OnReg(netMsg.UserId, netMsg.ClientSeq, netMsg.PayloadMessage)
 	case cmd.UserLoginNotify:
-		r.gameManager.OnLogin(netMsg.UserId, netMsg.ClientSeq)
+		GAME_MANAGER.OnLogin(netMsg.UserId, netMsg.ClientSeq)
 	case cmd.UserOfflineNotify:
-		r.gameManager.OnUserOffline(netMsg.UserId)
+		GAME_MANAGER.OnUserOffline(netMsg.UserId)
 	case cmd.ClientRttNotify:
-		r.gameManager.ClientRttNotify(netMsg.UserId, netMsg.ClientRtt)
+		GAME_MANAGER.ClientRttNotify(netMsg.UserId, netMsg.ClientRtt)
 	case cmd.ClientTimeNotify:
-		r.gameManager.ClientTimeNotify(netMsg.UserId, netMsg.ClientTime)
+		GAME_MANAGER.ClientTimeNotify(netMsg.UserId, netMsg.ClientTime)
 	}
 }

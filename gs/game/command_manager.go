@@ -9,6 +9,8 @@ import (
 	"hk4e/protocol/proto"
 )
 
+// 命令管理器
+
 // CommandPerm 命令权限等级
 // 0 为普通玩家 数越大权限越大
 type CommandPerm uint8
@@ -38,27 +40,24 @@ type CommandManager struct {
 	commandFuncRouter map[string]CommandFunc // 记录命令处理函数
 	commandPermMap    map[string]CommandPerm // 记录命令对应的权限
 	commandTextInput  chan *CommandMessage   // 传输要处理的命令文本
-
-	gameManager *GameManager
 }
 
 // NewCommandManager 新建命令管理器
-func NewCommandManager(g *GameManager) *CommandManager {
+func NewCommandManager() *CommandManager {
 	r := new(CommandManager)
 
 	// 创建一个公共的开放世界的AI
-	g.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0)
-	r.system = g.userManager.GetOnlineUser(1)
+	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0)
+	r.system = USER_MANAGER.GetOnlineUser(1)
 	// 开放大世界
 	r.system.SceneLoadState = model.SceneEnterDone
 	r.system.DbState = model.DbNormal
-	g.worldManager.InitBigWorld(r.system)
+	WORLD_MANAGER.InitBigWorld(r.system)
 
 	// 初始化
 	r.commandTextInput = make(chan *CommandMessage, 1000)
 	r.InitRouter() // 初始化路由
 
-	r.gameManager = g
 	return r
 }
 
@@ -221,14 +220,12 @@ func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 
 // SendMessage 发送消息
 func (c *CommandManager) SendMessage(executor any, msg string, param ...any) {
-	game := c.gameManager
-
 	// 根据相应的类型发送消息
 	switch executor.(type) {
 	case *model.Player:
 		// 玩家类型
 		player := executor.(*model.Player)
-		game.SendPrivateChat(c.system, player, fmt.Sprintf(msg, param...))
+		GAME_MANAGER.SendPrivateChat(c.system, player, fmt.Sprintf(msg, param...))
 	case string:
 		// GM接口等
 		//str := executor.(string)

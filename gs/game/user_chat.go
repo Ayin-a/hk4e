@@ -155,7 +155,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 		g.SendPrivateChat(player, targetPlayer, text)
 
 		// 输入命令 会检测是否为命令的
-		g.commandManager.InputCommand(player, text)
+		COMMAND_MANAGER.InputCommand(player, text)
 
 	case *proto.PrivateChatReq_Icon:
 		icon := content.(*proto.PrivateChatReq_Icon).Icon

@@ -202,7 +202,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		hostPlayerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
 			hostPlayer,
 			hostPlayer,
-			proto.EnterType_ENTER_TYPE_SELF,
+			proto.EnterType_ENTER_TYPE_GOTO,
 			uint32(constant.EnterReasonConst.HostFromSingleToMp),
 			hostPlayer.SceneId,
 			hostPlayer.Pos,
@@ -212,13 +212,6 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 
 	otherWorld := g.worldManager.GetWorldByID(otherPlayer.WorldId)
 	g.UserWorldRemovePlayer(otherWorld, otherPlayer)
-
-	otherPlayerOldSceneId := otherPlayer.SceneId
-	otherPlayerOldPos := &model.Vector{
-		X: otherPlayer.Pos.X,
-		Y: otherPlayer.Pos.Y,
-		Z: otherPlayer.Pos.Z,
-	}
 
 	otherPlayer.Pos = &model.Vector{
 		X: hostPlayer.Pos.X,
@@ -233,18 +226,19 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	otherPlayer.SceneId = hostPlayer.SceneId
 
 	g.UserWorldAddPlayer(hostWorld, otherPlayer)
-	otherPlayer.SceneLoadState = model.SceneNone
+}
 
-	// PacketPlayerEnterSceneNotify
-	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
-		otherPlayer,
-		hostPlayer,
-		proto.EnterType_ENTER_TYPE_OTHER,
-		uint32(constant.EnterReasonConst.TeamJoin),
-		otherPlayerOldSceneId,
-		otherPlayerOldPos,
-	)
-	g.SendMsg(cmd.PlayerEnterSceneNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerEnterSceneNotify)
+func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
+	joinPlayerSceneRsp := new(proto.JoinPlayerSceneRsp)
+	joinPlayerSceneRsp.Retcode = int32(proto.Retcode_RETCODE_RET_JOIN_OTHER_WAIT)
+	g.SendMsg(cmd.JoinPlayerSceneRsp, player.PlayerID, player.ClientSeq, joinPlayerSceneRsp)
+
+	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, 0, new(proto.LeaveWorldNotify))
+
+	g.LoginNotify(player.PlayerID, player, 0)
+
+	player.SceneLoadState = model.SceneNone
+	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, 0, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
 }
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
@@ -258,27 +252,8 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 		}
 	}
 	g.UserWorldRemovePlayer(oldWorld, player)
-	//{
-	//	newWorld := g.worldManager.CreateWorld(player, false)
-	//	g.UserWorldAddPlayer(newWorld, player)
-	//	player.SceneLoadState = model.SceneNone
-	//
-	//	// PacketPlayerEnterSceneNotify
-	//	enterReasonConst := constant.GetEnterReasonConst()
-	//	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
-	//		player,
-	//		player,
-	//		proto.EnterType_ENTER_TYPE_SELF,
-	//		uint32(enterReasonConst.TeamBack),
-	//		player.SceneId,
-	//		player.Pos,
-	//	)
-	//	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
-	//}
-	{
-		// PacketClientReconnectNotify
-		g.SendMsg(cmd.ClientReconnectNotify, player.PlayerID, 0, new(proto.ClientReconnectNotify))
-	}
+	// PacketClientReconnectNotify
+	g.SendMsg(cmd.ClientReconnectNotify, player.PlayerID, 0, new(proto.ClientReconnectNotify))
 	return true
 }
 

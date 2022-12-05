@@ -14,16 +14,14 @@ import (
 // 游戏服务器定时帧管理器
 
 type TickManager struct {
-	ticker      *time.Ticker
-	tickCount   uint64
-	gameManager *GameManager
+	ticker    *time.Ticker
+	tickCount uint64
 }
 
-func NewTickManager(gameManager *GameManager) (r *TickManager) {
+func NewTickManager() (r *TickManager) {
 	r = new(TickManager)
 	r.ticker = time.NewTicker(time.Millisecond * 100)
 	logger.LOG.Info("game server tick start at: %v", time.Now().UnixMilli())
-	r.gameManager = gameManager
 	return r
 }
 
@@ -73,21 +71,21 @@ func (t *TickManager) onTickHour(now int64) {
 }
 
 func (t *TickManager) onTick10Minute(now int64) {
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 蓝球粉球
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
 		}
 	}
 }
 
 func (t *TickManager) onTickMinute(now int64) {
 	//t.gameManager.ServerAnnounceNotify(100, "test123")
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 随机物品
-			allItemDataConfig := t.gameManager.GetAllItemDataConfig()
+			allItemDataConfig := GAME_MANAGER.GetAllItemDataConfig()
 			count := random.GetRandomInt32(0, 4)
 			i := int32(0)
 			for itemId := range allItemDataConfig {
@@ -101,29 +99,29 @@ func (t *TickManager) onTickMinute(now int64) {
 					continue
 				}
 				num := random.GetRandomInt32(1, 9)
-				t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
+				GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
 				i++
 				if i > count {
 					break
 				}
 			}
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
-			t.gameManager.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
 		}
 	}
 }
 
 func (t *TickManager) onTick10Second(now int64) {
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		for _, scene := range world.sceneMap {
 			for _, player := range scene.playerMap {
 				// PacketSceneTimeNotify
 				sceneTimeNotify := new(proto.SceneTimeNotify)
 				sceneTimeNotify.SceneId = player.SceneId
 				sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
-				GAME.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
+				GAME_MANAGER.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
 			}
 		}
 		if !world.IsBigWorld() && (world.multiplayer || !world.owner.Pause) {
@@ -137,8 +135,8 @@ func (t *TickManager) onTick10Second(now int64) {
 			}
 			if monsterEntityCount < 30 {
 				monsterEntityId := t.createMonster(scene)
-				bigWorldOwner := t.gameManager.userManager.GetOnlineUser(1)
-				t.gameManager.AddSceneEntityNotify(bigWorldOwner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true)
+				bigWorldOwner := USER_MANAGER.GetOnlineUser(1)
+				GAME_MANAGER.AddSceneEntityNotify(bigWorldOwner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true)
 			}
 		}
 		for _, player := range world.playerMap {
@@ -152,7 +150,7 @@ func (t *TickManager) onTick10Second(now int64) {
 					avatar := player.AvatarMap[avatarId]
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)] = 1000000
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)] = 1.0
-					t.gameManager.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
+					GAME_MANAGER.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
 				}
 			}
 		}
@@ -160,10 +158,10 @@ func (t *TickManager) onTick10Second(now int64) {
 }
 
 func (t *TickManager) onTick5Second(now int64) {
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		if world.IsBigWorld() {
 			for applyUid := range world.owner.CoopApplyMap {
-				t.gameManager.UserDealEnterWorld(world.owner, applyUid, true)
+				GAME_MANAGER.UserDealEnterWorld(world.owner, applyUid, true)
 			}
 		}
 		for _, player := range world.playerMap {
@@ -190,7 +188,7 @@ func (t *TickManager) onTick5Second(now int64) {
 					}
 					worldPlayerLocationNotify.PlayerWorldLocList = append(worldPlayerLocationNotify.PlayerWorldLocList, playerWorldLocationInfo)
 				}
-				t.gameManager.SendMsg(cmd.WorldPlayerLocationNotify, player.PlayerID, 0, worldPlayerLocationNotify)
+				GAME_MANAGER.SendMsg(cmd.WorldPlayerLocationNotify, player.PlayerID, 0, worldPlayerLocationNotify)
 
 				// PacketScenePlayerLocationNotify
 				scene := world.GetSceneById(player.SceneId)
@@ -212,14 +210,14 @@ func (t *TickManager) onTick5Second(now int64) {
 					}
 					scenePlayerLocationNotify.PlayerLocList = append(scenePlayerLocationNotify.PlayerLocList, playerLocationInfo)
 				}
-				t.gameManager.SendMsg(cmd.ScenePlayerLocationNotify, player.PlayerID, 0, scenePlayerLocationNotify)
+				GAME_MANAGER.SendMsg(cmd.ScenePlayerLocationNotify, player.PlayerID, 0, scenePlayerLocationNotify)
 			}
 		}
 	}
 }
 
 func (t *TickManager) onTickSecond(now int64) {
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 世界里所有玩家的网络延迟广播
 			// PacketWorldPlayerRTTNotify
@@ -229,16 +227,16 @@ func (t *TickManager) onTickSecond(now int64) {
 				playerRTTInfo := &proto.PlayerRTTInfo{Uid: worldPlayer.PlayerID, Rtt: worldPlayer.ClientRTT}
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
 			}
-			t.gameManager.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
+			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
 		}
 	}
 }
 
 func (t *TickManager) onTick200MilliSecond(now int64) {
 	// 耐力消耗
-	for _, world := range t.gameManager.worldManager.worldMap {
+	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
-			t.gameManager.StaminaHandler(player)
+			GAME_MANAGER.StaminaHandler(player)
 		}
 	}
 }

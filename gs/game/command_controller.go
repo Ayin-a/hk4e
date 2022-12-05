@@ -32,8 +32,6 @@ func (c *CommandManager) OpCommand(cmd *CommandMessage) {
 // TeleportCommand 传送玩家命令
 // tp [-u <userId>] [-s <sceneId>] -x <posX> -y <posY> -z <posZ>
 func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
-	game := c.gameManager
-
 	// 执行者如果不是玩家则必须输入目标UID
 	player, ok := cmd.Executor.(*model.Player)
 	if !ok && cmd.Args["u"] == "" {
@@ -61,7 +59,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 			var uid uint64
 			if uid, err = strconv.ParseUint(v, 10, 32); err != nil {
 				// 判断目标用户是否在线
-				if user := game.userManager.GetOnlineUser(uint32(uid)); user != nil {
+				if user := USER_MANAGER.GetOnlineUser(uint32(uid)); user != nil {
 					target = user
 					// 防止覆盖用户指定过的sceneId
 					if target.SceneId != sceneId {
@@ -135,8 +133,6 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 // GiveCommand 给予物品命令
 // give [-u <userId>] [-c <count>] -i <itemId|AvatarId/all>
 func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
-	game := c.gameManager
-
 	// 执行者如果不是玩家则必须输入目标UID
 	player, ok := cmd.Executor.(*model.Player)
 	if !ok && cmd.Args["u"] == "" {
@@ -168,7 +164,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 			var uid uint64
 			if uid, err = strconv.ParseUint(v, 10, 32); err != nil {
 				// 判断目标用户是否在线
-				if user := game.userManager.GetOnlineUser(uint32(uid)); user != nil {
+				if user := USER_MANAGER.GetOnlineUser(uint32(uid)); user != nil {
 					target = user
 				} else {
 					c.SendMessage(player, "目标玩家不在线，UID: %v。", v)
@@ -208,7 +204,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	switch mode {
 	case "once":
 		// 判断是否为物品
-		_, ok := game.GetAllItemDataConfig()[int32(itemId)]
+		_, ok := GAME_MANAGER.GetAllItemDataConfig()[int32(itemId)]
 		if ok {
 			// 给予玩家物品
 			c.GMAddUserItem(target.PlayerID, itemId, count)
@@ -216,7 +212,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 			return
 		}
 		// 判断是否为武器
-		_, ok = game.GetAllWeaponDataConfig()[int32(itemId)]
+		_, ok = GAME_MANAGER.GetAllWeaponDataConfig()[int32(itemId)]
 		if ok {
 			// 给予玩家武器
 			c.GMAddUserWeapon(target.PlayerID, itemId, count)
@@ -225,7 +221,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 		}
 		// 判断是否为角色
-		_, ok = game.GetAllAvatarDataConfig()[int32(itemId)]
+		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(itemId)]
 		if ok {
 			// 给予玩家武器
 			c.GMAddUserAvatar(target.PlayerID, itemId)

@@ -148,7 +148,7 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 
 	// 获取包含系统的临时好友列表
 	// 用于实现好友列表内的系统且不更改原先的内容
-	tempFriendList := g.commandManager.GetFriendList(player.FriendList)
+	tempFriendList := COMMAND_MANAGER.GetFriendList(player.FriendList)
 
 	for uid := range tempFriendList {
 		// TODO 同步阻塞待优化

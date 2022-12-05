@@ -94,6 +94,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(ToTheMoonEnterSceneReq, &proto.ToTheMoonEnterSceneReq{})                 // 进入场景请求
 	c.registerMessage(ToTheMoonEnterSceneRsp, &proto.ToTheMoonEnterSceneRsp{})                 // 进入场景响应
 	c.registerMessage(SetEntityClientDataNotify, &proto.SetEntityClientDataNotify{})           // 通知
+	c.registerMessage(LeaveWorldNotify, &proto.LeaveWorldNotify{})                             // 删除客户端世界通知
 
 	// 战斗与技能
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
@@ -137,6 +138,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(SceneKickPlayerRsp, &proto.SceneKickPlayerRsp{})                         // 剔除玩家响应
 	c.registerMessage(SceneKickPlayerNotify, &proto.SceneKickPlayerNotify{})                   // 剔除玩家通知
 	c.registerMessage(PlayerQuitFromMpNotify, &proto.PlayerQuitFromMpNotify{})                 // 退出多人游戏通知
+	c.registerMessage(JoinPlayerSceneReq, &proto.JoinPlayerSceneReq{})                         // 进入他人世界请求
+	c.registerMessage(JoinPlayerSceneRsp, &proto.JoinPlayerSceneRsp{})                         // 进入他人世界响应
 
 	// 社交
 	c.registerMessage(SetPlayerBirthdayReq, &proto.SetPlayerBirthdayReq{})           // 设置生日请求

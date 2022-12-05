@@ -282,7 +282,7 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.ChangeGameTimeRsp, player.PlayerID, player.ClientSeq, changeGameTimeRsp)
 }
 
-func (g *GameManager) PacketPlayerEnterSceneNotify(player *model.Player) *proto.PlayerEnterSceneNotify {
+func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
 	world := g.worldManager.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
@@ -290,12 +290,11 @@ func (g *GameManager) PacketPlayerEnterSceneNotify(player *model.Player) *proto.
 	playerEnterSceneNotify.SceneId = player.SceneId
 	playerEnterSceneNotify.Pos = &proto.Vector{X: float32(player.Pos.X), Y: float32(player.Pos.Y), Z: float32(player.Pos.Z)}
 	playerEnterSceneNotify.SceneBeginTime = uint64(scene.GetSceneCreateTime())
-	playerEnterSceneNotify.Type = proto.EnterType_ENTER_TYPE_SELF
+	playerEnterSceneNotify.Type = enterType
 	playerEnterSceneNotify.TargetUid = player.PlayerID
 	playerEnterSceneNotify.EnterSceneToken = player.EnterSceneToken
 	playerEnterSceneNotify.WorldLevel = player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL]
 	playerEnterSceneNotify.EnterReason = uint32(constant.EnterReasonConst.Login)
-	// 刚登录进入场景的时候才为true
 	playerEnterSceneNotify.IsFirstLoginEnterScene = true
 	playerEnterSceneNotify.WorldType = 1
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +

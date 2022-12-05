@@ -1,6 +1,7 @@
 package game
 
 import (
+	pb "google.golang.org/protobuf/proto"
 	"time"
 
 	gdc "hk4e/gs/config"
@@ -10,8 +11,6 @@ import (
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-
-	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32) {
@@ -53,6 +52,73 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	//	}
 	//}
 
+	g.LoginNotify(userId, player, clientSeq)
+
+	player.SceneLoadState = model.SceneNone
+	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, clientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
+}
+
+func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
+	logger.LOG.Debug("user reg, uid: %v", userId)
+	req := payloadMsg.(*proto.SetPlayerBornDataReq)
+	logger.LOG.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
+
+	exist, asyncWait := g.userManager.CheckUserExistOnReg(userId, req, clientSeq)
+	if !asyncWait {
+		g.OnRegOk(exist, req, userId, clientSeq)
+	}
+}
+
+func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32) {
+	if exist {
+		logger.LOG.Error("recv reg req, but user is already exist, userId: %v", userId)
+		return
+	}
+
+	nickName := req.NickName
+	mainCharAvatarId := req.GetAvatarId()
+	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
+		logger.LOG.Error("invalid main char avatar id: %v", mainCharAvatarId)
+		return
+	}
+
+	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
+	if player == nil {
+		logger.LOG.Error("player is nil, uid: %v", userId)
+		return
+	}
+	g.userManager.AddUser(player)
+
+	g.SendMsg(cmd.SetPlayerBornDataRsp, userId, clientSeq, new(proto.SetPlayerBornDataRsp))
+	g.OnLogin(userId, clientSeq)
+}
+
+func (g *GameManager) OnUserOffline(userId uint32) {
+	logger.LOG.Info("user offline, uid: %v", userId)
+	player := g.userManager.GetOnlineUser(userId)
+	if player == nil {
+		logger.LOG.Error("player is nil, userId: %v", userId)
+		return
+	}
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	if world != nil {
+		g.UserWorldRemovePlayer(world, player)
+	}
+	player.OfflineTime = uint32(time.Now().Unix())
+	player.Online = false
+	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
+	g.userManager.OfflineUser(player)
+}
+
+func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
+	g.SendMsg(cmd.PlayerDataNotify, userId, clientSeq, g.PacketPlayerDataNotify(player))
+	g.SendMsg(cmd.StoreWeightLimitNotify, userId, clientSeq, g.PacketStoreWeightLimitNotify())
+	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
+	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, g.PacketAvatarDataNotify(player))
+	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, g.PacketOpenStateUpdateNotify())
+}
+
+func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {
 	// PacketPlayerDataNotify
 	playerDataNotify := new(proto.PlayerDataNotify)
 	playerDataNotify.NickName = player.NickName
@@ -67,8 +133,10 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		propValue.Val = int64(v)
 		playerDataNotify.PropMap[uint32(k)] = propValue
 	}
-	g.SendMsg(cmd.PlayerDataNotify, userId, clientSeq, playerDataNotify)
+	return playerDataNotify
+}
 
+func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNotify {
 	// PacketStoreWeightLimitNotify
 	storeWeightLimitNotify := new(proto.StoreWeightLimitNotify)
 	storeWeightLimitNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
@@ -78,8 +146,10 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	storeWeightLimitNotify.ReliquaryCountLimit = 1500
 	storeWeightLimitNotify.MaterialCountLimit = 2000
 	storeWeightLimitNotify.FurnitureCountLimit = 2000
-	g.SendMsg(cmd.StoreWeightLimitNotify, userId, clientSeq, storeWeightLimitNotify)
+	return storeWeightLimitNotify
+}
 
+func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
 	// PacketPlayerStoreNotify
 	playerStoreNotify := new(proto.PlayerStoreNotify)
 	playerStoreNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
@@ -94,7 +164,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		itemData, ok := itemDataMapConfig[int32(weapon.ItemId)]
 		if !ok {
 			logger.LOG.Error("config is nil, itemId: %v", weapon.ItemId)
-			return
+			return nil
 		}
 		if itemData.ItemEnumType != constant.ItemTypeConst.ITEM_WEAPON {
 			continue
@@ -167,8 +237,10 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		}
 		playerStoreNotify.ItemList = append(playerStoreNotify.ItemList, pbItem)
 	}
-	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, playerStoreNotify)
+	return playerStoreNotify
+}
 
+func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.AvatarDataNotify {
 	// PacketAvatarDataNotify
 	avatarDataNotify := new(proto.AvatarDataNotify)
 	chooseAvatarId := player.MainCharAvatarId
@@ -195,14 +267,10 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 			TeamName:       team.Name,
 		}
 	}
-	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, avatarDataNotify)
+	return avatarDataNotify
+}
 
-	player.SceneLoadState = model.SceneNone
-
-	// PacketPlayerEnterSceneNotify
-	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotify(player)
-	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, clientSeq, playerEnterSceneNotify)
-
+func (g *GameManager) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify {
 	// PacketOpenStateUpdateNotify
 	openStateUpdateNotify := new(proto.OpenStateUpdateNotify)
 	openStateConstMap := reflection.ConvStructToMap(constant.OpenStateConst)
@@ -210,59 +278,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	for _, v := range openStateConstMap {
 		openStateUpdateNotify.OpenStateMap[uint32(v.(uint16))] = 1
 	}
-	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, openStateUpdateNotify)
-}
-
-func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	logger.LOG.Debug("user reg, uid: %v", userId)
-	req := payloadMsg.(*proto.SetPlayerBornDataReq)
-	logger.LOG.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
-
-	exist, asyncWait := g.userManager.CheckUserExistOnReg(userId, req, clientSeq)
-	if !asyncWait {
-		g.OnRegOk(exist, req, userId, clientSeq)
-	}
-}
-
-func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32) {
-	if exist {
-		logger.LOG.Error("recv reg req, but user is already exist, userId: %v", userId)
-		return
-	}
-
-	nickName := req.NickName
-	mainCharAvatarId := req.GetAvatarId()
-	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
-		logger.LOG.Error("invalid main char avatar id: %v", mainCharAvatarId)
-		return
-	}
-
-	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
-	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
-		return
-	}
-	g.userManager.AddUser(player)
-
-	g.SendMsg(cmd.SetPlayerBornDataRsp, userId, clientSeq, new(proto.SetPlayerBornDataRsp))
-	g.OnLogin(userId, clientSeq)
-}
-
-func (g *GameManager) OnUserOffline(userId uint32) {
-	logger.LOG.Info("user offline, uid: %v", userId)
-	player := g.userManager.GetOnlineUser(userId)
-	if player == nil {
-		logger.LOG.Error("player is nil, userId: %v", userId)
-		return
-	}
-	world := g.worldManager.GetWorldByID(player.WorldId)
-	if world != nil {
-		g.UserWorldRemovePlayer(world, player)
-	}
-	player.OfflineTime = uint32(time.Now().Unix())
-	player.Online = false
-	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
-	g.userManager.OfflineUser(player)
+	return openStateUpdateNotify
 }
 
 func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {

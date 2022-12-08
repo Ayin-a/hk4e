@@ -29,7 +29,7 @@ func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdc.AvatarData {
 }
 
 func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -52,13 +52,12 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	// 角色装上初始武器
 	g.WearUserAvatarEquip(player.PlayerID, avatarId, weaponId)
 
-	// TODO 真的有必要存在吗
 	g.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
 
-	// PacketAvatarAddNotify
-	avatarAddNotify := new(proto.AvatarAddNotify)
-	avatarAddNotify.Avatar = g.PacketAvatarInfo(avatar)
-	avatarAddNotify.IsInTeam = false
+	avatarAddNotify := &proto.AvatarAddNotify{
+		Avatar:   g.PacketAvatarInfo(avatar),
+		IsInTeam: false,
+	}
 	g.SendMsg(cmd.AvatarAddNotify, userId, player.ClientSeq, avatarAddNotify)
 }
 
@@ -71,15 +70,15 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	weapon := player.GameObjectGuidMap[equipGuid].(*model.Weapon)
 	g.WearUserAvatarEquip(player.PlayerID, avatar.AvatarId, weapon.WeaponId)
 
-	// PacketWearEquipRsp
-	wearEquipRsp := new(proto.WearEquipRsp)
-	wearEquipRsp.AvatarGuid = avatarGuid
-	wearEquipRsp.EquipGuid = equipGuid
+	wearEquipRsp := &proto.WearEquipRsp{
+		AvatarGuid: avatarGuid,
+		EquipGuid:  equipGuid,
+	}
 	g.SendMsg(cmd.WearEquipRsp, player.PlayerID, player.ClientSeq, wearEquipRsp)
 }
 
 func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weaponId uint64) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -87,7 +86,7 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 	avatar := player.AvatarMap[avatarId]
 	weapon := player.WeaponMap[weaponId]
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	team := player.TeamConfig.GetActiveTeam()
@@ -115,7 +114,6 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 			}
 		}
 
-		// PacketAvatarEquipChangeNotify
 		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, playerTeamEntity.weaponEntityMap[weakWeapon.WeaponId])
 		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 	} else if avatar.EquipWeapon != nil {
@@ -136,7 +134,6 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 		}
 	}
 
-	// PacketAvatarEquipChangeNotify
 	avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, playerTeamEntity.weaponEntityMap[weaponId])
 	g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 }
@@ -163,20 +160,19 @@ func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb
 	avatar := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
 	avatar.Costume = req.CostumeId
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 
-	// PacketAvatarChangeCostumeNotify
 	avatarChangeCostumeNotify := new(proto.AvatarChangeCostumeNotify)
 	avatarChangeCostumeNotify.EntityInfo = g.PacketSceneEntityInfoAvatar(scene, player, avatar.AvatarId)
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.AvatarChangeCostumeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, avatarChangeCostumeNotify)
 	}
 
-	// PacketAvatarChangeCostumeRsp
-	avatarChangeCostumeRsp := new(proto.AvatarChangeCostumeRsp)
-	avatarChangeCostumeRsp.AvatarGuid = req.AvatarGuid
-	avatarChangeCostumeRsp.CostumeId = req.CostumeId
+	avatarChangeCostumeRsp := &proto.AvatarChangeCostumeRsp{
+		AvatarGuid: req.AvatarGuid,
+		CostumeId:  req.CostumeId,
+	}
 	g.SendMsg(cmd.AvatarChangeCostumeRsp, player.PlayerID, player.ClientSeq, avatarChangeCostumeRsp)
 }
 
@@ -199,33 +195,30 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 	avatar := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
 	avatar.FlyCloak = req.FlycloakId
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 
-	// PacketAvatarFlycloakChangeNotify
-	avatarFlycloakChangeNotify := new(proto.AvatarFlycloakChangeNotify)
-	avatarFlycloakChangeNotify.AvatarGuid = avatarGuid
-	avatarFlycloakChangeNotify.FlycloakId = flycloakId
+	avatarFlycloakChangeNotify := &proto.AvatarFlycloakChangeNotify{
+		AvatarGuid: avatarGuid,
+		FlycloakId: flycloakId,
+	}
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.AvatarFlycloakChangeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, avatarFlycloakChangeNotify)
 	}
 
-	// PacketAvatarWearFlycloakRsp
-	avatarWearFlycloakRsp := new(proto.AvatarWearFlycloakRsp)
-	avatarWearFlycloakRsp.AvatarGuid = req.AvatarGuid
-	avatarWearFlycloakRsp.FlycloakId = req.FlycloakId
+	avatarWearFlycloakRsp := &proto.AvatarWearFlycloakRsp{
+		AvatarGuid: req.AvatarGuid,
+		FlycloakId: req.FlycloakId,
+	}
 	g.SendMsg(cmd.AvatarWearFlycloakRsp, player.PlayerID, player.ClientSeq, avatarWearFlycloakRsp)
 }
 
 func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon *model.Weapon, entityId uint32) *proto.AvatarEquipChangeNotify {
-	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(weapon.ItemId)]
-	avatarEquipChangeNotify := new(proto.AvatarEquipChangeNotify)
-	avatarEquipChangeNotify.AvatarGuid = avatar.Guid
-	if ok {
-		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.EquipEnumType)
+	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
+		AvatarGuid: avatar.Guid,
+		ItemId:     weapon.ItemId,
+		EquipGuid:  weapon.Guid,
 	}
-	avatarEquipChangeNotify.ItemId = weapon.ItemId
-	avatarEquipChangeNotify.EquipGuid = weapon.Guid
 	avatarEquipChangeNotify.Weapon = &proto.SceneWeaponInfo{
 		EntityId:    entityId,
 		GadgetId:    uint32(gdc.CONF.ItemDataMap[int32(weapon.ItemId)].GadgetId),
@@ -234,12 +227,17 @@ func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon
 		Level:       uint32(weapon.Level),
 		AbilityInfo: new(proto.AbilitySyncStateInfo),
 	}
+	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(weapon.ItemId)]
+	if ok {
+		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.EquipEnumType)
+	}
 	return avatarEquipChangeNotify
 }
 
 func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapon *model.Weapon) *proto.AvatarEquipChangeNotify {
-	avatarEquipChangeNotify := new(proto.AvatarEquipChangeNotify)
-	avatarEquipChangeNotify.AvatarGuid = avatar.Guid
+	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
+		AvatarGuid: avatar.Guid,
+	}
 	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(weapon.ItemId)]
 	if ok {
 		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.EquipEnumType)
@@ -248,15 +246,16 @@ func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapo
 }
 
 func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
 	}
-	avatarFightPropNotify := new(proto.AvatarFightPropNotify)
 	avatar := player.AvatarMap[avatarId]
-	avatarFightPropNotify.AvatarGuid = avatar.Guid
-	avatarFightPropNotify.FightPropMap = avatar.FightPropMap
+	avatarFightPropNotify := &proto.AvatarFightPropNotify{
+		AvatarGuid:   avatar.Guid,
+		FightPropMap: avatar.FightPropMap,
+	}
 	g.SendMsg(cmd.AvatarFightPropNotify, userId, player.ClientSeq, avatarFightPropNotify)
 }
 
@@ -303,7 +302,6 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 		FetterInfo: &proto.AvatarFetterInfo{
 			ExpLevel:  uint32(avatar.FetterLevel),
 			ExpNumber: avatar.FetterExp,
-			// FetterList 不知道是啥 该角色在配置表里的所有FetterId
 			// TODO 资料解锁条目
 			FetterList:              nil,
 			RewardedFetterLevelList: []uint32{10},

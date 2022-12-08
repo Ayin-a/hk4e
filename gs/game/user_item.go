@@ -49,7 +49,7 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdc.ItemData {
 }
 
 func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bool, hintReason uint16) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -58,9 +58,10 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 		player.AddItem(userItem.ItemId, userItem.ChangeCount)
 	}
 
-	// PacketStoreItemChangeNotify
-	storeItemChangeNotify := new(proto.StoreItemChangeNotify)
-	storeItemChangeNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
+	storeItemChangeNotify := &proto.StoreItemChangeNotify{
+		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		ItemList:  make([]*proto.Item, 0),
+	}
 	for _, userItem := range itemList {
 		pbItem := &proto.Item{
 			ItemId: userItem.ItemId,
@@ -79,9 +80,10 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 		if hintReason == 0 {
 			hintReason = constant.ActionReasonConst.SubfieldDrop
 		}
-		// PacketItemAddHintNotify
-		itemAddHintNotify := new(proto.ItemAddHintNotify)
-		itemAddHintNotify.Reason = uint32(hintReason)
+		itemAddHintNotify := &proto.ItemAddHintNotify{
+			Reason:   uint32(hintReason),
+			ItemList: make([]*proto.ItemHint, 0),
+		}
 		for _, userItem := range itemList {
 			itemAddHintNotify.ItemList = append(itemAddHintNotify.ItemList, &proto.ItemHint{
 				ItemId: userItem.ItemId,
@@ -92,9 +94,9 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 		g.SendMsg(cmd.ItemAddHintNotify, userId, player.ClientSeq, itemAddHintNotify)
 	}
 
-	// PacketPlayerPropNotify
-	playerPropNotify := new(proto.PlayerPropNotify)
-	playerPropNotify.PropMap = make(map[uint32]*proto.PropValue)
+	playerPropNotify := &proto.PlayerPropNotify{
+		PropMap: make(map[uint32]*proto.PropValue),
+	}
 	for _, userItem := range itemList {
 		isVirtualItem, prop := player.GetVirtualItemProp(userItem.ItemId)
 		if !isVirtualItem {
@@ -114,7 +116,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 }
 
 func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -123,9 +125,10 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		player.CostItem(userItem.ItemId, userItem.ChangeCount)
 	}
 
-	// PacketStoreItemChangeNotify
-	storeItemChangeNotify := new(proto.StoreItemChangeNotify)
-	storeItemChangeNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
+	storeItemChangeNotify := &proto.StoreItemChangeNotify{
+		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		ItemList:  make([]*proto.Item, 0),
+	}
 	for _, userItem := range itemList {
 		count := player.GetItemCount(userItem.ItemId)
 		if count == 0 {
@@ -146,9 +149,10 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		g.SendMsg(cmd.StoreItemChangeNotify, userId, player.ClientSeq, storeItemChangeNotify)
 	}
 
-	// PacketStoreItemDelNotify
-	storeItemDelNotify := new(proto.StoreItemDelNotify)
-	storeItemDelNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
+	storeItemDelNotify := &proto.StoreItemDelNotify{
+		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		GuidList:  make([]uint64, 0),
+	}
 	for _, userItem := range itemList {
 		count := player.GetItemCount(userItem.ItemId)
 		if count > 0 {
@@ -160,9 +164,9 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)
 	}
 
-	// PacketPlayerPropNotify
-	playerPropNotify := new(proto.PlayerPropNotify)
-	playerPropNotify.PropMap = make(map[uint32]*proto.PropValue)
+	playerPropNotify := &proto.PlayerPropNotify{
+		PropMap: make(map[uint32]*proto.PropValue),
+	}
 	for _, userItem := range itemList {
 		isVirtualItem, prop := player.GetVirtualItemProp(userItem.ItemId)
 		if !isVirtualItem {

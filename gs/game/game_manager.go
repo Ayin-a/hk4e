@@ -24,10 +24,6 @@ type GameManager struct {
 	netMsgInput  chan *cmd.NetMsg
 	netMsgOutput chan *cmd.NetMsg
 	snowflake    *alg.SnowflakeWorker
-	// 用户管理器
-	userManager *UserManager
-	// 世界管理器
-	worldManager *WorldManager
 }
 
 func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *GameManager) {
@@ -39,10 +35,8 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()
-	r.userManager = NewUserManager(dao, LOCAL_EVENT_MANAGER.localEventChan)
-	USER_MANAGER = r.userManager
-	r.worldManager = NewWorldManager(r.snowflake)
-	WORLD_MANAGER = r.worldManager
+	USER_MANAGER = NewUserManager(dao, LOCAL_EVENT_MANAGER.localEventChan)
+	WORLD_MANAGER = NewWorldManager(r.snowflake)
 	TICK_MANAGER = NewTickManager()
 	COMMAND_MANAGER = NewCommandManager()
 	return r

@@ -29,7 +29,7 @@ func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Mess
 		}
 	}
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
 		chatList := world.GetChatList()
 		count := len(chatList)
@@ -37,18 +37,18 @@ func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Mess
 			count = 10
 		}
 		for i := len(chatList) - count; i < len(chatList); i++ {
-			// PacketPlayerChatNotify
-			playerChatNotify := new(proto.PlayerChatNotify)
-			playerChatNotify.ChannelId = 0
-			playerChatNotify.ChatInfo = chatList[i]
-			g.SendMsg(cmd.PlayerChatNotify, player.PlayerID, 0, playerChatNotify)
+			playerChatNotify := &proto.PlayerChatNotify{
+				ChannelId: 0,
+				ChatInfo:  chatList[i],
+			}
+			g.SendMsg(cmd.PlayerChatNotify, player.PlayerID, player.ClientSeq, playerChatNotify)
 		}
 	}
 
-	// PacketPullRecentChatRsp
-	pullRecentChatRsp := new(proto.PullRecentChatRsp)
-	pullRecentChatRsp.ChatInfo = retMsgList
-	g.SendMsg(cmd.PullRecentChatRsp, player.PlayerID, 0, pullRecentChatRsp)
+	pullRecentChatRsp := &proto.PullRecentChatRsp{
+		ChatInfo: retMsgList,
+	}
+	g.SendMsg(cmd.PullRecentChatRsp, player.PlayerID, player.ClientSeq, pullRecentChatRsp)
 }
 
 func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -71,10 +71,10 @@ func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 		retMsgList = append(retMsgList, g.ConvChatMsgToChatInfo(chatMsg))
 	}
 
-	// PacketPullPrivateChatRsp
-	pullPrivateChatRsp := new(proto.PullPrivateChatRsp)
-	pullPrivateChatRsp.ChatInfo = retMsgList
-	g.SendMsg(cmd.PullPrivateChatRsp, player.PlayerID, 0, pullPrivateChatRsp)
+	pullPrivateChatRsp := &proto.PullPrivateChatRsp{
+		ChatInfo: retMsgList,
+	}
+	g.SendMsg(cmd.PullPrivateChatRsp, player.PlayerID, player.ClientSeq, pullPrivateChatRsp)
 }
 
 // SendPrivateChat 发送私聊文本消息给玩家
@@ -119,16 +119,16 @@ func (g *GameManager) SendPrivateChat(player, targetPlayer *model.Player, conten
 
 	// 如果目标玩家在线发送消息
 	if targetPlayer.Online {
-		// PacketPrivateChatNotify
-		privateChatNotify := new(proto.PrivateChatNotify)
-		privateChatNotify.ChatInfo = chatInfo
-		g.SendMsg(cmd.PrivateChatNotify, targetPlayer.PlayerID, 0, privateChatNotify)
+		privateChatNotify := &proto.PrivateChatNotify{
+			ChatInfo: chatInfo,
+		}
+		g.SendMsg(cmd.PrivateChatNotify, targetPlayer.PlayerID, player.ClientSeq, privateChatNotify)
 	}
 
-	// PacketPrivateChatNotify
-	privateChatNotify := new(proto.PrivateChatNotify)
-	privateChatNotify.ChatInfo = chatInfo
-	g.SendMsg(cmd.PrivateChatNotify, player.PlayerID, 0, privateChatNotify)
+	privateChatNotify := &proto.PrivateChatNotify{
+		ChatInfo: chatInfo,
+	}
+	g.SendMsg(cmd.PrivateChatNotify, player.PlayerID, player.ClientSeq, privateChatNotify)
 }
 
 func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -138,7 +138,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	content := req.Content
 
 	// TODO 同步阻塞待优化
-	targetPlayer := g.userManager.LoadTempOfflineUserSync(targetUid)
+	targetPlayer := USER_MANAGER.LoadTempOfflineUserSync(targetUid)
 	if targetPlayer == nil {
 		return
 	}
@@ -167,9 +167,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 		return
 	}
 
-	// PacketPrivateChatRsp
-	privateChatRsp := new(proto.PrivateChatRsp)
-	g.SendMsg(cmd.PrivateChatRsp, player.PlayerID, 0, privateChatRsp)
+	g.SendMsg(cmd.PrivateChatRsp, player.PlayerID, player.ClientSeq, new(proto.PrivateChatRsp))
 }
 
 func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -187,9 +185,7 @@ func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 	}
 	player.ChatMsgMap[targetUid] = msgList
 
-	// PacketReadPrivateChatRsp
-	readPrivateChatRsp := new(proto.ReadPrivateChatRsp)
-	g.SendMsg(cmd.ReadPrivateChatRsp, player.PlayerID, 0, readPrivateChatRsp)
+	g.SendMsg(cmd.ReadPrivateChatRsp, player.PlayerID, player.ClientSeq, new(proto.ReadPrivateChatRsp))
 }
 
 func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -221,20 +217,18 @@ func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message)
 		return
 	}
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	world.AddChat(sendChatInfo)
 
-	// PacketPlayerChatNotify
-	playerChatNotify := new(proto.PlayerChatNotify)
-	playerChatNotify.ChannelId = channelId
-	playerChatNotify.ChatInfo = sendChatInfo
+	playerChatNotify := &proto.PlayerChatNotify{
+		ChannelId: channelId,
+		ChatInfo:  sendChatInfo,
+	}
 	for _, worldPlayer := range world.playerMap {
-		g.SendMsg(cmd.PlayerChatNotify, worldPlayer.PlayerID, 0, playerChatNotify)
+		g.SendMsg(cmd.PlayerChatNotify, worldPlayer.PlayerID, player.ClientSeq, playerChatNotify)
 	}
 
-	// PacketPlayerChatRsp
-	playerChatRsp := new(proto.PlayerChatRsp)
-	g.SendMsg(cmd.PlayerChatRsp, player.PlayerID, 0, playerChatRsp)
+	g.SendMsg(cmd.PlayerChatRsp, player.PlayerID, player.ClientSeq, new(proto.PlayerChatRsp))
 }
 
 func (g *GameManager) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *model.ChatMsg) {

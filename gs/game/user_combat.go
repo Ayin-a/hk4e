@@ -13,7 +13,7 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	//logger.LOG.Debug("user send union cmd, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.UnionCmdNotify)
 	_ = req
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
@@ -29,13 +29,12 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 			continue
 		}
 		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			otherPlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 			surrPlayerList = append(surrPlayerList, otherPlayer)
 		}
 	}
 
 	// CombatInvocationsNotify转发
-	// PacketCombatInvocationsNotify
 	if player.CombatInvokeHandler.AllLen() > 0 {
 		combatInvocationsNotify := new(proto.CombatInvocationsNotify)
 		combatInvocationsNotify.InvokeList = player.CombatInvokeHandler.EntryListForwardAll
@@ -60,7 +59,6 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	}
 
 	// AbilityInvocationsNotify转发
-	// PacketAbilityInvocationsNotify
 	if player.AbilityInvokeHandler.AllLen() > 0 {
 		abilityInvocationsNotify := new(proto.AbilityInvocationsNotify)
 		abilityInvocationsNotify.Invokes = player.AbilityInvokeHandler.EntryListForwardAll
@@ -92,7 +90,7 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 	//logger.LOG.Debug("user meeo sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.MassiveEntityElementOpBatchNotify)
 	ntf := req
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
@@ -110,7 +108,7 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 			continue
 		}
 		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			otherPlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 			surrPlayerList = append(surrPlayerList, otherPlayer)
 		}
 	}
@@ -123,7 +121,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	//logger.LOG.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
@@ -225,11 +223,11 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 					world.aoiManager.AddEntityIdToGrid(playerActiveAvatarEntityId, newGid)
 					// 其他玩家
 					for _, uid := range delUidList {
-						otherPlayer := g.userManager.GetOnlineUser(uid)
+						otherPlayer := USER_MANAGER.GetOnlineUser(uid)
 						g.RemoveSceneEntityNotifyToPlayer(otherPlayer, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerActiveAvatarEntityId})
 					}
 					for _, uid := range addUidList {
-						otherPlayer := g.userManager.GetOnlineUser(uid)
+						otherPlayer := USER_MANAGER.GetOnlineUser(uid)
 						g.AddSceneEntityNotify(otherPlayer, proto.VisionType_VISION_TYPE_BORN, []uint32{playerActiveAvatarEntityId}, false)
 					}
 				}
@@ -351,7 +349,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
@@ -367,13 +365,12 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 			continue
 		}
 		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			otherPlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 			surrPlayerList = append(surrPlayerList, otherPlayer)
 		}
 	}
 
 	// ClientAbilityInitFinishNotify转发
-	// PacketClientAbilityInitFinishNotify
 	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
 		for _, v := range surrPlayerList {
 			if player.PlayerID == v.PlayerID {
@@ -418,7 +415,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	for _, entry := range req.Invokes {
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
@@ -434,13 +431,12 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			continue
 		}
 		if entity.avatarEntity != nil {
-			otherPlayer := g.userManager.GetOnlineUser(entity.avatarEntity.uid)
+			otherPlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 			surrPlayerList = append(surrPlayerList, otherPlayer)
 		}
 	}
 
 	// ClientAbilityChangeNotify转发
-	// PacketClientAbilityChangeNotify
 	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
 		clientAbilityChangeNotify := new(proto.ClientAbilityChangeNotify)
 		clientAbilityChangeNotify.EntityId = req.EntityId

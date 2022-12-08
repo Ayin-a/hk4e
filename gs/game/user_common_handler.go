@@ -15,29 +15,27 @@ func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Mess
 	logger.LOG.Debug("user pause, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerSetPauseReq)
 	isPaused := req.IsPaused
-
 	player.Pause = isPaused
 
-	// PacketPlayerSetPauseRsp
-	playerSetPauseRsp := new(proto.PlayerSetPauseRsp)
-	g.SendMsg(cmd.PlayerSetPauseRsp, player.PlayerID, player.ClientSeq, playerSetPauseRsp)
+	g.SendMsg(cmd.PlayerSetPauseRsp, player.PlayerID, player.ClientSeq, new(proto.PlayerSetPauseRsp))
 }
 
 func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user get tower all data, uid: %v", player.PlayerID)
 
-	// PacketTowerAllDataRsp
-	towerAllDataRsp := new(proto.TowerAllDataRsp)
-	towerAllDataRsp.TowerScheduleId = 29
-	towerAllDataRsp.TowerFloorRecordList = []*proto.TowerFloorRecord{{FloorId: 1001}}
-	towerAllDataRsp.CurLevelRecord = &proto.TowerCurLevelRecord{IsEmpty: true}
-	towerAllDataRsp.NextScheduleChangeTime = 4294967295
-	towerAllDataRsp.FloorOpenTimeMap = make(map[uint32]uint32)
-	towerAllDataRsp.FloorOpenTimeMap[1024] = 1630486800
-	towerAllDataRsp.FloorOpenTimeMap[1025] = 1630486800
-	towerAllDataRsp.FloorOpenTimeMap[1026] = 1630486800
-	towerAllDataRsp.FloorOpenTimeMap[1027] = 1630486800
-	towerAllDataRsp.ScheduleStartTime = 1630486800
+	towerAllDataRsp := &proto.TowerAllDataRsp{
+		TowerScheduleId:        29,
+		TowerFloorRecordList:   []*proto.TowerFloorRecord{{FloorId: 1001}},
+		CurLevelRecord:         &proto.TowerCurLevelRecord{IsEmpty: true},
+		NextScheduleChangeTime: 4294967295,
+		FloorOpenTimeMap: map[uint32]uint32{
+			1024: 1630486800,
+			1025: 1630486800,
+			1026: 1630486800,
+			1027: 1630486800,
+		},
+		ScheduleStartTime: 1630486800,
+	}
 	g.SendMsg(cmd.TowerAllDataRsp, player.PlayerID, player.ClientSeq, towerAllDataRsp)
 }
 
@@ -45,9 +43,9 @@ func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Mes
 	logger.LOG.Debug("user entity ai sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EntityAiSyncNotify)
 
-	// PacketEntityAiSyncNotify
-	entityAiSyncNotify := new(proto.EntityAiSyncNotify)
-	entityAiSyncNotify.InfoList = make([]*proto.AiSyncInfo, 0)
+	entityAiSyncNotify := &proto.EntityAiSyncNotify{
+		InfoList: make([]*proto.AiSyncInfo, 0),
+	}
 	for _, monsterId := range req.LocalAvatarAlertedMonsterList {
 		entityAiSyncNotify.InfoList = append(entityAiSyncNotify.InfoList, &proto.AiSyncInfo{
 			EntityId:        monsterId,
@@ -59,7 +57,7 @@ func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -69,7 +67,7 @@ func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
 }
 
 func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
@@ -79,24 +77,26 @@ func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
 }
 
 func (g *GameManager) ServerAnnounceNotify(announceId uint32, announceMsg string) {
-	for _, onlinePlayer := range g.userManager.GetAllOnlineUserList() {
-		serverAnnounceNotify := new(proto.ServerAnnounceNotify)
+	for _, onlinePlayer := range USER_MANAGER.GetAllOnlineUserList() {
 		now := uint32(time.Now().Unix())
-		serverAnnounceNotify.AnnounceDataList = []*proto.AnnounceData{{
-			ConfigId:              announceId,
-			BeginTime:             now + 1,
-			EndTime:               now + 2,
-			CenterSystemText:      announceMsg,
-			CenterSystemFrequency: 1,
-		}}
+		serverAnnounceNotify := &proto.ServerAnnounceNotify{
+			AnnounceDataList: []*proto.AnnounceData{{
+				ConfigId:              announceId,
+				BeginTime:             now + 1,
+				EndTime:               now + 2,
+				CenterSystemText:      announceMsg,
+				CenterSystemFrequency: 1,
+			}},
+		}
 		g.SendMsg(cmd.ServerAnnounceNotify, onlinePlayer.PlayerID, 0, serverAnnounceNotify)
 	}
 }
 
 func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
-	for _, onlinePlayer := range g.userManager.GetAllOnlineUserList() {
-		serverAnnounceRevokeNotify := new(proto.ServerAnnounceRevokeNotify)
-		serverAnnounceRevokeNotify.ConfigIdList = []uint32{announceId}
+	for _, onlinePlayer := range USER_MANAGER.GetAllOnlineUserList() {
+		serverAnnounceRevokeNotify := &proto.ServerAnnounceRevokeNotify{
+			ConfigIdList: []uint32{announceId},
+		}
 		g.SendMsg(cmd.ServerAnnounceRevokeNotify, onlinePlayer.PlayerID, 0, serverAnnounceRevokeNotify)
 	}
 }
@@ -105,7 +105,7 @@ func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb
 	logger.LOG.Debug("user ttm enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
 	_ = req
-	g.SendMsg(cmd.ServerAnnounceRevokeNotify, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
+	g.SendMsg(cmd.ToTheMoonEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
 }
 
 func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {

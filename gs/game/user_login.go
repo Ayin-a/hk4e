@@ -15,7 +15,7 @@ import (
 
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32) {
 	logger.LOG.Info("user login, uid: %v", userId)
-	player, asyncWait := g.userManager.OnlineUser(userId, clientSeq)
+	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq)
 	if !asyncWait {
 		g.OnLoginOk(userId, player, clientSeq)
 	}
@@ -33,7 +33,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.InitAll()
 	player.TeamConfig.UpdateTeam()
 	// 创建世界
-	world := g.worldManager.CreateWorld(player, false)
+	world := WORLD_MANAGER.CreateWorld(player, false)
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
 
@@ -63,7 +63,7 @@ func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Messa
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.LOG.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
 
-	exist, asyncWait := g.userManager.CheckUserExistOnReg(userId, req, clientSeq)
+	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq)
 	if !asyncWait {
 		g.OnRegOk(exist, req, userId, clientSeq)
 	}
@@ -87,7 +87,7 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return
 	}
-	g.userManager.AddUser(player)
+	USER_MANAGER.AddUser(player)
 
 	g.SendMsg(cmd.SetPlayerBornDataRsp, userId, clientSeq, new(proto.SetPlayerBornDataRsp))
 	g.OnLogin(userId, clientSeq)
@@ -95,19 +95,19 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 
 func (g *GameManager) OnUserOffline(userId uint32) {
 	logger.LOG.Info("user offline, uid: %v", userId)
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, userId: %v", userId)
 		return
 	}
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world != nil {
 		g.UserWorldRemovePlayer(world, player)
 	}
 	player.OfflineTime = uint32(time.Now().Unix())
 	player.Online = false
 	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
-	g.userManager.OfflineUser(player)
+	USER_MANAGER.OfflineUser(player)
 }
 
 func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
@@ -119,41 +119,42 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 }
 
 func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {
-	// PacketPlayerDataNotify
-	playerDataNotify := new(proto.PlayerDataNotify)
-	playerDataNotify.NickName = player.NickName
-	playerDataNotify.ServerTime = uint64(time.Now().UnixMilli())
-	playerDataNotify.IsFirstLoginToday = true
-	playerDataNotify.RegionId = player.RegionId
-	playerDataNotify.PropMap = make(map[uint32]*proto.PropValue)
+	playerDataNotify := &proto.PlayerDataNotify{
+		NickName:          player.NickName,
+		ServerTime:        uint64(time.Now().UnixMilli()),
+		IsFirstLoginToday: true,
+		RegionId:          player.RegionId,
+		PropMap:           make(map[uint32]*proto.PropValue),
+	}
 	for k, v := range player.PropertiesMap {
-		propValue := new(proto.PropValue)
-		propValue.Type = uint32(k)
-		propValue.Value = &proto.PropValue_Ival{Ival: int64(v)}
-		propValue.Val = int64(v)
+		propValue := &proto.PropValue{
+			Type:  uint32(k),
+			Value: &proto.PropValue_Ival{Ival: int64(v)},
+			Val:   int64(v),
+		}
 		playerDataNotify.PropMap[uint32(k)] = propValue
 	}
 	return playerDataNotify
 }
 
 func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNotify {
-	// PacketStoreWeightLimitNotify
-	storeWeightLimitNotify := new(proto.StoreWeightLimitNotify)
-	storeWeightLimitNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
-	// 背包容量限制
-	storeWeightLimitNotify.WeightLimit = 30000
-	storeWeightLimitNotify.WeaponCountLimit = 2000
-	storeWeightLimitNotify.ReliquaryCountLimit = 1500
-	storeWeightLimitNotify.MaterialCountLimit = 2000
-	storeWeightLimitNotify.FurnitureCountLimit = 2000
+	storeWeightLimitNotify := &proto.StoreWeightLimitNotify{
+		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		// 背包容量限制
+		WeightLimit:         30000,
+		WeaponCountLimit:    2000,
+		ReliquaryCountLimit: 1500,
+		MaterialCountLimit:  2000,
+		FurnitureCountLimit: 2000,
+	}
 	return storeWeightLimitNotify
 }
 
 func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
-	// PacketPlayerStoreNotify
-	playerStoreNotify := new(proto.PlayerStoreNotify)
-	playerStoreNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
-	playerStoreNotify.WeightLimit = 30000
+	playerStoreNotify := &proto.PlayerStoreNotify{
+		StoreType:   proto.StoreType_STORE_TYPE_PACK,
+		WeightLimit: 30000,
+	}
 	itemDataMapConfig := gdc.CONF.ItemDataMap
 	for _, weapon := range player.WeaponMap {
 		pbItem := &proto.Item{
@@ -241,19 +242,20 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 }
 
 func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.AvatarDataNotify {
-	// PacketAvatarDataNotify
-	avatarDataNotify := new(proto.AvatarDataNotify)
 	chooseAvatarId := player.MainCharAvatarId
-	avatarDataNotify.CurAvatarTeamId = uint32(player.TeamConfig.GetActiveTeamId())
-	avatarDataNotify.ChooseAvatarGuid = player.AvatarMap[chooseAvatarId].Guid
-	avatarDataNotify.OwnedFlycloakList = player.FlyCloakList
-	// 角色衣装
-	avatarDataNotify.OwnedCostumeList = player.CostumeList
+	avatarDataNotify := &proto.AvatarDataNotify{
+		CurAvatarTeamId:   uint32(player.TeamConfig.GetActiveTeamId()),
+		ChooseAvatarGuid:  player.AvatarMap[chooseAvatarId].Guid,
+		OwnedFlycloakList: player.FlyCloakList,
+		// 角色衣装
+		OwnedCostumeList: player.CostumeList,
+		AvatarList:       make([]*proto.AvatarInfo, 0),
+		AvatarTeamMap:    make(map[uint32]*proto.AvatarTeam),
+	}
 	for _, avatar := range player.AvatarMap {
 		pbAvatar := g.PacketAvatarInfo(avatar)
 		avatarDataNotify.AvatarList = append(avatarDataNotify.AvatarList, pbAvatar)
 	}
-	avatarDataNotify.AvatarTeamMap = make(map[uint32]*proto.AvatarTeam)
 	for teamIndex, team := range player.TeamConfig.TeamList {
 		var teamAvatarGuidList []uint64 = nil
 		for _, avatarId := range team.AvatarIdList {
@@ -271,10 +273,10 @@ func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.Avatar
 }
 
 func (g *GameManager) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify {
-	// PacketOpenStateUpdateNotify
-	openStateUpdateNotify := new(proto.OpenStateUpdateNotify)
+	openStateUpdateNotify := &proto.OpenStateUpdateNotify{
+		OpenStateMap: make(map[uint32]uint32),
+	}
 	openStateConstMap := reflection.ConvStructToMap(constant.OpenStateConst)
-	openStateUpdateNotify.OpenStateMap = make(map[uint32]uint32)
 	for _, v := range openStateConstMap {
 		openStateUpdateNotify.OpenStateMap[uint32(v.(uint16))] = 1
 	}

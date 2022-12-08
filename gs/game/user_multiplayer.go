@@ -18,19 +18,19 @@ func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.
 	req := payloadMsg.(*proto.PlayerApplyEnterMpReq)
 	targetUid := req.TargetUid
 
-	// PacketPlayerApplyEnterMpRsp
-	playerApplyEnterMpRsp := new(proto.PlayerApplyEnterMpRsp)
-	playerApplyEnterMpRsp.TargetUid = targetUid
+	playerApplyEnterMpRsp := &proto.PlayerApplyEnterMpRsp{
+		TargetUid: targetUid,
+	}
 	g.SendMsg(cmd.PlayerApplyEnterMpRsp, player.PlayerID, player.ClientSeq, playerApplyEnterMpRsp)
 
 	ok := g.UserApplyEnterWorld(player, targetUid)
 	if !ok {
-		// PacketPlayerApplyEnterMpResultNotify
-		playerApplyEnterMpResultNotify := new(proto.PlayerApplyEnterMpResultNotify)
-		playerApplyEnterMpResultNotify.TargetUid = targetUid
-		playerApplyEnterMpResultNotify.TargetNickname = ""
-		playerApplyEnterMpResultNotify.IsAgreed = false
-		playerApplyEnterMpResultNotify.Reason = proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP
+		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+			TargetUid:      targetUid,
+			TargetNickname: "",
+			IsAgreed:       false,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 	}
 }
@@ -41,10 +41,10 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 	applyUid := req.ApplyUid
 	isAgreed := req.IsAgreed
 
-	// PacketPlayerApplyEnterMpResultRsp
-	playerApplyEnterMpResultRsp := new(proto.PlayerApplyEnterMpResultRsp)
-	playerApplyEnterMpResultRsp.ApplyUid = applyUid
-	playerApplyEnterMpResultRsp.IsAgreed = isAgreed
+	playerApplyEnterMpResultRsp := &proto.PlayerApplyEnterMpResultRsp{
+		ApplyUid: applyUid,
+		IsAgreed: isAgreed,
+	}
 	g.SendMsg(cmd.PlayerApplyEnterMpResultRsp, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultRsp)
 
 	g.UserDealEnterWorld(player, applyUid, isAgreed)
@@ -54,14 +54,13 @@ func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payload
 	logger.LOG.Debug("user get world exit ban info, uid: %v", player.PlayerID)
 
 	result := true
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	for _, worldPlayer := range world.playerMap {
 		if worldPlayer.SceneLoadState != model.SceneEnterDone {
 			result = false
 		}
 	}
 
-	// PacketPlayerGetForceQuitBanInfoRsp
 	playerGetForceQuitBanInfoRsp := new(proto.PlayerGetForceQuitBanInfoRsp)
 	if result {
 		playerGetForceQuitBanInfoRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
@@ -77,7 +76,6 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 	// 其他玩家
 	ok := g.UserLeaveWorld(player)
 
-	// PacketBackMyWorldRsp
 	backMyWorldRsp := new(proto.BackMyWorldRsp)
 	if ok {
 		backMyWorldRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
@@ -93,7 +91,6 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 	// 房主
 	ok := g.UserLeaveWorld(player)
 
-	// PacketChangeWorldToSingleModeRsp
 	changeWorldToSingleModeRsp := new(proto.ChangeWorldToSingleModeRsp)
 	if ok {
 		changeWorldToSingleModeRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
@@ -108,20 +105,19 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
 	targetUid := req.TargetUid
 
-	targetPlayer := g.userManager.GetOnlineUser(targetUid)
+	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
 	ok := g.UserLeaveWorld(targetPlayer)
 	if ok {
-		// PacketSceneKickPlayerNotify
-		sceneKickPlayerNotify := new(proto.SceneKickPlayerNotify)
-		sceneKickPlayerNotify.TargetUid = targetUid
-		sceneKickPlayerNotify.KickerUid = player.PlayerID
-		world := g.worldManager.GetWorldByID(player.WorldId)
+		sceneKickPlayerNotify := &proto.SceneKickPlayerNotify{
+			TargetUid: targetUid,
+			KickerUid: player.PlayerID,
+		}
+		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 		for _, worldPlayer := range world.playerMap {
 			g.SendMsg(cmd.SceneKickPlayerNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneKickPlayerNotify)
 		}
 	}
 
-	// PacketSceneKickPlayerRsp
 	sceneKickPlayerRsp := new(proto.SceneKickPlayerRsp)
 	if ok {
 		sceneKickPlayerRsp.TargetUid = targetUid
@@ -135,8 +131,8 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 	logger.LOG.Debug("user join player scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.JoinPlayerSceneReq)
 
-	hostPlayer := g.userManager.GetOnlineUser(req.TargetUid)
-	hostWorld := g.worldManager.GetWorldByID(hostPlayer.WorldId)
+	hostPlayer := USER_MANAGER.GetOnlineUser(req.TargetUid)
+	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 
 	_, exist := hostWorld.waitEnterPlayerMap[player.PlayerID]
 	if !exist {
@@ -147,10 +143,10 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 	joinPlayerSceneRsp.Retcode = int32(proto.Retcode_RETCODE_RET_JOIN_OTHER_WAIT)
 	g.SendMsg(cmd.JoinPlayerSceneRsp, player.PlayerID, player.ClientSeq, joinPlayerSceneRsp)
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.UserWorldRemovePlayer(world, player)
 
-	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, 0, new(proto.LeaveWorldNotify))
+	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
 
 	//g.LoginNotify(player.PlayerID, player, 0)
 
@@ -171,16 +167,16 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 		g.UserWorldAddPlayer(hostWorld, player)
 
 		player.SceneLoadState = model.SceneNone
-		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, 0, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
+		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
 	}
 }
 
 func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) bool {
-	targetPlayer := g.userManager.GetOnlineUser(targetUid)
+	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
 	if targetPlayer == nil {
 		return false
 	}
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
 		return false
 	}
@@ -189,12 +185,11 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		return false
 	}
 	targetPlayer.CoopApplyMap[player.PlayerID] = time.Now().UnixNano()
-	targetWorld := g.worldManager.GetWorldByID(targetPlayer.WorldId)
+	targetWorld := WORLD_MANAGER.GetWorldByID(targetPlayer.WorldId)
 	if targetWorld.multiplayer && targetWorld.owner.PlayerID != targetPlayer.PlayerID {
 		return false
 	}
 
-	// PacketPlayerApplyEnterMpNotify
 	playerApplyEnterMpNotify := new(proto.PlayerApplyEnterMpNotify)
 	playerApplyEnterMpNotify.SrcPlayerInfo = g.PacketOnlinePlayerInfo(player)
 	g.SendMsg(cmd.PlayerApplyEnterMpNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, playerApplyEnterMpNotify)
@@ -202,7 +197,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 }
 
 func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agree bool) {
-	otherPlayer := g.userManager.GetOnlineUser(otherUid)
+	otherPlayer := USER_MANAGER.GetOnlineUser(otherUid)
 	if otherPlayer == nil {
 		return
 	}
@@ -211,30 +206,30 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		return
 	}
 	delete(hostPlayer.CoopApplyMap, otherUid)
-	otherPlayerWorld := g.worldManager.GetWorldByID(otherPlayer.WorldId)
+	otherPlayerWorld := WORLD_MANAGER.GetWorldByID(otherPlayer.WorldId)
 	if otherPlayerWorld.multiplayer {
-		// PacketPlayerApplyEnterMpResultNotify
-		playerApplyEnterMpResultNotify := new(proto.PlayerApplyEnterMpResultNotify)
-		playerApplyEnterMpResultNotify.TargetUid = hostPlayer.PlayerID
-		playerApplyEnterMpResultNotify.TargetNickname = hostPlayer.NickName
-		playerApplyEnterMpResultNotify.IsAgreed = false
-		playerApplyEnterMpResultNotify.Reason = proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP
+		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+			TargetUid:      hostPlayer.PlayerID,
+			TargetNickname: hostPlayer.NickName,
+			IsAgreed:       false,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 		return
 	}
 
-	// PacketPlayerApplyEnterMpResultNotify
-	playerApplyEnterMpResultNotify := new(proto.PlayerApplyEnterMpResultNotify)
-	playerApplyEnterMpResultNotify.TargetUid = hostPlayer.PlayerID
-	playerApplyEnterMpResultNotify.TargetNickname = hostPlayer.NickName
-	playerApplyEnterMpResultNotify.IsAgreed = agree
-	playerApplyEnterMpResultNotify.Reason = proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE
+	playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+		TargetUid:      hostPlayer.PlayerID,
+		TargetNickname: hostPlayer.NickName,
+		IsAgreed:       agree,
+		Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE,
+	}
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 
 	if !agree {
 		return
 	}
-	world := g.worldManager.GetWorldByID(hostPlayer.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 	world.waitEnterPlayerMap[otherPlayer.PlayerID] = time.Now().UnixMilli()
 	if world.multiplayer {
 		return
@@ -242,9 +237,9 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 
 	world.ChangeToMP()
 
-	// PacketWorldDataNotify
-	worldDataNotify := new(proto.WorldDataNotify)
-	worldDataNotify.WorldPropMap = make(map[uint32]*proto.PropValue)
+	worldDataNotify := &proto.WorldDataNotify{
+		WorldPropMap: make(map[uint32]*proto.PropValue),
+	}
 	// 是否多人游戏
 	worldDataNotify.WorldPropMap[2] = &proto.PropValue{
 		Type:  2,
@@ -255,7 +250,6 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 
 	hostPlayer.SceneLoadState = model.SceneNone
 
-	// PacketPlayerEnterSceneNotify
 	hostPlayerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
 		hostPlayer,
 		hostPlayer,
@@ -266,10 +260,10 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, hostPlayerEnterSceneNotify)
 
-	// PacketGuestBeginEnterSceneNotify
-	guestBeginEnterSceneNotify := new(proto.GuestBeginEnterSceneNotify)
-	guestBeginEnterSceneNotify.SceneId = hostPlayer.SceneId
-	guestBeginEnterSceneNotify.Uid = otherPlayer.PlayerID
+	guestBeginEnterSceneNotify := &proto.GuestBeginEnterSceneNotify{
+		SceneId: hostPlayer.SceneId,
+		Uid:     otherPlayer.PlayerID,
+	}
 	g.SendMsg(cmd.GuestBeginEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, guestBeginEnterSceneNotify)
 
 	// 仅仅把当前的场上角色的实体消失掉
@@ -280,7 +274,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 }
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
-	oldWorld := g.worldManager.GetWorldByID(player.WorldId)
+	oldWorld := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if !oldWorld.multiplayer {
 		return false
 	}
@@ -290,8 +284,7 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 		}
 	}
 	g.UserWorldRemovePlayer(oldWorld, player)
-	// PacketClientReconnectNotify
-	g.SendMsg(cmd.ClientReconnectNotify, player.PlayerID, 0, new(proto.ClientReconnectNotify))
+	g.ReconnectPlayer(player.PlayerID)
 	return true
 }
 
@@ -327,14 +320,13 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
 	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
 
-	// PacketDelTeamEntityNotify
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
 	g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
 
 	if world.multiplayer {
-		// PlayerQuitFromMpNotify
-		playerQuitFromMpNotify := new(proto.PlayerQuitFromMpNotify)
-		playerQuitFromMpNotify.Reason = proto.PlayerQuitFromMpNotify_QUIT_REASON_BACK_TO_MY_WORLD
+		playerQuitFromMpNotify := &proto.PlayerQuitFromMpNotify{
+			Reason: proto.PlayerQuitFromMpNotify_QUIT_REASON_BACK_TO_MY_WORLD,
+		}
 		g.SendMsg(cmd.PlayerQuitFromMpNotify, player.PlayerID, player.ClientSeq, playerQuitFromMpNotify)
 
 		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
@@ -351,7 +343,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	if world.owner.PlayerID == player.PlayerID {
 		// 房主离开销毁世界
-		g.worldManager.DestroyWorld(world.id)
+		WORLD_MANAGER.DestroyWorld(world.id)
 	}
 }
 
@@ -360,78 +352,81 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		if worldPlayer.PlayerID == excludePlayer.PlayerID {
 			continue
 		}
-		scene := hostWorld.GetSceneById(worldPlayer.SceneId)
 
-		// PacketPlayerPreEnterMpNotify
-		playerPreEnterMpNotify := new(proto.PlayerPreEnterMpNotify)
-		playerPreEnterMpNotify.State = proto.PlayerPreEnterMpNotify_STATE_START
-		playerPreEnterMpNotify.Uid = excludePlayer.PlayerID
-		playerPreEnterMpNotify.Nickname = excludePlayer.NickName
+		playerPreEnterMpNotify := &proto.PlayerPreEnterMpNotify{
+			State:    proto.PlayerPreEnterMpNotify_STATE_START,
+			Uid:      excludePlayer.PlayerID,
+			Nickname: excludePlayer.NickName,
+		}
 		g.SendMsg(cmd.PlayerPreEnterMpNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, playerPreEnterMpNotify)
 
-		// PacketWorldPlayerInfoNotify
-		worldPlayerInfoNotify := new(proto.WorldPlayerInfoNotify)
+		worldPlayerInfoNotify := &proto.WorldPlayerInfoNotify{
+			PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
+			PlayerUidList:  make([]uint32, 0),
+		}
 		for _, subWorldPlayer := range hostWorld.playerMap {
-			onlinePlayerInfo := new(proto.OnlinePlayerInfo)
-			onlinePlayerInfo.Uid = subWorldPlayer.PlayerID
-			onlinePlayerInfo.Nickname = subWorldPlayer.NickName
-			onlinePlayerInfo.PlayerLevel = subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL]
-			onlinePlayerInfo.MpSettingType = proto.MpSettingType(subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE])
-			onlinePlayerInfo.NameCardId = subWorldPlayer.NameCard
-			onlinePlayerInfo.Signature = subWorldPlayer.Signature
-			onlinePlayerInfo.ProfilePicture = &proto.ProfilePicture{AvatarId: subWorldPlayer.HeadImage}
-			onlinePlayerInfo.CurPlayerNumInWorld = uint32(len(hostWorld.playerMap))
+			onlinePlayerInfo := &proto.OnlinePlayerInfo{
+				Uid:                 subWorldPlayer.PlayerID,
+				Nickname:            subWorldPlayer.NickName,
+				PlayerLevel:         subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
+				MpSettingType:       proto.MpSettingType(subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+				NameCardId:          subWorldPlayer.NameCard,
+				Signature:           subWorldPlayer.Signature,
+				ProfilePicture:      &proto.ProfilePicture{AvatarId: subWorldPlayer.HeadImage},
+				CurPlayerNumInWorld: uint32(len(hostWorld.playerMap)),
+			}
+
 			worldPlayerInfoNotify.PlayerInfoList = append(worldPlayerInfoNotify.PlayerInfoList, onlinePlayerInfo)
 			worldPlayerInfoNotify.PlayerUidList = append(worldPlayerInfoNotify.PlayerUidList, subWorldPlayer.PlayerID)
 		}
 		g.SendMsg(cmd.WorldPlayerInfoNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, worldPlayerInfoNotify)
 
-		// PacketSceneTimeNotify
-		sceneTimeNotify := new(proto.SceneTimeNotify)
-		sceneTimeNotify.SceneId = worldPlayer.SceneId
-		sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
-		g.SendMsg(cmd.SceneTimeNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTimeNotify)
+		serverTimeNotify := &proto.ServerTimeNotify{
+			ServerTime: uint64(time.Now().UnixMilli()),
+		}
+		g.SendMsg(cmd.ServerTimeNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, serverTimeNotify)
 
-		// PacketScenePlayerInfoNotify
-		scenePlayerInfoNotify := new(proto.ScenePlayerInfoNotify)
-		for _, subWorldPlayer := range hostWorld.playerMap {
-			onlinePlayerInfo := new(proto.OnlinePlayerInfo)
-			onlinePlayerInfo.Uid = subWorldPlayer.PlayerID
-			onlinePlayerInfo.Nickname = subWorldPlayer.NickName
-			onlinePlayerInfo.PlayerLevel = subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL]
-			onlinePlayerInfo.MpSettingType = proto.MpSettingType(subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE])
-			onlinePlayerInfo.NameCardId = subWorldPlayer.NameCard
-			onlinePlayerInfo.Signature = subWorldPlayer.Signature
-			onlinePlayerInfo.ProfilePicture = &proto.ProfilePicture{AvatarId: subWorldPlayer.HeadImage}
-			onlinePlayerInfo.CurPlayerNumInWorld = uint32(len(hostWorld.playerMap))
+		scenePlayerInfoNotify := &proto.ScenePlayerInfoNotify{
+			PlayerInfoList: make([]*proto.ScenePlayerInfo, 0),
+		}
+		for _, worldPlayer := range hostWorld.playerMap {
+			onlinePlayerInfo := &proto.OnlinePlayerInfo{
+				Uid:                 worldPlayer.PlayerID,
+				Nickname:            worldPlayer.NickName,
+				PlayerLevel:         worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
+				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+				NameCardId:          worldPlayer.NameCard,
+				Signature:           worldPlayer.Signature,
+				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
+				CurPlayerNumInWorld: uint32(len(hostWorld.playerMap)),
+			}
 			scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
-				Uid:              subWorldPlayer.PlayerID,
-				PeerId:           subWorldPlayer.PeerId,
-				Name:             subWorldPlayer.NickName,
-				SceneId:          subWorldPlayer.SceneId,
+				Uid:              worldPlayer.PlayerID,
+				PeerId:           worldPlayer.PeerId,
+				Name:             worldPlayer.NickName,
+				SceneId:          worldPlayer.SceneId,
 				OnlinePlayerInfo: onlinePlayerInfo,
 			})
 		}
 		g.SendMsg(cmd.ScenePlayerInfoNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, scenePlayerInfoNotify)
 
-		// PacketSceneTeamUpdateNotify
 		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(hostWorld)
 		g.SendMsg(cmd.SceneTeamUpdateNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTeamUpdateNotify)
 
-		// PacketSyncTeamEntityNotify
-		syncTeamEntityNotify := new(proto.SyncTeamEntityNotify)
-		syncTeamEntityNotify.SceneId = worldPlayer.SceneId
-		syncTeamEntityNotify.TeamEntityInfoList = make([]*proto.TeamEntityInfo, 0)
+		syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
+			SceneId:            worldPlayer.SceneId,
+			TeamEntityInfoList: make([]*proto.TeamEntityInfo, 0),
+		}
 		if hostWorld.multiplayer {
-			for _, subWorldPlayer := range hostWorld.playerMap {
-				if subWorldPlayer.PlayerID == worldPlayer.PlayerID {
+			for _, worldPlayer := range hostWorld.playerMap {
+				if worldPlayer.PlayerID == worldPlayer.PlayerID {
 					continue
 				}
-				subWorldPlayerScene := hostWorld.GetSceneById(subWorldPlayer.SceneId)
-				subWorldPlayerTeamEntity := subWorldPlayerScene.GetPlayerTeamEntity(subWorldPlayer.PlayerID)
+				worldPlayerScene := hostWorld.GetSceneById(worldPlayer.SceneId)
+				worldPlayerTeamEntity := worldPlayerScene.GetPlayerTeamEntity(worldPlayer.PlayerID)
 				teamEntityInfo := &proto.TeamEntityInfo{
-					TeamEntityId:    subWorldPlayerTeamEntity.teamEntityId,
-					AuthorityPeerId: subWorldPlayer.PeerId,
+					TeamEntityId:    worldPlayerTeamEntity.teamEntityId,
+					AuthorityPeerId: worldPlayer.PeerId,
 					TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
 				}
 				syncTeamEntityNotify.TeamEntityInfoList = append(syncTeamEntityNotify.TeamEntityInfoList, teamEntityInfo)
@@ -439,9 +434,9 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		}
 		g.SendMsg(cmd.SyncTeamEntityNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, syncTeamEntityNotify)
 
-		// PacketSyncScenePlayTeamEntityNotify
-		syncScenePlayTeamEntityNotify := new(proto.SyncScenePlayTeamEntityNotify)
-		syncScenePlayTeamEntityNotify.SceneId = worldPlayer.SceneId
+		syncScenePlayTeamEntityNotify := &proto.SyncScenePlayTeamEntityNotify{
+			SceneId: worldPlayer.SceneId,
+		}
 		g.SendMsg(cmd.SyncScenePlayTeamEntityNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, syncScenePlayTeamEntityNotify)
 	}
 }

@@ -24,8 +24,6 @@ type UserInfo struct {
 func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user get gacha info, uid: %v", player.PlayerID)
 	serverAddr := config.CONF.Hk4e.GachaHistoryServer
-	getGachaInfoRsp := new(proto.GetGachaInfoRsp)
-	getGachaInfoRsp.GachaRandom = 12345
 	userInfo := &UserInfo{
 		UserId: player.PlayerID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -40,6 +38,9 @@ func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Messag
 		logger.LOG.Error("generate jwt error: %v", err)
 		jwtStr = "default.jwt.token"
 	}
+
+	getGachaInfoRsp := new(proto.GetGachaInfoRsp)
+	getGachaInfoRsp.GachaRandom = 12345
 	getGachaInfoRsp.GachaInfoList = []*proto.GachaInfo{
 		// 温迪
 		{
@@ -190,7 +191,6 @@ func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Messag
 			IsNewWish:          false,
 		},
 	}
-
 	g.SendMsg(cmd.GetGachaInfoRsp, player.PlayerID, player.ClientSeq, getGachaInfoRsp)
 }
 
@@ -221,19 +221,6 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		costItemId = 224
 	}
 
-	// PacketDoGachaRsp
-	doGachaRsp := new(proto.DoGachaRsp)
-	doGachaRsp.GachaType = gachaType
-	doGachaRsp.GachaScheduleId = gachaScheduleId
-	doGachaRsp.GachaTimes = gachaTimes
-	doGachaRsp.NewGachaRandom = 12345
-	doGachaRsp.LeftGachaTimes = 2147483647
-	doGachaRsp.GachaTimesLimit = 2147483647
-	doGachaRsp.CostItemId = costItemId
-	doGachaRsp.CostItemNum = 1
-	doGachaRsp.TenCostItemId = costItemId
-	doGachaRsp.TenCostItemNum = 10
-
 	// 先扣掉粉球或蓝球再进行抽卡
 	g.CostUserItem(player.PlayerID, []*UserItem{
 		{
@@ -242,7 +229,20 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		},
 	})
 
-	doGachaRsp.GachaItemList = make([]*proto.GachaItem, 0)
+	doGachaRsp := &proto.DoGachaRsp{
+		GachaType:       gachaType,
+		GachaScheduleId: gachaScheduleId,
+		GachaTimes:      gachaTimes,
+		NewGachaRandom:  12345,
+		LeftGachaTimes:  2147483647,
+		GachaTimesLimit: 2147483647,
+		CostItemId:      costItemId,
+		CostItemNum:     1,
+		TenCostItemId:   costItemId,
+		TenCostItemNum:  10,
+		GachaItemList:   make([]*proto.GachaItem, 0),
+	}
+
 	for i := uint32(0); i < gachaTimes; i++ {
 		var ok bool
 		var itemId uint32
@@ -378,7 +378,7 @@ const (
 
 // 单抽一次
 func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnable bool, weaponFix bool) (bool, uint32) {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return false, 0

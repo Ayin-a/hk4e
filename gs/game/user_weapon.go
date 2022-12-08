@@ -38,7 +38,7 @@ func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdc.ItemData {
 }
 
 func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
-	player := g.userManager.GetOnlineUser(userId)
+	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.LOG.Error("player is nil, uid: %v", userId)
 		return 0
@@ -51,9 +51,10 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 		return 0
 	}
 
-	// PacketStoreItemChangeNotify
-	storeItemChangeNotify := new(proto.StoreItemChangeNotify)
-	storeItemChangeNotify.StoreType = proto.StoreType_STORE_TYPE_PACK
+	storeItemChangeNotify := &proto.StoreItemChangeNotify{
+		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		ItemList:  make([]*proto.Item, 0),
+	}
 	affixMap := make(map[uint32]uint32)
 	for _, affixId := range weapon.AffixIdList {
 		affixMap[affixId] = uint32(weapon.Refinement)

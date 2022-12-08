@@ -17,7 +17,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	req := payloadMsg.(*proto.ChangeAvatarReq)
 	targetAvatarGuid := req.Guid
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 
@@ -49,27 +49,27 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	}
 	entity.moveState = uint16(proto.MotionState_MOTION_STATE_STANDBY)
 
-	// PacketSceneEntityDisappearNotify
-	sceneEntityDisappearNotify := new(proto.SceneEntityDisappearNotify)
-	sceneEntityDisappearNotify.DisappearType = proto.VisionType_VISION_TYPE_REPLACE
-	sceneEntityDisappearNotify.EntityList = []uint32{playerTeamEntity.avatarEntityMap[oldAvatarId]}
+	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
+		DisappearType: proto.VisionType_VISION_TYPE_REPLACE,
+		EntityList:    []uint32{playerTeamEntity.avatarEntityMap[oldAvatarId]},
+	}
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.SceneEntityDisappearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityDisappearNotify)
 	}
 
-	// PacketSceneEntityAppearNotify
-	sceneEntityAppearNotify := new(proto.SceneEntityAppearNotify)
-	sceneEntityAppearNotify.AppearType = proto.VisionType_VISION_TYPE_REPLACE
-	sceneEntityAppearNotify.Param = playerTeamEntity.avatarEntityMap[oldAvatarId]
-	sceneEntityAppearNotify.EntityList = []*proto.SceneEntityInfo{g.PacketSceneEntityInfoAvatar(scene, player, player.TeamConfig.GetActiveAvatarId())}
+	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
+		AppearType: proto.VisionType_VISION_TYPE_REPLACE,
+		Param:      playerTeamEntity.avatarEntityMap[oldAvatarId],
+		EntityList: []*proto.SceneEntityInfo{g.PacketSceneEntityInfoAvatar(scene, player, player.TeamConfig.GetActiveAvatarId())},
+	}
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.SceneEntityAppearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityAppearNotify)
 	}
 
-	// PacketChangeAvatarRsp
-	changeAvatarRsp := new(proto.ChangeAvatarRsp)
-	changeAvatarRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
-	changeAvatarRsp.CurGuid = targetAvatarGuid
+	changeAvatarRsp := &proto.ChangeAvatarRsp{
+		Retcode: int32(proto.Retcode_RETCODE_RET_SUCC),
+		CurGuid: targetAvatarGuid,
+	}
 	g.SendMsg(cmd.ChangeAvatarRsp, player.PlayerID, player.ClientSeq, changeAvatarRsp)
 }
 
@@ -79,20 +79,20 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 
 	teamId := req.TeamId
 	if teamId <= 0 || teamId >= 5 {
-		// PacketSetUpAvatarTeamRsp
-		setUpAvatarTeamRsp := new(proto.SetUpAvatarTeamRsp)
-		setUpAvatarTeamRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SVR_ERROR)
+		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
+			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
 	}
 	avatarGuidList := req.AvatarTeamGuidList
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	multiTeam := teamId == 4
 	selfTeam := teamId == uint32(player.TeamConfig.GetActiveTeamId())
 	if (multiTeam && len(avatarGuidList) == 0) || (selfTeam && len(avatarGuidList) == 0) || len(avatarGuidList) > 4 || world.multiplayer {
-		// PacketSetUpAvatarTeamRsp
-		setUpAvatarTeamRsp := new(proto.SetUpAvatarTeamRsp)
-		setUpAvatarTeamRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SVR_ERROR)
+		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
+			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
 	}
@@ -110,19 +110,21 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 	}
 
 	if world.multiplayer {
-		// PacketSetUpAvatarTeamRsp
-		setUpAvatarTeamRsp := new(proto.SetUpAvatarTeamRsp)
-		setUpAvatarTeamRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SVR_ERROR)
+		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
+			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
 	}
 
-	// PacketAvatarTeamUpdateNotify
-	avatarTeamUpdateNotify := new(proto.AvatarTeamUpdateNotify)
-	avatarTeamUpdateNotify.AvatarTeamMap = make(map[uint32]*proto.AvatarTeam)
+	avatarTeamUpdateNotify := &proto.AvatarTeamUpdateNotify{
+		AvatarTeamMap: make(map[uint32]*proto.AvatarTeam),
+	}
 	for teamIndex, team := range player.TeamConfig.TeamList {
-		avatarTeam := new(proto.AvatarTeam)
-		avatarTeam.TeamName = team.Name
+		avatarTeam := &proto.AvatarTeam{
+			TeamName:       team.Name,
+			AvatarGuidList: make([]uint64, 0),
+		}
 		for _, avatarId := range team.AvatarIdList {
 			if avatarId == 0 {
 				break
@@ -139,14 +141,14 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 		scene := world.GetSceneById(player.SceneId)
 		scene.UpdatePlayerTeamEntity(player)
 
-		// PacketSceneTeamUpdateNotify
 		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
 		g.SendMsg(cmd.SceneTeamUpdateNotify, player.PlayerID, player.ClientSeq, sceneTeamUpdateNotify)
 
-		// PacketSetUpAvatarTeamRsp
-		setUpAvatarTeamRsp := new(proto.SetUpAvatarTeamRsp)
-		setUpAvatarTeamRsp.TeamId = teamId
-		setUpAvatarTeamRsp.CurAvatarGuid = player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid
+		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
+			TeamId:             teamId,
+			CurAvatarGuid:      player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid,
+			AvatarTeamGuidList: make([]uint64, 0),
+		}
 		team := player.TeamConfig.GetTeamByIndex(uint8(teamId - 1))
 		for _, avatarId := range team.AvatarIdList {
 			if avatarId == 0 {
@@ -156,10 +158,11 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 	} else {
-		// PacketSetUpAvatarTeamRsp
-		setUpAvatarTeamRsp := new(proto.SetUpAvatarTeamRsp)
-		setUpAvatarTeamRsp.TeamId = teamId
-		setUpAvatarTeamRsp.CurAvatarGuid = player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid
+		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
+			TeamId:             teamId,
+			CurAvatarGuid:      player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid,
+			AvatarTeamGuidList: make([]uint64, 0),
+		}
 		team := player.TeamConfig.GetTeamByIndex(uint8(teamId - 1))
 		for _, avatarId := range team.AvatarIdList {
 			if avatarId == 0 {
@@ -175,7 +178,7 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 	logger.LOG.Debug("user switch team, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChooseCurAvatarTeamReq)
 	teamId := req.TeamId
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
 		return
 	}
@@ -189,13 +192,12 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 	scene := world.GetSceneById(player.SceneId)
 	scene.UpdatePlayerTeamEntity(player)
 
-	// PacketSceneTeamUpdateNotify
 	sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
 	g.SendMsg(cmd.SceneTeamUpdateNotify, player.PlayerID, player.ClientSeq, sceneTeamUpdateNotify)
 
-	// PacketChooseCurAvatarTeamRsp
-	chooseCurAvatarTeamRsp := new(proto.ChooseCurAvatarTeamRsp)
-	chooseCurAvatarTeamRsp.CurTeamId = teamId
+	chooseCurAvatarTeamRsp := &proto.ChooseCurAvatarTeamRsp{
+		CurTeamId: teamId,
+	}
 	g.SendMsg(cmd.ChooseCurAvatarTeamRsp, player.PlayerID, player.ClientSeq, chooseCurAvatarTeamRsp)
 }
 
@@ -204,11 +206,11 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	req := payloadMsg.(*proto.ChangeMpTeamAvatarReq)
 	avatarGuidList := req.AvatarGuidList
 
-	world := g.worldManager.GetWorldByID(player.WorldId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if len(avatarGuidList) == 0 || len(avatarGuidList) > 4 || !world.multiplayer {
-		// PacketChangeMpTeamAvatarRsp
-		changeMpTeamAvatarRsp := new(proto.ChangeMpTeamAvatarRsp)
-		changeMpTeamAvatarRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SVR_ERROR)
+		changeMpTeamAvatarRsp := &proto.ChangeMpTeamAvatarRsp{
+			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+		}
 		g.SendMsg(cmd.ChangeMpTeamAvatarRsp, player.PlayerID, player.ClientSeq, changeMpTeamAvatarRsp)
 		return
 	}
@@ -230,14 +232,14 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	scene.UpdatePlayerTeamEntity(player)
 
 	for _, worldPlayer := range world.playerMap {
-		// PacketSceneTeamUpdateNotify
 		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
 		g.SendMsg(cmd.SceneTeamUpdateNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTeamUpdateNotify)
 	}
 
-	// PacketChangeMpTeamAvatarRsp
-	changeMpTeamAvatarRsp := new(proto.ChangeMpTeamAvatarRsp)
-	changeMpTeamAvatarRsp.CurAvatarGuid = player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid
+	changeMpTeamAvatarRsp := &proto.ChangeMpTeamAvatarRsp{
+		CurAvatarGuid:  player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid,
+		AvatarGuidList: make([]uint64, 0),
+	}
 	team := player.TeamConfig.GetTeamByIndex(3)
 	for _, avatarId := range team.AvatarIdList {
 		if avatarId == 0 {
@@ -249,8 +251,9 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeamUpdateNotify {
-	sceneTeamUpdateNotify := new(proto.SceneTeamUpdateNotify)
-	sceneTeamUpdateNotify.IsInMp = world.multiplayer
+	sceneTeamUpdateNotify := &proto.SceneTeamUpdateNotify{
+		IsInMp: world.multiplayer,
+	}
 	empty := new(proto.AbilitySyncStateInfo)
 	for _, worldPlayer := range world.playerMap {
 		worldPlayerScene := world.GetSceneById(worldPlayer.SceneId)

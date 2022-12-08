@@ -81,7 +81,7 @@ func (t *TickManager) onTick10Minute(now int64) {
 }
 
 func (t *TickManager) onTickMinute(now int64) {
-	//t.gameManager.ServerAnnounceNotify(100, "test123")
+	//GAME_MANAGER.ServerAnnounceNotify(100, "test123")
 	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 随机物品
@@ -117,17 +117,19 @@ func (t *TickManager) onTick10Second(now int64) {
 	for _, world := range WORLD_MANAGER.worldMap {
 		for _, scene := range world.sceneMap {
 			for _, player := range scene.playerMap {
-				// PacketSceneTimeNotify
-				sceneTimeNotify := new(proto.SceneTimeNotify)
-				sceneTimeNotify.SceneId = player.SceneId
-				sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
-				GAME_MANAGER.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
-				// PacketPlayerTimeNotify
-				playerTimeNotify := new(proto.PlayerTimeNotify)
-				playerTimeNotify.IsPaused = player.Pause
-				playerTimeNotify.PlayerTime = uint64(player.TotalOnlineTime)
-				playerTimeNotify.ServerTime = uint64(time.Now().UnixMilli())
-				GAME_MANAGER.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, player.ClientSeq, playerTimeNotify)
+
+				sceneTimeNotify := &proto.SceneTimeNotify{
+					SceneId:   player.SceneId,
+					SceneTime: uint64(scene.GetSceneTime()),
+				}
+				GAME_MANAGER.SendMsg(cmd.SceneTimeNotify, player.PlayerID, 0, sceneTimeNotify)
+
+				playerTimeNotify := &proto.PlayerTimeNotify{
+					IsPaused:   player.Pause,
+					PlayerTime: uint64(player.TotalOnlineTime),
+					ServerTime: uint64(time.Now().UnixMilli()),
+				}
+				GAME_MANAGER.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
 			}
 		}
 		if !world.IsBigWorld() && (world.multiplayer || !world.owner.Pause) {
@@ -172,9 +174,12 @@ func (t *TickManager) onTick5Second(now int64) {
 		}
 		for _, player := range world.playerMap {
 			if world.multiplayer {
+				scene := world.GetSceneById(player.SceneId)
+
 				// 多人世界其他玩家的坐标位置广播
-				// PacketWorldPlayerLocationNotify
-				worldPlayerLocationNotify := new(proto.WorldPlayerLocationNotify)
+				worldPlayerLocationNotify := &proto.WorldPlayerLocationNotify{
+					PlayerWorldLocList: make([]*proto.PlayerWorldLocationInfo, 0),
+				}
 				for _, worldPlayer := range world.playerMap {
 					playerWorldLocationInfo := &proto.PlayerWorldLocationInfo{
 						SceneId: worldPlayer.SceneId,
@@ -196,10 +201,10 @@ func (t *TickManager) onTick5Second(now int64) {
 				}
 				GAME_MANAGER.SendMsg(cmd.WorldPlayerLocationNotify, player.PlayerID, 0, worldPlayerLocationNotify)
 
-				// PacketScenePlayerLocationNotify
-				scene := world.GetSceneById(player.SceneId)
-				scenePlayerLocationNotify := new(proto.ScenePlayerLocationNotify)
-				scenePlayerLocationNotify.SceneId = player.SceneId
+				scenePlayerLocationNotify := &proto.ScenePlayerLocationNotify{
+					SceneId:       player.SceneId,
+					PlayerLocList: make([]*proto.PlayerLocationInfo, 0),
+				}
 				for _, scenePlayer := range scene.playerMap {
 					playerLocationInfo := &proto.PlayerLocationInfo{
 						Uid: scenePlayer.PlayerID,
@@ -226,9 +231,9 @@ func (t *TickManager) onTickSecond(now int64) {
 	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 世界里所有玩家的网络延迟广播
-			// PacketWorldPlayerRTTNotify
-			worldPlayerRTTNotify := new(proto.WorldPlayerRTTNotify)
-			worldPlayerRTTNotify.PlayerRttList = make([]*proto.PlayerRTTInfo, 0)
+			worldPlayerRTTNotify := &proto.WorldPlayerRTTNotify{
+				PlayerRttList: make([]*proto.PlayerRTTInfo, 0),
+			}
 			for _, worldPlayer := range world.playerMap {
 				playerRTTInfo := &proto.PlayerRTTInfo{Uid: worldPlayer.PlayerID, Rtt: worldPlayer.ClientRTT}
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)

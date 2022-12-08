@@ -15,9 +15,9 @@ import (
 func (g *GameManager) GetShopmallDataReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user get shop mall, uid: %v", player.PlayerID)
 
-	// PacketGetShopmallDataRsp
-	getShopmallDataRsp := new(proto.GetShopmallDataRsp)
-	getShopmallDataRsp.ShopTypeList = []uint32{900, 1052, 902, 1001, 903}
+	getShopmallDataRsp := &proto.GetShopmallDataRsp{
+		ShopTypeList: []uint32{900, 1052, 902, 1001, 903},
+	}
 	g.SendMsg(cmd.GetShopmallDataRsp, player.PlayerID, player.ClientSeq, getShopmallDataRsp)
 }
 
@@ -32,39 +32,39 @@ func (g *GameManager) GetShopReq(player *model.Player, payloadMsg pb.Message) {
 
 	nextRefreshTime := uint32(time.Now().Add(time.Hour * 24 * 30).Unix())
 
-	// PacketGetShopRsp
-	getShopRsp := new(proto.GetShopRsp)
-	getShopRsp.Shop = &proto.Shop{
-		GoodsList: []*proto.ShopGoods{
-			{
-				MinLevel:        1,
-				EndTime:         2051193600,
-				Hcoin:           160,
-				GoodsId:         102001,
-				NextRefreshTime: nextRefreshTime,
-				MaxLevel:        99,
-				BeginTime:       1575129600,
-				GoodsItem: &proto.ItemParam{
-					ItemId: 223,
-					Count:  1,
+	getShopRsp := &proto.GetShopRsp{
+		Shop: &proto.Shop{
+			GoodsList: []*proto.ShopGoods{
+				{
+					MinLevel:        1,
+					EndTime:         2051193600,
+					Hcoin:           160,
+					GoodsId:         102001,
+					NextRefreshTime: nextRefreshTime,
+					MaxLevel:        99,
+					BeginTime:       1575129600,
+					GoodsItem: &proto.ItemParam{
+						ItemId: 223,
+						Count:  1,
+					},
+				},
+				{
+					MinLevel:        1,
+					EndTime:         2051193600,
+					Hcoin:           160,
+					GoodsId:         102002,
+					NextRefreshTime: nextRefreshTime,
+					MaxLevel:        99,
+					BeginTime:       1575129600,
+					GoodsItem: &proto.ItemParam{
+						ItemId: 224,
+						Count:  1,
+					},
 				},
 			},
-			{
-				MinLevel:        1,
-				EndTime:         2051193600,
-				Hcoin:           160,
-				GoodsId:         102002,
-				NextRefreshTime: nextRefreshTime,
-				MaxLevel:        99,
-				BeginTime:       1575129600,
-				GoodsItem: &proto.ItemParam{
-					ItemId: 224,
-					Count:  1,
-				},
-			},
+			NextRefreshTime: nextRefreshTime,
+			ShopType:        1001,
 		},
-		NextRefreshTime: nextRefreshTime,
-		ShopType:        1001,
 	}
 	g.SendMsg(cmd.GetShopRsp, player.PlayerID, player.ClientSeq, getShopRsp)
 }
@@ -94,11 +94,11 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 	}}, true, constant.ActionReasonConst.Shop)
 	req.Goods.BoughtNum = player.GetItemCount(buyItemId)
 
-	// PacketBuyGoodsRsp
-	buyGoodsRsp := new(proto.BuyGoodsRsp)
-	buyGoodsRsp.ShopType = req.ShopType
-	buyGoodsRsp.BuyCount = req.BuyCount
-	buyGoodsRsp.GoodsList = []*proto.ShopGoods{req.Goods}
+	buyGoodsRsp := &proto.BuyGoodsRsp{
+		ShopType:  req.ShopType,
+		BuyCount:  req.BuyCount,
+		GoodsList: []*proto.ShopGoods{req.Goods},
+	}
 	g.SendMsg(cmd.BuyGoodsRsp, player.PlayerID, player.ClientSeq, buyGoodsRsp)
 }
 
@@ -123,9 +123,9 @@ func (g *GameManager) McoinExchangeHcoinReq(player *model.Player, payloadMsg pb.
 		ChangeCount: count,
 	}}, false, 0)
 
-	// PacketMcoinExchangeHcoinRsp
-	mcoinExchangeHcoinRsp := new(proto.McoinExchangeHcoinRsp)
-	mcoinExchangeHcoinRsp.Hcoin = req.Hcoin
-	mcoinExchangeHcoinRsp.McoinCost = req.McoinCost
+	mcoinExchangeHcoinRsp := &proto.McoinExchangeHcoinRsp{
+		Hcoin:     req.Hcoin,
+		McoinCost: req.McoinCost,
+	}
 	g.SendMsg(cmd.McoinExchangeHcoinRsp, player.PlayerID, player.ClientSeq, mcoinExchangeHcoinRsp)
 }

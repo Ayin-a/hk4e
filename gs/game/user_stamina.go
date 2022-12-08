@@ -222,7 +222,10 @@ func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 // SetStamina 设置玩家的耐力
 func (g *GameManager) SetStamina(player *model.Player, stamina uint32) {
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
-
+	// 当前无变动不要频繁发包
+	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA] == player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA] {
+		return
+	}
 	// 设置玩家的耐力prop
 	player.PropertiesMap[prop] = stamina
 

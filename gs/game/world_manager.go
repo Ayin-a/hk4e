@@ -62,6 +62,8 @@ func (w *WorldManager) CreateWorld(owner *model.Player, multiplayer bool) *World
 			-2000, 2000, 1,
 			-5500, 6500, 120,
 		),
+		playerFirstEnterMap: make(map[uint32]int64),
+		waitEnterPlayerMap:  make(map[uint32]int64),
 	}
 	if world.IsBigWorld() {
 		world.aoiManager = aoi.NewAoiManager(
@@ -94,16 +96,18 @@ func (w *WorldManager) InitBigWorld(owner *model.Player) {
 }
 
 type World struct {
-	id              uint32
-	owner           *model.Player
-	playerMap       map[uint32]*model.Player
-	sceneMap        map[uint32]*Scene
-	entityIdCounter uint32
-	worldLevel      uint8
-	multiplayer     bool
-	mpLevelEntityId uint32
-	chatMsgList     []*proto.ChatInfo
-	aoiManager      *aoi.AoiManager // 当前世界地图的aoi管理器
+	id                  uint32
+	owner               *model.Player
+	playerMap           map[uint32]*model.Player
+	sceneMap            map[uint32]*Scene
+	entityIdCounter     uint32
+	worldLevel          uint8
+	multiplayer         bool
+	mpLevelEntityId     uint32
+	chatMsgList         []*proto.ChatInfo
+	aoiManager          *aoi.AoiManager // 当前世界地图的aoi管理器
+	playerFirstEnterMap map[uint32]int64
+	waitEnterPlayerMap  map[uint32]int64
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
@@ -123,6 +127,7 @@ func (w *World) RemovePlayer(player *model.Player) {
 	scene := w.sceneMap[player.SceneId]
 	scene.RemovePlayer(player)
 	delete(w.playerMap, player.PlayerID)
+	delete(w.playerFirstEnterMap, player.PlayerID)
 }
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
@@ -159,6 +164,23 @@ func (w *World) GetChatList() []*proto.ChatInfo {
 
 func (w *World) IsBigWorld() bool {
 	return w.owner.PlayerID == 1
+}
+
+func (w *World) ChangeToMP() {
+	w.multiplayer = true
+}
+
+func (w *World) IsPlayerFirstEnter(player *model.Player) bool {
+	_, exist := w.playerFirstEnterMap[player.PlayerID]
+	if !exist {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (w *World) PlayerEnter(player *model.Player) {
+	w.playerFirstEnterMap[player.PlayerID] = time.Now().UnixMilli()
 }
 
 type Scene struct {
@@ -376,6 +398,14 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 
 func (s *Scene) GetEntity(entityId uint32) *Entity {
 	return s.entityMap[entityId]
+}
+
+func (s *Scene) GetEntityIdList() []uint32 {
+	entityIdList := make([]uint32, 0)
+	for k := range s.entityMap {
+		entityIdList = append(entityIdList, k)
+	}
+	return entityIdList
 }
 
 // 伤害处理和转发

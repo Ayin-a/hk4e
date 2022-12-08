@@ -21,7 +21,8 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 
 	// 只给附近aoi区域的玩家广播消息
 	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	for _, entityId := range entityIdList {
 		entity := scene.GetEntity(entityId)
 		if entity == nil {
@@ -101,7 +102,8 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 
 	// 只给附近aoi区域的玩家广播消息
 	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	for _, entityId := range entityIdList {
 		entity := scene.GetEntity(entityId)
 		if entity == nil {
@@ -160,7 +162,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				// aoi
 				oldGid := world.aoiManager.GetGidByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
 				newGid := world.aoiManager.GetGidByPos(motionInfo.Pos.X, motionInfo.Pos.Y, motionInfo.Pos.Z)
-				if oldGid != newGid {
+				if false && oldGid != newGid {
 					// 跨越了格子
 					oldGridList := world.aoiManager.GetSurrGridListByGid(oldGid)
 					oldEntityIdMap := make(map[uint32]bool)
@@ -211,7 +213,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 						}
 					}
 					// 发送已消失格子里的实体消失通知
-					g.RemoveSceneEntityNotifyToPlayer(player, delEntityIdList)
+					g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_REMOVE, delEntityIdList)
 					// 发送新出现格子里的实体出现通知
 					g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, addEntityIdList, false)
 					// 更新玩家的位置信息
@@ -224,7 +226,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 					// 其他玩家
 					for _, uid := range delUidList {
 						otherPlayer := g.userManager.GetOnlineUser(uid)
-						g.RemoveSceneEntityNotifyToPlayer(otherPlayer, []uint32{playerActiveAvatarEntityId})
+						g.RemoveSceneEntityNotifyToPlayer(otherPlayer, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerActiveAvatarEntityId})
 					}
 					for _, uid := range addUidList {
 						otherPlayer := g.userManager.GetOnlineUser(uid)
@@ -357,7 +359,8 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 
 	// 只给附近aoi区域的玩家广播消息
 	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	for _, entityId := range entityIdList {
 		entity := scene.GetEntity(entityId)
 		if entity == nil {
@@ -423,7 +426,8 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 
 	// 只给附近aoi区域的玩家广播消息
 	surrPlayerList := make([]*model.Player, 0)
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	for _, entityId := range entityIdList {
 		entity := scene.GetEntity(entityId)
 		if entity == nil {

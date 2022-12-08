@@ -122,6 +122,12 @@ func (t *TickManager) onTick10Second(now int64) {
 				sceneTimeNotify.SceneId = player.SceneId
 				sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
 				GAME_MANAGER.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
+				// PacketPlayerTimeNotify
+				playerTimeNotify := new(proto.PlayerTimeNotify)
+				playerTimeNotify.IsPaused = player.Pause
+				playerTimeNotify.PlayerTime = uint64(player.TotalOnlineTime)
+				playerTimeNotify.ServerTime = uint64(time.Now().UnixMilli())
+				GAME_MANAGER.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, player.ClientSeq, playerTimeNotify)
 			}
 		}
 		if !world.IsBigWorld() && (world.multiplayer || !world.owner.Pause) {

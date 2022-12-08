@@ -19,10 +19,11 @@ import (
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user enter scene ready, uid: %v", player.PlayerID)
 
+	world := g.worldManager.GetWorldByID(player.WorldId)
+
 	// PacketEnterScenePeerNotify
 	enterScenePeerNotify := new(proto.EnterScenePeerNotify)
 	enterScenePeerNotify.DestSceneId = player.SceneId
-	world := g.worldManager.GetWorldByID(player.WorldId)
 	enterScenePeerNotify.PeerId = player.PeerId
 	enterScenePeerNotify.HostPeerId = world.owner.PeerId
 	enterScenePeerNotify.EnterSceneToken = player.EnterSceneToken
@@ -37,120 +38,123 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user scene init finish, uid: %v", player.PlayerID)
 
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+
 	// PacketServerTimeNotify
 	serverTimeNotify := new(proto.ServerTimeNotify)
 	serverTimeNotify.ServerTime = uint64(time.Now().UnixMilli())
 	g.SendMsg(cmd.ServerTimeNotify, player.PlayerID, player.ClientSeq, serverTimeNotify)
 
-	// PacketWorldPlayerInfoNotify
-	worldPlayerInfoNotify := new(proto.WorldPlayerInfoNotify)
-	world := g.worldManager.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	for _, worldPlayer := range world.playerMap {
-		onlinePlayerInfo := new(proto.OnlinePlayerInfo)
-		onlinePlayerInfo.Uid = worldPlayer.PlayerID
-		onlinePlayerInfo.Nickname = worldPlayer.NickName
-		onlinePlayerInfo.PlayerLevel = worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL]
-		onlinePlayerInfo.MpSettingType = proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE])
-		onlinePlayerInfo.NameCardId = worldPlayer.NameCard
-		onlinePlayerInfo.Signature = worldPlayer.Signature
-		onlinePlayerInfo.ProfilePicture = &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage}
-		onlinePlayerInfo.CurPlayerNumInWorld = uint32(len(world.playerMap))
-		worldPlayerInfoNotify.PlayerInfoList = append(worldPlayerInfoNotify.PlayerInfoList, onlinePlayerInfo)
-		worldPlayerInfoNotify.PlayerUidList = append(worldPlayerInfoNotify.PlayerUidList, worldPlayer.PlayerID)
-	}
-	g.SendMsg(cmd.WorldPlayerInfoNotify, player.PlayerID, player.ClientSeq, worldPlayerInfoNotify)
-
-	// PacketWorldDataNotify
-	worldDataNotify := new(proto.WorldDataNotify)
-	worldDataNotify.WorldPropMap = make(map[uint32]*proto.PropValue)
-	// 世界等级
-	worldDataNotify.WorldPropMap[1] = &proto.PropValue{
-		Type:  1,
-		Val:   int64(world.worldLevel),
-		Value: &proto.PropValue_Ival{Ival: int64(world.worldLevel)},
-	}
-	// 是否多人游戏
-	worldDataNotify.WorldPropMap[2] = &proto.PropValue{
-		Type:  2,
-		Val:   object.ConvBoolToInt64(world.multiplayer),
-		Value: &proto.PropValue_Ival{Ival: object.ConvBoolToInt64(world.multiplayer)},
-	}
-	g.SendMsg(cmd.WorldDataNotify, player.PlayerID, player.ClientSeq, worldDataNotify)
-
-	// PacketPlayerWorldSceneInfoListNotify
-	playerWorldSceneInfoListNotify := new(proto.PlayerWorldSceneInfoListNotify)
-	playerWorldSceneInfoListNotify.InfoList = []*proto.PlayerWorldSceneInfo{
-		{SceneId: 1, IsLocked: true, SceneTagIdList: []uint32{}},
-		{SceneId: 3, IsLocked: false, SceneTagIdList: []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}},
-		{SceneId: 4, IsLocked: true, SceneTagIdList: []uint32{}},
-		{SceneId: 5, IsLocked: false, SceneTagIdList: []uint32{121, 1031}},
-		{SceneId: 6, IsLocked: false, SceneTagIdList: []uint32{144, 146, 1062, 1063}},
-		{SceneId: 7, IsLocked: true, SceneTagIdList: []uint32{136, 137, 138, 148, 1034}},
-		{SceneId: 9, IsLocked: true, SceneTagIdList: []uint32{1012, 1016, 1021, 1022, 1060, 1077}},
-	}
-	g.SendMsg(cmd.PlayerWorldSceneInfoListNotify, player.PlayerID, player.ClientSeq, playerWorldSceneInfoListNotify)
-
-	// SceneForceUnlockNotify
-	g.SendMsg(cmd.SceneForceUnlockNotify, player.PlayerID, player.ClientSeq, new(proto.SceneForceUnlockNotify))
-
-	// PacketHostPlayerNotify
-	hostPlayerNotify := new(proto.HostPlayerNotify)
-	hostPlayerNotify.HostUid = world.owner.PlayerID
-	hostPlayerNotify.HostPeerId = world.owner.PeerId
-	g.SendMsg(cmd.HostPlayerNotify, player.PlayerID, player.ClientSeq, hostPlayerNotify)
-
-	// PacketSceneTimeNotify
-	sceneTimeNotify := new(proto.SceneTimeNotify)
-	sceneTimeNotify.SceneId = player.SceneId
-	sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
-	g.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
-
-	// PacketPlayerGameTimeNotify
-	playerGameTimeNotify := new(proto.PlayerGameTimeNotify)
-	playerGameTimeNotify.GameTime = scene.gameTime
-	playerGameTimeNotify.Uid = player.PlayerID
-	g.SendMsg(cmd.PlayerGameTimeNotify, player.PlayerID, player.ClientSeq, playerGameTimeNotify)
-
-	// PacketPlayerEnterSceneInfoNotify
-	empty := new(proto.AbilitySyncStateInfo)
-	playerEnterSceneInfoNotify := new(proto.PlayerEnterSceneInfoNotify)
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	playerEnterSceneInfoNotify.CurAvatarEntityId = playerTeamEntity.avatarEntityMap[activeAvatarId]
-	playerEnterSceneInfoNotify.EnterSceneToken = player.EnterSceneToken
-	playerEnterSceneInfoNotify.TeamEnterInfo = &proto.TeamEnterSceneInfo{
-		TeamEntityId:        playerTeamEntity.teamEntityId,
-		TeamAbilityInfo:     empty,
-		AbilityControlBlock: new(proto.AbilityControlBlock),
-	}
-	playerEnterSceneInfoNotify.MpLevelEntityInfo = &proto.MPLevelEntityInfo{
-		EntityId:        g.worldManager.GetWorldByID(player.WorldId).mpLevelEntityId,
-		AuthorityPeerId: g.worldManager.GetWorldByID(player.WorldId).owner.PeerId,
-		AbilityInfo:     empty,
-	}
-	activeTeam := player.TeamConfig.GetActiveTeam()
-	for _, avatarId := range activeTeam.AvatarIdList {
-		if avatarId == 0 {
-			break
+	if world.IsPlayerFirstEnter(player) {
+		// PacketWorldPlayerInfoNotify
+		worldPlayerInfoNotify := new(proto.WorldPlayerInfoNotify)
+		for _, worldPlayer := range world.playerMap {
+			onlinePlayerInfo := new(proto.OnlinePlayerInfo)
+			onlinePlayerInfo.Uid = worldPlayer.PlayerID
+			onlinePlayerInfo.Nickname = worldPlayer.NickName
+			onlinePlayerInfo.PlayerLevel = worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL]
+			onlinePlayerInfo.MpSettingType = proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE])
+			onlinePlayerInfo.NameCardId = worldPlayer.NameCard
+			onlinePlayerInfo.Signature = worldPlayer.Signature
+			onlinePlayerInfo.ProfilePicture = &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage}
+			onlinePlayerInfo.CurPlayerNumInWorld = uint32(len(world.playerMap))
+			worldPlayerInfoNotify.PlayerInfoList = append(worldPlayerInfoNotify.PlayerInfoList, onlinePlayerInfo)
+			worldPlayerInfoNotify.PlayerUidList = append(worldPlayerInfoNotify.PlayerUidList, worldPlayer.PlayerID)
 		}
-		avatar := player.AvatarMap[avatarId]
-		avatarEnterSceneInfo := new(proto.AvatarEnterSceneInfo)
-		avatarEnterSceneInfo.AvatarGuid = avatar.Guid
-		avatarEnterSceneInfo.AvatarEntityId = playerTeamEntity.avatarEntityMap[avatarId]
-		avatarEnterSceneInfo.WeaponGuid = avatar.EquipWeapon.Guid
-		avatarEnterSceneInfo.WeaponEntityId = playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId]
-		avatarEnterSceneInfo.AvatarAbilityInfo = empty
-		avatarEnterSceneInfo.WeaponAbilityInfo = empty
-		playerEnterSceneInfoNotify.AvatarEnterInfo = append(playerEnterSceneInfoNotify.AvatarEnterInfo, avatarEnterSceneInfo)
-	}
-	g.SendMsg(cmd.PlayerEnterSceneInfoNotify, player.PlayerID, player.ClientSeq, playerEnterSceneInfoNotify)
+		g.SendMsg(cmd.WorldPlayerInfoNotify, player.PlayerID, player.ClientSeq, worldPlayerInfoNotify)
 
-	// PacketSceneAreaWeatherNotify
-	sceneAreaWeatherNotify := new(proto.SceneAreaWeatherNotify)
-	sceneAreaWeatherNotify.WeatherAreaId = 0
-	sceneAreaWeatherNotify.ClimateType = uint32(constant.ClimateTypeConst.CLIMATE_SUNNY)
-	g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
+		// PacketWorldDataNotify
+		worldDataNotify := new(proto.WorldDataNotify)
+		worldDataNotify.WorldPropMap = make(map[uint32]*proto.PropValue)
+		// 世界等级
+		worldDataNotify.WorldPropMap[1] = &proto.PropValue{
+			Type:  1,
+			Val:   int64(world.worldLevel),
+			Value: &proto.PropValue_Ival{Ival: int64(world.worldLevel)},
+		}
+		// 是否多人游戏
+		worldDataNotify.WorldPropMap[2] = &proto.PropValue{
+			Type:  2,
+			Val:   object.ConvBoolToInt64(world.multiplayer),
+			Value: &proto.PropValue_Ival{Ival: object.ConvBoolToInt64(world.multiplayer)},
+		}
+		g.SendMsg(cmd.WorldDataNotify, player.PlayerID, player.ClientSeq, worldDataNotify)
+
+		// PacketPlayerWorldSceneInfoListNotify
+		playerWorldSceneInfoListNotify := new(proto.PlayerWorldSceneInfoListNotify)
+		playerWorldSceneInfoListNotify.InfoList = []*proto.PlayerWorldSceneInfo{
+			{SceneId: 1, IsLocked: true, SceneTagIdList: []uint32{}},
+			{SceneId: 3, IsLocked: false, SceneTagIdList: []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}},
+			{SceneId: 4, IsLocked: true, SceneTagIdList: []uint32{}},
+			{SceneId: 5, IsLocked: false, SceneTagIdList: []uint32{121, 1031}},
+			{SceneId: 6, IsLocked: false, SceneTagIdList: []uint32{144, 146, 1062, 1063}},
+			{SceneId: 7, IsLocked: true, SceneTagIdList: []uint32{136, 137, 138, 148, 1034}},
+			{SceneId: 9, IsLocked: true, SceneTagIdList: []uint32{1012, 1016, 1021, 1022, 1060, 1077}},
+		}
+		g.SendMsg(cmd.PlayerWorldSceneInfoListNotify, player.PlayerID, player.ClientSeq, playerWorldSceneInfoListNotify)
+
+		// SceneForceUnlockNotify
+		g.SendMsg(cmd.SceneForceUnlockNotify, player.PlayerID, player.ClientSeq, new(proto.SceneForceUnlockNotify))
+
+		// PacketHostPlayerNotify
+		hostPlayerNotify := new(proto.HostPlayerNotify)
+		hostPlayerNotify.HostUid = world.owner.PlayerID
+		hostPlayerNotify.HostPeerId = world.owner.PeerId
+		g.SendMsg(cmd.HostPlayerNotify, player.PlayerID, player.ClientSeq, hostPlayerNotify)
+
+		// PacketSceneTimeNotify
+		sceneTimeNotify := new(proto.SceneTimeNotify)
+		sceneTimeNotify.SceneId = player.SceneId
+		sceneTimeNotify.SceneTime = uint64(scene.GetSceneTime())
+		g.SendMsg(cmd.SceneTimeNotify, player.PlayerID, player.ClientSeq, sceneTimeNotify)
+
+		// PacketPlayerGameTimeNotify
+		playerGameTimeNotify := new(proto.PlayerGameTimeNotify)
+		playerGameTimeNotify.GameTime = scene.gameTime
+		playerGameTimeNotify.Uid = player.PlayerID
+		g.SendMsg(cmd.PlayerGameTimeNotify, player.PlayerID, player.ClientSeq, playerGameTimeNotify)
+
+		// PacketPlayerEnterSceneInfoNotify
+		empty := new(proto.AbilitySyncStateInfo)
+		playerEnterSceneInfoNotify := new(proto.PlayerEnterSceneInfoNotify)
+		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+		playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
+		playerEnterSceneInfoNotify.CurAvatarEntityId = playerTeamEntity.avatarEntityMap[activeAvatarId]
+		playerEnterSceneInfoNotify.EnterSceneToken = player.EnterSceneToken
+		playerEnterSceneInfoNotify.TeamEnterInfo = &proto.TeamEnterSceneInfo{
+			TeamEntityId:        playerTeamEntity.teamEntityId,
+			TeamAbilityInfo:     empty,
+			AbilityControlBlock: new(proto.AbilityControlBlock),
+		}
+		playerEnterSceneInfoNotify.MpLevelEntityInfo = &proto.MPLevelEntityInfo{
+			EntityId:        g.worldManager.GetWorldByID(player.WorldId).mpLevelEntityId,
+			AuthorityPeerId: 1,
+			AbilityInfo:     empty,
+		}
+		activeTeam := player.TeamConfig.GetActiveTeam()
+		for _, avatarId := range activeTeam.AvatarIdList {
+			if avatarId == 0 {
+				break
+			}
+			avatar := player.AvatarMap[avatarId]
+			avatarEnterSceneInfo := new(proto.AvatarEnterSceneInfo)
+			avatarEnterSceneInfo.AvatarGuid = avatar.Guid
+			avatarEnterSceneInfo.AvatarEntityId = playerTeamEntity.avatarEntityMap[avatarId]
+			avatarEnterSceneInfo.WeaponGuid = avatar.EquipWeapon.Guid
+			avatarEnterSceneInfo.WeaponEntityId = playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId]
+			avatarEnterSceneInfo.AvatarAbilityInfo = empty
+			avatarEnterSceneInfo.WeaponAbilityInfo = empty
+			playerEnterSceneInfoNotify.AvatarEnterInfo = append(playerEnterSceneInfoNotify.AvatarEnterInfo, avatarEnterSceneInfo)
+		}
+		g.SendMsg(cmd.PlayerEnterSceneInfoNotify, player.PlayerID, player.ClientSeq, playerEnterSceneInfoNotify)
+
+		// PacketSceneAreaWeatherNotify
+		sceneAreaWeatherNotify := new(proto.SceneAreaWeatherNotify)
+		sceneAreaWeatherNotify.WeatherAreaId = 0
+		sceneAreaWeatherNotify.ClimateType = uint32(constant.ClimateTypeConst.CLIMATE_SUNNY)
+		g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
+	}
 
 	// PacketScenePlayerInfoNotify
 	scenePlayerInfoNotify := new(proto.ScenePlayerInfoNotify)
@@ -215,29 +219,67 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user enter scene done, uid: %v", player.PlayerID)
 
+	world := g.worldManager.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+
+	if world.multiplayer && world.IsPlayerFirstEnter(player) {
+		guestPostEnterSceneNotify := new(proto.GuestPostEnterSceneNotify)
+		guestPostEnterSceneNotify.SceneId = player.SceneId
+		guestPostEnterSceneNotify.Uid = player.PlayerID
+		g.SendMsg(cmd.GuestPostEnterSceneNotify, world.owner.PlayerID, world.owner.ClientSeq, guestPostEnterSceneNotify)
+	}
+
+	var visionType = proto.VisionType_VISION_TYPE_TRANSPORT
+
+	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
+	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+	if world.IsPlayerFirstEnter(player) {
+		visionType = proto.VisionType_VISION_TYPE_BORN
+	}
+	g.AddSceneEntityNotify(player, visionType, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]}, true)
+
+	// 通过aoi获取场景中在自己周围格子里的全部实体id
+	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
+	if world.IsPlayerFirstEnter(player) {
+		visionType = proto.VisionType_VISION_TYPE_MEET
+	}
+	g.AddSceneEntityNotify(player, visionType, entityIdList, false)
+
+	// PacketSceneAreaWeatherNotify
+	sceneAreaWeatherNotify := new(proto.SceneAreaWeatherNotify)
+	sceneAreaWeatherNotify.WeatherAreaId = 0
+	sceneAreaWeatherNotify.ClimateType = uint32(constant.ClimateTypeConst.CLIMATE_SUNNY)
+	g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
+
 	// PacketEnterSceneDoneRsp
 	enterSceneDoneRsp := new(proto.EnterSceneDoneRsp)
 	enterSceneDoneRsp.EnterSceneToken = player.EnterSceneToken
 	g.SendMsg(cmd.EnterSceneDoneRsp, player.PlayerID, player.ClientSeq, enterSceneDoneRsp)
 
-	// PacketPlayerTimeNotify
-	playerTimeNotify := new(proto.PlayerTimeNotify)
-	playerTimeNotify.IsPaused = player.Pause
-	playerTimeNotify.PlayerTime = uint64(player.TotalOnlineTime)
-	playerTimeNotify.ServerTime = uint64(time.Now().UnixMilli())
-	g.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, player.ClientSeq, playerTimeNotify)
-
 	player.SceneLoadState = model.SceneEnterDone
-	world := g.worldManager.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
+	world.PlayerEnter(player)
 
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
-	g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]}, true)
+	for otherPlayerId := range world.waitEnterPlayerMap {
+		delete(world.waitEnterPlayerMap, otherPlayerId)
+		otherPlayer := g.userManager.GetOnlineUser(otherPlayerId)
+		otherPlayer.Pos = &model.Vector{
+			X: player.Pos.X,
+			Y: player.Pos.Y,
+			Z: player.Pos.Z,
+		}
+		otherPlayer.Rot = &model.Vector{
+			X: player.Rot.X,
+			Y: player.Rot.Y,
+			Z: player.Rot.Z,
+		}
+		otherPlayer.SceneId = player.SceneId
 
-	// 通过aoi获取场景中在自己周围格子里的全部实体id
-	entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-	g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_MEET, entityIdList, false)
+		g.UserWorldAddPlayer(world, otherPlayer)
+
+		otherPlayer.SceneLoadState = model.SceneNone
+		g.SendMsg(cmd.PlayerEnterSceneNotify, otherPlayer.PlayerID, 0, g.PacketPlayerEnterSceneNotifyLogin(otherPlayer, proto.EnterType_ENTER_TYPE_OTHER))
+	}
 }
 
 func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
@@ -368,21 +410,21 @@ func (g *GameManager) AddSceneEntityNotifyBroadcast(scene *Scene, visionType pro
 	}
 }
 
-func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, entityIdList []uint32) {
+func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityIdList []uint32) {
 	// PacketSceneEntityDisappearNotify
 	sceneEntityDisappearNotify := new(proto.SceneEntityDisappearNotify)
 	sceneEntityDisappearNotify.EntityList = entityIdList
-	sceneEntityDisappearNotify.DisappearType = proto.VisionType_VISION_TYPE_REMOVE
+	sceneEntityDisappearNotify.DisappearType = visionType
 	g.SendMsg(cmd.SceneEntityDisappearNotify, player.PlayerID, player.ClientSeq, sceneEntityDisappearNotify)
 	logger.LOG.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
 		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
-func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, entityIdList []uint32) {
+func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
 	// PacketSceneEntityDisappearNotify
 	sceneEntityDisappearNotify := new(proto.SceneEntityDisappearNotify)
 	sceneEntityDisappearNotify.EntityList = entityIdList
-	sceneEntityDisappearNotify.DisappearType = proto.VisionType_VISION_TYPE_REMOVE
+	sceneEntityDisappearNotify.DisappearType = visionType
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.SceneEntityDisappearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityDisappearNotify)
 		logger.LOG.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
@@ -410,9 +452,9 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				logger.LOG.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
 				continue
 			}
-			if scenePlayer.SceneLoadState != model.SceneEnterDone {
-				continue
-			}
+			//if scenePlayer.SceneLoadState != model.SceneEnterDone {
+			//	continue
+			//}
 			if entity.avatarEntity.avatarId != scenePlayer.TeamConfig.GetActiveAvatarId() {
 				continue
 			}
@@ -626,8 +668,7 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 }
 
 func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
-	activeAvatar := player.AvatarMap[activeAvatarId]
+	avatar := player.AvatarMap[avatarId]
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	equipIdList := make([]uint32, 0)
 	weapon := player.AvatarMap[avatarId].EquipWeapon
@@ -643,7 +684,7 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 		EquipIdList:  equipIdList,
 		SkillDepotId: player.AvatarMap[avatarId].SkillDepotId,
 		Weapon: &proto.SceneWeaponInfo{
-			EntityId:    playerTeamEntity.weaponEntityMap[activeAvatar.EquipWeapon.WeaponId],
+			EntityId:    playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId],
 			GadgetId:    uint32(gdc.CONF.ItemDataMap[int32(weapon.ItemId)].GadgetId),
 			ItemId:      weapon.ItemId,
 			Guid:        weapon.Guid,

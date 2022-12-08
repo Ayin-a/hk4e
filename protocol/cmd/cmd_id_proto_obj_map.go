@@ -140,6 +140,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(PlayerQuitFromMpNotify, &proto.PlayerQuitFromMpNotify{})                 // 退出多人游戏通知
 	c.registerMessage(JoinPlayerSceneReq, &proto.JoinPlayerSceneReq{})                         // 进入他人世界请求
 	c.registerMessage(JoinPlayerSceneRsp, &proto.JoinPlayerSceneRsp{})                         // 进入他人世界响应
+	c.registerMessage(GuestBeginEnterSceneNotify, &proto.GuestBeginEnterSceneNotify{})         // 他人开始进入世界通知
+	c.registerMessage(GuestPostEnterSceneNotify, &proto.GuestPostEnterSceneNotify{})           // 他人进入世界完成通知
+	c.registerMessage(PlayerPreEnterMpNotify, &proto.PlayerPreEnterMpNotify{})                 // 他人正在进入世界通知
 
 	// 社交
 	c.registerMessage(SetPlayerBirthdayReq, &proto.SetPlayerBirthdayReq{})           // 设置生日请求

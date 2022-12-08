@@ -56,7 +56,6 @@ type Player struct {
 	EnterSceneToken       uint32                                   `bson:"-"` // 玩家的世界进入令牌
 	DbState               int                                      `bson:"-"` // 数据库存档状态
 	WorldId               uint32                                   `bson:"-"` // 所在的世界id
-	PeerId                uint32                                   `bson:"-"` // 多人世界的玩家编号
 	GameObjectGuidCounter uint64                                   `bson:"-"` // 游戏对象guid计数器
 	ClientTime            uint32                                   `bson:"-"` // 玩家客户端的本地时钟
 	ClientRTT             uint32                                   `bson:"-"` // 玩家客户端往返时延

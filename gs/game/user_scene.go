@@ -22,8 +22,8 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 
 	enterScenePeerNotify := &proto.EnterScenePeerNotify{
 		DestSceneId:     player.SceneId,
-		PeerId:          player.PeerId,
-		HostPeerId:      world.owner.PeerId,
+		PeerId:          world.GetPlayerPeerId(player),
+		HostPeerId:      world.GetPlayerPeerId(world.owner),
 		EnterSceneToken: player.EnterSceneToken,
 	}
 	g.SendMsg(cmd.EnterScenePeerNotify, player.PlayerID, player.ClientSeq, enterScenePeerNotify)
@@ -99,7 +99,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 
 		hostPlayerNotify := &proto.HostPlayerNotify{
 			HostUid:    world.owner.PlayerID,
-			HostPeerId: world.owner.PeerId,
+			HostPeerId: world.GetPlayerPeerId(world.owner),
 		}
 		g.SendMsg(cmd.HostPlayerNotify, player.PlayerID, player.ClientSeq, hostPlayerNotify)
 
@@ -174,7 +174,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 		}
 		scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
 			Uid:              worldPlayer.PlayerID,
-			PeerId:           worldPlayer.PeerId,
+			PeerId:           world.GetPlayerPeerId(worldPlayer),
 			Name:             worldPlayer.NickName,
 			SceneId:          worldPlayer.SceneId,
 			OnlinePlayerInfo: onlinePlayerInfo,
@@ -182,7 +182,12 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	}
 	g.SendMsg(cmd.ScenePlayerInfoNotify, player.PlayerID, player.ClientSeq, scenePlayerInfoNotify)
 
-	sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
+	var sceneTeamUpdateNotify *proto.SceneTeamUpdateNotify = nil
+	if world.multiplayer {
+		sceneTeamUpdateNotify = g.PacketSceneTeamUpdateNotifyMp(world)
+	} else {
+		sceneTeamUpdateNotify = g.PacketSceneTeamUpdateNotify(world)
+	}
 	g.SendMsg(cmd.SceneTeamUpdateNotify, player.PlayerID, player.ClientSeq, sceneTeamUpdateNotify)
 
 	syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
@@ -198,7 +203,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			worldPlayerTeamEntity := worldPlayerScene.GetPlayerTeamEntity(worldPlayer.PlayerID)
 			teamEntityInfo := &proto.TeamEntityInfo{
 				TeamEntityId:    worldPlayerTeamEntity.teamEntityId,
-				AuthorityPeerId: worldPlayer.PeerId,
+				AuthorityPeerId: world.GetPlayerPeerId(worldPlayer),
 				TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
 			}
 			syncTeamEntityNotify.TeamEntityInfoList = append(syncTeamEntityNotify.TeamEntityInfoList, teamEntityInfo)
@@ -679,11 +684,12 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 	for _, reliquary := range player.AvatarMap[avatarId].EquipReliquaryList {
 		equipIdList = append(equipIdList, reliquary.ItemId)
 	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	sceneAvatarInfo := &proto.SceneAvatarInfo{
 		Uid:          player.PlayerID,
 		AvatarId:     avatarId,
 		Guid:         player.AvatarMap[avatarId].Guid,
-		PeerId:       player.PeerId,
+		PeerId:       world.GetPlayerPeerId(player),
 		EquipIdList:  equipIdList,
 		SkillDepotId: player.AvatarMap[avatarId].SkillDepotId,
 		Weapon: &proto.SceneWeaponInfo{

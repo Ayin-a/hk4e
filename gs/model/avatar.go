@@ -75,6 +75,15 @@ func (p *Player) InitAvatar(avatar *Avatar) {
 	return
 }
 
+func (p *Player) GetAvatarIdByGuid(guid uint64) uint32 {
+	for avatarId, avatar := range p.AvatarMap {
+		if guid == avatar.Guid {
+			return avatarId
+		}
+	}
+	return 0
+}
+
 func (p *Player) AddAvatar(avatarId uint32) {
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
 	if !ok {

@@ -64,6 +64,8 @@ func (w *WorldManager) CreateWorld(owner *model.Player, multiplayer bool) *World
 		),
 		playerFirstEnterMap: make(map[uint32]int64),
 		waitEnterPlayerMap:  make(map[uint32]int64),
+		multiplayerTeam:     CreateMultiplayerTeam(),
+		peerMap:             make(map[uint32]*model.Player),
 	}
 	if world.IsBigWorld() {
 		world.aoiManager = aoi.NewAoiManager(
@@ -90,9 +92,33 @@ func (w *WorldManager) GetBigWorld() *World {
 	return w.bigWorld
 }
 
+// InitBigWorld 初始化大世界
 func (w *WorldManager) InitBigWorld(owner *model.Player) {
 	w.bigWorld = w.GetWorldByID(owner.WorldId)
-	w.bigWorld.multiplayer = true
+	w.bigWorld.ChangeToMultiplayer()
+}
+
+// WorldTeamAvatar 通用世界队伍角色项
+type WorldTeamAvatar struct {
+	uid      uint32
+	avatarId uint32
+}
+
+type MultiplayerTeam struct {
+	// key:uid value:玩家的本地队伍
+	localTeamMap map[uint32][]*WorldTeamAvatar
+	// key:uid value:玩家当前角色索引
+	localAvatarIndexMap map[uint32]int
+	// 最终的世界队伍
+	worldTeam []*WorldTeamAvatar
+}
+
+func CreateMultiplayerTeam() (r *MultiplayerTeam) {
+	r = new(MultiplayerTeam)
+	r.localTeamMap = make(map[uint32][]*WorldTeamAvatar)
+	r.localAvatarIndexMap = make(map[uint32]int)
+	r.worldTeam = make([]*WorldTeamAvatar, 0)
+	return r
 }
 
 type World struct {
@@ -100,14 +126,16 @@ type World struct {
 	owner               *model.Player
 	playerMap           map[uint32]*model.Player
 	sceneMap            map[uint32]*Scene
-	entityIdCounter     uint32
-	worldLevel          uint8
-	multiplayer         bool
+	entityIdCounter     uint32 // 世界的实体id生成计数器
+	worldLevel          uint8  // 世界等级
+	multiplayer         bool   // 是否多人世界
 	mpLevelEntityId     uint32
-	chatMsgList         []*proto.ChatInfo
-	aoiManager          *aoi.AoiManager // 当前世界地图的aoi管理器
-	playerFirstEnterMap map[uint32]int64
-	waitEnterPlayerMap  map[uint32]int64
+	chatMsgList         []*proto.ChatInfo // 世界聊天消息列表
+	aoiManager          *aoi.AoiManager   // 当前世界地图的aoi管理器
+	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
+	waitEnterPlayerMap  map[uint32]int64  // 等待进入世界的列表 key:uid value:开始时间
+	multiplayerTeam     *MultiplayerTeam
+	peerMap             map[uint32]*model.Player // key:玩家编号 value:player对象
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
@@ -116,18 +144,117 @@ func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
 	return ret
 }
 
+func (w *World) GetPlayerPeerId(player *model.Player) uint32 {
+	for peerId, worldPlayer := range w.peerMap {
+		if worldPlayer.PlayerID == player.PlayerID {
+			return peerId
+		}
+	}
+	return 0
+}
+
+func (w *World) GetNextPeerId() uint32 {
+	return uint32(len(w.playerMap) + 1)
+}
+
+func (w *World) GetWorldPlayerNum() int {
+	return len(w.playerMap)
+}
+
 func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
-	player.PeerId = uint32(len(w.playerMap) + 1)
+	w.peerMap[w.GetNextPeerId()] = player
 	w.playerMap[player.PlayerID] = player
+	// 将玩家自身当前的队伍角色信息复制到世界的玩家本地队伍
+	team := player.TeamConfig.GetActiveTeam()
+	w.SetPlayerLocalTeam(player, team.AvatarIdList)
+	w.UpdateMultiplayerTeam()
 	scene := w.GetSceneById(sceneId)
 	scene.AddPlayer(player)
 }
 
 func (w *World) RemovePlayer(player *model.Player) {
+	delete(w.peerMap, w.GetPlayerPeerId(player))
 	scene := w.sceneMap[player.SceneId]
 	scene.RemovePlayer(player)
 	delete(w.playerMap, player.PlayerID)
 	delete(w.playerFirstEnterMap, player.PlayerID)
+	delete(w.multiplayerTeam.localTeamMap, player.PlayerID)
+	delete(w.multiplayerTeam.localAvatarIndexMap, player.PlayerID)
+	w.UpdateMultiplayerTeam()
+}
+
+func (w *World) SetPlayerLocalTeam(player *model.Player, avatarIdList []uint32) {
+	localTeam := make([]*WorldTeamAvatar, 4)
+	for index := 0; index < 4; index++ {
+		if index > len(avatarIdList)-1 {
+			localTeam[index] = &WorldTeamAvatar{
+				uid:      0,
+				avatarId: 0,
+			}
+		} else {
+			avatarId := avatarIdList[index]
+			localTeam[index] = &WorldTeamAvatar{
+				uid:      player.PlayerID,
+				avatarId: avatarId,
+			}
+		}
+	}
+	w.multiplayerTeam.localTeamMap[player.PlayerID] = localTeam
+}
+
+func (w *World) GetPlayerLocalAvatarIndex(player *model.Player) int {
+	return w.multiplayerTeam.localAvatarIndexMap[player.PlayerID]
+}
+
+func (w *World) SetPlayerLocalAvatarIndex(player *model.Player, index int) {
+	if index > len(w.multiplayerTeam.localTeamMap[player.PlayerID])-1 {
+		return
+	}
+	w.multiplayerTeam.localAvatarIndexMap[player.PlayerID] = index
+}
+
+func (w *World) GetPlayerActiveAvatarId(player *model.Player) uint32 {
+	avatarIndex := w.GetPlayerLocalAvatarIndex(player)
+	localTeam := w.multiplayerTeam.localTeamMap[player.PlayerID]
+	worldTeamAvatar := localTeam[avatarIndex]
+	return worldTeamAvatar.avatarId
+}
+
+func (w *World) copyLocalTeamToWorld(start int, end int, peerId uint32) {
+	localTeamIndex := 0
+	for index := start; index <= end; index++ {
+		player := w.peerMap[peerId]
+		localTeam := w.multiplayerTeam.localTeamMap[player.PlayerID]
+		w.multiplayerTeam.worldTeam[index] = localTeam[localTeamIndex]
+		localTeamIndex++
+	}
+}
+
+// UpdateMultiplayerTeam 整合所有玩家的本地队伍计算出世界队伍
+func (w *World) UpdateMultiplayerTeam() {
+	w.multiplayerTeam.worldTeam = make([]*WorldTeamAvatar, 4)
+	switch w.GetWorldPlayerNum() {
+	case 1:
+		// 1P*4
+		w.copyLocalTeamToWorld(0, 3, 1)
+	case 2:
+		// 1P*2 + 2P*2
+		w.copyLocalTeamToWorld(0, 1, 1)
+		w.copyLocalTeamToWorld(2, 3, 2)
+	case 3:
+		// 1P*2 + 2P*1 + 3P*1
+		w.copyLocalTeamToWorld(0, 1, 1)
+		w.copyLocalTeamToWorld(2, 2, 2)
+		w.copyLocalTeamToWorld(3, 3, 3)
+	case 4:
+		// 1P*1 + 2P*1 + 3P*1 + 4P*1
+		w.copyLocalTeamToWorld(0, 0, 1)
+		w.copyLocalTeamToWorld(1, 1, 2)
+		w.copyLocalTeamToWorld(2, 2, 3)
+		w.copyLocalTeamToWorld(3, 3, 4)
+	default:
+		break
+	}
 }
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
@@ -166,7 +293,7 @@ func (w *World) IsBigWorld() bool {
 	return w.owner.PlayerID == 1
 }
 
-func (w *World) ChangeToMP() {
+func (w *World) ChangeToMultiplayer() {
 	w.multiplayer = true
 }
 
@@ -189,10 +316,10 @@ type Scene struct {
 	playerMap           map[uint32]*model.Player
 	entityMap           map[uint32]*Entity
 	playerTeamEntityMap map[uint32]*PlayerTeamEntity
-	gameTime            uint32
+	gameTime            uint32 // 游戏内提瓦特大陆的时间
 	attackQueue         *alg.RAQueue[*Attack]
 	createTime          int64
-	meeoIndex           uint32
+	meeoIndex           uint32 // 客户端风元素染色同步协议的计数器
 }
 
 type AvatarEntity struct {
@@ -261,6 +388,10 @@ func (s *Scene) CreatePlayerTeamEntity(player *model.Player) {
 }
 
 func (s *Scene) UpdatePlayerTeamEntity(player *model.Player) {
+	if s.world.multiplayer {
+		s.UpdatePlayerTeamEntityMp(player)
+		return
+	}
 	team := player.TeamConfig.GetActiveTeam()
 	playerTeamEntity := s.playerTeamEntityMap[player.PlayerID]
 	for _, avatarId := range team.AvatarIdList {
@@ -273,6 +404,26 @@ func (s *Scene) UpdatePlayerTeamEntity(player *model.Player) {
 			s.DestroyEntity(avatarEntityId)
 		}
 		playerTeamEntity.avatarEntityMap[avatarId] = s.CreateEntityAvatar(player, avatarId)
+		weaponEntityId, exist := playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId]
+		if exist {
+			s.DestroyEntity(weaponEntityId)
+		}
+		playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId] = s.CreateEntityWeapon()
+	}
+}
+
+func (s *Scene) UpdatePlayerTeamEntityMp(player *model.Player) {
+	playerTeamEntity := s.playerTeamEntityMap[player.PlayerID]
+	for _, worldTeamAvatar := range s.world.multiplayerTeam.worldTeam {
+		if worldTeamAvatar.uid != player.PlayerID || worldTeamAvatar.avatarId == 0 {
+			continue
+		}
+		avatar := player.AvatarMap[worldTeamAvatar.avatarId]
+		avatarEntityId, exist := playerTeamEntity.avatarEntityMap[worldTeamAvatar.avatarId]
+		if exist {
+			s.DestroyEntity(avatarEntityId)
+		}
+		playerTeamEntity.avatarEntityMap[worldTeamAvatar.avatarId] = s.CreateEntityAvatar(player, worldTeamAvatar.avatarId)
 		weaponEntityId, exist := playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId]
 		if exist {
 			s.DestroyEntity(weaponEntityId)

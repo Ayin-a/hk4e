@@ -256,7 +256,7 @@ func (u *UserManager) SaveUser() {
 		playerMapTemp[k] = v
 	}
 	u.playerMapLock.RUnlock()
-	logger.LOG.Info("copy user map finish")
+	logger.LOG.Info("copyLocalTeamToWorld user map finish")
 	insertList := make([]*model.Player, 0)
 	deleteList := make([]uint32, 0)
 	updateList := make([]*model.Player, 0)

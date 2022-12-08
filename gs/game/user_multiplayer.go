@@ -52,7 +52,6 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 
 func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user get world exit ban info, uid: %v", player.PlayerID)
-
 	result := true
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	for _, worldPlayer := range world.playerMap {
@@ -72,7 +71,6 @@ func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payload
 
 func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user back world, uid: %v", player.PlayerID)
-
 	// 其他玩家
 	ok := g.UserLeaveWorld(player)
 
@@ -87,7 +85,6 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 
 func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user change world to single, uid: %v", player.PlayerID)
-
 	// 房主
 	ok := g.UserLeaveWorld(player)
 
@@ -103,8 +100,15 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user kick player, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if player.PlayerID != world.owner.PlayerID {
+		sceneKickPlayerRsp := &proto.SceneKickPlayerRsp{
+			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+		}
+		g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
+		return
+	}
 	targetUid := req.TargetUid
-
 	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
 	ok := g.UserLeaveWorld(targetPlayer)
 	if ok {
@@ -112,7 +116,6 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 			TargetUid: targetUid,
 			KickerUid: player.PlayerID,
 		}
-		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 		for _, worldPlayer := range world.playerMap {
 			g.SendMsg(cmd.SceneKickPlayerNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneKickPlayerNotify)
 		}
@@ -130,10 +133,8 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user join player scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.JoinPlayerSceneReq)
-
 	hostPlayer := USER_MANAGER.GetOnlineUser(req.TargetUid)
 	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-
 	_, exist := hostWorld.waitEnterPlayerMap[player.PlayerID]
 	if !exist {
 		return
@@ -234,8 +235,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	if world.multiplayer {
 		return
 	}
-
-	world.ChangeToMP()
+	world.ChangeToMultiplayer()
 
 	worldDataNotify := &proto.WorldDataNotify{
 		WorldPropMap: make(map[uint32]*proto.PropValue),
@@ -312,7 +312,6 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 			}
 		}
 	}
-
 	scene := world.GetSceneById(player.SceneId)
 
 	// 仅仅把当前的场上角色的实体消失掉
@@ -336,11 +335,9 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	world.RemovePlayer(player)
 	player.WorldId = 0
-
 	if world.multiplayer && len(world.playerMap) > 0 {
 		g.UpdateWorldPlayerInfo(world, player)
 	}
-
 	if world.owner.PlayerID == player.PlayerID {
 		// 房主离开销毁世界
 		WORLD_MANAGER.DestroyWorld(world.id)
@@ -402,7 +399,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			}
 			scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
 				Uid:              worldPlayer.PlayerID,
-				PeerId:           worldPlayer.PeerId,
+				PeerId:           hostWorld.GetPlayerPeerId(worldPlayer),
 				Name:             worldPlayer.NickName,
 				SceneId:          worldPlayer.SceneId,
 				OnlinePlayerInfo: onlinePlayerInfo,
@@ -410,7 +407,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		}
 		g.SendMsg(cmd.ScenePlayerInfoNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, scenePlayerInfoNotify)
 
-		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(hostWorld)
+		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotifyMp(hostWorld)
 		g.SendMsg(cmd.SceneTeamUpdateNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTeamUpdateNotify)
 
 		syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
@@ -426,7 +423,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 				worldPlayerTeamEntity := worldPlayerScene.GetPlayerTeamEntity(worldPlayer.PlayerID)
 				teamEntityInfo := &proto.TeamEntityInfo{
 					TeamEntityId:    worldPlayerTeamEntity.teamEntityId,
-					AuthorityPeerId: worldPlayer.PeerId,
+					AuthorityPeerId: hostWorld.GetPlayerPeerId(worldPlayer),
 					TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
 				}
 				syncTeamEntityNotify.TeamEntityInfoList = append(syncTeamEntityNotify.TeamEntityInfoList, teamEntityInfo)

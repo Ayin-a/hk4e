@@ -40,7 +40,7 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 		}
 		getPlayerSocialDetailRsp.DetailData = socialDetail
 	} else {
-		getPlayerSocialDetailRsp.Retcode = int32(proto.Retcode_RETCODE_RET_PLAYER_NOT_EXIST)
+		getPlayerSocialDetailRsp.Retcode = int32(proto.Retcode_RET_PLAYER_NOT_EXIST)
 	}
 	g.SendMsg(cmd.GetPlayerSocialDetailRsp, player.PlayerID, player.ClientSeq, getPlayerSocialDetailRsp)
 }
@@ -80,9 +80,9 @@ func (g *GameManager) SetPlayerSignatureReq(player *model.Player, payloadMsg pb.
 
 	setPlayerSignatureRsp := new(proto.SetPlayerSignatureRsp)
 	if !object.IsUtf8String(signature) {
-		setPlayerSignatureRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SIGNATURE_ILLEGAL)
+		setPlayerSignatureRsp.Retcode = int32(proto.Retcode_RET_SIGNATURE_ILLEGAL)
 	} else if utf8.RuneCountInString(signature) > 50 {
-		setPlayerSignatureRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SIGNATURE_ILLEGAL)
+		setPlayerSignatureRsp.Retcode = int32(proto.Retcode_RET_SIGNATURE_ILLEGAL)
 	} else {
 		player.Signature = signature
 		setPlayerSignatureRsp.Signature = player.Signature
@@ -97,13 +97,13 @@ func (g *GameManager) SetPlayerNameReq(player *model.Player, payloadMsg pb.Messa
 
 	setPlayerNameRsp := new(proto.SetPlayerNameRsp)
 	if len(nickName) == 0 {
-		setPlayerNameRsp.Retcode = int32(proto.Retcode_RETCODE_RET_NICKNAME_IS_EMPTY)
+		setPlayerNameRsp.Retcode = int32(proto.Retcode_RET_NICKNAME_IS_EMPTY)
 	} else if !object.IsUtf8String(nickName) {
-		setPlayerNameRsp.Retcode = int32(proto.Retcode_RETCODE_RET_NICKNAME_UTF8_ERROR)
+		setPlayerNameRsp.Retcode = int32(proto.Retcode_RET_NICKNAME_UTF8_ERROR)
 	} else if utf8.RuneCountInString(nickName) > 14 {
-		setPlayerNameRsp.Retcode = int32(proto.Retcode_RETCODE_RET_NICKNAME_TOO_LONG)
+		setPlayerNameRsp.Retcode = int32(proto.Retcode_RET_NICKNAME_TOO_LONG)
 	} else if len(regexp.MustCompile(`\d`).FindAllString(nickName, -1)) > 6 {
-		setPlayerNameRsp.Retcode = int32(proto.Retcode_RETCODE_RET_NICKNAME_TOO_MANY_DIGITS)
+		setPlayerNameRsp.Retcode = int32(proto.Retcode_RET_NICKNAME_TOO_MANY_DIGITS)
 	} else {
 		player.NickName = nickName
 		setPlayerNameRsp.NickName = player.NickName
@@ -153,7 +153,7 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 		if online {
 			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE
 		} else {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_FREIEND_DISCONNECT
+			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_DISCONNECT
 		}
 		friendPlayer := USER_MANAGER.LoadTempOfflineUserSync(uid)
 		if friendPlayer == nil {
@@ -193,7 +193,7 @@ func (g *GameManager) GetPlayerAskFriendListReq(player *model.Player, payloadMsg
 		if online {
 			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE
 		} else {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_FREIEND_DISCONNECT
+			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_DISCONNECT
 		}
 		friendPlayer := USER_MANAGER.LoadTempOfflineUserSync(uid)
 		if friendPlayer == nil {

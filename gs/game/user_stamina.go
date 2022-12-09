@@ -51,9 +51,9 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 	sceneAvatarStaminaStepRsp := new(proto.SceneAvatarStaminaStepRsp)
 	// 角度超过范围返回值为错误
 	if (req.Rot.X >= 0 && req.Rot.X < 90) || (req.Rot.X > 270 && req.Rot.X < 360) {
-		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RETCODE_RET_SUCC)
+		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RET_SUCC)
 	} else {
-		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RETCODE_RET_FAIL)
+		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RET_FAIL)
 	}
 	sceneAvatarStaminaStepRsp.UseClientRot = true
 	sceneAvatarStaminaStepRsp.Rot = req.Rot

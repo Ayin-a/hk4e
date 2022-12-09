@@ -67,7 +67,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	}
 
 	changeAvatarRsp := &proto.ChangeAvatarRsp{
-		Retcode: int32(proto.Retcode_RETCODE_RET_SUCC),
+		Retcode: int32(proto.Retcode_RET_SUCC),
 		CurGuid: targetAvatarGuid,
 	}
 	g.SendMsg(cmd.ChangeAvatarRsp, player.PlayerID, player.ClientSeq, changeAvatarRsp)
@@ -80,7 +80,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 	teamId := req.TeamId
 	if teamId <= 0 || teamId >= 5 {
 		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
-			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
 		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
@@ -90,7 +90,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 	selfTeam := teamId == uint32(player.TeamConfig.GetActiveTeamId())
 	if (selfTeam && len(avatarGuidList) == 0) || len(avatarGuidList) > 4 || world.multiplayer {
 		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
-			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
 		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
@@ -110,7 +110,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 
 	if world.multiplayer {
 		setUpAvatarTeamRsp := &proto.SetUpAvatarTeamRsp{
-			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
 		}
 		g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 		return
@@ -209,7 +209,7 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if len(avatarGuidList) == 0 || len(avatarGuidList) > 4 || !world.multiplayer {
 		changeMpTeamAvatarRsp := &proto.ChangeMpTeamAvatarRsp{
-			Retcode: int32(proto.Retcode_RETCODE_RET_SVR_ERROR),
+			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
 		}
 		g.SendMsg(cmd.ChangeMpTeamAvatarRsp, player.PlayerID, player.ClientSeq, changeMpTeamAvatarRsp)
 		return

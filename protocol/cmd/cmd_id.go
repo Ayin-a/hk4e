@@ -443,7 +443,7 @@ const (
 	DungeonRestartReq                              uint16 = 961
 	DungeonRestartResultNotify                     uint16 = 940
 	DungeonRestartRsp                              uint16 = 929
-	DungeonReviseLevelNotify                       uint16 = 968
+	DungeonReviseLevelNotify                       uint16 = 933
 	DungeonSettleNotify                            uint16 = 999
 	DungeonShowReminderNotify                      uint16 = 997
 	DungeonSlipRevivePointActivateReq              uint16 = 958
@@ -621,8 +621,8 @@ const (
 	FungusFighterClearTrainingRuntimeDataReq       uint16 = 24137
 	FungusFighterClearTrainingRuntimeDataRsp       uint16 = 22991
 	FungusFighterPlotInfoNotify                    uint16 = 22174
-	FungusFighterRestartTraningDungeonReq          uint16 = 23980
-	FungusFighterRestartTraningDungeonRsp          uint16 = 22890
+	FungusFighterRestartTrainingDungeonReq         uint16 = 23980
+	FungusFighterRestartTrainingDungeonRsp         uint16 = 22890
 	FungusFighterRuntimeDataNotify                 uint16 = 24674
 	FungusFighterTrainingGallerySettleNotify       uint16 = 23931
 	FungusFighterTrainingInfoNotify                uint16 = 5595
@@ -632,7 +632,7 @@ const (
 	FungusFighterUseBackupFungusRsp                uint16 = 23428
 	FungusRenameReq                                uint16 = 22006
 	FungusRenameRsp                                uint16 = 20066
-	FunitureMakeMakeInfoChangeNotify               uint16 = 4898
+	FunitureMakeInfoChangeNotify                   uint16 = 4898
 	FurnitureCurModuleArrangeCountNotify           uint16 = 4498
 	FurnitureMakeBeHelpedNotify                    uint16 = 4578
 	FurnitureMakeCancelReq                         uint16 = 4555
@@ -1205,7 +1205,8 @@ const (
 	MiracleRingDropResultNotify                    uint16 = 5231
 	MiracleRingTakeRewardReq                       uint16 = 5207
 	MiracleRingTakeRewardRsp                       uint16 = 5202
-	MistTrialDunegonFailNotify                     uint16 = 8135
+	MistTrialDungeonFailNotify                     uint16 = 8135
+	MistTrialFloorLevelNotify                      uint16 = 968
 	MistTrialGetChallengeMissionReq                uint16 = 8893
 	MistTrialGetChallengeMissionRsp                uint16 = 8508
 	MistTrialGetDungeonExhibitionDataReq           uint16 = 8740
@@ -1635,8 +1636,8 @@ const (
 	SceneTimeNotify                                uint16 = 245
 	SceneTransToPointReq                           uint16 = 239
 	SceneTransToPointRsp                           uint16 = 253
-	SceneWeatherForcastReq                         uint16 = 3110
-	SceneWeatherForcastRsp                         uint16 = 3012
+	SceneWeatherForecastReq                        uint16 = 3110
+	SceneWeatherForecastRsp                        uint16 = 3012
 	SeaLampCoinNotify                              uint16 = 2114
 	SeaLampContributeItemReq                       uint16 = 2123
 	SeaLampContributeItemRsp                       uint16 = 2139

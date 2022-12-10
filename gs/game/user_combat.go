@@ -148,7 +148,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if motionInfo.Pos == nil || motionInfo.Rot == nil {
 				continue
 			}
-			activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+			activeAvatarId := world.GetPlayerActiveAvatarId(player)
 			playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 			playerActiveAvatarEntityId := playerTeamEntity.avatarEntityMap[activeAvatarId]
 			if entityMoveInfo.EntityId == playerActiveAvatarEntityId {
@@ -232,8 +232,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 					}
 				}
 				// 把队伍中的其他非活跃角色也同步进行移动
-				team := player.TeamConfig.GetActiveTeam()
-				for _, avatarId := range team.AvatarIdList {
+				for _, avatarId := range world.GetPlayerAvatarIdList(player) {
 					// 跳过当前的活跃角色
 					if avatarId == activeAvatarId {
 						continue

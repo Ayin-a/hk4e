@@ -84,7 +84,7 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	oldScene := world.GetSceneById(oldSceneId)
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	playerTeamEntity := oldScene.GetPlayerTeamEntity(player.PlayerID)
 	g.RemoveSceneEntityNotifyBroadcast(oldScene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
 	if jumpScene {

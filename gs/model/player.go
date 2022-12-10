@@ -6,11 +6,9 @@ import (
 )
 
 const (
-	DbInsert = iota
+	DbNormal = iota
+	DbInsert
 	DbDelete
-	DbUpdate
-	DbNormal
-	DbOffline
 )
 
 const (

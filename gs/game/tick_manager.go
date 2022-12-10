@@ -150,11 +150,7 @@ func (t *TickManager) onTick10Second(now int64) {
 		for _, player := range world.playerMap {
 			if world.multiplayer || !world.owner.Pause {
 				// 改面板
-				team := player.TeamConfig.GetActiveTeam()
-				for _, avatarId := range team.AvatarIdList {
-					if avatarId == 0 {
-						break
-					}
+				for _, avatarId := range world.GetPlayerAvatarIdList(player) {
 					avatar := player.AvatarMap[avatarId]
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)] = 1000000
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)] = 1.0

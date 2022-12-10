@@ -33,7 +33,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.InitAll()
 	player.TeamConfig.UpdateTeam()
 	// 创建世界
-	world := WORLD_MANAGER.CreateWorld(player, false)
+	world := WORLD_MANAGER.CreateWorld(player)
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
 
@@ -107,7 +107,7 @@ func (g *GameManager) OnUserOffline(userId uint32) {
 	player.OfflineTime = uint32(time.Now().Unix())
 	player.Online = false
 	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
-	USER_MANAGER.OfflineUser(player)
+	USER_MANAGER.DeleteUser(player)
 }
 
 func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
@@ -258,10 +258,7 @@ func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.Avatar
 	}
 	for teamIndex, team := range player.TeamConfig.TeamList {
 		var teamAvatarGuidList []uint64 = nil
-		for _, avatarId := range team.AvatarIdList {
-			if avatarId == 0 {
-				break
-			}
+		for _, avatarId := range team.GetAvatarIdList() {
 			teamAvatarGuidList = append(teamAvatarGuidList, player.AvatarMap[avatarId].Guid)
 		}
 		avatarDataNotify.AvatarTeamMap[uint32(teamIndex)+1] = &proto.AvatarTeam{
@@ -375,7 +372,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.WearWeapon(mainCharAvatarId, weaponId)
 
 	player.TeamConfig = model.NewTeamInfo()
-	player.TeamConfig.AddAvatarToTeam(mainCharAvatarId, 0)
+	player.TeamConfig.SetTeamAvatar(0, []uint32{mainCharAvatarId})
 
 	return player
 }

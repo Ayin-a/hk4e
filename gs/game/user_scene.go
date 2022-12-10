@@ -58,7 +58,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 				NameCardId:          worldPlayer.NameCard,
 				Signature:           worldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
-				CurPlayerNumInWorld: uint32(len(world.playerMap)),
+				CurPlayerNumInWorld: uint32(world.GetWorldPlayerNum()),
 			}
 			worldPlayerInfoNotify.PlayerInfoList = append(worldPlayerInfoNotify.PlayerInfoList, onlinePlayerInfo)
 			worldPlayerInfoNotify.PlayerUidList = append(worldPlayerInfoNotify.PlayerUidList, worldPlayer.PlayerID)
@@ -116,7 +116,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 		g.SendMsg(cmd.PlayerGameTimeNotify, player.PlayerID, player.ClientSeq, playerGameTimeNotify)
 
 		empty := new(proto.AbilitySyncStateInfo)
-		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+		activeAvatarId := world.GetPlayerActiveAvatarId(player)
 		playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 		playerEnterSceneInfoNotify := &proto.PlayerEnterSceneInfoNotify{
 			CurAvatarEntityId: playerTeamEntity.avatarEntityMap[activeAvatarId],
@@ -133,11 +133,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			},
 			AvatarEnterInfo: make([]*proto.AvatarEnterSceneInfo, 0),
 		}
-		activeTeam := player.TeamConfig.GetActiveTeam()
-		for _, avatarId := range activeTeam.AvatarIdList {
-			if avatarId == 0 {
-				break
-			}
+		for _, avatarId := range world.GetPlayerAvatarIdList(player) {
 			avatar := player.AvatarMap[avatarId]
 			avatarEnterSceneInfo := &proto.AvatarEnterSceneInfo{
 				AvatarGuid:        avatar.Guid,
@@ -170,7 +166,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			NameCardId:          worldPlayer.NameCard,
 			Signature:           worldPlayer.Signature,
 			ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
-			CurPlayerNumInWorld: uint32(len(world.playerMap)),
+			CurPlayerNumInWorld: uint32(world.GetWorldPlayerNum()),
 		}
 		scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
 			Uid:              worldPlayer.PlayerID,
@@ -182,12 +178,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	}
 	g.SendMsg(cmd.ScenePlayerInfoNotify, player.PlayerID, player.ClientSeq, scenePlayerInfoNotify)
 
-	var sceneTeamUpdateNotify *proto.SceneTeamUpdateNotify = nil
-	if world.multiplayer {
-		sceneTeamUpdateNotify = g.PacketSceneTeamUpdateNotifyMp(world)
-	} else {
-		sceneTeamUpdateNotify = g.PacketSceneTeamUpdateNotify(world)
-	}
+	sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
 	g.SendMsg(cmd.SceneTeamUpdateNotify, player.PlayerID, player.ClientSeq, sceneTeamUpdateNotify)
 
 	syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
@@ -240,7 +231,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	var visionType = proto.VisionType_VISION_TYPE_TRANSPORT
 
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	if world.IsPlayerFirstEnter(player) {
 		visionType = proto.VisionType_VISION_TYPE_BORN
 	}
@@ -463,10 +454,10 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				logger.LOG.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
 				continue
 			}
-			if entity.avatarEntity.avatarId != scenePlayer.TeamConfig.GetActiveAvatarId() {
+			if entity.avatarEntity.avatarId != world.GetPlayerActiveAvatarId(scenePlayer) {
 				continue
 			}
-			sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, scenePlayer.TeamConfig.GetActiveAvatarId())
+			sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, world.GetPlayerActiveAvatarId(scenePlayer))
 			entityList = append(entityList, sceneEntityInfoAvatar)
 		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_WEAPON):
 		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER):
@@ -707,9 +698,9 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 		BornTime:          uint32(player.AvatarMap[avatarId].BornTime),
 		TeamResonanceList: make([]uint32, 0),
 	}
-	for id := range player.TeamConfig.TeamResonances {
-		sceneAvatarInfo.TeamResonanceList = append(sceneAvatarInfo.TeamResonanceList, uint32(id))
-	}
+	//for id := range player.TeamConfig.TeamResonances {
+	//	sceneAvatarInfo.TeamResonanceList = append(sceneAvatarInfo.TeamResonanceList, uint32(id))
+	//}
 	return sceneAvatarInfo
 }
 

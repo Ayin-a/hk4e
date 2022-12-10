@@ -49,6 +49,7 @@ func (g *GameManager) SetPlayerBirthdayReq(player *model.Player, payloadMsg pb.M
 	logger.LOG.Debug("user set birthday, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerBirthdayReq)
 	_ = req
+	g.CommonRetError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
 }
 
 func (g *GameManager) SetNameCardReq(player *model.Player, payloadMsg pb.Message) {
@@ -336,7 +337,7 @@ func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.Online
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world != nil && world.playerMap != nil {
-		onlinePlayerInfo.CurPlayerNumInWorld = uint32(len(world.playerMap))
+		onlinePlayerInfo.CurPlayerNumInWorld = uint32(world.GetWorldPlayerNum())
 	}
 	return onlinePlayerInfo
 }

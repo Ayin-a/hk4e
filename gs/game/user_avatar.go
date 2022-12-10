@@ -89,7 +89,6 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	team := player.TeamConfig.GetActiveTeam()
 
 	if weapon.AvatarId != 0 {
 		// 武器在别的角色身上
@@ -105,10 +104,7 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 		weakAvatar := player.AvatarMap[weakAvatarId]
 		weakWeapon := player.WeaponMap[weakAvatar.EquipWeapon.WeaponId]
 
-		for _, aid := range team.AvatarIdList {
-			if aid == 0 {
-				break
-			}
+		for _, aid := range world.GetPlayerAvatarIdList(player) {
 			if aid == weakAvatar.AvatarId {
 				playerTeamEntity.weaponEntityMap[weakWeapon.WeaponId] = scene.CreateEntityWeapon()
 			}
@@ -125,10 +121,7 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 		player.WearWeapon(avatarId, weaponId)
 	}
 
-	for _, aid := range team.AvatarIdList {
-		if aid == 0 {
-			break
-		}
+	for _, aid := range world.GetPlayerAvatarIdList(player) {
 		if aid == avatarId {
 			playerTeamEntity.weaponEntityMap[weaponId] = scene.CreateEntityWeapon()
 		}

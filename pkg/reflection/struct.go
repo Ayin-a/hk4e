@@ -25,3 +25,25 @@ func ConvStructToMap(value any) map[string]any {
 	}
 	return result
 }
+
+func SetStructFieldValue(structPointer any, fieldName string, value any) bool {
+	refType := reflect.TypeOf(structPointer)
+	if refType.Kind() != reflect.Ptr {
+		return false
+	}
+	refType = refType.Elem()
+	if refType.Kind() != reflect.Struct {
+		return false
+	}
+	refValue := reflect.ValueOf(structPointer)
+	if refValue.Kind() != reflect.Ptr {
+		return false
+	}
+	refValue = refValue.Elem()
+	field := refValue.FieldByName(fieldName)
+	if field.Type() != reflect.TypeOf(value) {
+		return false
+	}
+	field.Set(reflect.ValueOf(value))
+	return true
+}

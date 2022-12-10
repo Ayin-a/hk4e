@@ -10,6 +10,17 @@ type Team struct {
 	AvatarIdList []uint32 `bson:"avatarIdList"`
 }
 
+func (t *Team) GetAvatarIdList() []uint32 {
+	avatarIdList := make([]uint32, 0)
+	for _, avatarId := range t.AvatarIdList {
+		if avatarId == 0 {
+			continue
+		}
+		avatarIdList = append(avatarIdList, avatarId)
+	}
+	return avatarIdList
+}
+
 type TeamInfo struct {
 	TeamList             []*Team         `bson:"teamList"`
 	CurrTeamIndex        uint8           `bson:"currTeamIndex"`
@@ -39,10 +50,7 @@ func (t *TeamInfo) UpdateTeam() {
 	t.TeamResonancesConfig = make(map[int32]bool)
 	teamElementTypeCountMap := make(map[uint16]uint8)
 	avatarSkillDepotDataMapConfig := gdc.CONF.AvatarSkillDepotDataMap
-	for _, avatarId := range activeTeam.AvatarIdList {
-		if avatarId == 0 {
-			break
-		}
+	for _, avatarId := range activeTeam.GetAvatarIdList() {
 		skillData := avatarSkillDepotDataMapConfig[int32(avatarId)]
 		if skillData != nil {
 			teamElementTypeCountMap[skillData.ElementType.Value] += 1
@@ -90,26 +98,10 @@ func (t *TeamInfo) ClearTeamAvatar(teamIndex uint8) {
 	team.AvatarIdList = make([]uint32, 4)
 }
 
-func (t *TeamInfo) AddAvatarToTeam(avatarId uint32, teamIndex uint8) {
+func (t *TeamInfo) SetTeamAvatar(teamIndex uint8, avatarIdList []uint32) {
 	team := t.GetTeamByIndex(teamIndex)
 	if team == nil {
 		return
 	}
-	for i, v := range team.AvatarIdList {
-		if v == 0 {
-			team.AvatarIdList[i] = avatarId
-			break
-		}
-	}
-}
-
-func (t *TeamInfo) GetActiveAvatarId() uint32 {
-	activeTeam := t.GetActiveTeam()
-	if activeTeam == nil {
-		return 0
-	}
-	if t.CurrAvatarIndex >= uint8(len(activeTeam.AvatarIdList)) {
-		return 0
-	}
-	return activeTeam.AvatarIdList[t.CurrAvatarIndex]
+	team.AvatarIdList = avatarIdList
 }

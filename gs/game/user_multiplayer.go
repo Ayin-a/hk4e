@@ -269,7 +269,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	// 仅仅把当前的场上角色的实体消失掉
 	scene := world.GetSceneById(hostPlayer.SceneId)
 	playerTeamEntity := scene.GetPlayerTeamEntity(hostPlayer.PlayerID)
-	activeAvatarId := hostPlayer.TeamConfig.GetActiveAvatarId()
+	activeAvatarId := world.GetPlayerActiveAvatarId(hostPlayer)
 	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_TYPE_MISS, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
 }
 
@@ -295,7 +295,7 @@ func (g *GameManager) UserWorldAddPlayer(world *World, player *model.Player) {
 	}
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
-	if len(world.playerMap) > 1 {
+	if world.GetWorldPlayerNum() > 1 {
 		g.UpdateWorldPlayerInfo(world, player)
 	}
 }
@@ -316,7 +316,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	// 仅仅把当前的场上角色的实体消失掉
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
 
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
@@ -328,14 +328,14 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 		}
 		g.SendMsg(cmd.PlayerQuitFromMpNotify, player.PlayerID, player.ClientSeq, playerQuitFromMpNotify)
 
-		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+		activeAvatarId := world.GetPlayerActiveAvatarId(player)
 		playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 		g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
 	}
 
 	world.RemovePlayer(player)
 	player.WorldId = 0
-	if world.multiplayer && len(world.playerMap) > 0 {
+	if world.multiplayer && world.GetWorldPlayerNum() > 0 {
 		g.UpdateWorldPlayerInfo(world, player)
 	}
 	if world.owner.PlayerID == player.PlayerID {
@@ -370,7 +370,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 				NameCardId:          subWorldPlayer.NameCard,
 				Signature:           subWorldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: subWorldPlayer.HeadImage},
-				CurPlayerNumInWorld: uint32(len(hostWorld.playerMap)),
+				CurPlayerNumInWorld: uint32(hostWorld.GetWorldPlayerNum()),
 			}
 
 			worldPlayerInfoNotify.PlayerInfoList = append(worldPlayerInfoNotify.PlayerInfoList, onlinePlayerInfo)
@@ -395,7 +395,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 				NameCardId:          worldPlayer.NameCard,
 				Signature:           worldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
-				CurPlayerNumInWorld: uint32(len(hostWorld.playerMap)),
+				CurPlayerNumInWorld: uint32(hostWorld.GetWorldPlayerNum()),
 			}
 			scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
 				Uid:              worldPlayer.PlayerID,
@@ -407,7 +407,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		}
 		g.SendMsg(cmd.ScenePlayerInfoNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, scenePlayerInfoNotify)
 
-		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotifyMp(hostWorld)
+		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(hostWorld)
 		g.SendMsg(cmd.SceneTeamUpdateNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTeamUpdateNotify)
 
 		syncTeamEntityNotify := &proto.SyncTeamEntityNotify{

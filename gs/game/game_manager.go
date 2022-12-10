@@ -5,8 +5,10 @@ import (
 	"hk4e/gate/entity/gm"
 	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
+	"hk4e/gs/model"
 	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )
@@ -35,7 +37,7 @@ func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput cha
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()
-	USER_MANAGER = NewUserManager(dao, LOCAL_EVENT_MANAGER.localEventChan)
+	USER_MANAGER = NewUserManager(dao)
 	WORLD_MANAGER = NewWorldManager(r.snowflake)
 	TICK_MANAGER = NewTickManager()
 	COMMAND_MANAGER = NewCommandManager()
@@ -90,6 +92,27 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 	}
 	netMsg.PayloadMessageData = payloadMessageData
 	g.netMsgInput <- netMsg
+}
+
+// CommonRetError 通用返回错误码
+func (g *GameManager) CommonRetError(cmdId uint16, player *model.Player, rsp pb.Message, retCode ...proto.Retcode) {
+	if rsp == nil {
+		return
+	}
+	ret := int32(proto.Retcode_RET_FAIL)
+	if len(retCode) == 0 {
+		ret = int32(proto.Retcode_RET_SVR_ERROR)
+	} else if len(retCode) == 1 {
+		ret = int32(retCode[0])
+	} else {
+		return
+	}
+	ok := reflection.SetStructFieldValue(rsp, "Retcode", ret)
+	if !ok {
+		return
+	}
+	logger.LOG.Debug("send common error: %v", rsp)
+	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 
 func (g *GameManager) ReconnectPlayer(userId uint32) {

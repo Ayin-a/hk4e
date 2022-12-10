@@ -27,7 +27,12 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 		} else if req.Rot.X > 270 && req.Rot.X < 360 {
 			angleRevise = int32(req.Rot.X - 360.0)
 		} else {
-			logger.LOG.Error("invalid rot x angle: %v", req.Rot.X)
+			logger.LOG.Error("invalid rot x angle: %v, uid: %v", req.Rot.X, player.PlayerID)
+			sceneAvatarStaminaStepRsp := &proto.SceneAvatarStaminaStepRsp{
+				Retcode: int32(proto.Retcode_RET_FAIL),
+			}
+			g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
+			return
 		}
 		// 攀爬耐力修正曲线
 		// angle >= 0 cost = -x + 10
@@ -49,12 +54,6 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 
 	// PacketSceneAvatarStaminaStepRsp
 	sceneAvatarStaminaStepRsp := new(proto.SceneAvatarStaminaStepRsp)
-	// 角度超过范围返回值为错误
-	if (req.Rot.X >= 0 && req.Rot.X < 90) || (req.Rot.X > 270 && req.Rot.X < 360) {
-		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RET_SUCC)
-	} else {
-		sceneAvatarStaminaStepRsp.Retcode = int32(proto.Retcode_RET_FAIL)
-	}
 	sceneAvatarStaminaStepRsp.UseClientRot = true
 	sceneAvatarStaminaStepRsp.Rot = req.Rot
 	g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
@@ -62,6 +61,10 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 
 // HandleStamina 处理即时耐力消耗
 func (g *GameManager) HandleStamina(player *model.Player, motionState proto.MotionState) {
+	// 玩家暂停状态不更新耐力
+	if player.Pause {
+		return
+	}
 	staminaInfo := player.StaminaInfo
 	//logger.LOG.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
 
@@ -129,6 +132,10 @@ func (g *GameManager) HandleSkillStartStamina(player *model.Player, skillId uint
 
 // StaminaHandler 处理持续耐力消耗
 func (g *GameManager) StaminaHandler(player *model.Player) {
+	// 玩家暂停状态不更新耐力
+	if player.Pause {
+		return
+	}
 	staminaInfo := player.StaminaInfo
 
 	// 添加的耐力大于0为恢复
@@ -222,12 +229,13 @@ func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 // SetStamina 设置玩家的耐力
 func (g *GameManager) SetStamina(player *model.Player, stamina uint32) {
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
+	// 设置玩家的耐力prop
+	player.PropertiesMap[prop] = stamina
+	//logger.LOG.Debug("player curr stamina: %v", stamina)
 	// 当前无变动不要频繁发包
 	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA] == player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA] {
 		return
 	}
-	// 设置玩家的耐力prop
-	player.PropertiesMap[prop] = stamina
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

@@ -43,9 +43,9 @@ func (i *InvokeHandler[T]) AddEntry(forward proto.ForwardType, entry *T) {
 		i.EntryListForwardHost = append(i.EntryListForwardHost, entry)
 	case proto.ForwardType_FORWARD_TYPE_ONLY_SERVER:
 		i.EntryListForwardServer = append(i.EntryListForwardServer, entry)
-		logger.LOG.Error("fwd server entry: %v", entry)
+		//logger.LOG.Error("forward server entry: %v", entry)
 	default:
-		logger.LOG.Error("forward: %v, entry: %v", forward, entry)
+		logger.LOG.Error("forward type: %v, entry: %v", forward, entry)
 	}
 }
 

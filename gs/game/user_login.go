@@ -284,9 +284,10 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player := new(model.Player)
 	player.PlayerID = userId
 	player.NickName = nickName
-	player.Signature = "惟愿时光记忆，一路繁花千树。"
+	player.Signature = ""
 	player.MainCharAvatarId = mainCharAvatarId
 	player.HeadImage = mainCharAvatarId
+	player.Birthday = [2]uint8{0, 0}
 	player.NameCard = 210001
 	player.NameCardList = make([]uint32, 0)
 	player.NameCardList = append(player.NameCardList, 210001, 210042)

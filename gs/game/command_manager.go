@@ -46,12 +46,11 @@ type CommandManager struct {
 func NewCommandManager() *CommandManager {
 	r := new(CommandManager)
 
-	// 创建一个公共的开放世界的AI
+	// 创建AI世界
 	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0)
 	r.system = USER_MANAGER.GetOnlineUser(1)
-	// 开放大世界
-	r.system.SceneLoadState = model.SceneEnterDone
 	r.system.DbState = model.DbNormal
+	r.system.SceneLoadState = model.SceneEnterDone
 	WORLD_MANAGER.InitBigWorld(r.system)
 
 	// 初始化

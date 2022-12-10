@@ -1,7 +1,6 @@
 package game
 
 import (
-	"sync"
 	"time"
 
 	"hk4e/gs/dao"
@@ -10,16 +9,22 @@ import (
 	"hk4e/protocol/proto"
 )
 
+type SaveUserData struct {
+	insertPlayerList []*model.Player
+	updatePlayerList []*model.Player
+}
+
 type UserManager struct {
-	dao           *dao.Dao
-	playerMap     map[uint32]*model.Player
-	playerMapLock sync.RWMutex
+	dao          *dao.Dao
+	playerMap    map[uint32]*model.Player
+	saveUserChan chan *SaveUserData
 }
 
 func NewUserManager(dao *dao.Dao) (r *UserManager) {
 	r = new(UserManager)
 	r.dao = dao
 	r.playerMap = make(map[uint32]*model.Player)
+	r.saveUserChan = make(chan *SaveUserData)
 	return r
 }
 
@@ -97,6 +102,7 @@ func (u *UserManager) LoadTempOfflineUserSync(userId uint32) *model.Player {
 		if player == nil {
 			return nil
 		}
+		u.ChangeUserDbState(player, model.DbDelete)
 		u.playerMap[player.PlayerID] = player
 		return player
 	}
@@ -141,12 +147,11 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32) (*model.Player
 	} else {
 		go func() {
 			player = u.loadUserFromDb(userId)
-			if player != nil {
-				player.DbState = model.DbNormal
-				u.playerMapLock.Lock()
-				u.playerMap[player.PlayerID] = player
-				u.playerMapLock.Unlock()
+			if player == nil {
+				logger.LOG.Error("can not find user from db, uid: %v", userId)
+				return
 			}
+			u.ChangeUserDbState(player, model.DbNormal)
 			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 				EventId: LoadLoginUserFromDbFinish,
 				Msg: &PlayerLoginInfo{
@@ -165,70 +170,64 @@ func (u *UserManager) ChangeUserDbState(player *model.Player, state int) {
 		return
 	}
 	switch player.DbState {
+	case model.DbNone:
+		if state == model.DbInsert {
+			player.DbState = model.DbInsert
+		} else if state == model.DbDelete {
+			player.DbState = model.DbDelete
+		} else if state == model.DbNormal {
+			player.DbState = model.DbNormal
+		} else {
+			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
+		}
 	case model.DbInsert:
+		logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		break
 	case model.DbDelete:
 		if state == model.DbNormal {
 			player.DbState = model.DbNormal
+		} else {
+			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		}
 	case model.DbNormal:
 		if state == model.DbDelete {
 			player.DbState = model.DbDelete
+		} else {
+			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		}
 	}
 }
 
-// 用户数据库定时同步协程
+// 用户数据库定时同步
 
 func (u *UserManager) StartAutoSaveUser() {
 	go func() {
 		ticker := time.NewTicker(time.Minute * 5)
 		for {
-			u.SaveUser()
+			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+				EventId: RunUserCopyAndSave,
+			}
 			<-ticker.C
+		}
+	}()
+	go func() {
+		for {
+			saveUserData := <-u.saveUserChan
+			u.SaveUser(saveUserData)
 		}
 	}()
 }
 
-func (u *UserManager) SaveUser() {
-	playerMapSave := make(map[uint32]*model.Player, len(u.playerMap))
-	u.playerMapLock.RLock()
-	for k, v := range u.playerMap {
-		playerMapSave[k] = v
-	}
-	u.playerMapLock.RUnlock()
-	insertList := make([]*model.Player, 0)
-	updateList := make([]*model.Player, 0)
-	for uid, player := range playerMapSave {
-		if uid < 100000000 {
-			continue
-		}
-		switch player.DbState {
-		case model.DbInsert:
-			insertList = append(insertList, player)
-			playerMapSave[uid].DbState = model.DbNormal
-		case model.DbDelete:
-			updateList = append(updateList, player)
-			delete(playerMapSave, uid)
-		case model.DbNormal:
-			updateList = append(updateList, player)
-		}
-		if !player.Online {
-			delete(playerMapSave, uid)
-		}
-	}
-	err := u.dao.InsertPlayerList(insertList)
+func (u *UserManager) SaveUser(saveUserData *SaveUserData) {
+	err := u.dao.InsertPlayerList(saveUserData.insertPlayerList)
 	if err != nil {
 		logger.LOG.Error("insert player list error: %v", err)
 		return
 	}
-	err = u.dao.UpdatePlayerList(updateList)
+	err = u.dao.UpdatePlayerList(saveUserData.updatePlayerList)
 	if err != nil {
 		logger.LOG.Error("update player list error: %v", err)
 		return
 	}
-	u.playerMapLock.Lock()
-	u.playerMap = playerMapSave
-	u.playerMapLock.Unlock()
-	logger.LOG.Info("save user finish, insert user count: %v, update user count: %v", len(insertList), len(updateList))
+	logger.LOG.Info("save user finish, insert user count: %v, update user count: %v", len(saveUserData.insertPlayerList), len(saveUserData.updatePlayerList))
 }

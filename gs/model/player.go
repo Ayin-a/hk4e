@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	DbNormal = iota
+	DbNone = iota
 	DbInsert
 	DbDelete
+	DbNormal
 )
 
 const (
@@ -27,6 +28,7 @@ type Player struct {
 	NickName         string                `bson:"nickname"`         // 玩家昵称
 	Signature        string                `bson:"signature"`        // 玩家签名
 	HeadImage        uint32                `bson:"headImage"`        // 玩家头像
+	Birthday         [2]uint8              `bson:"birthday"`         // 生日
 	NameCard         uint32                `bson:"nameCard"`         // 当前名片
 	NameCardList     []uint32              `bson:"nameCardList"`     // 已解锁名片列表
 	FriendList       map[uint32]bool       `bson:"friendList"`       // 好友uid列表

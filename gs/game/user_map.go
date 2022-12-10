@@ -20,10 +20,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	transPointId := strconv.Itoa(int(req.SceneId)) + "_" + strconv.Itoa(int(req.PointId))
 	transPointConfig, exist := gdc.CONF.ScenePointEntries[transPointId]
 	if !exist {
-		sceneTransToPointRsp := &proto.SceneTransToPointRsp{
-			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
-		}
-		g.SendMsg(cmd.SceneTransToPointRsp, player.PlayerID, player.ClientSeq, sceneTransToPointRsp)
+		g.CommonRetError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
 		return
 	}
 

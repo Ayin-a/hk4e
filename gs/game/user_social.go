@@ -20,27 +20,28 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 	req := payloadMsg.(*proto.GetPlayerSocialDetailReq)
 	targetUid := req.Uid
 
-	getPlayerSocialDetailRsp := new(proto.GetPlayerSocialDetailRsp)
 	// TODO 同步阻塞待优化
 	targetPlayer := USER_MANAGER.LoadTempOfflineUserSync(targetUid)
-	if targetPlayer != nil {
-		_, exist := player.FriendList[targetPlayer.PlayerID]
-		socialDetail := &proto.SocialDetail{
-			Uid:                  targetPlayer.PlayerID,
-			ProfilePicture:       &proto.ProfilePicture{AvatarId: targetPlayer.HeadImage},
-			Nickname:             targetPlayer.NickName,
-			Signature:            targetPlayer.Signature,
-			Level:                targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-			Birthday:             &proto.Birthday{Month: 2, Day: 13},
-			WorldLevel:           targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
-			NameCardId:           targetPlayer.NameCard,
-			IsShowAvatar:         false,
-			FinishAchievementNum: 0,
-			IsFriend:             exist,
-		}
-		getPlayerSocialDetailRsp.DetailData = socialDetail
-	} else {
-		getPlayerSocialDetailRsp.Retcode = int32(proto.Retcode_RET_PLAYER_NOT_EXIST)
+	if targetPlayer == nil {
+		g.CommonRetError(cmd.GetPlayerSocialDetailRsp, player, &proto.GetPlayerSocialDetailRsp{}, proto.Retcode_RET_PLAYER_NOT_EXIST)
+		return
+	}
+	_, exist := player.FriendList[targetPlayer.PlayerID]
+	socialDetail := &proto.SocialDetail{
+		Uid:                  targetPlayer.PlayerID,
+		ProfilePicture:       &proto.ProfilePicture{AvatarId: targetPlayer.HeadImage},
+		Nickname:             targetPlayer.NickName,
+		Signature:            targetPlayer.Signature,
+		Level:                targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
+		Birthday:             &proto.Birthday{Month: uint32(targetPlayer.Birthday[0]), Day: uint32(targetPlayer.Birthday[1])},
+		WorldLevel:           targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
+		NameCardId:           targetPlayer.NameCard,
+		IsShowAvatar:         false,
+		FinishAchievementNum: 0,
+		IsFriend:             exist,
+	}
+	getPlayerSocialDetailRsp := &proto.GetPlayerSocialDetailRsp{
+		DetailData: socialDetail,
 	}
 	g.SendMsg(cmd.GetPlayerSocialDetailRsp, player.PlayerID, player.ClientSeq, getPlayerSocialDetailRsp)
 }
@@ -48,8 +49,18 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 func (g *GameManager) SetPlayerBirthdayReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user set birthday, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerBirthdayReq)
-	_ = req
-	g.CommonRetError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
+	if player.Birthday[0] != 0 || player.Birthday[1] != 0 {
+		g.CommonRetError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
+		return
+	}
+	birthday := req.Birthday
+	player.Birthday[0] = uint8(birthday.Month)
+	player.Birthday[1] = uint8(birthday.Day)
+
+	setPlayerBirthdayRsp := &proto.SetPlayerBirthdayRsp{
+		Birthday: req.Birthday,
+	}
+	g.SendMsg(cmd.SetPlayerBirthdayRsp, player.PlayerID, player.ClientSeq, setPlayerBirthdayRsp)
 }
 
 func (g *GameManager) SetNameCardReq(player *model.Player, payloadMsg pb.Message) {
@@ -325,6 +336,7 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.OnlinePlayerInfo {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	onlinePlayerInfo := &proto.OnlinePlayerInfo{
 		Uid:                 player.PlayerID,
 		Nickname:            player.NickName,
@@ -333,11 +345,7 @@ func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.Online
 		NameCardId:          player.NameCard,
 		Signature:           player.Signature,
 		ProfilePicture:      &proto.ProfilePicture{AvatarId: player.HeadImage},
-		CurPlayerNumInWorld: 1,
-	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world != nil && world.playerMap != nil {
-		onlinePlayerInfo.CurPlayerNumInWorld = uint32(world.GetWorldPlayerNum())
+		CurPlayerNumInWorld: uint32(world.GetWorldPlayerNum()),
 	}
 	return onlinePlayerInfo
 }

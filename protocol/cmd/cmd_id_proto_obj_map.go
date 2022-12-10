@@ -95,6 +95,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(ToTheMoonEnterSceneRsp, &proto.ToTheMoonEnterSceneRsp{})                 // 进入场景响应
 	c.registerMessage(SetEntityClientDataNotify, &proto.SetEntityClientDataNotify{})           // 通知
 	c.registerMessage(LeaveWorldNotify, &proto.LeaveWorldNotify{})                             // 删除客户端世界通知
+	c.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{})           // 缓慢游泳或缓慢攀爬时消耗耐力请求
+	c.registerMessage(SceneAvatarStaminaStepRsp, &proto.SceneAvatarStaminaStepRsp{})           // 缓慢游泳或缓慢攀爬时消耗耐力响应
 
 	// 战斗与技能
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
@@ -221,10 +223,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(BuyGoodsRsp, &proto.BuyGoodsRsp{})                     // 商店货物购买响应
 	c.registerMessage(McoinExchangeHcoinReq, &proto.McoinExchangeHcoinReq{}) // 结晶换原石请求
 	c.registerMessage(McoinExchangeHcoinRsp, &proto.McoinExchangeHcoinRsp{}) // 结晶换原石响应
-
-	// 耐力
-	c.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{}) // 缓慢游泳或缓慢攀爬时消耗耐力请求
-	c.registerMessage(SceneAvatarStaminaStepRsp, &proto.SceneAvatarStaminaStepRsp{}) // 缓慢游泳或缓慢攀爬时消耗耐力响应
 
 	// 乱七八糟
 	c.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求

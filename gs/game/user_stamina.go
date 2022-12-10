@@ -28,10 +28,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 			angleRevise = int32(req.Rot.X - 360.0)
 		} else {
 			logger.LOG.Error("invalid rot x angle: %v, uid: %v", req.Rot.X, player.PlayerID)
-			sceneAvatarStaminaStepRsp := &proto.SceneAvatarStaminaStepRsp{
-				Retcode: int32(proto.Retcode_RET_FAIL),
-			}
-			g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
+			g.CommonRetError(cmd.SceneAvatarStaminaStepRsp, player, &proto.SceneAvatarStaminaStepRsp{})
 			return
 		}
 		// 攀爬耐力修正曲线

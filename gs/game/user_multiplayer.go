@@ -52,21 +52,19 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 
 func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user get world exit ban info, uid: %v", player.PlayerID)
-	result := true
+	ok := true
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	for _, worldPlayer := range world.playerMap {
 		if worldPlayer.SceneLoadState != model.SceneEnterDone {
-			result = false
+			ok = false
 		}
 	}
 
-	playerGetForceQuitBanInfoRsp := new(proto.PlayerGetForceQuitBanInfoRsp)
-	if result {
-		playerGetForceQuitBanInfoRsp.Retcode = int32(proto.Retcode_RET_SUCC)
-	} else {
-		playerGetForceQuitBanInfoRsp.Retcode = int32(proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+	if !ok {
+		g.CommonRetError(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		return
 	}
-	g.SendMsg(cmd.PlayerGetForceQuitBanInfoRsp, player.PlayerID, player.ClientSeq, playerGetForceQuitBanInfoRsp)
+	g.CommonRetSucc(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{})
 }
 
 func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
@@ -74,13 +72,11 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 	// 其他玩家
 	ok := g.UserLeaveWorld(player)
 
-	backMyWorldRsp := new(proto.BackMyWorldRsp)
-	if ok {
-		backMyWorldRsp.Retcode = int32(proto.Retcode_RET_SUCC)
-	} else {
-		backMyWorldRsp.Retcode = int32(proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+	if !ok {
+		g.CommonRetError(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		return
 	}
-	g.SendMsg(cmd.BackMyWorldRsp, player.PlayerID, player.ClientSeq, backMyWorldRsp)
+	g.CommonRetSucc(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{})
 }
 
 func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
@@ -88,13 +84,11 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 	// 房主
 	ok := g.UserLeaveWorld(player)
 
-	changeWorldToSingleModeRsp := new(proto.ChangeWorldToSingleModeRsp)
-	if ok {
-		changeWorldToSingleModeRsp.Retcode = int32(proto.Retcode_RET_SUCC)
-	} else {
-		changeWorldToSingleModeRsp.Retcode = int32(proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+	if !ok {
+		g.CommonRetError(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		return
 	}
-	g.SendMsg(cmd.ChangeWorldToSingleModeRsp, player.PlayerID, player.ClientSeq, changeWorldToSingleModeRsp)
+	g.CommonRetSucc(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{})
 }
 
 func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
@@ -102,30 +96,27 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if player.PlayerID != world.owner.PlayerID {
-		sceneKickPlayerRsp := &proto.SceneKickPlayerRsp{
-			Retcode: int32(proto.Retcode_RET_SVR_ERROR),
-		}
-		g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
+		g.CommonRetError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{})
 		return
 	}
 	targetUid := req.TargetUid
 	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
 	ok := g.UserLeaveWorld(targetPlayer)
-	if ok {
-		sceneKickPlayerNotify := &proto.SceneKickPlayerNotify{
-			TargetUid: targetUid,
-			KickerUid: player.PlayerID,
-		}
-		for _, worldPlayer := range world.playerMap {
-			g.SendMsg(cmd.SceneKickPlayerNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneKickPlayerNotify)
-		}
+	if !ok {
+		g.CommonRetError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		return
 	}
 
-	sceneKickPlayerRsp := new(proto.SceneKickPlayerRsp)
-	if ok {
-		sceneKickPlayerRsp.TargetUid = targetUid
-	} else {
-		sceneKickPlayerRsp.Retcode = int32(proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+	sceneKickPlayerNotify := &proto.SceneKickPlayerNotify{
+		TargetUid: targetUid,
+		KickerUid: player.PlayerID,
+	}
+	for _, worldPlayer := range world.playerMap {
+		g.SendMsg(cmd.SceneKickPlayerNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneKickPlayerNotify)
+	}
+
+	sceneKickPlayerRsp := &proto.SceneKickPlayerRsp{
+		TargetUid: targetUid,
 	}
 	g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
 }

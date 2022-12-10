@@ -11,6 +11,7 @@ import (
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+	"time"
 )
 
 var GAME_MANAGER *GameManager = nil
@@ -69,8 +70,10 @@ func (g *GameManager) Start() {
 
 func (g *GameManager) Stop() {
 	// 保存玩家数据
-	USER_MANAGER.SaveUser()
-
+	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+		EventId: RunUserCopyAndSave,
+	}
+	time.Sleep(time.Second * 5)
 	//g.worldManager.worldStatic.SaveTerrain()
 }
 
@@ -112,6 +115,18 @@ func (g *GameManager) CommonRetError(cmdId uint16, player *model.Player, rsp pb.
 		return
 	}
 	logger.LOG.Debug("send common error: %v", rsp)
+	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
+}
+
+// CommonRetSucc 通用返回成功
+func (g *GameManager) CommonRetSucc(cmdId uint16, player *model.Player, rsp pb.Message) {
+	if rsp == nil {
+		return
+	}
+	ok := reflection.SetStructFieldValue(rsp, "Retcode", int32(proto.Retcode_RET_SUCC))
+	if !ok {
+		return
+	}
 	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 

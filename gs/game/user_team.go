@@ -16,11 +16,9 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	logger.LOG.Debug("user change avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeAvatarReq)
 	targetAvatarGuid := req.Guid
-
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-
 	oldAvatarId := world.GetPlayerActiveAvatarId(player)
 	oldAvatar := player.AvatarMap[oldAvatarId]
 	if oldAvatar.Guid == targetAvatarGuid {
@@ -37,9 +35,11 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 		logger.LOG.Error("can not find the target avatar in team, uid: %v, target avatar guid: %v", player.PlayerID, targetAvatarGuid)
 		return
 	}
-	player.TeamConfig.CurrAvatarIndex = uint8(index)
-	world.SetPlayerLocalAvatarIndex(player, index)
-
+	if world.multiplayer {
+		world.SetPlayerLocalAvatarIndex(player, index)
+	} else {
+		player.TeamConfig.CurrAvatarIndex = uint8(index)
+	}
 	entity := scene.GetEntity(playerTeamEntity.avatarEntityMap[oldAvatarId])
 	if entity == nil {
 		return
@@ -178,13 +178,11 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	logger.LOG.Debug("user change mp team avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeMpTeamAvatarReq)
 	avatarGuidList := req.AvatarGuidList
-
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if !world.multiplayer || len(avatarGuidList) == 0 || len(avatarGuidList) > 4 {
 		g.CommonRetError(cmd.ChangeMpTeamAvatarRsp, player, &proto.ChangeMpTeamAvatarRsp{})
 		return
 	}
-
 	avatarIdList := make([]uint32, 0)
 	for _, avatarGuid := range avatarGuidList {
 		avatarId := player.GetAvatarIdByGuid(avatarGuid)
@@ -192,7 +190,6 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	}
 	world.SetPlayerLocalTeam(player, avatarIdList)
 	world.SetPlayerLocalAvatarIndex(player, 0)
-
 	world.UpdateMultiplayerTeam()
 	scene := world.GetSceneById(player.SceneId)
 	scene.UpdatePlayerTeamEntity(player)
@@ -204,7 +201,6 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 
 	avatarId := world.GetPlayerActiveAvatarId(player)
 	avatar := player.AvatarMap[avatarId]
-
 	changeMpTeamAvatarRsp := &proto.ChangeMpTeamAvatarRsp{
 		CurAvatarGuid:  avatar.Guid,
 		AvatarGuidList: req.AvatarGuidList,

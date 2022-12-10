@@ -33,7 +33,9 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	switch localEvent.EventId {
 	case LoadLoginUserFromDbFinish:
 		playerLoginInfo := localEvent.Msg.(*PlayerLoginInfo)
-		USER_MANAGER.playerMap[playerLoginInfo.Player.PlayerID] = playerLoginInfo.Player
+		if playerLoginInfo.Player != nil {
+			USER_MANAGER.playerMap[playerLoginInfo.Player.PlayerID] = playerLoginInfo.Player
+		}
 		GAME_MANAGER.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.Player, playerLoginInfo.ClientSeq)
 	case CheckUserExistOnRegFromDbFinish:
 		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)

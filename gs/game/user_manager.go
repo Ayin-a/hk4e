@@ -147,11 +147,11 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32) (*model.Player
 	} else {
 		go func() {
 			player = u.loadUserFromDb(userId)
-			if player == nil {
+			if player != nil {
+				u.ChangeUserDbState(player, model.DbNormal)
+			} else {
 				logger.LOG.Error("can not find user from db, uid: %v", userId)
-				return
 			}
-			u.ChangeUserDbState(player, model.DbNormal)
 			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 				EventId: LoadLoginUserFromDbFinish,
 				Msg: &PlayerLoginInfo{

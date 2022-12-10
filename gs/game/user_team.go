@@ -35,11 +35,10 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 		logger.LOG.Error("can not find the target avatar in team, uid: %v, target avatar guid: %v", player.PlayerID, targetAvatarGuid)
 		return
 	}
-	if world.multiplayer {
-		world.SetPlayerLocalAvatarIndex(player, index)
-	} else {
+	if !world.multiplayer {
 		player.TeamConfig.CurrAvatarIndex = uint8(index)
 	}
+	world.SetPlayerLocalAvatarIndex(player, index)
 	entity := scene.GetEntity(playerTeamEntity.avatarEntityMap[oldAvatarId])
 	if entity == nil {
 		return

@@ -105,3 +105,11 @@ func (t *TeamInfo) SetTeamAvatar(teamIndex uint8, avatarIdList []uint32) {
 	}
 	team.AvatarIdList = avatarIdList
 }
+
+func (t *TeamInfo) GetActiveAvatarId() uint32 {
+	team := t.GetActiveTeam()
+	if team == nil {
+		return 0
+	}
+	return team.AvatarIdList[t.CurrAvatarIndex]
+}

@@ -154,12 +154,13 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 	// 将玩家自身当前的队伍角色信息复制到世界的玩家本地队伍
 	team := player.TeamConfig.GetActiveTeam()
 	if player.PlayerID == w.owner.PlayerID {
-		w.SetPlayerLocalTeam(player, team.AvatarIdList)
-		w.SetPlayerLocalAvatarIndex(player, int(player.TeamConfig.CurrAvatarIndex))
+		w.SetPlayerLocalTeam(player, team.GetAvatarIdList())
 	} else {
-		// 非房主最多复制前两个角色
-		w.SetPlayerLocalTeam(player, team.AvatarIdList[0:2])
-		w.SetPlayerLocalAvatarIndex(player, 0)
+		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+		w.SetPlayerLocalTeam(player, []uint32{activeAvatarId})
+	}
+	for _, worldPlayer := range w.playerMap {
+		w.SetPlayerLocalAvatarIndex(worldPlayer, 0)
 	}
 	w.UpdateMultiplayerTeam()
 	scene := w.GetSceneById(sceneId)

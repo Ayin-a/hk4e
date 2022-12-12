@@ -9,10 +9,11 @@ import (
 // 角色技能配置表
 
 type AvatarSkillData struct {
-	AvatarSkillId int32 `csv:"AvatarSkillId"`          // ID
-	CostStamina   int32 `csv:"CostStamina,omitempty"`  // 消耗体力
-	CostElemType  int32 `csv:"CostElemType,omitempty"` // 消耗能量类型
-	CostElemVal   int32 `csv:"CostElemVal,omitempty"`  // 消耗能量值
+	AvatarSkillId int32  `csv:"AvatarSkillId"`          // ID
+	AbilityName   string `csv:"AbilityName,omitempty"`  // Ability名称
+	CostStamina   int32  `csv:"CostStamina,omitempty"`  // 消耗体力
+	CostElemType  int32  `csv:"CostElemType,omitempty"` // 消耗能量类型
+	CostElemVal   int32  `csv:"CostElemVal,omitempty"`  // 消耗能量值
 }
 
 func (g *GameDataConfig) loadAvatarSkillData() {

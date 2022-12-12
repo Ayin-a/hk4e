@@ -5,30 +5,60 @@ import (
 	"hk4e/gdconf"
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
+	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 	"time"
 )
 
-// HandleAbilityInvoke 处理能力调用
-func (g *GameManager) HandleAbilityInvoke(player *model.Player, entry *proto.AbilityInvokeEntry) {
-	//logger.LOG.Debug("ability invoke handle, entry: %v", entry.ArgumentType)
-
+// HandleAbilityStamina 处理来自ability的耐力消耗
+func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
 	switch entry.ArgumentType {
 	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_MIXIN_COST_STAMINA:
-		// 消耗耐力
-
-		//costStamina := new(proto.AbilityMixinCostStamina)
-		//err := pb.Unmarshal(entry.AbilityData, costStamina)
-		//if err != nil {
-		//	logger.LOG.Error("unmarshal ability data err: %v", err)
-		//	return
-		//}
-
-		// 处理技能持续时的耐力消耗
+		// 大剑重击耐力消耗
+		costStamina := new(proto.AbilityMixinCostStamina)
+		err := pb.Unmarshal(entry.AbilityData, costStamina)
+		if err != nil {
+			logger.LOG.Error("unmarshal ability data err: %v", err)
+			return
+		}
 		g.HandleSkillSustainStamina(player)
-
+	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
+		// 普通角色重击耐力消耗
+		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+		// 获取世界中的角色实体
+		worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
+		if worldAvatar == nil {
+			return
+		}
+		// 查找是不是属于该角色实体的ability id
+		abilityNameHashCode := uint32(0)
+		for _, ability := range worldAvatar.abilityList {
+			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
+				logger.LOG.Error("%v", ability)
+				abilityNameHashCode = ability.AbilityName.GetHash()
+			}
+		}
+		if abilityNameHashCode == 0 {
+			return
+		}
+		// 根据ability name查找到对应的技能表里的技能配置
+		var avatarAbility *gdconf.AvatarSkillData = nil
+		for _, avatarSkillData := range gdconf.CONF.AvatarSkillDataMap {
+			hashCode := endec.Hk4eAbilityHashCode(avatarSkillData.AbilityName)
+			if uint32(hashCode) == abilityNameHashCode {
+				avatarAbility = avatarSkillData
+			}
+		}
+		if avatarAbility == nil {
+			return
+		}
+		// 获取该技能对应的耐力消耗
+		_ = avatarAbility.CostStamina
+		logger.LOG.Error("%v", avatarAbility.CostStamina)
+	default:
+		break
 	}
 }
 
@@ -132,21 +162,21 @@ func (g *GameManager) HandleSkillSustainStamina(player *model.Player) {
 	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
 }
 
-// HandleSkillStartStamina 处理技能开始时即时耐力消耗
-func (g *GameManager) HandleSkillStartStamina(player *model.Player, skillId uint32) {
-	logger.LOG.Error("stamina skill start, skillId: %v", skillId)
-	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
-	if !ok {
-		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
-		return
-	}
-	// 根据配置消耗耐力
-	g.UpdateStamina(player, -avatarSkillConfig.CostStamina*100)
-
-	// 记录最后释放的技能
-	player.StaminaInfo.LastSkillId = skillId
-	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
-}
+//// HandleSkillStartStamina 处理技能开始时即时耐力消耗
+//func (g *GameManager) HandleSkillStartStamina(player *model.Player, skillId uint32) {
+//	logger.LOG.Error("stamina skill start, skillId: %v", skillId)
+//	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
+//	if !ok {
+//		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
+//		return
+//	}
+//	// 根据配置消耗耐力
+//	g.UpdateStamina(player, -avatarSkillConfig.CostStamina*100)
+//
+//	// 记录最后释放的技能
+//	player.StaminaInfo.LastSkillId = skillId
+//	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
+//}
 
 // StaminaHandler 处理持续耐力消耗
 func (g *GameManager) StaminaHandler(player *model.Player) {

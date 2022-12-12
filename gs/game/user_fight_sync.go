@@ -10,8 +10,12 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+var cmdProtoMap *cmd.CmdProtoMap = nil
+
 func DoForward[IET model.InvokeEntryType](player *model.Player, req pb.Message, copyFieldList []string, forwardField string, invokeHandler *model.InvokeHandler[IET]) {
-	cmdProtoMap := cmd.NewCmdProtoMap()
+	if cmdProtoMap == nil {
+		cmdProtoMap = cmd.NewCmdProtoMap()
+	}
 	cmdId := cmdProtoMap.GetCmdIdByProtoObj(req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
@@ -53,6 +57,9 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	//logger.LOG.Debug("user send union cmd, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.UnionCmdNotify)
 	_ = req
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	DoForward[proto.CombatInvokeEntry](player, &proto.CombatInvocationsNotify{}, []string{}, "InvokeList", player.CombatInvokeHandler)
 	DoForward[proto.AbilityInvokeEntry](player, &proto.AbilityInvocationsNotify{}, []string{}, "Invokes", player.AbilityInvokeHandler)
 	player.CombatInvokeHandler.Clear()
@@ -62,6 +69,9 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user meeo sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.MassiveEntityElementOpBatchNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	ntf := req
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -80,12 +90,8 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		return
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		return
-	}
 	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.InvokeList {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
@@ -93,7 +99,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
 			if err != nil {
-				logger.LOG.Error("parse combat invocations entity move info error: %v", err)
+				logger.LOG.Error("parse EntityMoveInfo error: %v", err)
 				continue
 			}
 			motionInfo := entityMoveInfo.MotionInfo
@@ -129,7 +135,6 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			sceneEntity.moveState = uint16(motionInfo.State)
 			sceneEntity.lastMoveSceneTimeMs = entityMoveInfo.SceneTime
 			sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
-			//logger.LOG.Debug("entity move, id: %v, pos: %v, uid: %v", sceneEntity.id, sceneEntity.pos, player.PlayerID)
 
 			// 处理耐力消耗
 			g.HandleStamina(player, motionInfo.State)
@@ -141,7 +146,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if err != nil {
 				logger.LOG.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
 			}
-			logger.LOG.Debug("%v", evtAnimatorStateChangedInfo)
+			logger.LOG.Debug("EvtAnimatorStateChangedInfo: %v", entry, player.PlayerID)
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
@@ -152,13 +157,39 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 
 	for _, entry := range req.Invokes {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
+		//logger.LOG.Debug("AbilityInvocationsNotify: %v", entry, player.PlayerID)
 
-		// 处理能力调用
-		g.HandleAbilityInvoke(player, entry)
+		//switch entry.ArgumentType {
+		//case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
+		//	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+		//	worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
+		//	if worldAvatar != nil {
+		//		for _, ability := range worldAvatar.abilityList {
+		//			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
+		//				logger.LOG.Error("A: %v", ability)
+		//			}
+		//		}
+		//		for _, modifier := range worldAvatar.modifierList {
+		//			if modifier.InstancedAbilityId == entry.Head.InstancedAbilityId {
+		//				logger.LOG.Error("B: %v", modifier)
+		//			}
+		//		}
+		//		for _, modifier := range worldAvatar.modifierList {
+		//			if modifier.InstancedModifierId == entry.Head.InstancedModifierId {
+		//				logger.LOG.Error("C: %v", modifier)
+		//			}
+		//		}
+		//	}
+		//case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_NONE:
+		//}
 
+		// 处理耐力消耗
+		g.HandleAbilityStamina(player, entry)
 		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 }
@@ -166,13 +197,12 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user client ability init finish, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		//logger.LOG.Debug("AT: %v, FT: %v, UID: %v", entry.ArgumentType, entry.ForwardType, player.PlayerID)
-
-		// 处理能力调用
-		g.HandleAbilityInvoke(player, entry)
-
+		logger.LOG.Debug("ClientAbilityInitFinishNotify: %v", entry, player.PlayerID)
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 	DoForward[proto.AbilityInvokeEntry](player, &proto.ClientAbilityInitFinishNotify{}, []string{"EntityId"}, "Invokes", invokeHandler)
@@ -181,8 +211,13 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
 	//logger.LOG.Debug("user client ability change, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
+		logger.LOG.Debug("ClientAbilityChangeNotify: %v", entry, player.PlayerID)
+
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 	DoForward[proto.AbilityInvokeEntry](player, req, []string{"EntityId", "IsInitHash"}, "Invokes", invokeHandler)
@@ -240,15 +275,18 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user event do skill success, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtDoSkillSuccNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtDoSkillSuccNotify: %v", req)
-
-	// 处理技能开始时的耐力消耗
-	g.HandleSkillStartStamina(player, req.SkillId)
 }
 
 func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user avatar enter focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarEnterFocusNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtAvatarEnterFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarEnterFocusNotify, player.ClientSeq, req)
@@ -257,6 +295,9 @@ func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg
 func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user avatar update focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarUpdateFocusNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtAvatarUpdateFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarUpdateFocusNotify, player.ClientSeq, req)
@@ -265,6 +306,9 @@ func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMs
 func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user avatar exit focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarExitFocusNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtAvatarExitFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarExitFocusNotify, player.ClientSeq, req)
@@ -273,6 +317,9 @@ func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg 
 func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user entity render change, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtEntityRenderersChangedNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtEntityRenderersChangedNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtEntityRenderersChangedNotify, player.ClientSeq, req)
@@ -281,6 +328,9 @@ func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payl
 func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user create gadget, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtCreateGadgetNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtCreateGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -299,6 +349,9 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user destroy gadget, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtDestroyGadgetNotify)
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
 	logger.LOG.Debug("EvtDestroyGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)

@@ -169,10 +169,17 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
 		w.SetPlayerLocalTeam(player, []uint32{activeAvatarId})
 	}
-	for _, worldPlayer := range w.playerMap {
-		w.SetPlayerAvatarIndex(worldPlayer, 0)
-	}
 	w.UpdateMultiplayerTeam()
+	for _, worldPlayer := range w.playerMap {
+		list := w.GetPlayerWorldAvatarList(worldPlayer)
+		maxIndex := len(list) - 1
+		index := int(worldPlayer.TeamConfig.CurrAvatarIndex)
+		if index > maxIndex {
+			w.SetPlayerAvatarIndex(worldPlayer, 0)
+		} else {
+			w.SetPlayerAvatarIndex(worldPlayer, index)
+		}
+	}
 	scene := w.GetSceneById(sceneId)
 	scene.AddPlayer(player)
 	w.InitPlayerTeamEntityId(player)

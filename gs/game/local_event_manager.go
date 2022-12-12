@@ -3,6 +3,7 @@ package game
 import (
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/object"
 	"time"
 )
 
@@ -43,8 +44,8 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	case RunUserCopyAndSave:
 		startTime := time.Now().UnixNano()
 		// 拷贝一份数据避免并发访问
-		insertPlayerList := make([]model.Player, 0, len(USER_MANAGER.playerMap))
-		updatePlayerList := make([]model.Player, 0, len(USER_MANAGER.playerMap))
+		insertPlayerList := make([]*model.Player, 0)
+		updatePlayerList := make([]*model.Player, 0)
 		for uid, player := range USER_MANAGER.playerMap {
 			if uid < 100000000 {
 				continue
@@ -53,26 +54,36 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 			case model.DbNone:
 				break
 			case model.DbInsert:
-				insertPlayerList = append(insertPlayerList, *player)
+				playerCopy := new(model.Player)
+				err := object.FastDeepCopy(playerCopy, player)
+				if err != nil {
+					logger.LOG.Error("deep copy player error: %v", err)
+					continue
+				}
+				insertPlayerList = append(insertPlayerList, playerCopy)
 				USER_MANAGER.playerMap[uid].DbState = model.DbNormal
 			case model.DbDelete:
-				updatePlayerList = append(updatePlayerList, *player)
+				playerCopy := new(model.Player)
+				err := object.FastDeepCopy(playerCopy, player)
+				if err != nil {
+					logger.LOG.Error("deep copy player error: %v", err)
+					continue
+				}
+				updatePlayerList = append(updatePlayerList, playerCopy)
 				delete(USER_MANAGER.playerMap, uid)
 			case model.DbNormal:
-				updatePlayerList = append(updatePlayerList, *player)
+				playerCopy := new(model.Player)
+				err := object.FastDeepCopy(playerCopy, player)
+				if err != nil {
+					logger.LOG.Error("deep copy player error: %v", err)
+					continue
+				}
+				updatePlayerList = append(updatePlayerList, playerCopy)
 			}
 		}
-		insertPlayerPointerList := make([]*model.Player, 0, len(insertPlayerList))
-		updatePlayerPointerList := make([]*model.Player, 0, len(updatePlayerList))
-		for _, player := range insertPlayerList {
-			insertPlayerPointerList = append(insertPlayerPointerList, &player)
-		}
-		for _, player := range updatePlayerList {
-			updatePlayerPointerList = append(updatePlayerPointerList, &player)
-		}
 		USER_MANAGER.saveUserChan <- &SaveUserData{
-			insertPlayerList: insertPlayerPointerList,
-			updatePlayerList: updatePlayerPointerList,
+			insertPlayerList: insertPlayerList,
+			updatePlayerList: updatePlayerList,
 		}
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime

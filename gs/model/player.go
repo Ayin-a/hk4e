@@ -22,7 +22,7 @@ type GameObject interface {
 }
 
 type Player struct {
-	// 离线数据
+	// 离线数据 请尽量不要定义接口等复杂数据结构
 	ID               primitive.ObjectID    `bson:"_id,omitempty"`
 	PlayerID         uint32                `bson:"playerID"`         // 玩家uid
 	NickName         string                `bson:"nickname"`         // 玩家昵称
@@ -52,22 +52,22 @@ type Player struct {
 	MainCharAvatarId uint32                `bson:"mainCharAvatarId"` // 主角id
 	ChatMsgMap       map[uint32][]*ChatMsg `bson:"chatMsgMap"`       // 聊天信息
 	IsGM             uint8                 `bson:"isGM"`             // 管理员权限等级
-	// 在线数据
-	EnterSceneToken       uint32                                   `bson:"-"` // 玩家的世界进入令牌
-	DbState               int                                      `bson:"-"` // 数据库存档状态
-	WorldId               uint32                                   `bson:"-"` // 所在的世界id
-	GameObjectGuidCounter uint64                                   `bson:"-"` // 游戏对象guid计数器
-	ClientTime            uint32                                   `bson:"-"` // 玩家客户端的本地时钟
-	ClientRTT             uint32                                   `bson:"-"` // 玩家客户端往返时延
-	GameObjectGuidMap     map[uint64]GameObject                    `bson:"-"` // 游戏对象guid映射表
-	Online                bool                                     `bson:"-"` // 在线状态
-	Pause                 bool                                     `bson:"-"` // 暂停状态
-	SceneLoadState        int                                      `bson:"-"` // 场景加载状态
-	CoopApplyMap          map[uint32]int64                         `bson:"-"` // 敲门申请的玩家uid及时间
-	StaminaInfo           *StaminaInfo                             `bson:"-"` // 耐力临时数据
-	ClientSeq             uint32                                   `bson:"-"` // 客户端发包请求的序号
-	CombatInvokeHandler   *InvokeHandler[proto.CombatInvokeEntry]  `bson:"-"`
-	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-"`
+	// 在线数据 请随意 记得加忽略字段的tag
+	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌
+	DbState               int                                      `bson:"-" msgpack:"-"` // 数据库存档状态
+	WorldId               uint32                                   `bson:"-" msgpack:"-"` // 所在的世界id
+	GameObjectGuidCounter uint64                                   `bson:"-" msgpack:"-"` // 游戏对象guid计数器
+	ClientTime            uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端的本地时钟
+	ClientRTT             uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端往返时延
+	GameObjectGuidMap     map[uint64]GameObject                    `bson:"-" msgpack:"-"` // 游戏对象guid映射表
+	Online                bool                                     `bson:"-" msgpack:"-"` // 在线状态
+	Pause                 bool                                     `bson:"-" msgpack:"-"` // 暂停状态
+	SceneLoadState        int                                      `bson:"-" msgpack:"-"` // 场景加载状态
+	CoopApplyMap          map[uint32]int64                         `bson:"-" msgpack:"-"` // 敲门申请的玩家uid及时间
+	StaminaInfo           *StaminaInfo                             `bson:"-" msgpack:"-"` // 耐力临时数据
+	ClientSeq             uint32                                   `bson:"-" msgpack:"-"` // 客户端发包请求的序号
+	CombatInvokeHandler   *InvokeHandler[proto.CombatInvokeEntry]  `bson:"-" msgpack:"-"` // combat转发器
+	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-" msgpack:"-"` // ability转发器
 }
 
 func (p *Player) GetNextGameObjectGuid() uint64 {

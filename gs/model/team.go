@@ -6,8 +6,8 @@ import (
 )
 
 type Team struct {
-	Name         string    `bson:"name"`
-	AvatarIdList [4]uint32 `bson:"avatarIdList"`
+	Name         string   `bson:"name"`
+	AvatarIdList []uint32 `bson:"avatarIdList"`
 }
 
 func (t *Team) GetAvatarIdList() []uint32 {
@@ -22,7 +22,7 @@ func (t *Team) GetAvatarIdList() []uint32 {
 }
 
 func (t *Team) SetAvatarIdList(avatarIdList []uint32) {
-	t.AvatarIdList = [4]uint32{0, 0, 0, 0}
+	t.AvatarIdList = make([]uint32, 4)
 	for index := range t.AvatarIdList {
 		if index >= len(avatarIdList) {
 			break
@@ -42,10 +42,10 @@ type TeamInfo struct {
 func NewTeamInfo() (r *TeamInfo) {
 	r = &TeamInfo{
 		TeamList: []*Team{
-			{Name: "冒险", AvatarIdList: [4]uint32{0, 0, 0, 0}},
-			{Name: "委托", AvatarIdList: [4]uint32{0, 0, 0, 0}},
-			{Name: "秘境", AvatarIdList: [4]uint32{0, 0, 0, 0}},
-			{Name: "联机", AvatarIdList: [4]uint32{0, 0, 0, 0}},
+			{Name: "冒险", AvatarIdList: make([]uint32, 4)},
+			{Name: "委托", AvatarIdList: make([]uint32, 4)},
+			{Name: "秘境", AvatarIdList: make([]uint32, 4)},
+			{Name: "联机", AvatarIdList: make([]uint32, 4)},
 		},
 		CurrTeamIndex:   0,
 		CurrAvatarIndex: 0,

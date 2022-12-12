@@ -27,3 +27,10 @@ func TestAesCFB(t *testing.T) {
 	dec, _ := AesCFBDecrypt(enc, key, key[0:16])
 	fmt.Printf("dec: %v\n", dec)
 }
+
+func TestHk4eAbilityHashCode(t *testing.T) {
+	hashCode := Hk4eAbilityHashCode("Avatar_Ayato_ExtraAttack")
+	fmt.Printf("Avatar_Ayato_ExtraAttack hashCode: %v\n", hashCode)
+	hashCode = Hk4eAbilityHashCode("Avatar_Ayato_ExtraAttack_CreateBullet")
+	fmt.Printf("Avatar_Ayato_ExtraAttack_CreateBullet hashCode: %v\n", hashCode)
+}

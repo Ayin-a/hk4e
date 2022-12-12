@@ -4,14 +4,32 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-func DeepCopy(src, dest any) error {
+func DeepCopy(dst, src any) error {
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
+	err := gob.NewEncoder(&buf).Encode(src)
+	if err != nil {
 		return err
 	}
-	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dest)
+	err = gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func FastDeepCopy(dst, src any) error {
+	data, err := msgpack.Marshal(src)
+	if err != nil {
+		return err
+	}
+	err = msgpack.Unmarshal(data, dst)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func ConvBoolToInt64(v bool) int64 {

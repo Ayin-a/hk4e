@@ -144,16 +144,12 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
 		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)
-		player.Pos = &model.Vector{
-			X: hostPlayer.Pos.X,
-			Y: hostPlayer.Pos.Y,
-			Z: hostPlayer.Pos.Z,
-		}
-		player.Rot = &model.Vector{
-			X: hostPlayer.Rot.X,
-			Y: hostPlayer.Rot.Y,
-			Z: hostPlayer.Rot.Z,
-		}
+		player.Pos.X = hostPlayer.Pos.X
+		player.Pos.Y = hostPlayer.Pos.Y
+		player.Pos.Z = hostPlayer.Pos.Z
+		player.Rot.X = hostPlayer.Rot.X
+		player.Rot.Y = hostPlayer.Rot.Y
+		player.Rot.Z = hostPlayer.Rot.Z
 		player.SceneId = hostPlayer.SceneId
 
 		g.UserWorldAddPlayer(hostWorld, player)
@@ -258,10 +254,8 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	g.SendMsg(cmd.GuestBeginEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, guestBeginEnterSceneNotify)
 
 	// 仅仅把当前的场上角色的实体消失掉
-	scene := world.GetSceneById(hostPlayer.SceneId)
-	playerTeamEntity := scene.GetPlayerTeamEntity(hostPlayer.PlayerID)
 	activeAvatarId := world.GetPlayerActiveAvatarId(hostPlayer)
-	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_TYPE_MISS, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
+	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_TYPE_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(hostPlayer, activeAvatarId)})
 }
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
@@ -306,9 +300,8 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	scene := world.GetSceneById(player.SceneId)
 
 	// 仅仅把当前的场上角色的实体消失掉
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
-	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
+	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
 	g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
@@ -320,8 +313,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 		g.SendMsg(cmd.PlayerQuitFromMpNotify, player.PlayerID, player.ClientSeq, playerQuitFromMpNotify)
 
 		activeAvatarId := world.GetPlayerActiveAvatarId(player)
-		playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-		g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
+		g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 	}
 
 	world.RemovePlayer(player)
@@ -410,10 +402,8 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 				if worldPlayer.PlayerID == worldPlayer.PlayerID {
 					continue
 				}
-				worldPlayerScene := hostWorld.GetSceneById(worldPlayer.SceneId)
-				worldPlayerTeamEntity := worldPlayerScene.GetPlayerTeamEntity(worldPlayer.PlayerID)
 				teamEntityInfo := &proto.TeamEntityInfo{
-					TeamEntityId:    worldPlayerTeamEntity.teamEntityId,
+					TeamEntityId:    hostWorld.GetPlayerTeamEntityId(worldPlayer),
 					AuthorityPeerId: hostWorld.GetPlayerPeerId(worldPlayer),
 					TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
 				}

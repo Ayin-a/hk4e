@@ -6,8 +6,8 @@ import (
 )
 
 type Team struct {
-	Name         string   `bson:"name"`
-	AvatarIdList []uint32 `bson:"avatarIdList"`
+	Name         string    `bson:"name"`
+	AvatarIdList [4]uint32 `bson:"avatarIdList"`
 }
 
 func (t *Team) GetAvatarIdList() []uint32 {
@@ -21,6 +21,16 @@ func (t *Team) GetAvatarIdList() []uint32 {
 	return avatarIdList
 }
 
+func (t *Team) SetAvatarIdList(avatarIdList []uint32) {
+	t.AvatarIdList = [4]uint32{0, 0, 0, 0}
+	for index := range t.AvatarIdList {
+		if index >= len(avatarIdList) {
+			break
+		}
+		t.AvatarIdList[index] = avatarIdList[index]
+	}
+}
+
 type TeamInfo struct {
 	TeamList             []*Team         `bson:"teamList"`
 	CurrTeamIndex        uint8           `bson:"currTeamIndex"`
@@ -32,10 +42,10 @@ type TeamInfo struct {
 func NewTeamInfo() (r *TeamInfo) {
 	r = &TeamInfo{
 		TeamList: []*Team{
-			{Name: "冒险", AvatarIdList: make([]uint32, 4)},
-			{Name: "委托", AvatarIdList: make([]uint32, 4)},
-			{Name: "秘境", AvatarIdList: make([]uint32, 4)},
-			{Name: "联机", AvatarIdList: make([]uint32, 4)},
+			{Name: "冒险", AvatarIdList: [4]uint32{0, 0, 0, 0}},
+			{Name: "委托", AvatarIdList: [4]uint32{0, 0, 0, 0}},
+			{Name: "秘境", AvatarIdList: [4]uint32{0, 0, 0, 0}},
+			{Name: "联机", AvatarIdList: [4]uint32{0, 0, 0, 0}},
 		},
 		CurrTeamIndex:   0,
 		CurrAvatarIndex: 0,
@@ -88,22 +98,6 @@ func (t *TeamInfo) GetTeamByIndex(teamIndex uint8) *Team {
 
 func (t *TeamInfo) GetActiveTeam() *Team {
 	return t.GetTeamByIndex(t.CurrTeamIndex)
-}
-
-func (t *TeamInfo) ClearTeamAvatar(teamIndex uint8) {
-	team := t.GetTeamByIndex(teamIndex)
-	if team == nil {
-		return
-	}
-	team.AvatarIdList = make([]uint32, 4)
-}
-
-func (t *TeamInfo) SetTeamAvatar(teamIndex uint8, avatarIdList []uint32) {
-	team := t.GetTeamByIndex(teamIndex)
-	if team == nil {
-		return
-	}
-	team.AvatarIdList = avatarIdList
 }
 
 func (t *TeamInfo) GetActiveAvatarId() uint32 {

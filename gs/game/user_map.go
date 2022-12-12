@@ -82,8 +82,7 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	oldScene := world.GetSceneById(oldSceneId)
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
-	playerTeamEntity := oldScene.GetPlayerTeamEntity(player.PlayerID)
-	g.RemoveSceneEntityNotifyBroadcast(oldScene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]})
+	g.RemoveSceneEntityNotifyBroadcast(oldScene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 	if jumpScene {
 		delTeamEntityNotify := g.PacketDelTeamEntityNotify(oldScene, player)
 		g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
@@ -91,8 +90,6 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 		oldScene.RemovePlayer(player)
 		newScene := world.GetSceneById(newSceneId)
 		newScene.AddPlayer(player)
-	} else {
-		oldScene.UpdatePlayerTeamEntity(player)
 	}
 	player.Pos.X = pos.X
 	player.Pos.Y = pos.Y

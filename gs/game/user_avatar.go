@@ -88,7 +88,6 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 
 	if weapon.AvatarId != 0 {
 		// 武器在别的角色身上
@@ -104,14 +103,12 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 		weakAvatar := player.AvatarMap[weakAvatarId]
 		weakWeapon := player.WeaponMap[weakAvatar.EquipWeapon.WeaponId]
 
-		for _, aid := range world.GetPlayerAvatarIdList(player) {
-			if aid == weakAvatar.AvatarId {
-				playerTeamEntity.weaponEntityMap[weakWeapon.WeaponId] = scene.CreateEntityWeapon()
-			}
+		weakWorldAvatar := world.GetPlayerWorldAvatar(player, weakAvatarId)
+		if weakWorldAvatar != nil {
+			weakWorldAvatar.weaponEntityId = scene.CreateEntityWeapon()
+			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, weakWorldAvatar.weaponEntityId)
+			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 		}
-
-		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, playerTeamEntity.weaponEntityMap[weakWeapon.WeaponId])
-		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 	} else if avatar.EquipWeapon != nil {
 		// 角色当前有武器
 		player.TakeOffWeapon(avatarId, avatar.EquipWeapon.WeaponId)
@@ -121,14 +118,12 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 		player.WearWeapon(avatarId, weaponId)
 	}
 
-	for _, aid := range world.GetPlayerAvatarIdList(player) {
-		if aid == avatarId {
-			playerTeamEntity.weaponEntityMap[weaponId] = scene.CreateEntityWeapon()
-		}
+	worldAvatar := world.GetPlayerWorldAvatar(player, avatarId)
+	if worldAvatar != nil {
+		worldAvatar.weaponEntityId = scene.CreateEntityWeapon()
+		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, worldAvatar.weaponEntityId)
+		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 	}
-
-	avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, playerTeamEntity.weaponEntityMap[weaponId])
-	g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 }
 
 func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Message) {

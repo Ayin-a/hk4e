@@ -31,7 +31,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	// 初始化
 	player.InitAll()
-	player.TeamConfig.UpdateTeam()
+	//player.TeamConfig.UpdateTeam()
 	// 创建世界
 	world := WORLD_MANAGER.CreateWorld(player)
 	world.AddPlayer(player, player.SceneId)
@@ -287,7 +287,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.Signature = ""
 	player.MainCharAvatarId = mainCharAvatarId
 	player.HeadImage = mainCharAvatarId
-	player.Birthday = [2]uint8{0, 0}
+	player.Birthday = []uint8{0, 0}
 	player.NameCard = 210001
 	player.NameCardList = make([]uint32, 0)
 	player.NameCardList = append(player.NameCardList, 210001, 210042)
@@ -373,7 +373,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.WearWeapon(mainCharAvatarId, weaponId)
 
 	player.TeamConfig = model.NewTeamInfo()
-	player.TeamConfig.SetTeamAvatar(0, []uint32{mainCharAvatarId})
+	player.TeamConfig.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
 
 	return player
 }

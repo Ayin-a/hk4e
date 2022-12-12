@@ -8,11 +8,7 @@ import (
 	"hk4e/gs/game/aoi"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
-	"hk4e/pkg/logger"
-	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-
-	pb "google.golang.org/protobuf/proto"
 )
 
 // 世界管理器
@@ -123,9 +119,23 @@ type World struct {
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
-	w.entityIdCounter++
-	ret := (uint32(entityType) << 24) + w.entityIdCounter
-	return ret
+	for {
+		w.entityIdCounter++
+		ret := (uint32(entityType) << 24) + w.entityIdCounter
+		reTry := false
+		for _, scene := range w.sceneMap {
+			_, exist := scene.entityMap[ret]
+			if exist {
+				reTry = true
+				break
+			}
+		}
+		if reTry {
+			continue
+		} else {
+			return ret
+		}
+	}
 }
 
 // GetPlayerPeerId 获取当前玩家世界内编号
@@ -160,11 +170,12 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 		w.SetPlayerLocalTeam(player, []uint32{activeAvatarId})
 	}
 	for _, worldPlayer := range w.playerMap {
-		w.SetPlayerLocalAvatarIndex(worldPlayer, 0)
+		w.SetPlayerAvatarIndex(worldPlayer, 0)
 	}
 	w.UpdateMultiplayerTeam()
 	scene := w.GetSceneById(sceneId)
 	scene.AddPlayer(player)
+	w.InitPlayerTeamEntityId(player)
 }
 
 func (w *World) RemovePlayer(player *model.Player) {
@@ -175,13 +186,136 @@ func (w *World) RemovePlayer(player *model.Player) {
 	delete(w.playerFirstEnterMap, player.PlayerID)
 	delete(w.multiplayerTeam.localTeamMap, player.PlayerID)
 	delete(w.multiplayerTeam.localAvatarIndexMap, player.PlayerID)
+	delete(w.multiplayerTeam.localTeamEntityMap, player.PlayerID)
 	w.UpdateMultiplayerTeam()
 }
 
-// WorldAvatar 通用世界角色
+// WorldAvatar 世界角色
 type WorldAvatar struct {
-	uid      uint32
-	avatarId uint32
+	uid            uint32
+	avatarId       uint32
+	avatarEntityId uint32
+	weaponEntityId uint32
+	abilityList    []*proto.AbilityAppliedAbility
+	modifierList   []*proto.AbilityAppliedModifier
+}
+
+// GetWorldAvatarList 获取世界队伍的全部角色列表
+func (w *World) GetWorldAvatarList() []*WorldAvatar {
+	worldAvatarList := make([]*WorldAvatar, 0)
+	for _, worldAvatar := range w.multiplayerTeam.worldTeam {
+		if worldAvatar.uid == 0 {
+			continue
+		}
+		worldAvatarList = append(worldAvatarList, worldAvatar)
+	}
+	return worldAvatarList
+}
+
+// GetPlayerWorldAvatar 获取某玩家在世界队伍中的某角色
+func (w *World) GetPlayerWorldAvatar(player *model.Player, avatarId uint32) *WorldAvatar {
+	for _, worldAvatar := range w.GetWorldAvatarList() {
+		if worldAvatar.uid == player.PlayerID && worldAvatar.avatarId == avatarId {
+			return worldAvatar
+		}
+	}
+	return nil
+}
+
+// GetPlayerWorldAvatarList 获取某玩家在世界队伍中的所有角色列表
+func (w *World) GetPlayerWorldAvatarList(player *model.Player) []*WorldAvatar {
+	worldAvatarList := make([]*WorldAvatar, 0)
+	for _, worldAvatar := range w.GetWorldAvatarList() {
+		if worldAvatar.uid == player.PlayerID {
+			worldAvatarList = append(worldAvatarList, worldAvatar)
+		}
+	}
+	return worldAvatarList
+}
+
+// GetWorldAvatarByEntityId 通过场景实体id获取世界队伍中的角色
+func (w *World) GetWorldAvatarByEntityId(avatarEntityId uint32) *WorldAvatar {
+	for _, worldAvatar := range w.GetWorldAvatarList() {
+		if worldAvatar.avatarEntityId == avatarEntityId {
+			return worldAvatar
+		}
+	}
+	return nil
+}
+
+// InitPlayerWorldAvatar 初始化某玩家在世界队伍中的所有角色
+func (w *World) InitPlayerWorldAvatar(player *model.Player) {
+	scene := w.GetSceneById(player.SceneId)
+	for _, worldAvatar := range w.GetWorldAvatarList() {
+		if worldAvatar.uid != player.PlayerID {
+			continue
+		}
+		if worldAvatar.avatarEntityId != 0 || worldAvatar.weaponEntityId != 0 {
+			continue
+		}
+		worldAvatar.avatarEntityId = scene.CreateEntityAvatar(player, worldAvatar.avatarId)
+		worldAvatar.weaponEntityId = scene.CreateEntityWeapon()
+	}
+}
+
+// GetPlayerTeamEntityId 获取某玩家的本地队伍实体id
+func (w *World) GetPlayerTeamEntityId(player *model.Player) uint32 {
+	return w.multiplayerTeam.localTeamEntityMap[player.PlayerID]
+}
+
+// InitPlayerTeamEntityId 初始化某玩家的本地队伍实体id
+func (w *World) InitPlayerTeamEntityId(player *model.Player) {
+	w.multiplayerTeam.localTeamEntityMap[player.PlayerID] = w.GetNextWorldEntityId(constant.EntityIdTypeConst.TEAM)
+}
+
+// GetPlayerWorldAvatarEntityId 获取某玩家在世界队伍中的某角色的实体id
+func (w *World) GetPlayerWorldAvatarEntityId(player *model.Player, avatarId uint32) uint32 {
+	worldAvatar := w.GetPlayerWorldAvatar(player, avatarId)
+	if worldAvatar == nil {
+		return 0
+	}
+	return worldAvatar.avatarEntityId
+}
+
+// GetPlayerWorldAvatarWeaponEntityId 获取某玩家在世界队伍中的某角色的武器的实体id
+func (w *World) GetPlayerWorldAvatarWeaponEntityId(player *model.Player, avatarId uint32) uint32 {
+	worldAvatar := w.GetPlayerWorldAvatar(player, avatarId)
+	if worldAvatar == nil {
+		return 0
+	}
+	return worldAvatar.weaponEntityId
+}
+
+// GetPlayerAvatarIndex 获取某玩家当前角色索引
+func (w *World) GetPlayerAvatarIndex(player *model.Player) int {
+	return w.multiplayerTeam.localAvatarIndexMap[player.PlayerID]
+}
+
+// SetPlayerAvatarIndex 设置某玩家当前角色索引
+func (w *World) SetPlayerAvatarIndex(player *model.Player, index int) {
+	if index > len(w.GetPlayerLocalTeam(player))-1 {
+		return
+	}
+	w.multiplayerTeam.localAvatarIndexMap[player.PlayerID] = index
+}
+
+// GetPlayerActiveAvatarId 获取玩家当前活跃角色id
+func (w *World) GetPlayerActiveAvatarId(player *model.Player) uint32 {
+	avatarIndex := w.GetPlayerAvatarIndex(player)
+	localTeam := w.GetPlayerLocalTeam(player)
+	worldTeamAvatar := localTeam[avatarIndex]
+	return worldTeamAvatar.avatarId
+}
+
+// GetPlayerAvatarIndexByAvatarId 获取玩家某角色的索引
+func (w *World) GetPlayerAvatarIndexByAvatarId(player *model.Player, avatarId uint32) int {
+	localTeam := w.GetPlayerLocalTeam(player)
+	for index, worldAvatar := range localTeam {
+		if worldAvatar.avatarId == avatarId {
+			return index
+		}
+	}
+	return -1
 }
 
 type MultiplayerTeam struct {
@@ -189,6 +323,7 @@ type MultiplayerTeam struct {
 	localTeamMap map[uint32][]*WorldAvatar
 	// key:uid value:玩家当前角色索引
 	localAvatarIndexMap map[uint32]int
+	localTeamEntityMap  map[uint32]uint32
 	// 最终的世界队伍
 	worldTeam []*WorldAvatar
 }
@@ -197,6 +332,7 @@ func CreateMultiplayerTeam() (r *MultiplayerTeam) {
 	r = new(MultiplayerTeam)
 	r.localTeamMap = make(map[uint32][]*WorldAvatar)
 	r.localAvatarIndexMap = make(map[uint32]int)
+	r.localTeamEntityMap = make(map[uint32]uint32)
 	r.worldTeam = make([]*WorldAvatar, 0)
 	return r
 }
@@ -206,74 +342,71 @@ func (w *World) GetPlayerLocalTeam(player *model.Player) []*WorldAvatar {
 }
 
 func (w *World) SetPlayerLocalTeam(player *model.Player, avatarIdList []uint32) {
-	localTeam := make([]*WorldAvatar, 4)
-	for index := 0; index < 4; index++ {
-		if index > len(avatarIdList)-1 {
-			localTeam[index] = &WorldAvatar{
-				uid:      0,
-				avatarId: 0,
+	oldLocalTeam := w.multiplayerTeam.localTeamMap[player.PlayerID]
+	sameAvatarIdList := make([]uint32, 0)
+	diffAvatarIdList := make([]uint32, 0)
+	for _, avatarId := range avatarIdList {
+		exist := false
+		for _, worldAvatar := range oldLocalTeam {
+			if worldAvatar.avatarId == avatarId {
+				exist = true
 			}
+		}
+		if exist {
+			sameAvatarIdList = append(sameAvatarIdList, avatarId)
 		} else {
-			avatarId := avatarIdList[index]
-			localTeam[index] = &WorldAvatar{
-				uid:      player.PlayerID,
-				avatarId: avatarId,
+			diffAvatarIdList = append(diffAvatarIdList, avatarId)
+		}
+	}
+	newLocalTeam := make([]*WorldAvatar, len(avatarIdList))
+	for _, avatarId := range sameAvatarIdList {
+		for _, worldAvatar := range oldLocalTeam {
+			if worldAvatar.avatarId == avatarId {
+				index := 0
+				for i, v := range avatarIdList {
+					if avatarId == v {
+						index = i
+					}
+				}
+				newLocalTeam[index] = worldAvatar
 			}
 		}
 	}
-	w.multiplayerTeam.localTeamMap[player.PlayerID] = localTeam
-}
-
-func (w *World) ClearPlayerLocalTeam(player *model.Player) {
-	w.multiplayerTeam.localTeamMap[player.PlayerID] = make([]*WorldAvatar, 4)
-}
-
-func (w *World) GetPlayerLocalAvatarIndex(player *model.Player) int {
-	return w.multiplayerTeam.localAvatarIndexMap[player.PlayerID]
-}
-
-func (w *World) SetPlayerLocalAvatarIndex(player *model.Player, index int) {
-	if index > len(w.GetPlayerLocalTeam(player))-1 {
-		return
-	}
-	w.multiplayerTeam.localAvatarIndexMap[player.PlayerID] = index
-}
-
-func (w *World) GetPlayerActiveAvatarId(player *model.Player) uint32 {
-	avatarIndex := w.GetPlayerLocalAvatarIndex(player)
-	localTeam := w.GetPlayerLocalTeam(player)
-	worldTeamAvatar := localTeam[avatarIndex]
-	return worldTeamAvatar.avatarId
-}
-
-func (w *World) GetPlayerAvatarIdList(player *model.Player) []uint32 {
-	localTeam := w.GetPlayerLocalTeam(player)
-	avatarIdList := make([]uint32, 0)
-	for _, worldAvatar := range localTeam {
-		if worldAvatar.avatarId == 0 {
-			continue
+	for _, avatarId := range diffAvatarIdList {
+		index := 0
+		for i, v := range avatarIdList {
+			if avatarId == v {
+				index = i
+			}
 		}
-		avatarIdList = append(avatarIdList, worldAvatar.avatarId)
-	}
-	return avatarIdList
-}
-
-func (w *World) GetWorldTeamAvatarList() []*WorldAvatar {
-	worldAvatarList := make([]*WorldAvatar, 0)
-	for _, worldAvatar := range w.multiplayerTeam.worldTeam {
-		if worldAvatar.avatarId == 0 {
-			continue
+		newLocalTeam[index] = &WorldAvatar{
+			uid:            player.PlayerID,
+			avatarId:       avatarId,
+			avatarEntityId: 0,
+			weaponEntityId: 0,
+			abilityList:    make([]*proto.AbilityAppliedAbility, 0),
+			modifierList:   make([]*proto.AbilityAppliedModifier, 0),
 		}
-		worldAvatarList = append(worldAvatarList, worldAvatar)
 	}
-	return worldAvatarList
+	w.multiplayerTeam.localTeamMap[player.PlayerID] = newLocalTeam
 }
 
 func (w *World) copyLocalTeamToWorld(start int, end int, peerId uint32) {
+	player := w.peerMap[peerId]
+	localTeam := w.GetPlayerLocalTeam(player)
 	localTeamIndex := 0
 	for index := start; index <= end; index++ {
-		player := w.peerMap[peerId]
-		localTeam := w.GetPlayerLocalTeam(player)
+		if localTeamIndex >= len(localTeam) {
+			w.multiplayerTeam.worldTeam[index] = &WorldAvatar{
+				uid:            0,
+				avatarId:       0,
+				avatarEntityId: 0,
+				weaponEntityId: 0,
+				abilityList:    nil,
+				modifierList:   nil,
+			}
+			continue
+		}
 		w.multiplayerTeam.worldTeam[index] = localTeam[localTeamIndex]
 		localTeamIndex++
 	}
@@ -337,15 +470,13 @@ func (w *World) PlayerEnter(player *model.Player) {
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
 	scene := &Scene{
-		id:                  sceneId,
-		world:               w,
-		playerMap:           make(map[uint32]*model.Player),
-		entityMap:           make(map[uint32]*Entity),
-		playerTeamEntityMap: make(map[uint32]*PlayerTeamEntity),
-		gameTime:            18 * 60,
-		attackQueue:         alg.NewRAQueue[*Attack](1000),
-		createTime:          time.Now().UnixMilli(),
-		meeoIndex:           0,
+		id:         sceneId,
+		world:      w,
+		playerMap:  make(map[uint32]*model.Player),
+		entityMap:  make(map[uint32]*Entity),
+		gameTime:   18 * 60,
+		createTime: time.Now().UnixMilli(),
+		meeoIndex:  0,
 	}
 	w.sceneMap[sceneId] = scene
 	return scene
@@ -362,15 +493,13 @@ func (w *World) GetSceneById(sceneId uint32) *Scene {
 // 场景数据结构
 
 type Scene struct {
-	id                  uint32
-	world               *World
-	playerMap           map[uint32]*model.Player
-	entityMap           map[uint32]*Entity
-	playerTeamEntityMap map[uint32]*PlayerTeamEntity
-	gameTime            uint32 // 游戏内提瓦特大陆的时间
-	attackQueue         *alg.RAQueue[*Attack]
-	createTime          int64
-	meeoIndex           uint32 // 客户端风元素染色同步协议的计数器
+	id         uint32
+	world      *World
+	playerMap  map[uint32]*model.Player
+	entityMap  map[uint32]*Entity
+	gameTime   uint32 // 游戏内提瓦特大陆的时间
+	createTime int64
+	meeoIndex  uint32 // 客户端风元素染色同步协议的计数器
 }
 
 type AvatarEntity struct {
@@ -381,8 +510,20 @@ type AvatarEntity struct {
 type MonsterEntity struct {
 }
 
+const (
+	GADGET_TYPE_CLIENT = iota
+	GADGET_TYPE_GATHER
+)
+
 type GadgetEntity struct {
-	gatherId uint32
+	gadgetType        int
+	gatherId          uint32
+	configId          uint32
+	campId            uint32
+	campType          uint32
+	ownerEntityId     uint32
+	targetEntityId    uint32
+	propOwnerEntityId uint32
 }
 
 // 场景实体数据结构
@@ -403,12 +544,6 @@ type Entity struct {
 	gadgetEntity        *GadgetEntity
 }
 
-type PlayerTeamEntity struct {
-	teamEntityId    uint32
-	avatarEntityMap map[uint32]uint32
-	weaponEntityMap map[uint64]uint32
-}
-
 type Attack struct {
 	combatInvokeEntry *proto.CombatInvokeEntry
 	uid               uint32
@@ -427,55 +562,18 @@ func (s *Scene) GetSceneTime() int64 {
 	return now - s.createTime
 }
 
-func (s *Scene) GetPlayerTeamEntity(userId uint32) *PlayerTeamEntity {
-	return s.playerTeamEntityMap[userId]
-}
-
-func (s *Scene) CreatePlayerTeamEntity(player *model.Player) {
-	playerTeamEntity := &PlayerTeamEntity{
-		teamEntityId:    s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.TEAM),
-		avatarEntityMap: make(map[uint32]uint32),
-		weaponEntityMap: make(map[uint64]uint32),
-	}
-	s.playerTeamEntityMap[player.PlayerID] = playerTeamEntity
-}
-
-func (s *Scene) UpdatePlayerTeamEntity(player *model.Player) {
-	playerTeamEntity := s.playerTeamEntityMap[player.PlayerID]
-	for _, worldTeamAvatar := range s.world.GetWorldTeamAvatarList() {
-		if worldTeamAvatar.uid != player.PlayerID {
-			continue
-		}
-		avatar := player.AvatarMap[worldTeamAvatar.avatarId]
-		avatarEntityId, exist := playerTeamEntity.avatarEntityMap[worldTeamAvatar.avatarId]
-		if exist {
-			s.DestroyEntity(avatarEntityId)
-		}
-		playerTeamEntity.avatarEntityMap[worldTeamAvatar.avatarId] = s.CreateEntityAvatar(player, worldTeamAvatar.avatarId)
-		weaponEntityId, exist := playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId]
-		if exist {
-			s.DestroyEntity(weaponEntityId)
-		}
-		playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId] = s.CreateEntityWeapon()
-	}
-}
-
 func (s *Scene) AddPlayer(player *model.Player) {
 	s.playerMap[player.PlayerID] = player
-	s.CreatePlayerTeamEntity(player)
-	s.UpdatePlayerTeamEntity(player)
+	s.world.InitPlayerWorldAvatar(player)
 }
 
 func (s *Scene) RemovePlayer(player *model.Player) {
-	playerTeamEntity := s.GetPlayerTeamEntity(player.PlayerID)
-	for _, avatarEntityId := range playerTeamEntity.avatarEntityMap {
-		s.DestroyEntity(avatarEntityId)
-	}
-	for _, weaponEntityId := range playerTeamEntity.weaponEntityMap {
-		s.DestroyEntity(weaponEntityId)
-	}
-	delete(s.playerTeamEntityMap, player.PlayerID)
 	delete(s.playerMap, player.PlayerID)
+	worldAvatarList := s.world.GetPlayerWorldAvatarList(player)
+	for _, worldAvatar := range worldAvatarList {
+		s.DestroyEntity(worldAvatar.avatarEntityId)
+		s.DestroyEntity(worldAvatar.weaponEntityId)
+	}
 }
 
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
@@ -540,6 +638,36 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	return entity.id
 }
 
+func (s *Scene) ClientCreateEntityGadget(pos, rot *model.Vector, entityId uint32, configId, campId, campType, ownerEntityId, targetEntityId, propOwnerEntityId uint32) {
+	entity := &Entity{
+		id:                  entityId,
+		scene:               s,
+		pos:                 pos,
+		rot:                 rot,
+		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		lastMoveSceneTimeMs: 0,
+		lastMoveReliableSeq: 0,
+		fightProp: map[uint32]float32{
+			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
+		},
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		level:      0,
+		gadgetEntity: &GadgetEntity{
+			gadgetType:        GADGET_TYPE_CLIENT,
+			configId:          configId,
+			campId:            campId,
+			campType:          campType,
+			ownerEntityId:     ownerEntityId,
+			targetEntityId:    targetEntityId,
+			propOwnerEntityId: propOwnerEntityId,
+		},
+	}
+	s.entityMap[entity.id] = entity
+	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+}
+
 func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
 	entity := &Entity{
@@ -558,7 +686,8 @@ func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
-			gatherId: gatherId,
+			gadgetType: GADGET_TYPE_GATHER,
+			gatherId:   gatherId,
 		},
 	}
 	s.entityMap[entity.id] = entity
@@ -585,107 +714,4 @@ func (s *Scene) GetEntityIdList() []uint32 {
 		entityIdList = append(entityIdList, k)
 	}
 	return entityIdList
-}
-
-// 伤害处理和转发
-
-func (s *Scene) AddAttack(attack *Attack) {
-	s.attackQueue.EnQueue(attack)
-}
-
-func (s *Scene) AttackHandler(gameManager *GameManager) {
-	combatInvokeEntryListAll := make([]*proto.CombatInvokeEntry, 0)
-	combatInvokeEntryListOther := make(map[uint32][]*proto.CombatInvokeEntry)
-	combatInvokeEntryListHost := make([]*proto.CombatInvokeEntry, 0)
-
-	for s.attackQueue.Len() != 0 {
-		attack := s.attackQueue.DeQueue()
-		if attack.combatInvokeEntry == nil {
-			logger.LOG.Error("error attack data, attack value: %v", attack)
-			continue
-		}
-
-		hitInfo := new(proto.EvtBeingHitInfo)
-		err := pb.Unmarshal(attack.combatInvokeEntry.CombatData, hitInfo)
-		if err != nil {
-			logger.LOG.Error("parse combat invocations entity hit info error: %v", err)
-			continue
-		}
-
-		attackResult := hitInfo.AttackResult
-		logger.LOG.Debug("run attack handler, attackResult: %v", attackResult)
-		target := s.entityMap[attackResult.DefenseId]
-		if target == nil {
-			logger.LOG.Error("could not found target, defense id: %v", attackResult.DefenseId)
-			continue
-		}
-		attackResult.Damage *= 100
-		damage := attackResult.Damage
-		attackerId := attackResult.AttackerId
-		_ = attackerId
-		currHp := float32(0)
-		if target.fightProp != nil {
-			currHp = target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
-			currHp -= damage
-			if currHp < 0 {
-				currHp = 0
-			}
-			target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
-		}
-
-		// PacketEntityFightPropUpdateNotify
-		entityFightPropUpdateNotify := new(proto.EntityFightPropUpdateNotify)
-		entityFightPropUpdateNotify.EntityId = target.id
-		entityFightPropUpdateNotify.FightPropMap = make(map[uint32]float32)
-		entityFightPropUpdateNotify.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
-		for _, player := range s.playerMap {
-			gameManager.SendMsg(cmd.EntityFightPropUpdateNotify, player.PlayerID, player.ClientSeq, entityFightPropUpdateNotify)
-		}
-
-		combatData, err := pb.Marshal(hitInfo)
-		if err != nil {
-			logger.LOG.Error("create combat invocations entity hit info error: %v", err)
-		}
-		attack.combatInvokeEntry.CombatData = combatData
-		switch attack.combatInvokeEntry.ForwardType {
-		case proto.ForwardType_FORWARD_TYPE_TO_ALL:
-			combatInvokeEntryListAll = append(combatInvokeEntryListAll, attack.combatInvokeEntry)
-		case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXCEPT_CUR:
-			fallthrough
-		case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXIST_EXCEPT_CUR:
-			if combatInvokeEntryListOther[attack.uid] == nil {
-				combatInvokeEntryListOther[attack.uid] = make([]*proto.CombatInvokeEntry, 0)
-			}
-			combatInvokeEntryListOther[attack.uid] = append(combatInvokeEntryListOther[attack.uid], attack.combatInvokeEntry)
-		case proto.ForwardType_FORWARD_TYPE_TO_HOST:
-			combatInvokeEntryListHost = append(combatInvokeEntryListHost, attack.combatInvokeEntry)
-		default:
-		}
-	}
-
-	// PacketCombatInvocationsNotify
-	if len(combatInvokeEntryListAll) > 0 {
-		combatInvocationsNotifyAll := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotifyAll.InvokeList = combatInvokeEntryListAll
-		for _, player := range s.playerMap {
-			gameManager.SendMsg(cmd.CombatInvocationsNotify, player.PlayerID, player.ClientSeq, combatInvocationsNotifyAll)
-		}
-	}
-	if len(combatInvokeEntryListOther) > 0 {
-		for uid, list := range combatInvokeEntryListOther {
-			combatInvocationsNotifyOther := new(proto.CombatInvocationsNotify)
-			combatInvocationsNotifyOther.InvokeList = list
-			for _, player := range s.playerMap {
-				if player.PlayerID == uid {
-					continue
-				}
-				gameManager.SendMsg(cmd.CombatInvocationsNotify, player.PlayerID, player.ClientSeq, combatInvocationsNotifyOther)
-			}
-		}
-	}
-	if len(combatInvokeEntryListHost) > 0 {
-		combatInvocationsNotifyHost := new(proto.CombatInvocationsNotify)
-		combatInvocationsNotifyHost.InvokeList = combatInvokeEntryListHost
-		gameManager.SendMsg(cmd.CombatInvocationsNotify, s.world.owner.PlayerID, s.world.owner.ClientSeq, combatInvocationsNotifyHost)
-	}
 }

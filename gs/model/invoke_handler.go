@@ -7,18 +7,18 @@ import (
 
 // 泛型通用转发器
 
-type InvokeType interface {
+type InvokeEntryType interface {
 	proto.CombatInvokeEntry | proto.AbilityInvokeEntry
 }
 
-type InvokeHandler[T InvokeType] struct {
+type InvokeHandler[T InvokeEntryType] struct {
 	EntryListForwardAll          []*T
 	EntryListForwardAllExceptCur []*T
 	EntryListForwardHost         []*T
 	EntryListForwardServer       []*T
 }
 
-func NewInvokeHandler[T InvokeType]() (r *InvokeHandler[T]) {
+func NewInvokeHandler[T InvokeEntryType]() (r *InvokeHandler[T]) {
 	r = new(InvokeHandler[T])
 	r.InitInvokeHandler()
 	return r

@@ -106,6 +106,12 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.ChangeMpTeamAvatarReq, GAME_MANAGER.ChangeMpTeamAvatarReq)
 	r.registerRouter(cmd.SceneAvatarStaminaStepReq, GAME_MANAGER.SceneAvatarStaminaStepReq)
 	r.registerRouter(cmd.JoinPlayerSceneReq, GAME_MANAGER.JoinPlayerSceneReq)
+	r.registerRouter(cmd.EvtAvatarEnterFocusNotify, GAME_MANAGER.EvtAvatarEnterFocusNotify)
+	r.registerRouter(cmd.EvtAvatarUpdateFocusNotify, GAME_MANAGER.EvtAvatarUpdateFocusNotify)
+	r.registerRouter(cmd.EvtAvatarExitFocusNotify, GAME_MANAGER.EvtAvatarExitFocusNotify)
+	r.registerRouter(cmd.EvtEntityRenderersChangedNotify, GAME_MANAGER.EvtEntityRenderersChangedNotify)
+	r.registerRouter(cmd.EvtCreateGadgetNotify, GAME_MANAGER.EvtCreateGadgetNotify)
+	r.registerRouter(cmd.EvtDestroyGadgetNotify, GAME_MANAGER.EvtDestroyGadgetNotify)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *cmd.NetMsg) {

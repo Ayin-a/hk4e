@@ -98,7 +98,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{})           // 缓慢游泳或缓慢攀爬时消耗耐力请求
 	c.registerMessage(SceneAvatarStaminaStepRsp, &proto.SceneAvatarStaminaStepRsp{})           // 缓慢游泳或缓慢攀爬时消耗耐力响应
 
-	// 战斗与技能
+	// 战斗与同步
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
 	c.registerMessage(EntityFightPropUpdateNotify, &proto.EntityFightPropUpdateNotify{})             // 实体战斗属性更新通知
 	c.registerMessage(CombatInvocationsNotify, &proto.CombatInvocationsNotify{})                     // 战斗通知 包含场景中实体的移动数据和伤害数据，多人游戏服务器转发
@@ -106,7 +106,13 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(ClientAbilityInitFinishNotify, &proto.ClientAbilityInitFinishNotify{})         // 客户端技能初始化完成通知 多人游戏服务器转发
 	c.registerMessage(EvtDoSkillSuccNotify, &proto.EvtDoSkillSuccNotify{})                           // 释放技能成功事件通知
 	c.registerMessage(ClientAbilityChangeNotify, &proto.ClientAbilityChangeNotify{})                 // 客户端技能改变通知
-	c.registerMessage(MassiveEntityElementOpBatchNotify, &proto.MassiveEntityElementOpBatchNotify{}) // MEEO通知 风元素染色
+	c.registerMessage(MassiveEntityElementOpBatchNotify, &proto.MassiveEntityElementOpBatchNotify{}) // 风元素染色相关通知
+	c.registerMessage(EvtAvatarEnterFocusNotify, &proto.EvtAvatarEnterFocusNotify{})                 // 进入弓箭蓄力瞄准状态通知
+	c.registerMessage(EvtAvatarUpdateFocusNotify, &proto.EvtAvatarUpdateFocusNotify{})               // 弓箭蓄力瞄准状态移动通知
+	c.registerMessage(EvtAvatarExitFocusNotify, &proto.EvtAvatarExitFocusNotify{})                   // 退出弓箭蓄力瞄准状态通知
+	c.registerMessage(EvtEntityRenderersChangedNotify, &proto.EvtEntityRenderersChangedNotify{})     // 实体可视状态改变通知
+	c.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})                         // 创建实体通知
+	c.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})                       // 销毁实体通知
 
 	// 队伍
 	c.registerMessage(ChangeAvatarReq, &proto.ChangeAvatarReq{})                             // 更换角色请求 切人
@@ -238,8 +244,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	//c.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
 	//c.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
 	//c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
-	//c.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})
-	//c.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})
 
 	// 空消息
 	c.registerMessage(65535, &proto.NullMsg{})

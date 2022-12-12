@@ -122,14 +122,12 @@ func (f *ForwardManager) kcpEventHandle() {
 				logger.LOG.Error("can not find userId by convId")
 				continue
 			}
-			if f.getConnState(event.ConvId) == ConnAlive {
-				// 通知GS玩家下线
-				netMsg := new(cmd.NetMsg)
-				netMsg.UserId = userId
-				netMsg.EventId = cmd.UserOfflineNotify
-				f.netMsgInput <- netMsg
-				logger.LOG.Info("send to gs user offline, ConvId: %v, UserId: %v", event.ConvId, netMsg.UserId)
-			}
+			// 通知GS玩家下线
+			netMsg := new(cmd.NetMsg)
+			netMsg.UserId = userId
+			netMsg.EventId = cmd.UserOfflineNotify
+			f.netMsgInput <- netMsg
+			logger.LOG.Info("send to gs user offline, ConvId: %v, UserId: %v", event.ConvId, netMsg.UserId)
 			// 删除各种map数据
 			f.deleteConnState(event.ConvId)
 			f.deleteUserIdByConvId(event.ConvId)
@@ -281,7 +279,7 @@ func (f *ForwardManager) sendNetMsgToGameServer() {
 			netMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
 			netMsg.PayloadMessage = protoMsg.PayloadMessage
 			f.netMsgInput <- netMsg
-		case cmd.PlayerForceExitRsp:
+		case cmd.PlayerForceExitReq:
 			// 玩家退出游戏请求
 			if connState != ConnAlive {
 				continue
@@ -294,7 +292,7 @@ func (f *ForwardManager) sendNetMsgToGameServer() {
 			f.setConnState(protoMsg.ConvId, ConnClose)
 			info := new(gm.KickPlayerInfo)
 			info.UserId = userId
-			info.Reason = uint32(kcp.EnetServerKick)
+			info.Reason = uint32(kcp.EnetClientClose)
 			f.KickPlayer(info)
 		case cmd.PingReq:
 			// ping请求

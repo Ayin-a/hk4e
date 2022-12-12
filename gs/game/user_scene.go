@@ -117,30 +117,36 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 
 		empty := new(proto.AbilitySyncStateInfo)
 		activeAvatarId := world.GetPlayerActiveAvatarId(player)
-		playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 		playerEnterSceneInfoNotify := &proto.PlayerEnterSceneInfoNotify{
-			CurAvatarEntityId: playerTeamEntity.avatarEntityMap[activeAvatarId],
+			CurAvatarEntityId: world.GetPlayerWorldAvatarEntityId(player, activeAvatarId),
 			EnterSceneToken:   player.EnterSceneToken,
 			TeamEnterInfo: &proto.TeamEnterSceneInfo{
-				TeamEntityId:        playerTeamEntity.teamEntityId,
+				TeamEntityId:        world.GetPlayerTeamEntityId(player),
 				TeamAbilityInfo:     empty,
 				AbilityControlBlock: new(proto.AbilityControlBlock),
 			},
 			MpLevelEntityInfo: &proto.MPLevelEntityInfo{
 				EntityId:        WORLD_MANAGER.GetWorldByID(player.WorldId).mpLevelEntityId,
-				AuthorityPeerId: 1,
+				AuthorityPeerId: world.GetPlayerPeerId(player),
 				AbilityInfo:     empty,
 			},
 			AvatarEnterInfo: make([]*proto.AvatarEnterSceneInfo, 0),
 		}
-		for _, avatarId := range world.GetPlayerAvatarIdList(player) {
-			avatar := player.AvatarMap[avatarId]
+		for _, worldAvatar := range world.GetPlayerWorldAvatarList(player) {
+			avatar := player.AvatarMap[worldAvatar.avatarId]
 			avatarEnterSceneInfo := &proto.AvatarEnterSceneInfo{
-				AvatarGuid:        avatar.Guid,
-				AvatarEntityId:    playerTeamEntity.avatarEntityMap[avatarId],
-				WeaponGuid:        avatar.EquipWeapon.Guid,
-				WeaponEntityId:    playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId],
-				AvatarAbilityInfo: empty,
+				AvatarGuid:     avatar.Guid,
+				AvatarEntityId: world.GetPlayerWorldAvatarEntityId(player, worldAvatar.avatarId),
+				WeaponGuid:     avatar.EquipWeapon.Guid,
+				WeaponEntityId: world.GetPlayerWorldAvatarWeaponEntityId(player, worldAvatar.avatarId),
+				AvatarAbilityInfo: &proto.AbilitySyncStateInfo{
+					IsInited:           len(worldAvatar.abilityList) != 0,
+					DynamicValueMap:    nil,
+					AppliedAbilities:   worldAvatar.abilityList,
+					AppliedModifiers:   worldAvatar.modifierList,
+					MixinRecoverInfos:  nil,
+					SgvDynamicValueMap: nil,
+				},
 				WeaponAbilityInfo: empty,
 			}
 			playerEnterSceneInfoNotify.AvatarEnterInfo = append(playerEnterSceneInfoNotify.AvatarEnterInfo, avatarEnterSceneInfo)
@@ -190,10 +196,8 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			if worldPlayer.PlayerID == player.PlayerID {
 				continue
 			}
-			worldPlayerScene := world.GetSceneById(worldPlayer.SceneId)
-			worldPlayerTeamEntity := worldPlayerScene.GetPlayerTeamEntity(worldPlayer.PlayerID)
 			teamEntityInfo := &proto.TeamEntityInfo{
-				TeamEntityId:    worldPlayerTeamEntity.teamEntityId,
+				TeamEntityId:    world.GetPlayerTeamEntityId(worldPlayer),
 				AuthorityPeerId: world.GetPlayerPeerId(worldPlayer),
 				TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
 			}
@@ -218,7 +222,6 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.LOG.Debug("user enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
 
 	if world.multiplayer && world.IsPlayerFirstEnter(player) {
 		guestPostEnterSceneNotify := &proto.GuestPostEnterSceneNotify{
@@ -230,12 +233,11 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 
 	var visionType = proto.VisionType_VISION_TYPE_TRANSPORT
 
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	if world.IsPlayerFirstEnter(player) {
 		visionType = proto.VisionType_VISION_TYPE_BORN
 	}
-	g.AddSceneEntityNotify(player, visionType, []uint32{playerTeamEntity.avatarEntityMap[activeAvatarId]}, true)
+	g.AddSceneEntityNotify(player, visionType, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)}, true, false)
 
 	// 通过aoi获取场景中在自己周围格子里的全部实体id
 	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
@@ -243,7 +245,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	if world.IsPlayerFirstEnter(player) {
 		visionType = proto.VisionType_VISION_TYPE_MEET
 	}
-	g.AddSceneEntityNotify(player, visionType, entityIdList, false)
+	g.AddSceneEntityNotify(player, visionType, entityIdList, false, false)
 
 	sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
 		WeatherAreaId: 0,
@@ -262,16 +264,12 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	for otherPlayerId := range world.waitEnterPlayerMap {
 		delete(world.waitEnterPlayerMap, otherPlayerId)
 		otherPlayer := USER_MANAGER.GetOnlineUser(otherPlayerId)
-		otherPlayer.Pos = &model.Vector{
-			X: player.Pos.X,
-			Y: player.Pos.Y,
-			Z: player.Pos.Z,
-		}
-		otherPlayer.Rot = &model.Vector{
-			X: player.Rot.X,
-			Y: player.Rot.Y,
-			Z: player.Rot.Z,
-		}
+		otherPlayer.Pos.X = player.Pos.X
+		otherPlayer.Pos.Y = player.Pos.Y
+		otherPlayer.Pos.Z = player.Pos.Z
+		otherPlayer.Rot.X = player.Rot.X
+		otherPlayer.Rot.Y = player.Rot.Y
+		otherPlayer.Rot.Z = player.Rot.Z
 		otherPlayer.SceneId = player.SceneId
 
 		g.UserWorldAddPlayer(world, otherPlayer)
@@ -400,12 +398,15 @@ func (g *GameManager) AddSceneEntityNotifyToPlayer(player *model.Player, visionT
 		player.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 }
 
-func (g *GameManager) AddSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityList []*proto.SceneEntityInfo) {
+func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene *Scene, visionType proto.VisionType, entityList []*proto.SceneEntityInfo, aec bool) {
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
 		AppearType: visionType,
 		EntityList: entityList,
 	}
 	for _, scenePlayer := range scene.playerMap {
+		if aec && scenePlayer.PlayerID == player.PlayerID {
+			continue
+		}
 		g.SendMsg(cmd.SceneEntityAppearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityAppearNotify)
 		logger.LOG.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
 			scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
@@ -434,7 +435,7 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 	}
 }
 
-func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool) {
+func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	entityList := make([]*proto.SceneEntityInfo, 0)
@@ -469,7 +470,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 		}
 	}
 	if broadcast {
-		g.AddSceneEntityNotifyBroadcast(scene, visionType, entityList)
+		g.AddSceneEntityNotifyBroadcast(player, scene, visionType, entityList, aec)
 	} else {
 		g.AddSceneEntityNotifyToPlayer(player, visionType, entityList)
 	}
@@ -522,11 +523,11 @@ func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint3
 }
 
 func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneEntityInfo {
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
-	entity := scene.GetEntity(playerTeamEntity.avatarEntityMap[avatarId])
+	entity := scene.GetEntity(scene.world.GetPlayerWorldAvatarEntityId(player, avatarId))
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
 	}
+	worldAvatar := scene.world.GetWorldAvatarByEntityId(entity.id)
 	sceneEntityInfo := &proto.SceneEntityInfo{
 		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR,
 		EntityId:   entity.id,
@@ -557,7 +558,14 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 		},
 		EntityClientData: new(proto.EntityClientData),
 		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
-			AbilityInfo:         new(proto.AbilitySyncStateInfo),
+			AbilityInfo: &proto.AbilitySyncStateInfo{
+				IsInited:           len(worldAvatar.abilityList) != 0,
+				DynamicValueMap:    nil,
+				AppliedAbilities:   worldAvatar.abilityList,
+				AppliedModifiers:   worldAvatar.modifierList,
+				MixinRecoverInfos:  nil,
+				SgvDynamicValueMap: nil,
+			},
 			RendererChangedInfo: new(proto.EntityRendererChangedInfo),
 			AiInfo: &proto.SceneEntityAiInfo{
 				IsAiOpen: true,
@@ -649,9 +657,6 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
 		LifeState:        1,
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
-		Entity: &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfo(entity.gadgetEntity.gatherId),
-		},
 		EntityClientData: new(proto.EntityClientData),
 		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
 			AbilityInfo:         new(proto.AbilitySyncStateInfo),
@@ -663,12 +668,22 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 			BornPos: new(proto.Vector),
 		},
 	}
+	switch entity.gadgetEntity.gadgetType {
+	case GADGET_TYPE_CLIENT:
+		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
+			Gadget: g.PacketSceneGadgetInfoAbility(entity.gadgetEntity),
+		}
+	case GADGET_TYPE_GATHER:
+		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
+			Gadget: g.PacketSceneGadgetInfoGather(entity.gadgetEntity),
+		}
+	default:
+		break
+	}
 	return sceneEntityInfo
 }
 
 func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
-	avatar := player.AvatarMap[avatarId]
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	equipIdList := make([]uint32, 0)
 	weapon := player.AvatarMap[avatarId].EquipWeapon
 	equipIdList = append(equipIdList, weapon.ItemId)
@@ -684,7 +699,7 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 		EquipIdList:  equipIdList,
 		SkillDepotId: player.AvatarMap[avatarId].SkillDepotId,
 		Weapon: &proto.SceneWeaponInfo{
-			EntityId:    playerTeamEntity.weaponEntityMap[avatar.EquipWeapon.WeaponId],
+			EntityId:    scene.world.GetPlayerWorldAvatarWeaponEntityId(player, avatarId),
 			GadgetId:    uint32(gdc.CONF.ItemDataMap[int32(weapon.ItemId)].GadgetId),
 			ItemId:      weapon.ItemId,
 			Guid:        weapon.Guid,
@@ -716,8 +731,8 @@ func (g *GameManager) PacketSceneMonsterInfo() *proto.SceneMonsterInfo {
 	return sceneMonsterInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfo(gatherId uint32) *proto.SceneGadgetInfo {
-	gather := gdc.CONF.GatherDataMap[int32(gatherId)]
+func (g *GameManager) PacketSceneGadgetInfoGather(gadgetEntity *GadgetEntity) *proto.SceneGadgetInfo {
+	gather := gdc.CONF.GatherDataMap[int32(gadgetEntity.gatherId)]
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId: uint32(gather.GadgetId),
 		//GroupId:          133003011,
@@ -735,11 +750,29 @@ func (g *GameManager) PacketSceneGadgetInfo(gatherId uint32) *proto.SceneGadgetI
 	return sceneGadgetInfo
 }
 
+func (g *GameManager) PacketSceneGadgetInfoAbility(gadgetEntity *GadgetEntity) *proto.SceneGadgetInfo {
+	sceneGadgetInfo := &proto.SceneGadgetInfo{
+		GadgetId:         gadgetEntity.configId,
+		OwnerEntityId:    gadgetEntity.ownerEntityId,
+		AuthorityPeerId:  1,
+		IsEnableInteract: true,
+		Content: &proto.SceneGadgetInfo_ClientGadget{
+			ClientGadget: &proto.ClientGadgetInfo{
+				CampId:         gadgetEntity.campId,
+				CampType:       gadgetEntity.campType,
+				OwnerEntityId:  gadgetEntity.ownerEntityId,
+				TargetEntityId: gadgetEntity.targetEntityId,
+			},
+		},
+		PropOwnerEntityId: gadgetEntity.propOwnerEntityId,
+	}
+	return sceneGadgetInfo
+}
+
 func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Player) *proto.DelTeamEntityNotify {
-	playerTeamEntity := scene.GetPlayerTeamEntity(player.PlayerID)
 	delTeamEntityNotify := &proto.DelTeamEntityNotify{
 		SceneId:         player.SceneId,
-		DelEntityIdList: []uint32{playerTeamEntity.teamEntityId},
+		DelEntityIdList: []uint32{scene.world.GetPlayerTeamEntityId(player)},
 	}
 	return delTeamEntityNotify
 }

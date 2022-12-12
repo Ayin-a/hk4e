@@ -130,6 +130,25 @@ func (g *GameManager) CommonRetSucc(cmdId uint16, player *model.Player, rsp pb.M
 	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 
+func (g *GameManager) SendToWorldA(world *World, cmdId uint16, seq uint32, msg pb.Message) {
+	for _, v := range world.playerMap {
+		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
+	}
+}
+
+func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
+	for _, v := range world.playerMap {
+		if uid == v.PlayerID {
+			continue
+		}
+		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
+	}
+}
+
+func (g *GameManager) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Message) {
+	GAME_MANAGER.SendMsg(cmdId, world.owner.PlayerID, seq, msg)
+}
+
 func (g *GameManager) ReconnectPlayer(userId uint32) {
 	g.SendMsg(cmd.ClientReconnectNotify, userId, 0, new(proto.ClientReconnectNotify))
 }

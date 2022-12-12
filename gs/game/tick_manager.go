@@ -144,17 +144,17 @@ func (t *TickManager) onTick10Second(now int64) {
 			if monsterEntityCount < 30 {
 				monsterEntityId := t.createMonster(scene)
 				bigWorldOwner := USER_MANAGER.GetOnlineUser(1)
-				GAME_MANAGER.AddSceneEntityNotify(bigWorldOwner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true)
+				GAME_MANAGER.AddSceneEntityNotify(bigWorldOwner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
 			}
 		}
 		for _, player := range world.playerMap {
 			if world.multiplayer || !world.owner.Pause {
 				// 改面板
-				for _, avatarId := range world.GetPlayerAvatarIdList(player) {
-					avatar := player.AvatarMap[avatarId]
+				for _, worldAvatar := range world.GetPlayerWorldAvatarList(player) {
+					avatar := player.AvatarMap[worldAvatar.avatarId]
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)] = 1000000
 					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)] = 1.0
-					GAME_MANAGER.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
+					GAME_MANAGER.UpdateUserAvatarFightProp(player.PlayerID, worldAvatar.avatarId)
 				}
 			}
 		}
@@ -249,75 +249,6 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 }
 
 func (t *TickManager) onTick100MilliSecond(now int64) {
-	//// 伤害处理和转发
-	//for _, world := range t.gameManager.worldManager.worldMap {
-	//	for _, scene := range world.sceneMap {
-	//		scene.AttackHandler(t.gameManager)
-	//	}
-	//}
-
-	// 服务器控制的模拟AI移动
-
-	//bigWorldOwner := t.gameManager.userManager.GetOnlineUser(1)
-	//bigWorld := t.gameManager.worldManager.GetBigWorld()
-	//bigWorldScene := bigWorld.GetSceneById(3)
-	//
-	//if len(bigWorldScene.playerMap) < 2 {
-	//	return
-	//}
-	//if t.gameManager.worldManager.worldStatic.aiMoveCurrIndex >= len(t.gameManager.worldManager.worldStatic.aiMoveVectorList)-1 {
-	//	return
-	//}
-	//t.gameManager.worldManager.worldStatic.aiMoveCurrIndex++
-	//
-	//entityMoveInfo := new(proto.EntityMoveInfo)
-	//activeAvatarId := bigWorldOwner.TeamConfig.GetActiveAvatarId()
-	//playerTeamEntity := bigWorldScene.GetPlayerTeamEntity(bigWorldOwner.PlayerID)
-	//entityMoveInfo.EntityId = playerTeamEntity.avatarEntityMap[activeAvatarId]
-	//entityMoveInfo.SceneTime = uint32(bigWorldScene.GetSceneTime())
-	//entityMoveInfo.ReliableSeq = uint32(bigWorldScene.GetSceneTime() / 100 * 100)
-	//entityMoveInfo.IsReliable = true
-	//oldPos := model.Vector{
-	//	X: bigWorldOwner.Pos.X,
-	//	Y: bigWorldOwner.Pos.Y,
-	//	Z: bigWorldOwner.Pos.Z,
-	//}
-	//newPos := t.gameManager.worldManager.worldStatic.aiMoveVectorList[t.gameManager.worldManager.worldStatic.aiMoveCurrIndex]
-	//rotY := math.Atan2(newPos.X-oldPos.X, newPos.Z-oldPos.Z) / math.Pi * 180.0
-	//if rotY < 0.0 {
-	//	rotY += 360.0
-	//}
-	//entityMoveInfo.MotionInfo = &proto.MotionInfo{
-	//	Pos: &proto.Vector{
-	//		X: float32(newPos.X),
-	//		Y: float32(newPos.Y),
-	//		Z: float32(newPos.Z),
-	//	},
-	//	Rot: &proto.Vector{
-	//		X: 0.0,
-	//		Y: float32(rotY),
-	//		Z: 0.0,
-	//	},
-	//	Speed: &proto.Vector{
-	//		X: float32((newPos.X - oldPos.X) * 10.0),
-	//		Y: float32((newPos.Y - oldPos.Y) * 10.0),
-	//		Z: float32((newPos.Z - oldPos.Z) * 10.0),
-	//	},
-	//	State:  proto.MotionState_MOTION_STATE_RUN,
-	//	RefPos: new(proto.Vector),
-	//}
-	//data, err := pb.Marshal(entityMoveInfo)
-	//if err != nil {
-	//	logger.LOG.Error("build combat invocations entity move info error: %v", err)
-	//	return
-	//}
-	//combatInvocationsNotify := new(proto.CombatInvocationsNotify)
-	//combatInvocationsNotify.InvokeList = []*proto.CombatInvokeEntry{{
-	//	CombatData:   data,
-	//	ForwardType:  proto.ForwardType_FORWARD_TYPE_TO_ALL_EXCEPT_CUR,
-	//	ArgumentType: proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE,
-	//}}
-	//t.gameManager.CombatInvocationsNotify(bigWorldOwner.PlayerID, bigWorldOwner, 0, combatInvocationsNotify)
 }
 
 func (t *TickManager) createMonster(scene *Scene) uint32 {

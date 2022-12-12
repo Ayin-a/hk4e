@@ -21,6 +21,11 @@ type StaminaCost struct {
 	SKIFF         int32 // 游艇行驶
 	STANDBY       int32 // 站立
 	WALK          int32 // 走路
+	// 战斗技能
+	FIGHT_SWORD_ONE_HAND int32 // 单手剑
+	FIGHT_POLE           int32 // 长枪
+	FIGHT_CATALYST       int32 // 法器
+	FIGHT_CLAYMORE_PER   int32 // 双手剑 (每秒消耗)
 }
 
 func InitStaminaCostConst() {
@@ -42,4 +47,8 @@ func InitStaminaCostConst() {
 	StaminaCostConst.SKIFF = 500
 	StaminaCostConst.STANDBY = 500
 	StaminaCostConst.WALK = 500
+	StaminaCostConst.FIGHT_SWORD_ONE_HAND = -2000
+	StaminaCostConst.FIGHT_POLE = -2500
+	StaminaCostConst.FIGHT_CATALYST = -5000
+	StaminaCostConst.FIGHT_CLAYMORE_PER = -4000
 }

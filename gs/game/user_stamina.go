@@ -16,13 +16,14 @@ import (
 func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
 	switch entry.ArgumentType {
 	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_MIXIN_COST_STAMINA:
-		// 大剑重击耐力消耗
+		// 大剑重击 或 持续技能 耐力消耗
 		costStamina := new(proto.AbilityMixinCostStamina)
 		err := pb.Unmarshal(entry.AbilityData, costStamina)
 		if err != nil {
 			logger.LOG.Error("unmarshal ability data err: %v", err)
 			return
 		}
+		// 处理持续耐力消耗
 		g.HandleSkillSustainStamina(player)
 	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
 		// 普通角色重击耐力消耗
@@ -54,9 +55,8 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		if avatarAbility == nil {
 			return
 		}
-		// 获取该技能对应的耐力消耗
-		_ = avatarAbility.CostStamina
-		logger.LOG.Error("%v", avatarAbility.CostStamina)
+		// 重击对应的耐力消耗
+		g.HandleChargedAttackStamina(player, worldAvatar, avatarAbility)
 	default:
 		break
 	}
@@ -146,37 +146,93 @@ func (g *GameManager) HandleStamina(player *model.Player, motionState proto.Moti
 
 // HandleSkillSustainStamina 处理技能持续时的耐力消耗
 func (g *GameManager) HandleSkillSustainStamina(player *model.Player) {
-	skillId := player.StaminaInfo.LastSkillId
-	logger.LOG.Error("stamina skill sustain, skillId: %v", skillId)
+	staminaInfo := player.StaminaInfo
+	skillId := staminaInfo.LastSkillId
+
+	// 读取技能配置表
 	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
 	if !ok {
 		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
 		return
 	}
-	// 距离上次执行过去的时间
-	pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
-	// 根据配置以及距离上次的时间计算消耗的耐力
-	g.UpdateStamina(player, -(int32(pastTime/1000)*avatarSkillConfig.CostStamina)*100)
+	// 获取释放技能者的角色Id
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	// 获取世界中的角色实体
+	worldAvatar := world.GetWorldAvatarByEntityId(staminaInfo.LastCasterId)
+	if worldAvatar == nil {
+		return
+	}
+	// 获取现行角色的配置表
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
+	if !ok {
+		logger.LOG.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		return
+	}
 
-	// 记录最后释放技能时间
-	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
+	// 需要消耗的耐力值
+	var costStamina int32
+
+	// 如果为0代表使用默认值
+	if avatarSkillConfig.CostStamina == 0 {
+		// 大剑持续耐力消耗默认值
+		if avatarDataConfig.WeaponType == constant.WeaponTypeConst.WEAPON_CLAYMORE {
+			costStamina = constant.StaminaCostConst.FIGHT_CLAYMORE_PER
+		}
+	} else {
+		costStamina = -(avatarSkillConfig.CostStamina * 100)
+	}
+
+	// 距离上次执行过去的时间
+	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+	// 根据配置以及距离上次的时间计算消耗的耐力
+	costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
+	logger.LOG.Debug("stamina skill sustain, skillId: %v, cost: %v", skillId, costStamina)
+
+	// 根据配置以及距离上次的时间计算消耗的耐力
+	g.UpdateStamina(player, costStamina)
+
+	// 记录最后释放的技能
+	player.StaminaInfo.SetLastSkill(staminaInfo.LastCasterId, staminaInfo.LastSkillId)
 }
 
-//// HandleSkillStartStamina 处理技能开始时即时耐力消耗
-//func (g *GameManager) HandleSkillStartStamina(player *model.Player, skillId uint32) {
-//	logger.LOG.Error("stamina skill start, skillId: %v", skillId)
-//	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
-//	if !ok {
-//		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
-//		return
-//	}
-//	// 根据配置消耗耐力
-//	g.UpdateStamina(player, -avatarSkillConfig.CostStamina*100)
-//
-//	// 记录最后释放的技能
-//	player.StaminaInfo.LastSkillId = skillId
-//	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
-//}
+// HandleChargedAttackStamina 处理重击技能即时耐力消耗
+func (g *GameManager) HandleChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
+	// 获取现行角色的配置表
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
+	if !ok {
+		logger.LOG.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		return
+	}
+
+	// 需要消耗的耐力值
+	var costStamina int32
+
+	// 如果为0代表使用默认值
+	if skillData.CostStamina == 0 {
+		// 使用武器对应默认耐力消耗
+		// 双手剑为持续耐力消耗不在这里处理
+		switch avatarDataConfig.WeaponType {
+		case constant.WeaponTypeConst.WEAPON_SWORD_ONE_HAND:
+			// 单手剑
+			costStamina = constant.StaminaCostConst.FIGHT_SWORD_ONE_HAND
+		case constant.WeaponTypeConst.WEAPON_POLE:
+			// 长枪
+			costStamina = constant.StaminaCostConst.FIGHT_POLE
+		case constant.WeaponTypeConst.WEAPON_CATALYST:
+			// 法器
+			costStamina = constant.StaminaCostConst.FIGHT_CATALYST
+		}
+	} else {
+		costStamina = -(skillData.CostStamina * 100)
+	}
+	logger.LOG.Debug("charged attack stamina, skillId: %v, cost: %v", skillData.AvatarSkillId, costStamina)
+
+	// 根据配置消耗耐力
+	g.UpdateStamina(player, costStamina)
+
+	// 记录最后释放的技能
+	player.StaminaInfo.SetLastSkill(worldAvatar.avatarEntityId, uint32(skillData.AvatarSkillId))
+}
 
 // StaminaHandler 处理持续耐力消耗
 func (g *GameManager) StaminaHandler(player *model.Player) {
@@ -188,8 +244,8 @@ func (g *GameManager) StaminaHandler(player *model.Player) {
 
 	// 添加的耐力大于0为恢复
 	if staminaInfo.CostStamina > 0 {
-		// 耐力延迟1s(5 ticks)恢复 动作状态为加速将立刻恢复耐力
-		if staminaInfo.RestoreDelay < 5 && (staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH) {
+		// 耐力延迟2s(10 ticks)恢复 动作状态为加速将立刻恢复耐力
+		if staminaInfo.RestoreDelay < 10 && (staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH) {
 			//logger.LOG.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.RestoreDelay++
 			return // 不恢复耐力
@@ -271,6 +327,11 @@ func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 		stamina = 0
 	}
 
+	// 当前无变动不要频繁发包
+	if curStamina == stamina {
+		return
+	}
+
 	g.SetStamina(player, uint32(stamina))
 }
 
@@ -280,10 +341,6 @@ func (g *GameManager) SetStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力prop
 	player.PropertiesMap[prop] = stamina
 	//logger.LOG.Debug("player curr stamina: %v", stamina)
-	// 当前无变动不要频繁发包
-	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA] == player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA] {
-		return
-	}
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

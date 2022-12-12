@@ -279,6 +279,9 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 		return
 	}
 	logger.LOG.Debug("EvtDoSkillSuccNotify: %v", req)
+
+	// 记录耐力消耗的技能id 技能持续消耗需要这个获取到技能id
+	player.StaminaInfo.SetLastSkill(req.CasterId, req.SkillId)
 }
 
 func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {

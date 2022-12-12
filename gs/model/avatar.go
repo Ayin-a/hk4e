@@ -47,7 +47,11 @@ func (p *Player) InitAllAvatar() {
 }
 
 func (p *Player) InitAvatar(avatar *Avatar) {
-	avatarDataConfig := gdc.CONF.AvatarDataMap[int32(avatar.AvatarId)]
+	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatar.AvatarId)]
+	if !ok {
+		logger.LOG.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
+		return
+	}
 	// 角色战斗属性
 	avatar.FightPropMap = make(map[uint32]float32)
 	avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_NONE)] = 0.0

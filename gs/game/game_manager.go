@@ -73,7 +73,7 @@ func (g *GameManager) Stop() {
 	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 		EventId: RunUserCopyAndSave,
 	}
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
 	//g.worldManager.worldStatic.SaveTerrain()
 }
 

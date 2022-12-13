@@ -33,7 +33,7 @@ func LoadRsaKey() (signRsaKey []byte, encRsaKeyMap map[string][]byte, pwdRsaKey 
 	return signRsaKey, encRsaKeyMap, pwdRsaKey
 }
 
-func InitRegion(kcpAddr string, kcpPort int) (*proto.QueryCurrRegionHttpRsp, *proto.QueryRegionListHttpRsp, *random.Ec2b) {
+func InitRegion(kcpAddr string, kcpPort int32) (*proto.QueryCurrRegionHttpRsp, *proto.QueryRegionListHttpRsp, *random.Ec2b) {
 	dispatchEc2b := random.NewEc2b()
 	dispatchEc2bData := dispatchEc2b.Bytes()
 	dispatchXorKey := dispatchEc2b.XorKey()

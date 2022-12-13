@@ -25,7 +25,7 @@ import (
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("gs", config.CONF.Logger)
+	logger.InitLogger("gs")
 	logger.LOG.Info("gs start")
 
 	constant.InitConstant()

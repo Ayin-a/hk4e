@@ -17,7 +17,7 @@ import (
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("dispatch", config.CONF.Logger)
+	logger.InitLogger("dispatch")
 	logger.LOG.Info("dispatch start")
 
 	db := dao.NewDao()

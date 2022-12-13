@@ -3,6 +3,7 @@ package logger
 import (
 	"bytes"
 	"fmt"
+	"hk4e/common/config"
 	"log"
 	"os"
 	"path"
@@ -13,31 +14,39 @@ import (
 )
 
 const (
-	DEBUG   int = 1
-	INFO    int = 2
-	ERROR   int = 3
-	UNKNOWN int = 4
+	DEBUG = iota
+	INFO
+	ERROR
+	UNKNOWN
 )
 
 const (
-	CONSOLE int = 1
-	FILE    int = 2
-	BOTH    int = 3
-	NEITHER int = 4
+	CONSOLE = iota
+	FILE
+	BOTH
+	NEITHER
 )
 
-type Config struct {
-	Level     string `toml:"level"`
-	Method    string `toml:"method"`
-	TrackLine bool   `toml:"track_line"`
-}
+var (
+	GREEN     = string([]byte{27, 91, 51, 50, 109})
+	WHITE     = string([]byte{27, 91, 51, 55, 109})
+	YELLOW    = string([]byte{27, 91, 51, 51, 109})
+	RED       = string([]byte{27, 91, 51, 49, 109})
+	BLUE      = string([]byte{27, 91, 51, 52, 109})
+	MAGENTA   = string([]byte{27, 91, 51, 53, 109})
+	CYAN      = string([]byte{27, 91, 51, 54, 109})
+	RESET     = string([]byte{27, 91, 48, 109})
+	ALL_COLOR = []string{GREEN, WHITE, YELLOW, RED, BLUE, MAGENTA, CYAN, RESET}
+)
 
 var LOG *Logger = nil
 
 type Logger struct {
+	AppName     string
 	Level       int
-	Method      int
-	TrackLine   bool
+	Mode        int
+	Track       bool
+	MaxSize     int32
 	File        *os.File
 	LogInfoChan chan *LogInfo
 }
@@ -53,32 +62,18 @@ type LogInfo struct {
 	Stack       string
 }
 
-func InitLogger(name string, cfg Config) {
+func InitLogger(appName string) {
 	log.SetFlags(0)
 	LOG = new(Logger)
-	LOG.Level = getLevelInt(cfg.Level)
-	LOG.Method = getMethodInt(cfg.Method)
-	LOG.TrackLine = cfg.TrackLine
+	LOG.AppName = appName
+	LOG.Level = getLevelInt(config.CONF.Logger.Level)
+	LOG.Mode = getModeInt(config.CONF.Logger.Mode)
+	LOG.Track = config.CONF.Logger.Track
+	LOG.MaxSize = config.CONF.Logger.MaxSize
 	LOG.LogInfoChan = make(chan *LogInfo, 1000)
-	if LOG.Method == FILE || LOG.Method == BOTH {
-		file, err := os.OpenFile("./"+name+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-		if err != nil {
-			info := fmt.Sprintf("open log file error: %v\n", err)
-			panic(info)
-		}
-		LOG.File = file
-	}
+	LOG.File = nil
 	go LOG.doLog()
 }
-
-var GREEN = string([]byte{27, 91, 51, 50, 109})
-var WHITE = string([]byte{27, 91, 51, 55, 109})
-var YELLOW = string([]byte{27, 91, 51, 51, 109})
-var RED = string([]byte{27, 91, 51, 49, 109})
-var BLUE = string([]byte{27, 91, 51, 52, 109})
-var MAGENTA = string([]byte{27, 91, 51, 53, 109})
-var CYAN = string([]byte{27, 91, 51, 54, 109})
-var RESET = string([]byte{27, 91, 48, 109})
 
 func (l *Logger) doLog() {
 	for {
@@ -93,7 +88,7 @@ func (l *Logger) doLog() {
 		} else if logInfo.Level == ERROR {
 			logHeader += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
 		}
-		if l.TrackLine {
+		if l.Track {
 			logHeader += MAGENTA + "[" +
 				logInfo.FileName + ":" + strconv.Itoa(logInfo.Line) + " " +
 				logInfo.FuncName + "()" + " " +
@@ -109,14 +104,58 @@ func (l *Logger) doLog() {
 		if logInfo.Stack != "" {
 			logStr += logInfo.Stack
 		}
-		if l.Method == CONSOLE {
+		if l.Mode == CONSOLE {
 			log.Print(logStr)
-		} else if l.Method == FILE {
-			_, _ = l.File.WriteString(logStr)
-		} else if l.Method == BOTH {
+		} else if l.Mode == FILE {
+			l.WriteLogFile(logStr)
+		} else if l.Mode == BOTH {
 			log.Print(logStr)
-			_, _ = l.File.WriteString(logStr)
+			l.WriteLogFile(logStr)
 		}
+	}
+}
+
+func (l *Logger) WriteLogFile(logStr string) {
+	for _, v := range ALL_COLOR {
+		logStr = strings.ReplaceAll(logStr, v, "")
+	}
+	if l.File == nil {
+		file, err := os.OpenFile("./"+l.AppName+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			fmt.Printf(RED+"open new log file error: %v\n"+RESET, err)
+			return
+		}
+		LOG.File = file
+	}
+	fileStat, err := l.File.Stat()
+	if err != nil {
+		fmt.Printf(RED+"get log file stat error: %v\n"+RESET, err)
+		return
+	}
+	if fileStat.Size() >= int64(l.MaxSize) {
+		err = l.File.Close()
+		if err != nil {
+			fmt.Printf(RED+"close old log file error: %v\n"+RESET, err)
+			return
+		}
+		timeNow := time.Now()
+		timeNowStr := timeNow.Format("2006-01-02-15_04_05")
+		err = os.Rename(l.File.Name(), l.File.Name()+"."+timeNowStr+".log")
+		if err != nil {
+			fmt.Printf(RED+"rename old log file error: %v\n"+RESET, err)
+			return
+		}
+		file, err := os.OpenFile("./"+l.AppName+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			fmt.Printf(RED+"open new log file error: %v\n"+RESET, err)
+			return
+		}
+		LOG.File = file
+	}
+	_, err = l.File.WriteString(logStr)
+	if err != nil {
+		fmt.Printf(RED+"write log file error: %v\n"+RESET, err)
+		return
 	}
 }
 
@@ -128,7 +167,7 @@ func (l *Logger) Debug(msg string, param ...any) {
 	logInfo.Level = DEBUG
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.TrackLine {
+	if l.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
 	}
@@ -143,7 +182,7 @@ func (l *Logger) Info(msg string, param ...any) {
 	logInfo.Level = INFO
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.TrackLine {
+	if l.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
 	}
@@ -158,7 +197,7 @@ func (l *Logger) Error(msg string, param ...any) {
 	logInfo.Level = ERROR
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.TrackLine {
+	if l.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
 	}
@@ -173,7 +212,7 @@ func (l *Logger) ErrorStack(msg string, param ...any) {
 	logInfo.Level = ERROR
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.TrackLine {
+	if l.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
 		logInfo.GoroutineId = l.getGoroutineId()
 		logInfo.Stack = l.Stack()
@@ -207,8 +246,8 @@ func (l *Logger) getLevelStr(level int) (ret string) {
 	return ret
 }
 
-func getMethodInt(method string) (ret int) {
-	switch method {
+func getModeInt(mode string) (ret int) {
+	switch mode {
 	case "CONSOLE":
 		ret = CONSOLE
 	case "FILE":

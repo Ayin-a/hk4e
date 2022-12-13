@@ -162,7 +162,7 @@ func (c *Controller) registerRouter() {
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)
 	port := config.CONF.HttpPort
-	addr := ":" + strconv.Itoa(port)
+	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)
 	if err != nil {
 		logger.LOG.Error("gin run error: %v", err)

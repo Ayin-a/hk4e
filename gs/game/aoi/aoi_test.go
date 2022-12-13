@@ -10,7 +10,7 @@ import (
 func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 	filePath := "./application.toml"
 	config.InitConfig(filePath)
-	logger.InitLogger("", config.CONF.Logger)
+	logger.InitLogger("")
 	aoiManager := NewAoiManager(
 		-150, 150, 3,
 		-150, 150, 3,

@@ -19,7 +19,7 @@ import (
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("gate", config.CONF.Logger)
+	logger.InitLogger("gate")
 	logger.LOG.Info("gate start")
 
 	kcpEventInput := make(chan *net.KcpEvent)

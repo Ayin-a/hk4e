@@ -3,37 +3,43 @@ package config
 import (
 	"fmt"
 
-	"hk4e/pkg/logger"
-
 	"github.com/BurntSushi/toml"
 )
 
 var CONF *Config = nil
 
-// 配置
+// Config 配置
 type Config struct {
-	HttpPort int           `toml:"http_port"`
-	Logger   logger.Config `toml:"logger"`
-	Database Database      `toml:"database"`
-	Hk4e     Hk4e          `toml:"hk4e"`
-	MQ       MQ            `toml:"mq"`
+	HttpPort int32    `toml:"http_port"`
+	Logger   Logger   `toml:"logger"`
+	Database Database `toml:"database"`
+	Hk4e     Hk4e     `toml:"hk4e"`
+	MQ       MQ       `toml:"mq"`
 }
 
-// 数据库配置
+// Logger 日志
+type Logger struct {
+	Level   string `toml:"level"`
+	Mode    string `toml:"mode"`
+	Track   bool   `toml:"track"`
+	MaxSize int32  `toml:"max_size"`
+}
+
+// Database 数据库配置
 type Database struct {
 	Url string `toml:"url"`
 }
 
-// 原神相关
+// Hk4e 原神相关
 type Hk4e struct {
-	KcpPort            int    `toml:"kcp_port"`
+	KcpPort            int32  `toml:"kcp_port"`
 	KcpAddr            string `toml:"kcp_addr"`
 	ResourcePath       string `toml:"resource_path"`
 	GameDataConfigPath string `toml:"game_data_config_path"`
 	GachaHistoryServer string `toml:"gacha_history_server"`
 }
 
-// 消息队列
+// MQ 消息队列
 type MQ struct {
 	NatsUrl string `toml:"nats_url"`
 }

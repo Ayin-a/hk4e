@@ -61,8 +61,8 @@ func (k *KcpConnectManager) Start() {
 		// key
 		k.dispatchKey = make([]byte, 4096)
 		// kcp
-		port := strconv.FormatInt(int64(config.CONF.Hk4e.KcpPort), 10)
-		listener, err := kcp.ListenWithOptions("0.0.0.0:"+port, nil, 0, 0)
+		port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
+		listener, err := kcp.ListenWithOptions(config.CONF.Hk4e.KcpAddr+":"+port, nil, 0, 0)
 		if err != nil {
 			logger.LOG.Error("listen kcp err: %v", err)
 			return

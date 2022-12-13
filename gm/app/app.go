@@ -18,7 +18,7 @@ import (
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("gm", config.CONF.Logger)
+	logger.InitLogger("gm")
 	logger.LOG.Info("gm start")
 
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)

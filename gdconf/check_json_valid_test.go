@@ -40,7 +40,7 @@ func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount 
 
 func TestCheckJsonValid(t *testing.T) {
 	config.InitConfig("./application.toml")
-	logger.InitLogger("test", config.CONF.Logger)
+	logger.InitLogger("test")
 	errorJsonFileList := make([]string, 0)
 	totalJsonFileCount := 0
 	CheckJsonLoop("./game_data_config/json", &errorJsonFileList, &totalJsonFileCount)

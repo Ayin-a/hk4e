@@ -24,7 +24,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 			return
 		}
 		// 处理持续耐力消耗
-		g.HandleSkillSustainStamina(player)
+		g.SkillSustainStamina(player, costStamina.IsSwim)
 	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
 		// 普通角色重击耐力消耗
 		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -37,7 +37,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		abilityNameHashCode := uint32(0)
 		for _, ability := range worldAvatar.abilityList {
 			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
-				logger.LOG.Error("%v", ability)
+				//logger.LOG.Error("%v", ability)
 				abilityNameHashCode = ability.AbilityName.GetHash()
 			}
 		}
@@ -56,7 +56,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 			return
 		}
 		// 重击对应的耐力消耗
-		g.HandleChargedAttackStamina(player, worldAvatar, avatarAbility)
+		g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
 	default:
 		break
 	}
@@ -107,8 +107,8 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 	g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
 }
 
-// HandleStamina 处理即时耐力消耗
-func (g *GameManager) HandleStamina(player *model.Player, motionState proto.MotionState) {
+// ImmediateStamina 处理即时耐力消耗
+func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.MotionState) {
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
@@ -144,8 +144,8 @@ func (g *GameManager) HandleStamina(player *model.Player, motionState proto.Moti
 	}
 }
 
-// HandleSkillSustainStamina 处理技能持续时的耐力消耗
-func (g *GameManager) HandleSkillSustainStamina(player *model.Player) {
+// SkillSustainStamina 处理技能持续时的耐力消耗
+func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	staminaInfo := player.StaminaInfo
 	skillId := staminaInfo.LastSkillId
 
@@ -186,17 +186,17 @@ func (g *GameManager) HandleSkillSustainStamina(player *model.Player) {
 	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
 	// 根据配置以及距离上次的时间计算消耗的耐力
 	costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
-	logger.LOG.Debug("stamina skill sustain, skillId: %v, cost: %v", skillId, costStamina)
+	logger.LOG.Debug("stamina skill sustain, skillId: %v, cost: %v, isSwim: %v", skillId, costStamina, isSwim)
 
 	// 根据配置以及距离上次的时间计算消耗的耐力
 	g.UpdateStamina(player, costStamina)
 
-	// 记录最后释放的技能
-	player.StaminaInfo.SetLastSkill(staminaInfo.LastCasterId, staminaInfo.LastSkillId)
+	// 记录最后释放技能的时间
+	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
 }
 
-// HandleChargedAttackStamina 处理重击技能即时耐力消耗
-func (g *GameManager) HandleChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
+// ChargedAttackStamina 处理重击技能即时耐力消耗
+func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
 	// 获取现行角色的配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
 	if !ok {
@@ -229,13 +229,31 @@ func (g *GameManager) HandleChargedAttackStamina(player *model.Player, worldAvat
 
 	// 根据配置消耗耐力
 	g.UpdateStamina(player, costStamina)
-
-	// 记录最后释放的技能
-	player.StaminaInfo.SetLastSkill(worldAvatar.avatarEntityId, uint32(skillData.AvatarSkillId))
 }
 
-// StaminaHandler 处理持续耐力消耗
-func (g *GameManager) StaminaHandler(player *model.Player) {
+// SkillStartStamina 处理技能开始时的即时耐力消耗
+func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, skillId uint32) {
+	staminaInfo := player.StaminaInfo
+
+	// 获取该技能开始时所需消耗的耐力
+	costStamina := constant.StaminaCostConst.SKILL_START[skillId]
+	logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
+
+	// 距离上次处理技能开始耐力消耗过去的时间
+	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+	// 上次触发的技能相同则每400ms触发一次消耗
+	if staminaInfo.LastSkillId == skillId && pastTime < 400 {
+		return
+	}
+	// 根据配置消耗耐力
+	g.UpdateStamina(player, costStamina)
+
+	// 记录最后释放的技能
+	player.StaminaInfo.SetLastSkill(casterId, skillId)
+}
+
+// SustainStaminaHandler 处理持续耐力消耗
+func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return

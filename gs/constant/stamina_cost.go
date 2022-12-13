@@ -21,11 +21,13 @@ type StaminaCost struct {
 	SKIFF         int32 // 游艇行驶
 	STANDBY       int32 // 站立
 	WALK          int32 // 走路
-	// 战斗技能
+	// 武器消耗默认值
 	FIGHT_SWORD_ONE_HAND int32 // 单手剑
 	FIGHT_POLE           int32 // 长枪
 	FIGHT_CATALYST       int32 // 法器
 	FIGHT_CLAYMORE_PER   int32 // 双手剑 (每秒消耗)
+	// 技能开始消耗 (目前仅发现绫华与莫娜的冲刺会有开始消耗)
+	SKILL_START map[uint32]int32 // [skillId]消耗值
 }
 
 func InitStaminaCostConst() {
@@ -51,4 +53,8 @@ func InitStaminaCostConst() {
 	StaminaCostConst.FIGHT_POLE = -2500
 	StaminaCostConst.FIGHT_CATALYST = -5000
 	StaminaCostConst.FIGHT_CLAYMORE_PER = -4000
+	StaminaCostConst.SKILL_START = map[uint32]int32{
+		10013: -1000, // 绫华冲刺(霰步)
+		10413: -1000, // 莫娜冲刺(虚实流动)
+	}
 }

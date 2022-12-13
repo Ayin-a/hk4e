@@ -243,7 +243,7 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 	// 耐力消耗
 	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
-			GAME_MANAGER.StaminaHandler(player)
+			GAME_MANAGER.SustainStaminaHandler(player)
 		}
 	}
 }

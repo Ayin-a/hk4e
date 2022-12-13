@@ -137,7 +137,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
 
 			// 处理耐力消耗
-			g.HandleStamina(player, motionInfo.State)
+			g.ImmediateStamina(player, motionInfo.State)
 
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ANIMATOR_STATE_CHANGED:
@@ -280,8 +280,8 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 	}
 	logger.LOG.Debug("EvtDoSkillSuccNotify: %v", req)
 
-	// 记录耐力消耗的技能id 技能持续消耗需要这个获取到技能id
-	player.StaminaInfo.SetLastSkill(req.CasterId, req.SkillId)
+	// 处理技能开始的耐力消耗
+	g.SkillStartStamina(player, req.CasterId, req.SkillId)
 }
 
 func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {

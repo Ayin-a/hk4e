@@ -440,9 +440,9 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 	scene := world.GetSceneById(player.SceneId)
 	entityList := make([]*proto.SceneEntityInfo, 0)
 	for _, entityId := range entityIdList {
-		entity := scene.entityMap[entityId]
-		if entity == nil {
-			logger.LOG.Error("get entity is nil, entityId: %v", entityId)
+		entity, ok := scene.entityMap[entityId]
+		if !ok {
+			// logger.LOG.Error("get entity is nil, entityId: %v", entityId)
 			continue
 		}
 		switch entity.entityType {
@@ -527,16 +527,17 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
 	}
+	pos := &proto.Vector{
+		X: float32(entity.pos.X),
+		Y: float32(entity.pos.Y),
+		Z: float32(entity.pos.Z),
+	}
 	worldAvatar := scene.world.GetWorldAvatarByEntityId(entity.id)
 	sceneEntityInfo := &proto.SceneEntityInfo{
 		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
-			Pos: &proto.Vector{
-				X: float32(entity.pos.X),
-				Y: float32(entity.pos.Y),
-				Z: float32(entity.pos.Z),
-			},
+			Pos: pos,
 			Rot: &proto.Vector{
 				X: float32(entity.rot.X),
 				Y: float32(entity.rot.Y),
@@ -569,9 +570,9 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 			RendererChangedInfo: new(proto.EntityRendererChangedInfo),
 			AiInfo: &proto.SceneEntityAiInfo{
 				IsAiOpen: true,
-				BornPos:  new(proto.Vector),
+				BornPos:  pos,
 			},
-			BornPos: new(proto.Vector),
+			BornPos: pos,
 		},
 		LastMoveSceneTimeMs: entity.lastMoveSceneTimeMs,
 		LastMoveReliableSeq: entity.lastMoveReliableSeq,
@@ -632,15 +633,16 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
 	}
+	pos := &proto.Vector{
+		X: float32(entity.pos.X),
+		Y: float32(entity.pos.Y),
+		Z: float32(entity.pos.Z),
+	}
 	sceneEntityInfo := &proto.SceneEntityInfo{
 		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
-			Pos: &proto.Vector{
-				X: float32(entity.pos.X),
-				Y: float32(entity.pos.Y),
-				Z: float32(entity.pos.Z),
-			},
+			Pos: pos,
 			Rot: &proto.Vector{
 				X: float32(entity.rot.X),
 				Y: float32(entity.rot.Y),
@@ -663,19 +665,23 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 			RendererChangedInfo: new(proto.EntityRendererChangedInfo),
 			AiInfo: &proto.SceneEntityAiInfo{
 				IsAiOpen: true,
-				BornPos:  new(proto.Vector),
+				BornPos:  pos,
 			},
-			BornPos: new(proto.Vector),
+			BornPos: pos,
 		},
 	}
 	switch entity.gadgetEntity.gadgetType {
 	case GADGET_TYPE_CLIENT:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoAbility(entity.gadgetEntity),
+			Gadget: g.PacketSceneGadgetInfoAbility(entity.gadgetEntity.gadgetClientEntity),
 		}
 	case GADGET_TYPE_GATHER:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoGather(entity.gadgetEntity),
+			Gadget: g.PacketSceneGadgetInfoGather(entity.gadgetEntity.gadgetGatherEntity),
+		}
+	case GADGET_TYPE_VEHICLE:
+		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
+			Gadget: g.PacketSceneGadgetInfoVehicle(entity.gadgetEntity.gadgetVehicleEntity),
 		}
 	default:
 		break
@@ -731,8 +737,28 @@ func (g *GameManager) PacketSceneMonsterInfo() *proto.SceneMonsterInfo {
 	return sceneMonsterInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoGather(gadgetEntity *GadgetEntity) *proto.SceneGadgetInfo {
-	gather := gdc.CONF.GatherDataMap[int32(gadgetEntity.gatherId)]
+func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVehicleEntity) *proto.SceneGadgetInfo {
+	sceneGadgetInfo := &proto.SceneGadgetInfo{
+		GadgetId:         gadgetVehicleEntity.vehicleId,
+		AuthorityPeerId:  WORLD_MANAGER.GetWorldByID(gadgetVehicleEntity.owner.WorldId).GetPlayerPeerId(gadgetVehicleEntity.owner),
+		IsEnableInteract: true,
+		Content: &proto.SceneGadgetInfo_VehicleInfo{
+			VehicleInfo: &proto.VehicleInfo{
+				MemberList: make([]*proto.VehicleMember, 0, len(gadgetVehicleEntity.memberMap)),
+				OwnerUid:   gadgetVehicleEntity.owner.PlayerID,
+				CurStamina: gadgetVehicleEntity.curStamina,
+			},
+		},
+	}
+	return sceneGadgetInfo
+}
+
+func (g *GameManager) PacketSceneGadgetInfoGather(gadgetGatherEntity *GadgetGatherEntity) *proto.SceneGadgetInfo {
+	gather, ok := gdc.CONF.GatherDataMap[int32(gadgetGatherEntity.gatherId)]
+	if !ok {
+		logger.LOG.Error("gather data error, gatherId: %v", gadgetGatherEntity.gatherId)
+		return new(proto.SceneGadgetInfo)
+	}
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId: uint32(gather.GadgetId),
 		//GroupId:          133003011,
@@ -750,21 +776,21 @@ func (g *GameManager) PacketSceneGadgetInfoGather(gadgetEntity *GadgetEntity) *p
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoAbility(gadgetEntity *GadgetEntity) *proto.SceneGadgetInfo {
+func (g *GameManager) PacketSceneGadgetInfoAbility(gadgetClientEntity *GadgetClientEntity) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
-		GadgetId:         gadgetEntity.configId,
-		OwnerEntityId:    gadgetEntity.ownerEntityId,
+		GadgetId:         gadgetClientEntity.configId,
+		OwnerEntityId:    gadgetClientEntity.ownerEntityId,
 		AuthorityPeerId:  1,
 		IsEnableInteract: true,
 		Content: &proto.SceneGadgetInfo_ClientGadget{
 			ClientGadget: &proto.ClientGadgetInfo{
-				CampId:         gadgetEntity.campId,
-				CampType:       gadgetEntity.campType,
-				OwnerEntityId:  gadgetEntity.ownerEntityId,
-				TargetEntityId: gadgetEntity.targetEntityId,
+				CampId:         gadgetClientEntity.campId,
+				CampType:       gadgetClientEntity.campType,
+				OwnerEntityId:  gadgetClientEntity.ownerEntityId,
+				TargetEntityId: gadgetClientEntity.targetEntityId,
 			},
 		},
-		PropOwnerEntityId: gadgetEntity.propOwnerEntityId,
+		PropOwnerEntityId: gadgetClientEntity.propOwnerEntityId,
 	}
 	return sceneGadgetInfo
 }

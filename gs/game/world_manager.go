@@ -1,6 +1,7 @@
 package game
 
 import (
+	"hk4e/pkg/logger"
 	"math"
 	"time"
 
@@ -520,17 +521,34 @@ type MonsterEntity struct {
 const (
 	GADGET_TYPE_CLIENT = iota
 	GADGET_TYPE_GATHER
+	GADGET_TYPE_VEHICLE // 载具
 )
 
-type GadgetEntity struct {
-	gadgetType        int
-	gatherId          uint32
+type GadgetClientEntity struct {
 	configId          uint32
 	campId            uint32
 	campType          uint32
 	ownerEntityId     uint32
 	targetEntityId    uint32
 	propOwnerEntityId uint32
+}
+
+type GadgetGatherEntity struct {
+	gatherId uint32
+}
+
+type GadgetVehicleEntity struct {
+	vehicleId  uint32
+	owner      *model.Player
+	curStamina float32
+	memberMap  map[uint32]*model.Player // uint32 = pos
+}
+
+type GadgetEntity struct {
+	gadgetType          int
+	gadgetClientEntity  *GadgetClientEntity
+	gadgetGatherEntity  *GadgetGatherEntity
+	gadgetVehicleEntity *GadgetVehicleEntity
 }
 
 // 场景实体数据结构
@@ -662,13 +680,15 @@ func (s *Scene) ClientCreateEntityGadget(pos, rot *model.Vector, entityId uint32
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
-			gadgetType:        GADGET_TYPE_CLIENT,
-			configId:          configId,
-			campId:            campId,
-			campType:          campType,
-			ownerEntityId:     ownerEntityId,
-			targetEntityId:    targetEntityId,
-			propOwnerEntityId: propOwnerEntityId,
+			gadgetType: GADGET_TYPE_CLIENT,
+			gadgetClientEntity: &GadgetClientEntity{
+				configId:          configId,
+				campId:            campId,
+				campType:          campType,
+				ownerEntityId:     ownerEntityId,
+				targetEntityId:    targetEntityId,
+				propOwnerEntityId: propOwnerEntityId,
+			},
 		},
 	}
 	s.entityMap[entity.id] = entity
@@ -694,7 +714,47 @@ func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
 		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_GATHER,
-			gatherId:   gatherId,
+			gadgetGatherEntity: &GadgetGatherEntity{
+				gatherId: gatherId,
+			},
+		},
+	}
+	s.entityMap[entity.id] = entity
+	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	return entity.id
+}
+
+func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
+	player := USER_MANAGER.GetOnlineUser(uid)
+	if player == nil {
+		logger.LOG.Error("player is nil, uid: %v", uid)
+		return 0
+	}
+	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
+	entity := &Entity{
+		id:                  entityId,
+		scene:               s,
+		pos:                 pos,
+		rot:                 rot,
+		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		lastMoveSceneTimeMs: 0,
+		lastMoveReliableSeq: 0,
+		fightProp: map[uint32]float32{
+			// TODO 以后使用配置表
+			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  114514,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  114514,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
+		},
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		level:      0,
+		gadgetEntity: &GadgetEntity{
+			gadgetType: GADGET_TYPE_VEHICLE,
+			gadgetVehicleEntity: &GadgetVehicleEntity{
+				vehicleId:  vehicleId,
+				owner:      player,
+				curStamina: 240, // TODO 应该也能在配置表找到
+				memberMap:  make(map[uint32]*model.Player),
+			},
 		},
 	}
 	s.entityMap[entity.id] = entity

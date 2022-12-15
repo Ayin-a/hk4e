@@ -540,6 +540,7 @@ type GadgetGatherEntity struct {
 type GadgetVehicleEntity struct {
 	vehicleId  uint32
 	owner      *model.Player
+	maxStamina float32
 	curStamina float32
 	memberMap  map[uint32]*model.Player // uint32 = pos
 }
@@ -752,7 +753,8 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 			gadgetVehicleEntity: &GadgetVehicleEntity{
 				vehicleId:  vehicleId,
 				owner:      player,
-				curStamina: 240, // TODO 应该也能在配置表找到
+				maxStamina: 240, // TODO 应该也能在配置表找到
+				curStamina: 240, // TODO 与maxStamina一致
 				memberMap:  make(map[uint32]*model.Player),
 			},
 		},

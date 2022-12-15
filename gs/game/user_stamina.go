@@ -55,8 +55,14 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		if avatarAbility == nil {
 			return
 		}
-		// 重击对应的耐力消耗
-		g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
+		// 距离技能开始过去的时间
+		pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
+		// 法器角色轻击也会算触发重击消耗
+		// 所以通过策略判断 必须距离技能开始过去100ms才算重击
+		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && pastTime > 100 {
+			// 重击对应的耐力消耗
+			g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
+		}
 	default:
 		break
 	}
@@ -117,7 +123,7 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 	//logger.LOG.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
 
 	// 设置用于持续消耗或恢复耐力的值
-	g.SetStaminaCost(player, motionState)
+	staminaInfo.SetStaminaCost(motionState)
 
 	// 未改变状态不执行后面 有些仅在动作开始消耗耐力
 	if motionState == staminaInfo.State {
@@ -126,6 +132,7 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 
 	// 记录玩家的动作状态
 	staminaInfo.State = motionState
+	logger.LOG.Error("state: %v", motionState.String())
 
 	// 根据玩家的状态立刻消耗耐力
 	switch motionState {
@@ -237,7 +244,6 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 
 	// 获取该技能开始时所需消耗的耐力
 	costStamina := constant.StaminaCostConst.SKILL_START[skillId]
-	logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
 
 	// 距离上次处理技能开始耐力消耗过去的时间
 	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
@@ -248,8 +254,12 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 	// 根据配置消耗耐力
 	g.UpdateStamina(player, costStamina)
 
+	logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
+
 	// 记录最后释放的技能
-	player.StaminaInfo.SetLastSkill(casterId, skillId)
+	staminaInfo.LastCasterId = casterId
+	staminaInfo.LastSkillId = skillId
+	staminaInfo.LastSkillTime = time.Now().UnixMilli()
 }
 
 // SustainStaminaHandler 处理持续耐力消耗
@@ -274,50 +284,6 @@ func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	g.UpdateStamina(player, staminaInfo.CostStamina)
 }
 
-// SetStaminaCost 设置动作需要消耗的耐力
-func (g *GameManager) SetStaminaCost(player *model.Player, state proto.MotionState) {
-	staminaInfo := player.StaminaInfo
-
-	// 根据状态决定要修改的耐力
-	// TODO 角色天赋 食物 会影响耐力消耗
-	switch state {
-	// 消耗耐力
-	case proto.MotionState_MOTION_STATE_DASH:
-		// 快速跑步
-		staminaInfo.CostStamina = constant.StaminaCostConst.DASH
-	case proto.MotionState_MOTION_STATE_FLY, proto.MotionState_MOTION_STATE_FLY_FAST, proto.MotionState_MOTION_STATE_FLY_SLOW:
-		// 滑翔
-		staminaInfo.CostStamina = constant.StaminaCostConst.FLY
-	case proto.MotionState_MOTION_STATE_SWIM_DASH:
-		// 快速游泳
-		staminaInfo.CostStamina = constant.StaminaCostConst.SWIM_DASH
-	case proto.MotionState_MOTION_STATE_SKIFF_DASH:
-		// 浪船加速
-		// TODO 玩家使用载具时需要用载具的协议发送prop
-		staminaInfo.CostStamina = constant.StaminaCostConst.SKIFF_DASH
-	// 恢复耐力
-	case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN:
-		// 正常跑步
-		staminaInfo.CostStamina = constant.StaminaCostConst.RUN
-	case proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY:
-		// 站立
-		staminaInfo.CostStamina = constant.StaminaCostConst.STANDBY
-	case proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK:
-		// 走路
-		staminaInfo.CostStamina = constant.StaminaCostConst.WALK
-	case proto.MotionState_MOTION_STATE_POWERED_FLY:
-		// 滑翔加速 (风圈等)
-		staminaInfo.CostStamina = constant.StaminaCostConst.POWERED_FLY
-	case proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH:
-		// 浪船加速 (风圈等)
-		staminaInfo.CostStamina = constant.StaminaCostConst.POWERED_SKIFF
-	// 缓慢动作将在客户端发送消息后消耗
-	case proto.MotionState_MOTION_STATE_CLIMB, proto.MotionState_MOTION_STATE_SWIM_MOVE:
-		// 缓慢攀爬 或 缓慢游泳
-		staminaInfo.CostStamina = 0
-	}
-}
-
 // UpdateStamina 更新耐力 当前耐力值 + 消耗的耐力值
 func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 	// 耐力增加0是没有意义的
@@ -330,10 +296,29 @@ func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 		player.StaminaInfo.RestoreDelay = 0
 	}
 
-	// 玩家最大耐力值
-	maxStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA])
-	// 玩家现行耐力值
-	curStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA])
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+
+	// 最大耐力值 现行耐力值
+	var maxStamina, curStamina int32
+	// 玩家是否处于载具中
+	var isInVehicle bool
+
+	// 获取载具实体
+	entity := g.GetSceneVehicleEntity(scene, player.VehicleInfo.InVehicleEntityId)
+	// 判断玩家处于载具中
+	if entity != nil && g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
+		// 载具耐力
+		// 因为载具的耐力需要换算
+		// 这里先*100后面要用的时候再换算 为了确保精度
+		maxStamina = int32(entity.gadgetEntity.gadgetVehicleEntity.maxStamina * 100)
+		curStamina = int32(entity.gadgetEntity.gadgetVehicleEntity.curStamina * 100)
+		isInVehicle = true
+	} else {
+		// 角色耐力
+		maxStamina = int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA])
+		curStamina = int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA])
+	}
 
 	// 即将更改为的耐力值
 	stamina := curStamina + staminaCost
@@ -350,15 +335,35 @@ func (g *GameManager) UpdateStamina(player *model.Player, staminaCost int32) {
 		return
 	}
 
-	g.SetStamina(player, uint32(stamina))
+	if isInVehicle {
+		// 修改载具现行耐力
+		g.SetVehicleStamina(player, entity.gadgetEntity.gadgetVehicleEntity, float32(stamina)/100)
+	} else {
+		// 修改玩家现行耐力
+		g.SetPlayerStamina(player, uint32(stamina))
+	}
+
 }
 
-// SetStamina 设置玩家的耐力
-func (g *GameManager) SetStamina(player *model.Player, stamina uint32) {
+// SetVehicleStamina 设置载具的耐力
+func (g *GameManager) SetVehicleStamina(player *model.Player, gadgetVehicleEntity *GadgetVehicleEntity, stamina float32) {
+	// 设置载具的耐力
+	gadgetVehicleEntity.curStamina = stamina
+	logger.LOG.Debug("vehicle stamina set, stamina: %v", stamina)
+
+	// PacketVehicleStaminaNotify
+	vehicleStaminaNotify := new(proto.VehicleStaminaNotify)
+	vehicleStaminaNotify.EntityId = player.VehicleInfo.InVehicleEntityId
+	vehicleStaminaNotify.CurStamina = stamina
+	g.SendMsg(cmd.VehicleStaminaNotify, player.PlayerID, player.ClientSeq, vehicleStaminaNotify)
+}
+
+// SetPlayerStamina 设置玩家的耐力
+func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
+	// 设置玩家的耐力
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
-	// 设置玩家的耐力prop
 	player.PropertiesMap[prop] = stamina
-	//logger.LOG.Debug("player curr stamina: %v", stamina)
+	logger.LOG.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

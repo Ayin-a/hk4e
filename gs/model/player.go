@@ -65,6 +65,7 @@ type Player struct {
 	SceneLoadState        int                                      `bson:"-" msgpack:"-"` // 场景加载状态
 	CoopApplyMap          map[uint32]int64                         `bson:"-" msgpack:"-"` // 敲门申请的玩家uid及时间
 	StaminaInfo           *StaminaInfo                             `bson:"-" msgpack:"-"` // 耐力临时数据
+	VehicleInfo           *VehicleInfo                             `bson:"-" msgpack:"-"` // 载具临时数据
 	ClientSeq             uint32                                   `bson:"-" msgpack:"-"` // 客户端发包请求的序号
 	CombatInvokeHandler   *InvokeHandler[proto.CombatInvokeEntry]  `bson:"-" msgpack:"-"` // combat转发器
 	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-" msgpack:"-"` // ability转发器
@@ -79,6 +80,7 @@ func (p *Player) InitAll() {
 	p.GameObjectGuidMap = make(map[uint64]GameObject)
 	p.CoopApplyMap = make(map[uint32]int64)
 	p.StaminaInfo = new(StaminaInfo)
+	p.VehicleInfo = new(VehicleInfo)
 	p.InitAllAvatar()
 	p.InitAllWeapon()
 	p.InitAllItem()

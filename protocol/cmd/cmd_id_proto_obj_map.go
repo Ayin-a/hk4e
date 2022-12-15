@@ -231,10 +231,11 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(McoinExchangeHcoinRsp, &proto.McoinExchangeHcoinRsp{}) // 结晶换原石响应
 
 	// 载具
-	c.registerMessage(CreateVehicleReq, &proto.CreateVehicleReq{})     // 创建载具请求
-	c.registerMessage(CreateVehicleRsp, &proto.CreateVehicleRsp{})     // 创建载具响应
-	c.registerMessage(VehicleInteractReq, &proto.VehicleInteractReq{}) // 载具交互请求
-	c.registerMessage(VehicleInteractRsp, &proto.VehicleInteractRsp{}) // 载具交互响应
+	c.registerMessage(CreateVehicleReq, &proto.CreateVehicleReq{})         // 创建载具请求
+	c.registerMessage(CreateVehicleRsp, &proto.CreateVehicleRsp{})         // 创建载具响应
+	c.registerMessage(VehicleInteractReq, &proto.VehicleInteractReq{})     // 载具交互请求
+	c.registerMessage(VehicleInteractRsp, &proto.VehicleInteractRsp{})     // 载具交互响应
+	c.registerMessage(VehicleStaminaNotify, &proto.VehicleStaminaNotify{}) // 载具耐力消耗通知
 
 	// 乱七八糟
 	c.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求

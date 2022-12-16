@@ -87,10 +87,11 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 	if entity == nil {
 		return
 	}
+	// 目前原神仅有一种载具 多载具时可能跟载具耐力回复冲突 到时候再改
 	// 确保载具Id为将要创建的 (每种载具允许存在1个)
-	if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
-		return
-	}
+	//if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
+	//	return
+	//}
 	// 该载具是否为此玩家的
 	if entity.gadgetEntity.gadgetVehicleEntity.owner != player {
 		return

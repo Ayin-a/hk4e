@@ -22,6 +22,8 @@ type StaminaCost struct {
 	SKIFF_DASH    int32 // 浪船加速
 	SKIFF_NORMAL  int32 // 浪船正常移动 (回复耐力)
 	POWERED_SKIFF int32 // 浪船加速(风圈等) (回复耐力)
+	IN_SKIFF      int32 // 处于浪船中回复角色耐力 (回复耐力)
+	SKIFF_NOBODY  int32 // 浪船无人时回复载具耐力 (回复耐力)
 	// 武器消耗默认值
 	FIGHT_SWORD_ONE_HAND int32 // 单手剑
 	FIGHT_POLE           int32 // 长枪
@@ -50,6 +52,8 @@ func InitStaminaCostConst() {
 	StaminaCostConst.SKIFF_DASH = -204
 	StaminaCostConst.SKIFF_NORMAL = 500
 	StaminaCostConst.POWERED_SKIFF = 500
+	StaminaCostConst.IN_SKIFF = 500
+	StaminaCostConst.SKIFF_NOBODY = 500
 	StaminaCostConst.FIGHT_SWORD_ONE_HAND = -2000
 	StaminaCostConst.FIGHT_POLE = -2500
 	StaminaCostConst.FIGHT_CATALYST = -5000

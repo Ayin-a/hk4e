@@ -6,12 +6,13 @@ import (
 )
 
 type StaminaInfo struct {
-	State         proto.MotionState // 动作状态
-	CostStamina   int32             // 消耗或恢复的耐力
-	RestoreDelay  uint8             // 恢复延迟
-	LastCasterId  uint32            // 最后释放技能者的Id
-	LastSkillId   uint32            // 最后释放的技能Id
-	LastSkillTime int64             // 最后释放技能的时间
+	State               proto.MotionState // 动作状态
+	CostStamina         int32             // 消耗或恢复的耐力
+	PlayerRestoreDelay  uint8             // 玩家耐力回复延时
+	VehicleRestoreDelay uint8             // 载具耐力回复延时
+	LastCasterId        uint32            // 最后释放技能者的Id
+	LastSkillId         uint32            // 最后释放的技能Id
+	LastSkillTime       int64             // 最后释放技能的时间
 }
 
 // SetStaminaCost 设置动作需要消耗的耐力

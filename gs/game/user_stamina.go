@@ -242,17 +242,22 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 	staminaInfo := player.StaminaInfo
 
 	// 获取该技能开始时所需消耗的耐力
-	costStamina := constant.StaminaCostConst.SKILL_START[skillId]
+	costStamina, ok := constant.StaminaCostConst.SKILL_START[skillId]
 
-	// 距离上次处理技能开始耐力消耗过去的时间
-	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
-	// 上次触发的技能相同则每400ms触发一次消耗
-	if staminaInfo.LastSkillId == skillId && pastTime > 400 {
-		// 根据配置消耗耐力
-		g.UpdatePlayerStamina(player, costStamina)
+	// 配置表确保存在技能开始对应的耐力消耗
+	if ok {
+		// 距离上次处理技能开始耐力消耗过去的时间
+		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillStartTime
+		// 上次触发的技能相同则每400ms触发一次消耗
+		if staminaInfo.LastSkillId != skillId || pastTime > 400 {
+			logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
+			// 根据配置消耗耐力
+			g.UpdatePlayerStamina(player, costStamina)
+			staminaInfo.LastSkillStartTime = time.Now().UnixMilli()
+		}
+	} else {
+		//logger.LOG.Debug("skill start cost error, cost: %v", costStamina)
 	}
-
-	logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
 
 	// 记录最后释放的技能
 	staminaInfo.LastCasterId = casterId
@@ -410,7 +415,7 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, stamina float32) {
 	// 设置载具的耐力
 	vehicleEntity.gadgetEntity.gadgetVehicleEntity.curStamina = stamina
-	logger.LOG.Debug("vehicle stamina set, stamina: %v", stamina)
+	//logger.LOG.Debug("vehicle stamina set, stamina: %v", stamina)
 
 	// PacketVehicleStaminaNotify
 	vehicleStaminaNotify := new(proto.VehicleStaminaNotify)
@@ -424,7 +429,7 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
-	logger.LOG.Debug("player stamina set, stamina: %v", stamina)
+	//logger.LOG.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

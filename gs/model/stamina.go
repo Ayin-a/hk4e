@@ -13,6 +13,7 @@ type StaminaInfo struct {
 	LastCasterId        uint32            // 最后释放技能者的Id
 	LastSkillId         uint32            // 最后释放的技能Id
 	LastSkillTime       int64             // 最后释放技能的时间
+	LastSkillStartTime  int64             // 最后执行开始技能耐力消耗的时间
 }
 
 // SetStaminaCost 设置动作需要消耗的耐力

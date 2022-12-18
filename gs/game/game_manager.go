@@ -2,8 +2,6 @@ package game
 
 import (
 	pb "google.golang.org/protobuf/proto"
-	"hk4e/gate/entity/gm"
-	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
@@ -155,19 +153,4 @@ func (g *GameManager) ReconnectPlayer(userId uint32) {
 
 func (g *GameManager) DisconnectPlayer(userId uint32) {
 	g.SendMsg(cmd.ServerDisconnectClientNotify, userId, 0, new(proto.ServerDisconnectClientNotify))
-}
-
-// KickPlayer 踢出玩家
-func (g *GameManager) KickPlayer(userId uint32) {
-	info := new(gm.KickPlayerInfo)
-	info.UserId = userId
-	// 客户端提示信息为服务器断开连接
-	info.Reason = uint32(kcp.EnetServerKick)
-	var result bool
-	ok := false
-	//ok := r.hk4eGatewayConsumer.CallFunction("RpcManager", "KickPlayer", &info, &result)
-	if ok == true && result == true {
-		return
-	}
-	return
 }

@@ -8,16 +8,6 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-type ProtoEnDecode struct {
-	cmdProtoMap *cmd.CmdProtoMap
-}
-
-func NewProtoEnDecode() (r *ProtoEnDecode) {
-	r = new(ProtoEnDecode)
-	r.cmdProtoMap = cmd.NewCmdProtoMap()
-	return r
-}
-
 type ProtoMsg struct {
 	ConvId         uint64
 	CmdId          uint16
@@ -30,7 +20,7 @@ type ProtoMessage struct {
 	message pb.Message
 }
 
-func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
+func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 	protoMsgList = make([]*ProtoMsg, 0)
 	protoMsg := new(ProtoMsg)
 	protoMsg.ConvId = kcpMsg.ConvId
@@ -49,7 +39,7 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 	}
 	// payload msg
 	protoMessageList := make([]*ProtoMessage, 0)
-	p.protoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
+	k.protoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
 	if len(protoMessageList) == 0 {
 		logger.LOG.Error("decode proto object is nil")
 		return protoMsgList
@@ -82,8 +72,8 @@ func (p *ProtoEnDecode) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
 	return protoMsgList
 }
 
-func (p *ProtoEnDecode) protoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
-	protoObj := p.decodePayloadToProto(cmdId, protoData)
+func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
+	protoObj := k.decodePayloadToProto(cmdId, protoData)
 	if protoObj == nil {
 		logger.LOG.Error("decode proto object is nil")
 		return
@@ -96,7 +86,7 @@ func (p *ProtoEnDecode) protoDecodePayloadLoop(cmdId uint16, protoData []byte, p
 			return
 		}
 		for _, unionCmd := range unionCmdNotify.GetCmdList() {
-			p.protoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
+			k.protoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
 		}
 	}
 	*protoMessageList = append(*protoMessageList, &ProtoMessage{
@@ -105,7 +95,7 @@ func (p *ProtoEnDecode) protoDecodePayloadLoop(cmdId uint16, protoData []byte, p
 	})
 }
 
-func (p *ProtoEnDecode) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
+func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	cmdName := ""
 	if protoMsg.PayloadMessage != nil {
 		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
@@ -127,7 +117,7 @@ func (p *ProtoEnDecode) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	}
 	// payload msg
 	if protoMsg.PayloadMessage != nil {
-		cmdId, protoData := p.encodeProtoToPayload(protoMsg.PayloadMessage)
+		cmdId, protoData := k.encodeProtoToPayload(protoMsg.PayloadMessage)
 		if cmdId == 0 || protoData == nil {
 			logger.LOG.Error("encode proto data is nil")
 			return nil
@@ -143,8 +133,8 @@ func (p *ProtoEnDecode) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	return kcpMsg
 }
 
-func (p *ProtoEnDecode) decodePayloadToProto(cmdId uint16, protoData []byte) (protoObj pb.Message) {
-	protoObj = p.cmdProtoMap.GetProtoObjByCmdId(cmdId)
+func (k *KcpConnectManager) decodePayloadToProto(cmdId uint16, protoData []byte) (protoObj pb.Message) {
+	protoObj = k.cmdProtoMap.GetProtoObjByCmdId(cmdId)
 	if protoObj == nil {
 		logger.LOG.Error("get new proto object is nil")
 		return nil
@@ -157,8 +147,8 @@ func (p *ProtoEnDecode) decodePayloadToProto(cmdId uint16, protoData []byte) (pr
 	return protoObj
 }
 
-func (p *ProtoEnDecode) encodeProtoToPayload(protoObj pb.Message) (cmdId uint16, protoData []byte) {
-	cmdId = p.cmdProtoMap.GetCmdIdByProtoObj(protoObj)
+func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uint16, protoData []byte) {
+	cmdId = k.cmdProtoMap.GetCmdIdByProtoObj(protoObj)
 	var err error = nil
 	protoData, err = pb.Marshal(protoObj)
 	if err != nil {

@@ -33,26 +33,19 @@ type KcpMsg struct {
 	ProtoData []byte
 }
 
-func (k *KcpConnectManager) decodeBinToPayload(data []byte, convId uint64, kcpMsgList *[]*KcpMsg) {
+func (k *KcpConnectManager) decodeBinToPayload(data []byte, convId uint64, kcpMsgList *[]*KcpMsg, xorKey []byte) {
 	// xor解密
-	k.kcpKeyMapLock.RLock()
-	xorKey, exist := k.kcpKeyMap[convId]
-	k.kcpKeyMapLock.RUnlock()
-	if !exist {
-		logger.LOG.Error("kcp xor key not exist, convId: %v", convId)
-		return
-	}
 	endec.Xor(data, xorKey)
-	k.decodeRecur(data, convId, kcpMsgList)
+	k.decodeLoop(data, convId, kcpMsgList)
 }
 
-func (k *KcpConnectManager) decodeRecur(data []byte, convId uint64, kcpMsgList *[]*KcpMsg) {
+func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[]*KcpMsg) {
 	// 长度太短
 	if len(data) < 12 {
 		logger.LOG.Debug("packet len less 12 byte")
 		return
 	}
-	// 头部标志错误
+	// 头部幻数错误
 	if data[0] != 0x45 || data[1] != 0x67 {
 		logger.LOG.Error("packet head magic 0x4567 error")
 		return
@@ -97,7 +90,7 @@ func (k *KcpConnectManager) decodeRecur(data []byte, convId uint64, kcpMsgList *
 		logger.LOG.Error("packet len error")
 		return
 	}
-	// 尾部标志错误
+	// 尾部幻数错误
 	if data[headLen+protoLen+10] != 0x89 || data[headLen+protoLen+11] != 0xAB {
 		logger.LOG.Error("packet tail magic 0x89AB error")
 		return
@@ -124,11 +117,11 @@ func (k *KcpConnectManager) decodeRecur(data []byte, convId uint64, kcpMsgList *
 	*kcpMsgList = append(*kcpMsgList, kcpMsg)
 	// 递归解析
 	if haveMoreData {
-		k.decodeRecur(data[int(headLen+protoLen)+12:], convId, kcpMsgList)
+		k.decodeLoop(data[int(headLen+protoLen)+12:], convId, kcpMsgList)
 	}
 }
 
-func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg) (bin []byte) {
+func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (bin []byte) {
 	if kcpMsg.HeadData == nil {
 		kcpMsg.HeadData = make([]byte, 0)
 	}
@@ -136,7 +129,7 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg) (bin []byte) {
 		kcpMsg.ProtoData = make([]byte, 0)
 	}
 	bin = make([]byte, len(kcpMsg.HeadData)+len(kcpMsg.ProtoData)+12)
-	// 头部标志
+	// 头部幻数
 	bin[0] = 0x45
 	bin[1] = 0x67
 	// 协议号
@@ -172,17 +165,10 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg) (bin []byte) {
 	copy(bin[10:], kcpMsg.HeadData)
 	// proto数据
 	copy(bin[10+len(kcpMsg.HeadData):], kcpMsg.ProtoData)
-	// 尾部标志
+	// 尾部幻数
 	bin[len(bin)-2] = 0x89
 	bin[len(bin)-1] = 0xAB
 	// xor加密
-	k.kcpKeyMapLock.RLock()
-	xorKey, exist := k.kcpKeyMap[kcpMsg.ConvId]
-	k.kcpKeyMapLock.RUnlock()
-	if !exist {
-		logger.LOG.Error("kcp xor key not exist, convId: %v", kcpMsg.ConvId)
-		return
-	}
 	endec.Xor(bin, xorKey)
 	return bin
 }

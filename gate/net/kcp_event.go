@@ -1,23 +1,17 @@
 package net
 
 import (
+	"hk4e/gate/kcp"
 	"hk4e/pkg/logger"
 	"reflect"
 )
 
 const (
-	KcpXorKeyChange = iota
-	KcpDispatchKeyChange
-	KcpPacketRecvListen
-	KcpPacketSendListen
-	KcpConnForceClose
+	KcpConnForceClose = iota
 	KcpAllConnForceClose
 	KcpGateOpenState
-	KcpPacketRecvNotify
-	KcpPacketSendNotify
 	KcpConnCloseNotify
 	KcpConnEstNotify
-	KcpConnRttNotify
 	KcpConnAddrChangeNotify
 )
 
@@ -27,92 +21,26 @@ type KcpEvent struct {
 	EventMessage any
 }
 
+func (k *KcpConnectManager) GetKcpEventInputChan() chan *KcpEvent {
+	return k.kcpEventInput
+}
+
+func (k *KcpConnectManager) GetKcpEventOutputChan() chan *KcpEvent {
+	return k.kcpEventOutput
+}
+
 func (k *KcpConnectManager) eventHandle() {
+	logger.LOG.Debug("event handle start")
 	// 事件处理
 	for {
 		event := <-k.kcpEventInput
 		logger.LOG.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage Type: %v", event.ConvId, event.EventId, reflect.TypeOf(event.EventMessage))
 		switch event.EventId {
-		case KcpXorKeyChange:
-			// XOR密钥切换
-			k.connMapLock.RLock()
-			_, exist := k.connMap[event.ConvId]
-			k.connMapLock.RUnlock()
-			if !exist {
-				logger.LOG.Error("conn not exist, convId: %v", event.ConvId)
-				continue
-			}
-			key, ok := event.EventMessage.([]byte)
-			if !ok {
-				logger.LOG.Error("event KcpXorKeyChange msg type error")
-				continue
-			}
-			k.kcpKeyMapLock.Lock()
-			k.kcpKeyMap[event.ConvId] = key
-			k.kcpKeyMapLock.Unlock()
-		case KcpDispatchKeyChange:
-			// 首包加密XOR密钥切换
-			key, ok := event.EventMessage.([]byte)
-			if !ok {
-				logger.LOG.Error("event KcpXorKeyChange msg type error")
-				continue
-			}
-			k.dispatchKeyLock.Lock()
-			k.dispatchKey = key
-			k.dispatchKeyLock.Unlock()
-		case KcpPacketRecvListen:
-			// 收包监听
-			k.connMapLock.RLock()
-			_, exist := k.connMap[event.ConvId]
-			k.connMapLock.RUnlock()
-			if !exist {
-				logger.LOG.Error("conn not exist, convId: %v", event.ConvId)
-				continue
-			}
-			flag, ok := event.EventMessage.(string)
-			if !ok {
-				logger.LOG.Error("event KcpXorKeyChange msg type error")
-				continue
-			}
-			if flag == "Enable" {
-				k.kcpRecvListenMapLock.Lock()
-				k.kcpRecvListenMap[event.ConvId] = true
-				k.kcpRecvListenMapLock.Unlock()
-			} else if flag == "Disable" {
-				k.kcpRecvListenMapLock.Lock()
-				k.kcpRecvListenMap[event.ConvId] = false
-				k.kcpRecvListenMapLock.Unlock()
-			}
-		case KcpPacketSendListen:
-			// 发包监听
-			k.connMapLock.RLock()
-			_, exist := k.connMap[event.ConvId]
-			k.connMapLock.RUnlock()
-			if !exist {
-				logger.LOG.Error("conn not exist, convId: %v", event.ConvId)
-				continue
-			}
-			flag, ok := event.EventMessage.(string)
-			if !ok {
-				logger.LOG.Error("event KcpXorKeyChange msg type error")
-				continue
-			}
-			if flag == "Enable" {
-				k.kcpSendListenMapLock.Lock()
-				k.kcpSendListenMap[event.ConvId] = true
-				k.kcpSendListenMapLock.Unlock()
-			} else if flag == "Disable" {
-				k.kcpSendListenMapLock.Lock()
-				k.kcpSendListenMap[event.ConvId] = false
-				k.kcpSendListenMapLock.Unlock()
-			}
 		case KcpConnForceClose:
 			// 强制关闭某个连接
-			k.connMapLock.RLock()
-			_, exist := k.connMap[event.ConvId]
-			k.connMapLock.RUnlock()
-			if !exist {
-				logger.LOG.Error("conn not exist, convId: %v", event.ConvId)
+			session := k.GetSessionByConvId(event.ConvId)
+			if session == nil {
+				logger.LOG.Error("session not exist, convId: %v", event.ConvId)
 				continue
 			}
 			reason, ok := event.EventMessage.(uint32)
@@ -120,7 +48,11 @@ func (k *KcpConnectManager) eventHandle() {
 				logger.LOG.Error("event KcpConnForceClose msg type error")
 				continue
 			}
-			k.closeKcpConn(event.ConvId, reason)
+			session.conn.SendEnetNotify(&kcp.Enet{
+				ConnType: kcp.ConnEnetFin,
+				EnetType: reason,
+			})
+			_ = session.conn.Close()
 			logger.LOG.Info("conn has been force close, convId: %v", event.ConvId)
 		case KcpAllConnForceClose:
 			// 强制关闭所有连接

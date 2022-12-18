@@ -2,8 +2,7 @@ package controller
 
 import (
 	"encoding/base64"
-	"encoding/binary"
-	"github.com/nats-io/nats.go"
+	"hk4e/pkg/random"
 	"net/http"
 	"strconv"
 
@@ -23,6 +22,7 @@ type Controller struct {
 	signRsaKey       []byte
 	encRsaKeyMap     map[string][]byte
 	pwdRsaKey        []byte
+	dispatchEc2b     *random.Ec2b
 }
 
 func NewController(dao *dao.Dao) (r *Controller) {
@@ -31,25 +31,7 @@ func NewController(dao *dao.Dao) (r *Controller) {
 	r.regionListBase64 = ""
 	r.regionCurrBase64 = ""
 	regionCurr, regionList, dispatchEc2b := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
-
-	// TODO 临时写一下用来传递新的密钥后面改RPC
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
-	if err != nil {
-		logger.LOG.Error("connect nats error: %v", err)
-		return nil
-	}
-	natsMsg := nats.NewMsg("GATE_KEY_HK4E")
-	natsMsg.Data = make([]byte, 8)
-	dispatchEc2bSeed := dispatchEc2b.Seed()
-	binary.BigEndian.PutUint64(natsMsg.Data, dispatchEc2bSeed)
-	err = conn.PublishMsg(natsMsg)
-	if err != nil {
-		logger.LOG.Error("nats publish msg error: %v", err)
-		return nil
-	}
-	conn.Close()
-	logger.LOG.Debug("send new dispatch ec2b seed: %v", dispatchEc2bSeed)
-
+	r.dispatchEc2b = dispatchEc2b
 	r.signRsaKey, r.encRsaKeyMap, r.pwdRsaKey = region.LoadRsaKey()
 	regionCurrModify, err := pb.Marshal(regionCurr)
 	if err != nil {
@@ -161,6 +143,7 @@ func (c *Controller) registerRouter() {
 	}
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)
+	engine.GET("/dispatch/ec2b/seed", c.getDispatchEc2bSeed)
 	port := config.CONF.HttpPort
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)

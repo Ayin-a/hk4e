@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"hk4e/common/config"
-	"hk4e/gate/forward"
 	"hk4e/gate/mq"
 	"hk4e/gate/net"
 	"hk4e/pkg/logger"
@@ -22,20 +21,20 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("gate")
 	logger.LOG.Info("gate start")
 
-	kcpEventInput := make(chan *net.KcpEvent)
-	kcpEventOutput := make(chan *net.KcpEvent)
-	protoMsgInput := make(chan *net.ProtoMsg, 10000)
-	protoMsgOutput := make(chan *net.ProtoMsg, 10000)
 	netMsgInput := make(chan *cmd.NetMsg, 10000)
 	netMsgOutput := make(chan *cmd.NetMsg, 10000)
 
-	connectManager := net.NewKcpConnectManager(protoMsgInput, protoMsgOutput, kcpEventInput, kcpEventOutput)
+	connectManager := net.NewKcpConnectManager(netMsgInput, netMsgOutput)
 	connectManager.Start()
 
-	forwardManager := forward.NewForwardManager(protoMsgInput, protoMsgOutput, kcpEventInput, kcpEventOutput, netMsgInput, netMsgOutput)
-	forwardManager.Start()
+	go func() {
+		outputChan := connectManager.GetKcpEventOutputChan()
+		for {
+			<-outputChan
+		}
+	}()
 
-	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput, kcpEventInput)
+	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput)
 	messageQueue.Start()
 	defer messageQueue.Close()
 

@@ -19,6 +19,7 @@ type GameDataConfig struct {
 	AvatarDataMap           map[int32]*AvatarData           // 角色
 	AvatarSkillDataMap      map[int32]*AvatarSkillData      // 角色技能
 	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData // 角色技能库
+	DropGroupDataMap        map[int32]*DropGroupData        // 掉落组
 }
 
 func InitGameDataConfig() {
@@ -59,6 +60,7 @@ func (g *GameDataConfig) load() {
 	g.loadAvatarData()           // 角色
 	g.loadAvatarSkillData()      // 角色技能
 	g.loadAvatarSkillDepotData() // 角色技能库
+	g.loadDropGroupData()        // 掉落组
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

@@ -1,10 +1,10 @@
 package game
 
 import (
+	"hk4e/gdconf"
 	"time"
 
 	"hk4e/common/config"
-	gdc "hk4e/gs/config"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -385,7 +385,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 	}
 
 	// 找到卡池对应的掉落组
-	dropGroupDataConfig := gdc.CONF.DropGroupDataMap[int32(gachaType)]
+	dropGroupDataConfig := gdconf.CONF.DropGroupDataMap[int32(gachaType)]
 	if dropGroupDataConfig == nil {
 		logger.LOG.Error("drop group not found, drop id: %v", gachaType)
 		return false, 0
@@ -419,7 +419,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 		PurpleTimesFixValue = WeaponPurpleTimesFixValue
 	}
 	if gachaPoolInfo.OrangeTimes >= OrangeTimesFixThreshold || gachaPoolInfo.PurpleTimes >= PurpleTimesFixThreshold {
-		fixDropGroupDataConfig := new(gdc.DropGroupData)
+		fixDropGroupDataConfig := new(gdconf.DropGroupData)
 		fixDropGroupDataConfig.DropId = dropGroupDataConfig.DropId
 		fixDropGroupDataConfig.WeightAll = dropGroupDataConfig.WeightAll
 		// 计算4星和5星权重修正值
@@ -432,7 +432,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			addPurpleWeight = 0
 		}
 		for _, drop := range dropGroupDataConfig.DropConfig {
-			fixDrop := new(gdc.Drop)
+			fixDrop := new(gdconf.Drop)
 			fixDrop.Result = drop.Result
 			fixDrop.DropId = drop.DropId
 			fixDrop.IsEnd = drop.IsEnd
@@ -527,7 +527,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			// 替换本次结果为5星大保底
 			if gachaPoolInfo.MustGetUpOrange {
 				logger.LOG.Debug("trigger must get up orange, uid: %v", userId)
-				upOrangeDropGroupDataConfig := gdc.CONF.DropGroupDataMap[upOrangeDropId]
+				upOrangeDropGroupDataConfig := gdconf.CONF.DropGroupDataMap[upOrangeDropId]
 				if upOrangeDropGroupDataConfig == nil {
 					logger.LOG.Error("drop group not found, drop id: %v", upOrangeDropId)
 					return false, 0
@@ -554,7 +554,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			// 替换本次结果为4星大保底
 			if gachaPoolInfo.MustGetUpPurple {
 				logger.LOG.Debug("trigger must get up purple, uid: %v", userId)
-				upPurpleDropGroupDataConfig := gdc.CONF.DropGroupDataMap[upPurpleDropId]
+				upPurpleDropGroupDataConfig := gdconf.CONF.DropGroupDataMap[upPurpleDropId]
 				if upPurpleDropGroupDataConfig == nil {
 					logger.LOG.Error("drop group not found, drop id: %v", upPurpleDropId)
 					return false, 0
@@ -578,7 +578,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 }
 
 // 走一次完整流程的掉落组
-func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdc.DropGroupData) (bool, *gdc.Drop) {
+func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdconf.DropGroupData) (bool, *gdconf.Drop) {
 	for {
 		drop := g.doRandDropOnce(dropGroupDataConfig)
 		if drop == nil {
@@ -590,7 +590,7 @@ func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdc.DropGroupData) (bo
 			return true, drop
 		}
 		// 进行下一步掉落流程
-		dropGroupDataConfig = gdc.CONF.DropGroupDataMap[drop.Result]
+		dropGroupDataConfig = gdconf.CONF.DropGroupDataMap[drop.Result]
 		if dropGroupDataConfig == nil {
 			logger.LOG.Error("drop config tab exist error, invalid drop id: %v", drop.Result)
 			return false, nil
@@ -599,7 +599,7 @@ func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdc.DropGroupData) (bo
 }
 
 // 进行单次随机掉落
-func (g *GameManager) doRandDropOnce(dropGroupDataConfig *gdc.DropGroupData) *gdc.Drop {
+func (g *GameManager) doRandDropOnce(dropGroupDataConfig *gdconf.DropGroupData) *gdconf.Drop {
 	randNum := random.GetRandomInt32(0, dropGroupDataConfig.WeightAll-1)
 	sumWeight := int32(0)
 	// 轮盘选择法

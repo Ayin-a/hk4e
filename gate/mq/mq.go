@@ -1,11 +1,8 @@
 package mq
 
 import (
-	"encoding/binary"
 	"hk4e/common/config"
-	"hk4e/gate/net"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 
 	"github.com/nats-io/nats.go"
@@ -21,7 +18,7 @@ type MessageQueue struct {
 	cmdProtoMap  *cmd.CmdProtoMap
 }
 
-func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg, kcpEventInput chan *net.KcpEvent) (r *MessageQueue) {
+func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *MessageQueue) {
 	r = new(MessageQueue)
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
 	if err != nil {
@@ -35,30 +32,6 @@ func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg
 		logger.LOG.Error("nats subscribe error: %v", err)
 		return nil
 	}
-
-	// TODO 临时写一下用来传递新的密钥后面改RPC
-	keyNatsMsgChan := make(chan *nats.Msg, 10000)
-	_, err = r.natsConn.ChanSubscribe("GATE_KEY_HK4E", keyNatsMsgChan)
-	if err != nil {
-		logger.LOG.Error("nats subscribe error: %v", err)
-		return nil
-	}
-	go func() {
-		for {
-			natsMsg := <-keyNatsMsgChan
-			dispatchEc2bSeed := binary.BigEndian.Uint64(natsMsg.Data)
-			logger.LOG.Debug("recv new dispatch ec2b seed: %v", dispatchEc2bSeed)
-			gateDispatchEc2b := random.NewEc2b()
-			gateDispatchEc2b.SetSeed(dispatchEc2bSeed)
-			gateDispatchXorKey := gateDispatchEc2b.XorKey()
-			// 改变密钥
-			kcpEventInput <- &net.KcpEvent{
-				EventId:      net.KcpDispatchKeyChange,
-				EventMessage: gateDispatchXorKey,
-			}
-		}
-	}()
-
 	r.netMsgInput = netMsgInput
 	r.netMsgOutput = netMsgOutput
 	r.cmdProtoMap = cmd.NewCmdProtoMap()

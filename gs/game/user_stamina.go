@@ -1,7 +1,8 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
+	"time"
+
 	"hk4e/gdconf"
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
@@ -9,7 +10,8 @@ import (
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 // HandleAbilityStamina 处理来自ability的耐力消耗
@@ -20,7 +22,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		costStamina := new(proto.AbilityMixinCostStamina)
 		err := pb.Unmarshal(entry.AbilityData, costStamina)
 		if err != nil {
-			logger.LOG.Error("unmarshal ability data err: %v", err)
+			logger.Error("unmarshal ability data err: %v", err)
 			return
 		}
 		// 处理持续耐力消耗
@@ -37,7 +39,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		abilityNameHashCode := uint32(0)
 		for _, ability := range worldAvatar.abilityList {
 			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
-				//logger.LOG.Error("%v", ability)
+				// logger.Error("%v", ability)
 				abilityNameHashCode = ability.AbilityName.GetHash()
 			}
 		}
@@ -84,7 +86,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 		} else if req.Rot.X > 270 && req.Rot.X < 360 {
 			angleRevise = int32(req.Rot.X - 360.0)
 		} else {
-			logger.LOG.Error("invalid rot x angle: %v, uid: %v", req.Rot.X, player.PlayerID)
+			logger.Error("invalid rot x angle: %v, uid: %v", req.Rot.X, player.PlayerID)
 			g.CommonRetError(cmd.SceneAvatarStaminaStepRsp, player, &proto.SceneAvatarStaminaStepRsp{})
 			return
 		}
@@ -99,7 +101,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 			// 倒三角 非常消耗体力
 			costRevise = -(angleRevise * 2) + 10
 		}
-		logger.LOG.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
+		logger.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
 	case proto.MotionState_MOTION_STATE_SWIM_MOVE:
 		// 缓慢游泳
@@ -120,7 +122,7 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 		return
 	}
 	staminaInfo := player.StaminaInfo
-	//logger.LOG.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
+	// logger.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
 
 	// 设置用于持续消耗或恢复耐力的值
 	staminaInfo.SetStaminaCost(motionState)
@@ -158,7 +160,7 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	// 读取技能配置表
 	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
 	if !ok {
-		logger.LOG.Error("avatarSkillConfig error, skillId: %v", skillId)
+		logger.Error("avatarSkillConfig error, skillId: %v", skillId)
 		return
 	}
 	// 获取释放技能者的角色Id
@@ -171,7 +173,7 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	// 获取现行角色的配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
 	if !ok {
-		logger.LOG.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
 		return
 	}
 
@@ -192,7 +194,7 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
 	// 根据配置以及距离上次的时间计算消耗的耐力
 	costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
-	logger.LOG.Debug("stamina skill sustain, skillId: %v, cost: %v, isSwim: %v", skillId, costStamina, isSwim)
+	logger.Debug("stamina skill sustain, skillId: %v, cost: %v, isSwim: %v", skillId, costStamina, isSwim)
 
 	// 根据配置以及距离上次的时间计算消耗的耐力
 	g.UpdatePlayerStamina(player, costStamina)
@@ -206,7 +208,7 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 	// 获取现行角色的配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
 	if !ok {
-		logger.LOG.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
 		return
 	}
 
@@ -231,7 +233,7 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 	} else {
 		costStamina = -(skillData.CostStamina * 100)
 	}
-	logger.LOG.Debug("charged attack stamina, skillId: %v, cost: %v", skillData.AvatarSkillId, costStamina)
+	logger.Debug("charged attack stamina, skillId: %v, cost: %v", skillData.AvatarSkillId, costStamina)
 
 	// 根据配置消耗耐力
 	g.UpdatePlayerStamina(player, costStamina)
@@ -250,13 +252,13 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillStartTime
 		// 上次触发的技能相同则每400ms触发一次消耗
 		if staminaInfo.LastSkillId != skillId || pastTime > 400 {
-			logger.LOG.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
+			logger.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
 			// 根据配置消耗耐力
 			g.UpdatePlayerStamina(player, costStamina)
 			staminaInfo.LastSkillStartTime = time.Now().UnixMilli()
 		}
 	} else {
-		//logger.LOG.Debug("skill start cost error, cost: %v", costStamina)
+		// logger.Debug("skill start cost error, cost: %v", costStamina)
 	}
 
 	// 记录最后释放的技能
@@ -338,13 +340,13 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 	if staminaCost > 0 {
 		// 耐力延迟2s(10 ticks)恢复 动作状态为加速将立刻恢复耐力
 		if staminaInfo.VehicleRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH {
-			//logger.LOG.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
+			// logger.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.VehicleRestoreDelay++
 			return // 不恢复耐力
 		}
 	} else {
 		// 消耗耐力重新计算恢复需要延迟的tick
-		//logger.LOG.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.VehicleRestoreDelay)
+		// logger.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.VehicleRestoreDelay)
 		staminaInfo.VehicleRestoreDelay = 0
 	}
 
@@ -384,13 +386,13 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 	if staminaCost > 0 {
 		// 耐力延迟2s(10 ticks)恢复 动作状态为加速将立刻恢复耐力
 		if staminaInfo.PlayerRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY {
-			//logger.LOG.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
+			// logger.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.PlayerRestoreDelay++
 			return // 不恢复耐力
 		}
 	} else {
 		// 消耗耐力重新计算恢复需要延迟的tick
-		//logger.LOG.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.RestoreDelay)
+		// logger.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.RestoreDelay)
 		staminaInfo.PlayerRestoreDelay = 0
 	}
 
@@ -415,7 +417,7 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, stamina float32) {
 	// 设置载具的耐力
 	vehicleEntity.gadgetEntity.gadgetVehicleEntity.curStamina = stamina
-	//logger.LOG.Debug("vehicle stamina set, stamina: %v", stamina)
+	// logger.Debug("vehicle stamina set, stamina: %v", stamina)
 
 	// PacketVehicleStaminaNotify
 	vehicleStaminaNotify := new(proto.VehicleStaminaNotify)
@@ -429,7 +431,7 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
-	//logger.LOG.Debug("player stamina set, stamina: %v", stamina)
+	// logger.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

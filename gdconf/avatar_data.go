@@ -2,11 +2,13 @@ package gdconf
 
 import (
 	"fmt"
-	"github.com/hjson/hjson-go/v4"
-	"github.com/jszwec/csvutil"
+	"os"
+
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
-	"os"
+
+	"github.com/hjson/hjson-go/v4"
+	"github.com/jszwec/csvutil"
 )
 
 // 角色配置表
@@ -58,7 +60,7 @@ func (g *GameDataConfig) loadAvatarData() {
 			panic(info)
 		}
 		if len(configAvatar.Abilities) == 0 {
-			logger.LOG.Info("can not find any ability of avatar, AvatarId: %v", avatarData.AvatarId)
+			logger.Info("can not find any ability of avatar, AvatarId: %v", avatarData.AvatarId)
 		}
 		for _, configAvatarAbility := range configAvatar.Abilities {
 			abilityHashCode := endec.Hk4eAbilityHashCode(configAvatarAbility.AbilityName)
@@ -67,5 +69,5 @@ func (g *GameDataConfig) loadAvatarData() {
 		// list -> map
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData
 	}
-	logger.LOG.Info("AvatarData count: %v", len(g.AvatarDataMap))
+	logger.Info("AvatarData count: %v", len(g.AvatarDataMap))
 }

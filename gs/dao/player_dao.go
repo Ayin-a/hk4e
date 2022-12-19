@@ -2,9 +2,11 @@ package dao
 
 import (
 	"context"
+
+	"hk4e/gs/model"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"hk4e/gs/model"
 )
 
 func (d *Dao) InsertPlayer(player *model.Player) error {

@@ -1,19 +1,21 @@
 package gdconf
 
 import (
-	"github.com/hjson/hjson-go/v4"
-	"hk4e/common/config"
-	"hk4e/pkg/logger"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"hk4e/common/config"
+	"hk4e/pkg/logger"
+
+	"github.com/hjson/hjson-go/v4"
 )
 
 func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount *int) {
 	fileList, err := os.ReadDir(path)
 	if err != nil {
-		logger.LOG.Error("open dir error: %v", err)
+		logger.Error("open dir error: %v", err)
 		return
 	}
 	for _, file := range fileList {
@@ -26,7 +28,7 @@ func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount 
 		}
 		fileData, err := os.ReadFile(path + "/" + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		var obj any
@@ -45,8 +47,8 @@ func TestCheckJsonValid(t *testing.T) {
 	totalJsonFileCount := 0
 	CheckJsonLoop("./game_data_config/json", &errorJsonFileList, &totalJsonFileCount)
 	for _, v := range errorJsonFileList {
-		logger.LOG.Info("%v", v)
+		logger.Info("%v", v)
 	}
-	logger.LOG.Info("err json file count: %v, total count: %v", len(errorJsonFileList), totalJsonFileCount)
+	logger.Info("err json file count: %v, total count: %v", len(errorJsonFileList), totalJsonFileCount)
 	time.Sleep(time.Second)
 }

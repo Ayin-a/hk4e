@@ -19,7 +19,7 @@ import (
 func (c *Controller) query_security_file(context *gin.Context) {
 	file, err := os.ReadFile("static/security_file")
 	if err != nil {
-		logger.LOG.Error("open security_file error")
+		logger.Error("open security_file error")
 		return
 	}
 	context.Header("Content-type", "text/html; charset=UTF-8")
@@ -39,7 +39,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 	}
 	reg, err := regexp.Compile("[0-9]+")
 	if err != nil {
-		logger.LOG.Error("compile regexp error: %v", err)
+		logger.Error("compile regexp error: %v", err)
 		return
 	}
 	versionSlice := reg.FindAllString(versionName, -1)
@@ -47,7 +47,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 	for index := 0; index < len(versionSlice); index++ {
 		v, err := strconv.Atoi(versionSlice[index])
 		if err != nil {
-			logger.LOG.Error("parse client version error: %v", err)
+			logger.Error("parse client version error: %v", err)
 			return
 		}
 		for i := 0; i < len(versionSlice)-1-index; i++ {
@@ -60,7 +60,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 		version /= 10
 	}
 	if version >= 275 {
-		logger.LOG.Debug("do hk4e 2.8 rsa logic")
+		logger.Debug("do hk4e 2.8 rsa logic")
 		if context.Query("dispatchSeed") == "" {
 			rsp := &api.QueryCurRegionRspJson{
 				Content: response,
@@ -72,12 +72,12 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 		keyId := context.Query("key_id")
 		encPubPrivKey, exist := c.encRsaKeyMap[keyId]
 		if !exist {
-			logger.LOG.Error("can not found key id: %v", keyId)
+			logger.Error("can not found key id: %v", keyId)
 			return
 		}
 		regionInfo, err := base64.StdEncoding.DecodeString(response)
 		if err != nil {
-			logger.LOG.Error("decode region info error: %v", err)
+			logger.Error("decode region info error: %v", err)
 			return
 		}
 		chunkSize := 256 - 11
@@ -90,47 +90,47 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 			chunk := regionInfo[from:to]
 			pubKey, err := endec.RsaParsePubKeyByPrivKey(encPubPrivKey)
 			if err != nil {
-				logger.LOG.Error("parse rsa pub key error: %v", err)
+				logger.Error("parse rsa pub key error: %v", err)
 				return
 			}
 			privKey, err := endec.RsaParsePrivKey(encPubPrivKey)
 			if err != nil {
-				logger.LOG.Error("parse rsa priv key error: %v", err)
+				logger.Error("parse rsa priv key error: %v", err)
 				return
 			}
 			encrypt, err := endec.RsaEncrypt(chunk, pubKey)
 			if err != nil {
-				logger.LOG.Error("rsa enc error: %v", err)
+				logger.Error("rsa enc error: %v", err)
 				return
 			}
 			decrypt, err := endec.RsaDecrypt(encrypt, privKey)
 			if err != nil {
-				logger.LOG.Error("rsa dec error: %v", err)
+				logger.Error("rsa dec error: %v", err)
 				return
 			}
 			if bytes.Compare(decrypt, chunk) != 0 {
-				logger.LOG.Error("rsa dec test fail")
+				logger.Error("rsa dec test fail")
 				return
 			}
 			encryptedRegionInfo = append(encryptedRegionInfo, encrypt...)
 		}
 		signPrivkey, err := endec.RsaParsePrivKey(c.signRsaKey)
 		if err != nil {
-			logger.LOG.Error("parse rsa priv key error: %v", err)
+			logger.Error("parse rsa priv key error: %v", err)
 			return
 		}
 		signData, err := endec.RsaSign(regionInfo, signPrivkey)
 		if err != nil {
-			logger.LOG.Error("rsa sign error: %v", err)
+			logger.Error("rsa sign error: %v", err)
 			return
 		}
 		ok, err := endec.RsaVerify(regionInfo, signData, &signPrivkey.PublicKey)
 		if err != nil {
-			logger.LOG.Error("rsa verify error: %v", err)
+			logger.Error("rsa verify error: %v", err)
 			return
 		}
 		if !ok {
-			logger.LOG.Error("rsa verify test fail")
+			logger.Error("rsa verify test fail")
 			return
 		}
 		rsp := &api.QueryCurRegionRspJson{

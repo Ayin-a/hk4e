@@ -21,7 +21,7 @@ type TickManager struct {
 func NewTickManager() (r *TickManager) {
 	r = new(TickManager)
 	r.ticker = time.NewTicker(time.Millisecond * 100)
-	logger.LOG.Info("game server tick start at: %v", time.Now().UnixMilli())
+	logger.Info("game server tick start at: %v", time.Now().UnixMilli())
 	return r
 }
 
@@ -59,15 +59,15 @@ func (t *TickManager) OnGameServerTick() {
 }
 
 func (t *TickManager) onTickWeek(now int64) {
-	logger.LOG.Info("on tick week, time: %v", now)
+	logger.Info("on tick week, time: %v", now)
 }
 
 func (t *TickManager) onTickDay(now int64) {
-	logger.LOG.Info("on tick day, time: %v", now)
+	logger.Info("on tick day, time: %v", now)
 }
 
 func (t *TickManager) onTickHour(now int64) {
-	logger.LOG.Info("on tick hour, time: %v", now)
+	logger.Info("on tick hour, time: %v", now)
 }
 
 func (t *TickManager) onTick10Minute(now int64) {
@@ -81,7 +81,7 @@ func (t *TickManager) onTick10Minute(now int64) {
 }
 
 func (t *TickManager) onTickMinute(now int64) {
-	//GAME_MANAGER.ServerAnnounceNotify(100, "test123")
+	// GAME_MANAGER.ServerAnnounceNotify(100, "test123")
 	for _, world := range WORLD_MANAGER.worldMap {
 		for _, player := range world.playerMap {
 			// 随机物品
@@ -91,7 +91,7 @@ func (t *TickManager) onTickMinute(now int64) {
 			for itemId := range allItemDataConfig {
 				itemDataConfig, ok := allItemDataConfig[itemId]
 				if !ok {
-					logger.LOG.Error("config is nil, itemId: %v", itemId)
+					logger.Error("config is nil, itemId: %v", itemId)
 					return
 				}
 				// TODO 3.0.0REL版本中 发送某些无效家具 可能会导致客户端背包家具界面卡死

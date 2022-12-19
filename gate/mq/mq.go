@@ -22,14 +22,14 @@ func NewMessageQueue(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg
 	r = new(MessageQueue)
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
 	if err != nil {
-		logger.LOG.Error("connect nats error: %v", err)
+		logger.Error("connect nats error: %v", err)
 		return nil
 	}
 	r.natsConn = conn
 	r.natsMsgChan = make(chan *nats.Msg, 10000)
 	_, err = r.natsConn.ChanSubscribe("GATE_CMD_HK4E", r.natsMsgChan)
 	if err != nil {
-		logger.LOG.Error("nats subscribe error: %v", err)
+		logger.Error("nats subscribe error: %v", err)
 		return nil
 	}
 	r.netMsgInput = netMsgInput
@@ -54,7 +54,7 @@ func (m *MessageQueue) startRecvHandler() {
 		netMsg := new(cmd.NetMsg)
 		err := msgpack.Unmarshal(natsMsg.Data, netMsg)
 		if err != nil {
-			logger.LOG.Error("parse bin to net msg error: %v", err)
+			logger.Error("parse bin to net msg error: %v", err)
 			continue
 		}
 		if netMsg.EventId == cmd.NormalMsg {
@@ -62,7 +62,7 @@ func (m *MessageQueue) startRecvHandler() {
 			payloadMessage := m.cmdProtoMap.GetProtoObjByCmdId(netMsg.CmdId)
 			err = pb.Unmarshal(netMsg.PayloadMessageData, payloadMessage)
 			if err != nil {
-				logger.LOG.Error("parse bin to payload msg error: %v", err)
+				logger.Error("parse bin to payload msg error: %v", err)
 				continue
 			}
 			netMsg.PayloadMessage = payloadMessage
@@ -77,21 +77,21 @@ func (m *MessageQueue) startSendHandler() {
 		// protobuf PayloadMessage
 		payloadMessageData, err := pb.Marshal(netMsg.PayloadMessage)
 		if err != nil {
-			logger.LOG.Error("parse payload msg to bin error: %v", err)
+			logger.Error("parse payload msg to bin error: %v", err)
 			continue
 		}
 		netMsg.PayloadMessageData = payloadMessageData
 		// msgpack NetMsg
 		netMsgData, err := msgpack.Marshal(netMsg)
 		if err != nil {
-			logger.LOG.Error("parse net msg to bin error: %v", err)
+			logger.Error("parse net msg to bin error: %v", err)
 			continue
 		}
 		natsMsg := nats.NewMsg("GS_CMD_HK4E")
 		natsMsg.Data = netMsgData
 		err = m.natsConn.PublishMsg(natsMsg)
 		if err != nil {
-			logger.LOG.Error("nats publish msg error: %v", err)
+			logger.Error("nats publish msg error: %v", err)
 			continue
 		}
 	}

@@ -1,10 +1,11 @@
 package game
 
 import (
+	"time"
+
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
-	"time"
 )
 
 // 本地事件队列管理器
@@ -57,7 +58,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 				playerCopy := new(model.Player)
 				err := object.FastDeepCopy(playerCopy, player)
 				if err != nil {
-					logger.LOG.Error("deep copy player error: %v", err)
+					logger.Error("deep copy player error: %v", err)
 					continue
 				}
 				insertPlayerList = append(insertPlayerList, playerCopy)
@@ -66,7 +67,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 				playerCopy := new(model.Player)
 				err := object.FastDeepCopy(playerCopy, player)
 				if err != nil {
-					logger.LOG.Error("deep copy player error: %v", err)
+					logger.Error("deep copy player error: %v", err)
 					continue
 				}
 				updatePlayerList = append(updatePlayerList, playerCopy)
@@ -75,7 +76,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 				playerCopy := new(model.Player)
 				err := object.FastDeepCopy(playerCopy, player)
 				if err != nil {
-					logger.LOG.Error("deep copy player error: %v", err)
+					logger.Error("deep copy player error: %v", err)
 					continue
 				}
 				updatePlayerList = append(updatePlayerList, playerCopy)
@@ -87,6 +88,6 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		}
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime
-		logger.LOG.Info("run save user copy cost time: %v ns", costTime)
+		logger.Info("run save user copy cost time: %v ns", costTime)
 	}
 }

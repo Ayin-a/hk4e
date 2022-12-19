@@ -20,7 +20,7 @@ func NewDao() (r *Dao) {
 	clientOptions := options.Client().ApplyURI(config.CONF.Database.Url)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		logger.LOG.Error("mongo connect error: %v", err)
+		logger.Error("mongo connect error: %v", err)
 		return nil
 	}
 	r.client = client
@@ -31,6 +31,6 @@ func NewDao() (r *Dao) {
 func (d *Dao) CloseDao() {
 	err := d.client.Disconnect(context.TODO())
 	if err != nil {
-		logger.LOG.Error("mongo close error: %v", err)
+		logger.Error("mongo close error: %v", err)
 	}
 }

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/base64"
-	"hk4e/pkg/random"
 	"net/http"
 	"strconv"
 
@@ -10,6 +9,7 @@ import (
 	"hk4e/common/region"
 	"hk4e/dispatch/dao"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 
 	"github.com/gin-gonic/gin"
 	pb "google.golang.org/protobuf/proto"
@@ -35,13 +35,13 @@ func NewController(dao *dao.Dao) (r *Controller) {
 	r.signRsaKey, r.encRsaKeyMap, r.pwdRsaKey = region.LoadRsaKey()
 	regionCurrModify, err := pb.Marshal(regionCurr)
 	if err != nil {
-		logger.LOG.Error("Marshal QueryCurrRegionHttpRsp error")
+		logger.Error("Marshal QueryCurrRegionHttpRsp error")
 		return nil
 	}
 	r.regionCurrBase64 = base64.StdEncoding.EncodeToString(regionCurrModify)
 	regionListModify, err := pb.Marshal(regionList)
 	if err != nil {
-		logger.LOG.Error("Marshal QueryRegionListHttpRsp error")
+		logger.Error("Marshal QueryRegionListHttpRsp error")
 		return nil
 	}
 	r.regionListBase64 = base64.StdEncoding.EncodeToString(regionListModify)
@@ -75,7 +75,7 @@ func (c *Controller) registerRouter() {
 	{
 		// 404
 		engine.NoRoute(func(context *gin.Context) {
-			logger.LOG.Info("no route find, fallback to fuck mhy, url: %v", context.Request.RequestURI)
+			logger.Info("no route find, fallback to fuck mhy, url: %v", context.Request.RequestURI)
 			context.Header("Content-type", "text/html; charset=UTF-8")
 			context.Status(http.StatusNotFound)
 			_, _ = context.Writer.WriteString("FUCK MHY")
@@ -148,6 +148,6 @@ func (c *Controller) registerRouter() {
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)
 	if err != nil {
-		logger.LOG.Error("gin run error: %v", err)
+		logger.Error("gin run error: %v", err)
 	}
 }

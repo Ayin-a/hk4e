@@ -23,15 +23,15 @@ func (f *Service) UserPasswordChange(uid uint32) bool {
 	if account == nil {
 		return false
 	}
-	//convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
-	//if !exist {
+	// convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
+	// if !exist {
 	//	return true
-	//}
-	//f.kcpEventInput <- &net.KcpEvent{
+	// }
+	// f.kcpEventInput <- &net.KcpEvent{
 	//	ConvId:       convId,
 	//	EventId:      net.KcpConnForceClose,
 	//	EventMessage: uint32(kcp.EnetAccountPasswordChange),
-	//}
+	// }
 	return true
 }
 
@@ -57,15 +57,15 @@ func (f *Service) ForbidUser(info *ForbidUserInfo) bool {
 	if account == nil {
 		return false
 	}
-	//convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
-	//if !exist {
+	// convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
+	// if !exist {
 	//	return true
-	//}
-	//f.kcpEventInput <- &net.KcpEvent{
+	// }
+	// f.kcpEventInput <- &net.KcpEvent{
 	//	ConvId:       convId,
 	//	EventId:      net.KcpConnForceClose,
 	//	EventMessage: uint32(kcp.EnetServerKillClient),
-	//}
+	// }
 	return true
 }
 

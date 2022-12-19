@@ -34,7 +34,7 @@ func NewAoiManager(minX, maxX, numX, minY, maxY, numY, minZ, maxZ, numZ int16) (
 	r.maxZ = maxZ
 	r.numZ = numZ
 	r.gridMap = make(map[uint32]*Grid)
-	logger.LOG.Info("start init aoi area grid, num: %v", uint32(numX)*uint32(numY)*uint32(numZ))
+	logger.Info("start init aoi area grid, num: %v", uint32(numX)*uint32(numY)*uint32(numZ))
 	// 初始化aoi区域中所有的格子
 	for x := int16(0); x < numX; x++ {
 		for y := int16(0); y < numY; y++ {
@@ -55,7 +55,7 @@ func NewAoiManager(minX, maxX, numX, minY, maxY, numY, minZ, maxZ, numZ int16) (
 			}
 		}
 	}
-	logger.LOG.Info("init aoi area grid finish")
+	logger.Info("init aoi area grid finish")
 	return r
 }
 
@@ -175,7 +175,7 @@ func (a *AoiManager) GetEntityIdListByPos(x, y, z float32) (entityIdList []uint3
 	for _, v := range gridList {
 		tmp := v.GetEntityIdList()
 		entityIdList = append(entityIdList, tmp...)
-		//logger.LOG.Debug("Grid: gid: %d, tmp len: %v", v.gid, len(tmp))
+		// logger.Debug("Grid: gid: %d, tmp len: %v", v.gid, len(tmp))
 	}
 	return entityIdList
 }

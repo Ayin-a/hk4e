@@ -2,9 +2,10 @@ package gdconf
 
 import (
 	"fmt"
-	"hk4e/common/config"
 	"os"
 	"strings"
+
+	"hk4e/common/config"
 )
 
 // 游戏数据配置表

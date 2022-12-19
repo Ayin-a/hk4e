@@ -1,13 +1,10 @@
 package email
 
 import (
-	"fmt"
-	"strings"
-	"testing"
-
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -15,6 +12,8 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"strings"
+	"testing"
 )
 
 func prepareEmail() *Email {
@@ -90,7 +89,7 @@ func TestEmailWithHTMLAttachments(t *testing.T) {
 	}
 
 	// Print the bytes for ocular validation and make sure no errors.
-	//fmt.Println(string(b))
+	// fmt.Println(string(b))
 
 	// TODO: Verify the attachments.
 	s := &trimReader{rd: bytes.NewBuffer(b)}
@@ -156,7 +155,7 @@ func TestEmailWithHTMLAttachmentsHTMLOnly(t *testing.T) {
 	}
 
 	// Print the bytes for ocular validation and make sure no errors.
-	//fmt.Println(string(b))
+	// fmt.Println(string(b))
 
 	// TODO: Verify the attachments.
 	s := &trimReader{rd: bytes.NewBuffer(b)}

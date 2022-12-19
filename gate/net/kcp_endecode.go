@@ -42,12 +42,12 @@ func (k *KcpConnectManager) decodeBinToPayload(data []byte, convId uint64, kcpMs
 func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[]*KcpMsg) {
 	// 长度太短
 	if len(data) < 12 {
-		logger.LOG.Debug("packet len less 12 byte")
+		logger.Debug("packet len less 12 byte")
 		return
 	}
 	// 头部幻数错误
 	if data[0] != 0x45 || data[1] != 0x67 {
-		logger.LOG.Error("packet head magic 0x4567 error")
+		logger.Error("packet head magic 0x4567 error")
 		return
 	}
 	// 协议号
@@ -58,7 +58,7 @@ func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[
 	var cmdId int64
 	err := binary.Read(cmdIdBuffer, binary.BigEndian, &cmdId)
 	if err != nil {
-		logger.LOG.Error("packet cmd id parse fail: %v", err)
+		logger.Error("packet cmd id parse fail: %v", err)
 		return
 	}
 	// 头部长度
@@ -69,7 +69,7 @@ func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[
 	var headLen int64
 	err = binary.Read(headLenBuffer, binary.BigEndian, &headLen)
 	if err != nil {
-		logger.LOG.Error("packet head len parse fail: %v", err)
+		logger.Error("packet head len parse fail: %v", err)
 		return
 	}
 	// proto长度
@@ -82,17 +82,17 @@ func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[
 	var protoLen int64
 	err = binary.Read(protoLenBuffer, binary.BigEndian, &protoLen)
 	if err != nil {
-		logger.LOG.Error("packet proto len parse fail: %v", err)
+		logger.Error("packet proto len parse fail: %v", err)
 		return
 	}
 	// 检查最小长度
 	if len(data) < int(headLen+protoLen)+12 {
-		logger.LOG.Error("packet len error")
+		logger.Error("packet len error")
 		return
 	}
 	// 尾部幻数错误
 	if data[headLen+protoLen+10] != 0x89 || data[headLen+protoLen+11] != 0xAB {
-		logger.LOG.Error("packet tail magic 0x89AB error")
+		logger.Error("packet tail magic 0x89AB error")
 		return
 	}
 	// 判断是否有不止一个包
@@ -108,10 +108,10 @@ func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[
 	kcpMsg := new(KcpMsg)
 	kcpMsg.ConvId = convId
 	kcpMsg.CmdId = uint16(cmdId)
-	//kcpMsg.HeadData = make([]byte, len(headData))
-	//copy(kcpMsg.HeadData, headData)
-	//kcpMsg.ProtoData = make([]byte, len(protoData))
-	//copy(kcpMsg.ProtoData, protoData)
+	// kcpMsg.HeadData = make([]byte, len(headData))
+	// copy(kcpMsg.HeadData, headData)
+	// kcpMsg.ProtoData = make([]byte, len(protoData))
+	// copy(kcpMsg.ProtoData, protoData)
 	kcpMsg.HeadData = headData
 	kcpMsg.ProtoData = protoData
 	*kcpMsgList = append(*kcpMsgList, kcpMsg)
@@ -136,7 +136,7 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (b
 	cmdIdBuffer := bytes.NewBuffer([]byte{})
 	err := binary.Write(cmdIdBuffer, binary.BigEndian, kcpMsg.CmdId)
 	if err != nil {
-		logger.LOG.Error("cmd id encode err: %v", err)
+		logger.Error("cmd id encode err: %v", err)
 		return nil
 	}
 	bin[2] = (cmdIdBuffer.Bytes())[0]
@@ -145,7 +145,7 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (b
 	headLenBuffer := bytes.NewBuffer([]byte{})
 	err = binary.Write(headLenBuffer, binary.BigEndian, uint16(len(kcpMsg.HeadData)))
 	if err != nil {
-		logger.LOG.Error("head len encode err: %v", err)
+		logger.Error("head len encode err: %v", err)
 		return nil
 	}
 	bin[4] = (headLenBuffer.Bytes())[0]
@@ -154,7 +154,7 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (b
 	protoLenBuffer := bytes.NewBuffer([]byte{})
 	err = binary.Write(protoLenBuffer, binary.BigEndian, uint32(len(kcpMsg.ProtoData)))
 	if err != nil {
-		logger.LOG.Error("proto len encode err: %v", err)
+		logger.Error("proto len encode err: %v", err)
 		return nil
 	}
 	bin[6] = (protoLenBuffer.Bytes())[0]

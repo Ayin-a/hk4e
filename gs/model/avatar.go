@@ -49,7 +49,7 @@ func (p *Player) InitAllAvatar() {
 func (p *Player) InitAvatar(avatar *Avatar) {
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
-		logger.LOG.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
 		return
 	}
 	// 角色战斗属性
@@ -91,7 +91,7 @@ func (p *Player) GetAvatarIdByGuid(guid uint64) uint32 {
 func (p *Player) AddAvatar(avatarId uint32) {
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
 	if !ok {
-		logger.LOG.Error("avatarDataConfig error, avatarId: %v", avatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", avatarId)
 		return
 	}
 	skillDepotId := int32(0)
@@ -105,7 +105,7 @@ func (p *Player) AddAvatar(avatarId uint32) {
 	}
 	avatarSkillDepotDataConfig, ok := gdc.CONF.AvatarSkillDepotDataMap[skillDepotId]
 	if !ok {
-		logger.LOG.Error("avatarSkillDepotDataConfig error, skillDepotId: %v", skillDepotId)
+		logger.Error("avatarSkillDepotDataConfig error, skillDepotId: %v", skillDepotId)
 		return
 	}
 	avatar := &Avatar{

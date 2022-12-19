@@ -1,7 +1,6 @@
 package game
 
 import (
-	"hk4e/pkg/logger"
 	"math"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"hk4e/gs/game/aoi"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/proto"
 )
 
@@ -27,8 +27,8 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 	r.snowflake = snowflake
 	r.worldStatic = NewWorldStatic()
 	r.worldStatic.InitTerrain()
-	//r.worldStatic.Pathfinding()
-	//r.worldStatic.ConvPathVectorListToAiMoveVectorList()
+	// r.worldStatic.Pathfinding()
+	// r.worldStatic.ConvPathVectorListToAiMoveVectorList()
 	return r
 }
 
@@ -728,7 +728,7 @@ func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
 func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
 	player := USER_MANAGER.GetOnlineUser(uid)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", uid)
+		logger.Error("player is nil, uid: %v", uid)
 		return 0
 	}
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)

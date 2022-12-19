@@ -111,7 +111,7 @@ func (u *UserManager) LoadTempOfflineUserSync(userId uint32) *model.Player {
 func (u *UserManager) loadUserFromDb(userId uint32) *model.Player {
 	player, err := u.dao.QueryPlayerByID(userId)
 	if err != nil {
-		logger.LOG.Error("query player error: %v", err)
+		logger.Error("query player error: %v", err)
 		return nil
 	}
 	return player
@@ -150,7 +150,7 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32) (*model.Player
 			if player != nil {
 				u.ChangeUserDbState(player, model.DbNormal)
 			} else {
-				logger.LOG.Error("can not find user from db, uid: %v", userId)
+				logger.Error("can not find user from db, uid: %v", userId)
 			}
 			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 				EventId: LoadLoginUserFromDbFinish,
@@ -178,22 +178,22 @@ func (u *UserManager) ChangeUserDbState(player *model.Player, state int) {
 		} else if state == model.DbNormal {
 			player.DbState = model.DbNormal
 		} else {
-			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
+			logger.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		}
 	case model.DbInsert:
-		logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
+		logger.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		break
 	case model.DbDelete:
 		if state == model.DbNormal {
 			player.DbState = model.DbNormal
 		} else {
-			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
+			logger.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		}
 	case model.DbNormal:
 		if state == model.DbDelete {
 			player.DbState = model.DbDelete
 		} else {
-			logger.LOG.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
+			logger.Error("player db state change not allow, before: %v, after: %v", player.DbState, state)
 		}
 	}
 }
@@ -221,13 +221,13 @@ func (u *UserManager) StartAutoSaveUser() {
 func (u *UserManager) SaveUser(saveUserData *SaveUserData) {
 	err := u.dao.InsertPlayerList(saveUserData.insertPlayerList)
 	if err != nil {
-		logger.LOG.Error("insert player list error: %v", err)
+		logger.Error("insert player list error: %v", err)
 		return
 	}
 	err = u.dao.UpdatePlayerList(saveUserData.updatePlayerList)
 	if err != nil {
-		logger.LOG.Error("update player list error: %v", err)
+		logger.Error("update player list error: %v", err)
 		return
 	}
-	logger.LOG.Info("save user finish, insert user count: %v, update user count: %v", len(saveUserData.insertPlayerList), len(saveUserData.updatePlayerList))
+	logger.Info("save user finish, insert user count: %v, update user count: %v", len(saveUserData.insertPlayerList), len(saveUserData.updatePlayerList))
 }

@@ -2,8 +2,10 @@ package gdconf
 
 import (
 	"fmt"
-	"github.com/jszwec/csvutil"
+
 	"hk4e/pkg/logger"
+
+	"github.com/jszwec/csvutil"
 )
 
 // 角色技能库配置表
@@ -94,5 +96,5 @@ func (g *GameDataConfig) loadAvatarSkillDepotData() {
 		// list -> map
 		g.AvatarSkillDepotDataMap[avatarSkillDepotData.AvatarSkillDepotId] = avatarSkillDepotData
 	}
-	logger.LOG.Info("AvatarSkillDepotData count: %v", len(g.AvatarSkillDepotDataMap))
+	logger.Info("AvatarSkillDepotData count: %v", len(g.AvatarSkillDepotDataMap))
 }

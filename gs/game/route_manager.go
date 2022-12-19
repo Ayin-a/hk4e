@@ -30,12 +30,12 @@ func (r *RouteManager) registerRouter(cmdId uint16, handlerFunc HandlerFunc) {
 func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
 	handlerFunc, ok := r.handlerFuncRouteMap[cmdId]
 	if !ok {
-		logger.LOG.Error("no route for msg, cmdId: %v", cmdId)
+		logger.Error("no route for msg, cmdId: %v", cmdId)
 		return
 	}
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		// 临时为了调试便捷搞的重连 生产环境请务必去除 不然新用户会一直重连不能进入
 		// GAME_MANAGER.ReconnectPlayer(userId)
 		return

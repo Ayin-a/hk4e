@@ -1,7 +1,8 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
+	"time"
+
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
@@ -9,7 +10,8 @@ import (
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 var GAME_MANAGER *GameManager = nil
@@ -72,7 +74,7 @@ func (g *GameManager) Stop() {
 		EventId: RunUserCopyAndSave,
 	}
 	time.Sleep(time.Second * 3)
-	//g.worldManager.worldStatic.SaveTerrain()
+	// g.worldManager.worldStatic.SaveTerrain()
 }
 
 // SendMsg 发送消息给客户端
@@ -88,7 +90,7 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 	// 在这里直接序列化成二进制数据 防止发送的消息内包含各种游戏数据指针 而造成并发读写的问题
 	payloadMessageData, err := pb.Marshal(payloadMsg)
 	if err != nil {
-		logger.LOG.Error("parse payload msg to bin error: %v", err)
+		logger.Error("parse payload msg to bin error: %v", err)
 		return
 	}
 	netMsg.PayloadMessageData = payloadMessageData
@@ -112,7 +114,7 @@ func (g *GameManager) CommonRetError(cmdId uint16, player *model.Player, rsp pb.
 	if !ok {
 		return
 	}
-	logger.LOG.Debug("send common error: %v", rsp)
+	logger.Debug("send common error: %v", rsp)
 	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 

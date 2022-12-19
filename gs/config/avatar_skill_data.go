@@ -35,31 +35,31 @@ func (g *GameDataConfig) loadAvatarSkillData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			avatarSkillData := new(AvatarSkillData)
 			err = json.Unmarshal(i, avatarSkillData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.AvatarSkillDataMap[avatarSkillData.Id] = avatarSkillData
 		}
 	}
-	logger.LOG.Info("load %v AvatarSkillData", len(g.AvatarSkillDataMap))
+	logger.Info("load %v AvatarSkillData", len(g.AvatarSkillDataMap))
 	for _, v := range g.AvatarSkillDataMap {
 		v.CostElemTypeX = constant.ElementTypeConst.STRING_MAP[v.CostElemType]
 	}

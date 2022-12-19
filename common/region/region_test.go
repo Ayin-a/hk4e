@@ -3,9 +3,11 @@ package region
 import (
 	"encoding/base64"
 	"fmt"
-	pb "google.golang.org/protobuf/proto"
-	"hk4e/protocol/proto"
 	"testing"
+
+	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func TestRegion(t *testing.T) {

@@ -16,7 +16,7 @@ var (
 
 func main() {
 	flag.Parse()
-	//go statsviz_serve.Serve("0.0.0.0:2345")
+	// go statsviz_serve.Serve("0.0.0.0:2345")
 	err := app.Run(context.TODO(), *config)
 	if err != nil {
 		fmt.Println(err)

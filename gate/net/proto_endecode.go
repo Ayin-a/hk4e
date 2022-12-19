@@ -30,7 +30,7 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 		headMsg := new(proto.PacketHead)
 		err := pb.Unmarshal(kcpMsg.HeadData, headMsg)
 		if err != nil {
-			logger.LOG.Error("unmarshal head data err: %v", err)
+			logger.Error("unmarshal head data err: %v", err)
 			return protoMsgList
 		}
 		protoMsg.HeadMessage = headMsg
@@ -41,7 +41,7 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 	protoMessageList := make([]*ProtoMessage, 0)
 	k.protoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
 	if len(protoMessageList) == 0 {
-		logger.LOG.Error("decode proto object is nil")
+		logger.Error("decode proto object is nil")
 		return protoMsgList
 	}
 	if kcpMsg.CmdId == cmd.UnionCmdNotify {
@@ -58,7 +58,7 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 			if msg.PayloadMessage != nil {
 				cmdName = string(msg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 			}
-			logger.LOG.Debug("[RECV UNION CMD], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", msg.CmdId, cmdName, msg.ConvId, msg.HeadMessage)
+			logger.Debug("[RECV UNION CMD], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", msg.CmdId, cmdName, msg.ConvId, msg.HeadMessage)
 		}
 	} else {
 		protoMsg.PayloadMessage = protoMessageList[0].message
@@ -67,7 +67,7 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 		if protoMsg.PayloadMessage != nil {
 			cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 		}
-		logger.LOG.Debug("[RECV], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
+		logger.Debug("[RECV], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	}
 	return protoMsgList
 }
@@ -75,14 +75,14 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
 	protoObj := k.decodePayloadToProto(cmdId, protoData)
 	if protoObj == nil {
-		logger.LOG.Error("decode proto object is nil")
+		logger.Error("decode proto object is nil")
 		return
 	}
 	if cmdId == cmd.UnionCmdNotify {
 		// 处理聚合消息
 		unionCmdNotify, ok := protoObj.(*proto.UnionCmdNotify)
 		if !ok {
-			logger.LOG.Error("parse union cmd error")
+			logger.Error("parse union cmd error")
 			return
 		}
 		for _, unionCmd := range unionCmdNotify.GetCmdList() {
@@ -100,7 +100,7 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	if protoMsg.PayloadMessage != nil {
 		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 	}
-	logger.LOG.Debug("[SEND], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
+	logger.Debug("[SEND], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	kcpMsg = new(KcpMsg)
 	kcpMsg.ConvId = protoMsg.ConvId
 	kcpMsg.CmdId = protoMsg.CmdId
@@ -108,7 +108,7 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	if protoMsg.HeadMessage != nil {
 		headData, err := pb.Marshal(protoMsg.HeadMessage)
 		if err != nil {
-			logger.LOG.Error("marshal head data err: %v", err)
+			logger.Error("marshal head data err: %v", err)
 			return nil
 		}
 		kcpMsg.HeadData = headData
@@ -119,11 +119,11 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	if protoMsg.PayloadMessage != nil {
 		cmdId, protoData := k.encodeProtoToPayload(protoMsg.PayloadMessage)
 		if cmdId == 0 || protoData == nil {
-			logger.LOG.Error("encode proto data is nil")
+			logger.Error("encode proto data is nil")
 			return nil
 		}
 		if cmdId != 65535 && cmdId != protoMsg.CmdId {
-			logger.LOG.Error("cmd id is not match with proto obj, src cmd id: %v, found cmd id: %v", protoMsg.CmdId, cmdId)
+			logger.Error("cmd id is not match with proto obj, src cmd id: %v, found cmd id: %v", protoMsg.CmdId, cmdId)
 			return nil
 		}
 		kcpMsg.ProtoData = protoData
@@ -136,12 +136,12 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 func (k *KcpConnectManager) decodePayloadToProto(cmdId uint16, protoData []byte) (protoObj pb.Message) {
 	protoObj = k.cmdProtoMap.GetProtoObjByCmdId(cmdId)
 	if protoObj == nil {
-		logger.LOG.Error("get new proto object is nil")
+		logger.Error("get new proto object is nil")
 		return nil
 	}
 	err := pb.Unmarshal(protoData, protoObj)
 	if err != nil {
-		logger.LOG.Error("unmarshal proto data err: %v", err)
+		logger.Error("unmarshal proto data err: %v", err)
 		return nil
 	}
 	return protoObj
@@ -152,7 +152,7 @@ func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uin
 	var err error = nil
 	protoData, err = pb.Marshal(protoObj)
 	if err != nil {
-		logger.LOG.Error("marshal proto object err: %v", err)
+		logger.Error("marshal proto object err: %v", err)
 		return 0, nil
 	}
 	return cmdId, protoData

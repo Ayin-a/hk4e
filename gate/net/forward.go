@@ -5,6 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
 	"hk4e/dispatch/controller"
 	"hk4e/gate/kcp"
 	"hk4e/pkg/endec"
@@ -13,10 +18,6 @@ import (
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -32,7 +33,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 	headMeta := session.headMeta
 	connState := session.connState
 	if protoMsg.HeadMessage == nil {
-		logger.LOG.Error("recv null head msg: %v", protoMsg)
+		logger.Error("recv null head msg: %v", protoMsg)
 	}
 	headMeta.seq = protoMsg.HeadMessage.ClientSequenceId
 	// gate本地处理的请求
@@ -77,7 +78,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		netMsg.EventId = cmd.UserLoginNotify
 		netMsg.ClientSeq = headMeta.seq
 		k.netMsgInput <- netMsg
-		logger.LOG.Info("send to gs user login ok, ConvId: %v, UserId: %v", protoMsg.ConvId, netMsg.UserId)
+		logger.Info("send to gs user login ok, ConvId: %v, UserId: %v", protoMsg.ConvId, netMsg.UserId)
 	case cmd.SetPlayerBornDataReq:
 		// 玩家注册请求
 		if connState != ConnAlive {
@@ -106,7 +107,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			return
 		}
 		pingReq := protoMsg.PayloadMessage.(*proto.PingReq)
-		logger.LOG.Debug("user ping req, data: %v", pingReq.String())
+		logger.Debug("user ping req, data: %v", pingReq.String())
 		// 返回数据到客户端
 		// TODO 记录客户端最后一次ping时间做超时下线处理
 		pingRsp := new(proto.PingRsp)
@@ -124,7 +125,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		netMsg.ClientTime = pingReq.ClientTime
 		k.netMsgInput <- netMsg
 		// RTT
-		logger.LOG.Debug("convId: %v, RTO: %v, SRTT: %v, RTTVar: %v", protoMsg.ConvId, session.conn.GetRTO(), session.conn.GetSRTT(), session.conn.GetSRTTVar())
+		logger.Debug("convId: %v, RTO: %v, SRTT: %v, RTTVar: %v", protoMsg.ConvId, session.conn.GetRTO(), session.conn.GetSRTT(), session.conn.GetSRTTVar())
 		// 客户端往返时延通知
 		rtt := session.conn.GetSRTT()
 		// 通知GS玩家客户端往返时延
@@ -151,7 +152,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 
 // 从GS接收消息
 func (k *KcpConnectManager) sendMsgHandle() {
-	logger.LOG.Debug("send msg handle start")
+	logger.Debug("send msg handle start")
 	kcpRawSendChanMap := make(map[uint64]chan *ProtoMsg)
 	userIdConvMap := make(map[uint32]uint64)
 	sendToClientFn := func(protoMsg *ProtoMsg) {
@@ -161,10 +162,10 @@ func (k *KcpConnectManager) sendMsgHandle() {
 			select {
 			case kcpRawSendChan <- protoMsg:
 			default:
-				logger.LOG.Error("kcpRawSendChan is full, convId: %v", protoMsg.ConvId)
+				logger.Error("kcpRawSendChan is full, convId: %v", protoMsg.ConvId)
 			}
 		} else {
-			logger.LOG.Error("kcpRawSendChan is nil, convId: %v", protoMsg.ConvId)
+			logger.Error("kcpRawSendChan is nil, convId: %v", protoMsg.ConvId)
 		}
 	}
 	for {
@@ -181,7 +182,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 		case netMsg := <-k.netMsgOutput:
 			convId, exist := userIdConvMap[netMsg.UserId]
 			if !exist {
-				logger.LOG.Error("can not find convId by userId")
+				logger.Error("can not find convId by userId")
 				continue
 			}
 			if netMsg.EventId == cmd.NormalMsg {
@@ -192,7 +193,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 				protoMsg.PayloadMessage = netMsg.PayloadMessage
 				sendToClientFn(protoMsg)
 			} else {
-				logger.LOG.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
+				logger.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
 			}
 		}
 	}
@@ -213,11 +214,11 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		AccountToken: req.AccountToken,
 	}, "")
 	if err != nil {
-		logger.LOG.Error("verify token error: %v", err)
+		logger.Error("verify token error: %v", err)
 		return nil
 	}
 	if !tokenVerifyRsp.Valid {
-		logger.LOG.Error("token error")
+		logger.Error("token error")
 		return nil
 	}
 	// comboToken验证成功
@@ -273,38 +274,38 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	split := strings.Split(addr, ":")
 	rsp.ClientIpStr = split[0]
 	if req.GetKeyId() != 0 {
-		logger.LOG.Debug("do hk4e 2.8 rsa logic")
+		logger.Debug("do hk4e 2.8 rsa logic")
 		keyId := strconv.Itoa(int(req.GetKeyId()))
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]
 		if !exist {
-			logger.LOG.Error("can not found key id: %v", keyId)
+			logger.Error("can not found key id: %v", keyId)
 			return
 		}
 		pubKey, err := endec.RsaParsePubKeyByPrivKey(encPubPrivKey)
 		if err != nil {
-			logger.LOG.Error("parse rsa pub key error: %v", err)
+			logger.Error("parse rsa pub key error: %v", err)
 			return nil
 		}
 		signPrivkey, err := endec.RsaParsePrivKey(k.signRsaKey)
 		if err != nil {
-			logger.LOG.Error("parse rsa priv key error: %v", err)
+			logger.Error("parse rsa priv key error: %v", err)
 			return nil
 		}
 		clientSeedBase64 := req.GetClientRandKey()
 		clientSeedEnc, err := base64.StdEncoding.DecodeString(clientSeedBase64)
 		if err != nil {
-			logger.LOG.Error("parse client seed base64 error: %v", err)
+			logger.Error("parse client seed base64 error: %v", err)
 			return nil
 		}
 		clientSeed, err := endec.RsaDecrypt(clientSeedEnc, signPrivkey)
 		if err != nil {
-			logger.LOG.Error("rsa dec error: %v", err)
+			logger.Error("rsa dec error: %v", err)
 			return rsp
 		}
 		clientSeedUint64 := uint64(0)
 		err = binary.Read(bytes.NewReader(clientSeed), binary.BigEndian, &clientSeedUint64)
 		if err != nil {
-			logger.LOG.Error("parse client seed to uint64 error: %v", err)
+			logger.Error("parse client seed to uint64 error: %v", err)
 			return rsp
 		}
 		timeRand := random.GetTimeRand()
@@ -315,18 +316,18 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
 		if err != nil {
-			logger.LOG.Error("conv seed uint64 to bytes error: %v", err)
+			logger.Error("conv seed uint64 to bytes error: %v", err)
 			return rsp
 		}
 		seed := seedBuf.Bytes()
 		seedEnc, err := endec.RsaEncrypt(seed, pubKey)
 		if err != nil {
-			logger.LOG.Error("rsa enc error: %v", err)
+			logger.Error("rsa enc error: %v", err)
 			return rsp
 		}
 		seedSign, err := endec.RsaSign(seed, signPrivkey)
 		if err != nil {
-			logger.LOG.Error("rsa sign error: %v", err)
+			logger.Error("rsa sign error: %v", err)
 			return rsp
 		}
 		rsp.KeyId = req.KeyId
@@ -337,7 +338,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 }
 
 func (k *KcpConnectManager) playerLogin(req *proto.PlayerLoginReq, session *Session) (rsp *proto.PlayerLoginRsp) {
-	logger.LOG.Debug("player login, info: %v", req.String())
+	logger.Debug("player login, info: %v", req.String())
 	// TODO 验证token
 	session.connState = ConnAlive
 	// 返回响应

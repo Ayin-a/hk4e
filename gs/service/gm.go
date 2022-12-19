@@ -15,7 +15,7 @@ type GMService struct {
 }
 
 func (s *GMService) Cmd(ctx context.Context, req *api.CmdRequest) (*api.CmdReply, error) {
-	//TODO implement me
+	// TODO implement me
 	fmt.Println("Cmd", req.FuncName, req.Param)
 	return &api.CmdReply{
 		Message: "TODO",

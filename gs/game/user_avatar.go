@@ -31,20 +31,20 @@ func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdc.AvatarData {
 func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	player.AddAvatar(avatarId)
 	avatar := player.AvatarMap[avatarId]
 	if avatar == nil {
-		logger.LOG.Error("avatar is nil, avatarId", avatarId)
+		logger.Error("avatar is nil, avatarId", avatarId)
 		return
 	}
 
 	// 添加初始武器
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
 	if !ok {
-		logger.LOG.Error("config is nil, itemId: %v", avatarId)
+		logger.Error("config is nil, itemId: %v", avatarId)
 		return
 	}
 	weaponId := g.AddUserWeapon(player.PlayerID, uint32(avatarDataConfig.InitialWeapon))
@@ -62,7 +62,7 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 }
 
 func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user wear equip, uid: %v", player.PlayerID)
+	logger.Debug("user wear equip, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WearEquipReq)
 	avatarGuid := req.AvatarGuid
 	equipGuid := req.EquipGuid
@@ -80,7 +80,7 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weaponId uint64) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	avatar := player.AvatarMap[avatarId]
@@ -127,7 +127,7 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 }
 
 func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change avatar costume, uid: %v", player.PlayerID)
+	logger.Debug("user change avatar costume, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarChangeCostumeReq)
 	avatarGuid := req.AvatarGuid
 	costumeId := req.CostumeId
@@ -165,7 +165,7 @@ func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change avatar fly cloak, uid: %v", player.PlayerID)
+	logger.Debug("user change avatar fly cloak, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarWearFlycloakReq)
 	avatarGuid := req.AvatarGuid
 	flycloakId := req.FlycloakId
@@ -236,7 +236,7 @@ func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapo
 func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	avatar := player.AvatarMap[avatarId]
@@ -249,9 +249,9 @@ func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) 
 
 func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 	isFocus := false
-	//if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
+	// if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
 	//	isFocus = true
-	//}
+	// }
 	pbAvatar := &proto.AvatarInfo{
 		IsFocus:  isFocus,
 		AvatarId: avatar.AvatarId,

@@ -29,5 +29,5 @@ func (c *Controller) gmCmd(context *gin.Context) {
 		return
 	}
 	context.JSON(http.StatusOK, rep)
-	logger.LOG.Info("%v", gmCmdReq)
+	logger.Info("%v", gmCmdReq)
 }

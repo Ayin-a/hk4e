@@ -18,31 +18,31 @@ func (g *GameDataConfig) loadFetterData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			fetterData := new(FetterData)
 			err = json.Unmarshal(i, fetterData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.FetterDataMap[fetterData.FetterId] = fetterData
 		}
 	}
-	logger.LOG.Info("load %v FetterData", len(g.FetterDataMap))
+	logger.Info("load %v FetterData", len(g.FetterDataMap))
 	g.AvatarFetterDataMap = make(map[int32][]int32)
 	for _, v := range g.FetterDataMap {
 		avatarFetterIdList, exist := g.AvatarFetterDataMap[v.AvatarId]

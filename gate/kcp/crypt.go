@@ -9,7 +9,6 @@ import (
 
 	xor "github.com/templexxx/xorsimd"
 	"github.com/tjfoc/gmsm/sm4"
-
 	"golang.org/x/crypto/blowfish"
 	"golang.org/x/crypto/cast5"
 	"golang.org/x/crypto/pbkdf2"

@@ -1,17 +1,18 @@
 package gdconf
 
 import (
-	"hk4e/common/config"
-	"hk4e/pkg/logger"
 	"testing"
 	"time"
+
+	"hk4e/common/config"
+	"hk4e/pkg/logger"
 )
 
 func TestInitGameDataConfig(t *testing.T) {
 	config.InitConfig("./application.toml")
 	logger.InitLogger("test")
-	logger.LOG.Info("start load conf")
+	logger.Info("start load conf")
 	InitGameDataConfig()
-	logger.LOG.Info("load conf finish, conf: %v", CONF)
+	logger.Info("load conf finish, conf: %v", CONF)
 	time.Sleep(time.Second)
 }

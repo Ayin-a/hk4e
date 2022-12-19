@@ -4,13 +4,13 @@
 package kcp
 
 import (
-	"golang.org/x/net/ipv6"
 	"net"
 	"os"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 )
 
 func (l *Listener) SendEnetNotifyToClient(enet *Enet) {

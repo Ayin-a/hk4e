@@ -18,7 +18,7 @@ func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
 	logger.InitLogger("dispatch")
-	logger.LOG.Info("dispatch start")
+	logger.Warn("dispatch start")
 
 	db := dao.NewDao()
 	defer db.CloseDao()
@@ -32,10 +32,10 @@ func Run(ctx context.Context, configFile string) error {
 		case <-ctx.Done():
 			return nil
 		case s := <-c:
-			logger.LOG.Info("get a signal %s", s.String())
+			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.LOG.Info("dispatch exit")
+				logger.Warn("dispatch exit")
 
 				time.Sleep(time.Second)
 				return nil

@@ -3,6 +3,7 @@ package kcp
 import (
 	"bytes"
 	"encoding/binary"
+
 	"github.com/pkg/errors"
 )
 
@@ -17,8 +18,8 @@ func (s *UDPSession) defaultReadLoop() {
 			if src == "" { // set source address
 				src = addr.String()
 			} else if addr.String() != src {
-				//atomic.AddUint64(&DefaultSnmp.InErrs, 1)
-				//continue
+				// atomic.AddUint64(&DefaultSnmp.InErrs, 1)
+				// continue
 				s.remote = addr
 				src = addr.String()
 			}

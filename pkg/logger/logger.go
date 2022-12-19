@@ -3,7 +3,6 @@ package logger
 import (
 	"bytes"
 	"fmt"
-	"hk4e/common/config"
 	"log"
 	"os"
 	"path"
@@ -11,13 +10,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"hk4e/common/config"
 )
 
 const (
 	DEBUG = iota
 	INFO
+	WARN
 	ERROR
-	UNKNOWN
 )
 
 const (
@@ -66,8 +67,8 @@ func InitLogger(appName string) {
 	log.SetFlags(0)
 	LOG = new(Logger)
 	LOG.AppName = appName
-	LOG.Level = getLevelInt(config.CONF.Logger.Level)
-	LOG.Mode = getModeInt(config.CONF.Logger.Mode)
+	LOG.Level = LOG.getLevelInt(config.CONF.Logger.Level)
+	LOG.Mode = LOG.getModeInt(config.CONF.Logger.Mode)
 	LOG.Track = config.CONF.Logger.Track
 	LOG.MaxSize = config.CONF.Logger.MaxSize
 	LOG.LogInfoChan = make(chan *LogInfo, 1000)
@@ -85,6 +86,8 @@ func (l *Logger) doLog() {
 			logHeader += BLUE + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
 		} else if logInfo.Level == INFO {
 			logHeader += GREEN + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+		} else if logInfo.Level == WARN {
+			logHeader += YELLOW + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
 		} else if logInfo.Level == ERROR {
 			logHeader += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
 		}
@@ -107,15 +110,15 @@ func (l *Logger) doLog() {
 		if l.Mode == CONSOLE {
 			log.Print(logStr)
 		} else if l.Mode == FILE {
-			l.WriteLogFile(logStr)
+			l.writeLogFile(logStr)
 		} else if l.Mode == BOTH {
 			log.Print(logStr)
-			l.WriteLogFile(logStr)
+			l.writeLogFile(logStr)
 		}
 	}
 }
 
-func (l *Logger) WriteLogFile(logStr string) {
+func (l *Logger) writeLogFile(logStr string) {
 	for _, v := range ALL_COLOR {
 		logStr = strings.ReplaceAll(logStr, v, "")
 	}
@@ -159,77 +162,94 @@ func (l *Logger) WriteLogFile(logStr string) {
 	}
 }
 
-func (l *Logger) Debug(msg string, param ...any) {
-	if l.Level > DEBUG {
+func Debug(msg string, param ...any) {
+	if LOG.Level > DEBUG {
 		return
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = DEBUG
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.Track {
-		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
-		logInfo.GoroutineId = l.getGoroutineId()
+	if LOG.Track {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
+		logInfo.GoroutineId = LOG.getGoroutineId()
 	}
-	l.LogInfoChan <- logInfo
+	LOG.LogInfoChan <- logInfo
 }
 
-func (l *Logger) Info(msg string, param ...any) {
-	if l.Level > INFO {
+func Info(msg string, param ...any) {
+	if LOG.Level > INFO {
 		return
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = INFO
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.Track {
-		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
-		logInfo.GoroutineId = l.getGoroutineId()
+	if LOG.Track {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
+		logInfo.GoroutineId = LOG.getGoroutineId()
 	}
-	l.LogInfoChan <- logInfo
+	LOG.LogInfoChan <- logInfo
 }
 
-func (l *Logger) Error(msg string, param ...any) {
-	if l.Level > ERROR {
+func Warn(msg string, param ...any) {
+	if LOG.Level > WARN {
+		return
+	}
+	logInfo := new(LogInfo)
+	logInfo.Level = WARN
+	logInfo.Msg = msg
+	logInfo.Param = param
+	if LOG.Track {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
+		logInfo.GoroutineId = LOG.getGoroutineId()
+	}
+	LOG.LogInfoChan <- logInfo
+}
+
+func Error(msg string, param ...any) {
+	if LOG.Level > ERROR {
 		return
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = ERROR
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.Track {
-		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
-		logInfo.GoroutineId = l.getGoroutineId()
+	if LOG.Track {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
+		logInfo.GoroutineId = LOG.getGoroutineId()
 	}
-	l.LogInfoChan <- logInfo
+	LOG.LogInfoChan <- logInfo
 }
 
-func (l *Logger) ErrorStack(msg string, param ...any) {
-	if l.Level > ERROR {
+func ErrorStack(msg string, param ...any) {
+	if LOG.Level > ERROR {
 		return
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = ERROR
 	logInfo.Msg = msg
 	logInfo.Param = param
-	if l.Track {
-		logInfo.FileName, logInfo.Line, logInfo.FuncName = l.getLineFunc()
-		logInfo.GoroutineId = l.getGoroutineId()
-		logInfo.Stack = l.Stack()
+	if LOG.Track {
+		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
+		logInfo.GoroutineId = LOG.getGoroutineId()
+		logInfo.Stack = Stack()
 	}
-	l.LogInfoChan <- logInfo
+	LOG.LogInfoChan <- logInfo
 }
 
-func getLevelInt(level string) (ret int) {
+func (l *Logger) getLevelInt(level string) (ret int) {
 	switch level {
 	case "DEBUG":
 		ret = DEBUG
 	case "INFO":
 		ret = INFO
+	case "WARN":
+		ret = WARN
 	case "ERROR":
 		ret = ERROR
 	default:
-		ret = UNKNOWN
+		ret = DEBUG
 	}
 	return ret
 }
@@ -240,13 +260,17 @@ func (l *Logger) getLevelStr(level int) (ret string) {
 		ret = "DEBUG"
 	case INFO:
 		ret = "INFO"
+	case WARN:
+		ret = "WARN"
 	case ERROR:
 		ret = "ERROR"
+	default:
+		ret = "DEBUG"
 	}
 	return ret
 }
 
-func getModeInt(mode string) (ret int) {
+func (l *Logger) getModeInt(mode string) (ret int) {
 	switch mode {
 	case "CONSOLE":
 		ret = CONSOLE
@@ -254,8 +278,10 @@ func getModeInt(mode string) (ret int) {
 		ret = FILE
 	case "BOTH":
 		ret = BOTH
-	default:
+	case "NEITHER":
 		ret = NEITHER
+	default:
+		ret = CONSOLE
 	}
 	return ret
 }
@@ -286,7 +312,7 @@ func (l *Logger) getLineFunc() (fileName string, line int, funcName string) {
 	return fileName, line, funcName
 }
 
-func (l *Logger) Stack() string {
+func Stack() string {
 	buf := make([]byte, 1024)
 	for {
 		n := runtime.Stack(buf, false)
@@ -297,7 +323,7 @@ func (l *Logger) Stack() string {
 	}
 }
 
-func (l *Logger) StackAll() string {
+func StackAll() string {
 	buf := make([]byte, 1024*16)
 	for {
 		n := runtime.Stack(buf, true)

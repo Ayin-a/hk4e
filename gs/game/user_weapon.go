@@ -40,14 +40,14 @@ func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdc.ItemData {
 func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return 0
 	}
 	weaponId := uint64(g.snowflake.GenId())
 	player.AddWeapon(itemId, weaponId)
 	weapon := player.GetWeapon(weaponId)
 	if weapon == nil {
-		logger.LOG.Error("weapon is nil, itemId: %v, weaponId: %v", itemId, weaponId)
+		logger.Error("weapon is nil, itemId: %v, weaponId: %v", itemId, weaponId)
 		return 0
 	}
 

@@ -16,16 +16,16 @@ func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 		-150, 150, 3,
 		-150, 150, 3,
 	)
-	logger.LOG.Debug("aoiManager: %s", aoiManager.DebugString())
+	logger.Debug("aoiManager: %s", aoiManager.DebugString())
 	for k := range aoiManager.gridMap {
 		// 得到当前格子周边的九宫格
 		gridList := aoiManager.GetSurrGridListByGid(k)
 		// 得到九宫格所有的id
-		logger.LOG.Debug("gid: %d gridList len: %d", k, len(gridList))
+		logger.Debug("gid: %d gridList len: %d", k, len(gridList))
 		gidList := make([]uint32, 0, len(gridList))
 		for _, grid := range gridList {
 			gidList = append(gidList, grid.gid)
 		}
-		logger.LOG.Debug("Grid: gid: %d, surr grid gid list: %v", k, gidList)
+		logger.Debug("Grid: gid: %d, surr grid gid list: %v", k, gidList)
 	}
 }

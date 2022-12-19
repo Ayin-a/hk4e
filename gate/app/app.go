@@ -19,7 +19,7 @@ func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
 	logger.InitLogger("gate")
-	logger.LOG.Info("gate start")
+	logger.Warn("gate start")
 
 	netMsgInput := make(chan *cmd.NetMsg, 10000)
 	netMsgOutput := make(chan *cmd.NetMsg, 10000)
@@ -45,10 +45,10 @@ func Run(ctx context.Context, configFile string) error {
 		case <-ctx.Done():
 			return nil
 		case s := <-c:
-			logger.LOG.Info("get a signal %s", s.String())
+			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.LOG.Info("gate exit")
+				logger.Warn("gate exit")
 				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:

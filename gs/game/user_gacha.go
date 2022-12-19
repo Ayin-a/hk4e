@@ -1,10 +1,10 @@
 package game
 
 import (
-	"hk4e/gdconf"
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -22,7 +22,7 @@ type UserInfo struct {
 
 // 获取卡池信息
 func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get gacha info, uid: %v", player.PlayerID)
+	logger.Debug("user get gacha info, uid: %v", player.PlayerID)
 	serverAddr := config.CONF.Hk4e.GachaHistoryServer
 	userInfo := &UserInfo{
 		UserId: player.PlayerID,
@@ -35,7 +35,7 @@ func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Messag
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, userInfo)
 	jwtStr, err := token.SignedString([]byte("flswld"))
 	if err != nil {
-		logger.LOG.Error("generate jwt error: %v", err)
+		logger.Error("generate jwt error: %v", err)
 		jwtStr = "default.jwt.token"
 	}
 
@@ -195,7 +195,7 @@ func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user do gacha, uid: %v", player.PlayerID)
+	logger.Debug("user do gacha, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.DoGachaReq)
 	gachaScheduleId := req.GachaScheduleId
 	gachaTimes := req.GachaTimes
@@ -319,7 +319,7 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		doGachaRsp.GachaItemList = append(doGachaRsp.GachaItemList, gachaItem)
 	}
 
-	logger.LOG.Debug("doGachaRsp: %v", doGachaRsp.String())
+	logger.Debug("doGachaRsp: %v", doGachaRsp.String())
 	g.SendMsg(cmd.DoGachaRsp, player.PlayerID, player.ClientSeq, doGachaRsp)
 }
 
@@ -380,21 +380,21 @@ const (
 func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnable bool, weaponFix bool) (bool, uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return false, 0
 	}
 
 	// 找到卡池对应的掉落组
 	dropGroupDataConfig := gdconf.CONF.DropGroupDataMap[int32(gachaType)]
 	if dropGroupDataConfig == nil {
-		logger.LOG.Error("drop group not found, drop id: %v", gachaType)
+		logger.Error("drop group not found, drop id: %v", gachaType)
 		return false, 0
 	}
 
 	// 获取用户的卡池保底信息
 	gachaPoolInfo := player.DropInfo.GachaPoolInfo[gachaType]
 	if gachaPoolInfo == nil {
-		logger.LOG.Error("user gacha pool info not found, gacha type: %v", gachaType)
+		logger.Error("user gacha pool info not found, gacha type: %v", gachaType)
 		return false, 0
 	}
 
@@ -448,7 +448,7 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			} else if drop.Result == blueDropId {
 				fixDrop.Weight = drop.Weight - addOrangeWeight - addPurpleWeight
 			} else {
-				logger.LOG.Error("invalid drop group id, does not match any case of orange/purple/blue, result group id: %v", drop.Result)
+				logger.Error("invalid drop group id, does not match any case of orange/purple/blue, result group id: %v", drop.Result)
 				fixDrop.Weight = drop.Weight
 			}
 			fixDropGroupDataConfig.DropConfig = append(fixDropGroupDataConfig.DropConfig, fixDrop)
@@ -473,20 +473,20 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 		allAvatarDataConfig := g.GetAllAvatarDataConfig()
 		avatarDataConfig := allAvatarDataConfig[int32(avatarId)]
 		if avatarDataConfig == nil {
-			logger.LOG.Error("avatar data config not found, avatar id: %v", avatarId)
+			logger.Error("avatar data config not found, avatar id: %v", avatarId)
 			return false, 0
 		}
 		if avatarDataConfig.QualityType == "QUALITY_ORANGE" {
 			itemColor = Orange
-			logger.LOG.Debug("[orange avatar], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
+			logger.Debug("[orange avatar], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
 			if gachaPoolInfo.OrangeTimes > 90 {
-				logger.LOG.Error("[abnormal orange avatar], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
+				logger.Error("[abnormal orange avatar], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
 			}
 		} else if avatarDataConfig.QualityType == "QUALITY_PURPLE" {
 			itemColor = Purple
-			logger.LOG.Debug("[purple avatar], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
+			logger.Debug("[purple avatar], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
 			if gachaPoolInfo.PurpleTimes > 10 {
-				logger.LOG.Error("[abnormal purple avatar], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
+				logger.Error("[abnormal purple avatar], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
 			}
 		} else {
 			itemColor = Blue
@@ -497,20 +497,20 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 		allWeaponDataConfig := g.GetAllWeaponDataConfig()
 		weaponDataConfig := allWeaponDataConfig[int32(gachaItemId)]
 		if weaponDataConfig == nil {
-			logger.LOG.Error("weapon item data config not found, item id: %v", gachaItemId)
+			logger.Error("weapon item data config not found, item id: %v", gachaItemId)
 			return false, 0
 		}
 		if weaponDataConfig.RankLevel == 5 {
 			itemColor = Orange
-			logger.LOG.Debug("[orange weapon], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
+			logger.Debug("[orange weapon], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
 			if gachaPoolInfo.OrangeTimes > 90 {
-				logger.LOG.Error("[abnormal orange weapon], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
+				logger.Error("[abnormal orange weapon], times: %v, gachaItemId: %v", gachaPoolInfo.OrangeTimes, gachaItemId)
 			}
 		} else if weaponDataConfig.RankLevel == 4 {
 			itemColor = Purple
-			logger.LOG.Debug("[purple weapon], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
+			logger.Debug("[purple weapon], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
 			if gachaPoolInfo.PurpleTimes > 10 {
-				logger.LOG.Error("[abnormal purple weapon], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
+				logger.Error("[abnormal purple weapon], times: %v, gachaItemId: %v", gachaPoolInfo.PurpleTimes, gachaItemId)
 			}
 		} else {
 			itemColor = Blue
@@ -526,10 +526,10 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			upOrangeDropId := int32(gachaType*100 + 12)
 			// 替换本次结果为5星大保底
 			if gachaPoolInfo.MustGetUpOrange {
-				logger.LOG.Debug("trigger must get up orange, uid: %v", userId)
+				logger.Debug("trigger must get up orange, uid: %v", userId)
 				upOrangeDropGroupDataConfig := gdconf.CONF.DropGroupDataMap[upOrangeDropId]
 				if upOrangeDropGroupDataConfig == nil {
-					logger.LOG.Error("drop group not found, drop id: %v", upOrangeDropId)
+					logger.Error("drop group not found, drop id: %v", upOrangeDropId)
 					return false, 0
 				}
 				upOrangeOk, upOrangeDrop := g.doFullRandDrop(upOrangeDropGroupDataConfig)
@@ -553,10 +553,10 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 			upPurpleDropId := int32(gachaType*100 + 22)
 			// 替换本次结果为4星大保底
 			if gachaPoolInfo.MustGetUpPurple {
-				logger.LOG.Debug("trigger must get up purple, uid: %v", userId)
+				logger.Debug("trigger must get up purple, uid: %v", userId)
 				upPurpleDropGroupDataConfig := gdconf.CONF.DropGroupDataMap[upPurpleDropId]
 				if upPurpleDropGroupDataConfig == nil {
-					logger.LOG.Error("drop group not found, drop id: %v", upPurpleDropId)
+					logger.Error("drop group not found, drop id: %v", upPurpleDropId)
 					return false, 0
 				}
 				upPurpleOk, upPurpleDrop := g.doFullRandDrop(upPurpleDropGroupDataConfig)
@@ -582,7 +582,7 @@ func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdconf.DropGroupData) 
 	for {
 		drop := g.doRandDropOnce(dropGroupDataConfig)
 		if drop == nil {
-			logger.LOG.Error("weight error, drop group config: %v", dropGroupDataConfig)
+			logger.Error("weight error, drop group config: %v", dropGroupDataConfig)
 			return false, nil
 		}
 		if drop.IsEnd {
@@ -592,7 +592,7 @@ func (g *GameManager) doFullRandDrop(dropGroupDataConfig *gdconf.DropGroupData) 
 		// 进行下一步掉落流程
 		dropGroupDataConfig = gdconf.CONF.DropGroupDataMap[drop.Result]
 		if dropGroupDataConfig == nil {
-			logger.LOG.Error("drop config tab exist error, invalid drop id: %v", drop.Result)
+			logger.Error("drop config tab exist error, invalid drop id: %v", drop.Result)
 			return false, nil
 		}
 	}

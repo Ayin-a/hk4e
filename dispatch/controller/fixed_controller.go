@@ -195,7 +195,7 @@ func (c *Controller) webp(context *gin.Context) {
 	context.Header("Content-type", "image/webp")
 	file, err := os.ReadFile("static/a330cf996.webp")
 	if err != nil {
-		logger.LOG.Error("open a330cf996.webp error")
+		logger.Error("open a330cf996.webp error")
 		return
 	}
 	_, _ = context.Writer.Write(file)
@@ -206,7 +206,7 @@ func (c *Controller) bgWebp(context *gin.Context) {
 	context.Header("Content-type", "image/webp")
 	file, err := os.ReadFile("static/86f9db021.webp")
 	if err != nil {
-		logger.LOG.Error("open 86f9db021.webp error")
+		logger.Error("open 86f9db021.webp error")
 		return
 	}
 	_, _ = context.Writer.Write(file)
@@ -217,7 +217,7 @@ func (c *Controller) slicePng(context *gin.Context) {
 	context.Header("Content-type", "image/png")
 	file, err := os.ReadFile("static/86f9db021.png")
 	if err != nil {
-		logger.LOG.Error("open 86f9db021.png error")
+		logger.Error("open 86f9db021.png error")
 		return
 	}
 	_, _ = context.Writer.Write(file)
@@ -228,7 +228,7 @@ func (c *Controller) sprite2xPng(context *gin.Context) {
 	context.Header("Content-type", "image/png")
 	file, err := os.ReadFile("static/sprite2x.1.2.6.png")
 	if err != nil {
-		logger.LOG.Error("open sprite2x.1.2.6.png error")
+		logger.Error("open sprite2x.1.2.6.png error")
 		return
 	}
 	_, _ = context.Writer.Write(file)

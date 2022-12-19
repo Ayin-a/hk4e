@@ -1,8 +1,9 @@
 package gdconf
 
 import (
-	"github.com/jszwec/csvutil"
 	"hk4e/pkg/logger"
+
+	"github.com/jszwec/csvutil"
 )
 
 type Drop struct {
@@ -26,7 +27,7 @@ func (g *GameDataConfig) loadDropGroupData() {
 		var dropList []*Drop
 		err := csvutil.Unmarshal(data, &dropList)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			return
 		}
 		for _, drop := range dropList {
@@ -42,5 +43,5 @@ func (g *GameDataConfig) loadDropGroupData() {
 			dropGroupData.DropConfig = append(dropGroupData.DropConfig, drop)
 		}
 	}
-	logger.LOG.Info("load %v DropGroupData", len(g.DropGroupDataMap))
+	logger.Info("load %v DropGroupData", len(g.DropGroupDataMap))
 }

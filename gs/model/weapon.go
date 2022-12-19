@@ -66,7 +66,7 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 	}
 	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(itemId)]
 	if !ok {
-		logger.LOG.Error("config is nil, itemId: %v", itemId)
+		logger.Error("config is nil, itemId: %v", itemId)
 		return
 	}
 	if itemDataConfig.SkillAffix != nil {

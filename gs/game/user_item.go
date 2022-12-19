@@ -51,7 +51,7 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdc.ItemData {
 func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bool, hintReason uint16) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	for _, userItem := range itemList {
@@ -118,7 +118,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	for _, userItem := range itemList {

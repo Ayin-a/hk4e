@@ -30,31 +30,31 @@ func (g *GameDataConfig) loadGadgetData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			gadgetData := new(GadgetData)
 			err = json.Unmarshal(i, gadgetData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.GadgetDataMap[gadgetData.Id] = gadgetData
 		}
 	}
-	logger.LOG.Info("load %v GadgetData", len(g.GadgetDataMap))
+	logger.Info("load %v GadgetData", len(g.GadgetDataMap))
 	for _, v := range g.GadgetDataMap {
 		v.TypeX = constant.EntityTypeConst.STRING_MAP[v.Type]
 	}

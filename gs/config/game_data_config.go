@@ -76,19 +76,19 @@ func (g *GameDataConfig) loadAll() {
 	resourcePath := g.getResourcePathPrefix()
 	dirInfo, err := os.Stat(resourcePath)
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data config dir error: %v", err)
+		logger.Error("open game data config dir error: %v", err)
 		return
 	}
 	g.binPrefix = resourcePath + "/BinOutput"
 	g.excelBinPrefix = resourcePath + "/ExcelBinOutput"
 	dirInfo, err = os.Stat(g.binPrefix)
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data bin output config dir error: %v", err)
+		logger.Error("open game data bin output config dir error: %v", err)
 		return
 	}
 	dirInfo, err = os.Stat(g.excelBinPrefix)
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data excel bin output config dir error: %v", err)
+		logger.Error("open game data excel bin output config dir error: %v", err)
 		return
 	}
 	g.binPrefix += "/"
@@ -100,17 +100,17 @@ func (g *GameDataConfig) ReadWorldTerrain() []byte {
 	resourcePath := g.getResourcePathPrefix()
 	dirInfo, err := os.Stat(resourcePath)
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data config dir error: %v", err)
+		logger.Error("open game data config dir error: %v", err)
 		return nil
 	}
 	dirInfo, err = os.Stat(resourcePath + "/WorldStatic")
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data world static dir error: %v", err)
+		logger.Error("open game data world static dir error: %v", err)
 		return nil
 	}
 	data, err := os.ReadFile(resourcePath + "/WorldStatic/world_terrain.bin")
 	if err != nil {
-		logger.LOG.Error("read world terrain file error: %v", err)
+		logger.Error("read world terrain file error: %v", err)
 		return nil
 	}
 	return data
@@ -120,17 +120,17 @@ func (g *GameDataConfig) WriteWorldTerrain(data []byte) {
 	resourcePath := g.getResourcePathPrefix()
 	dirInfo, err := os.Stat(resourcePath)
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data config dir error: %v", err)
+		logger.Error("open game data config dir error: %v", err)
 		return
 	}
 	dirInfo, err = os.Stat(resourcePath + "/WorldStatic")
 	if err != nil || !dirInfo.IsDir() {
-		logger.LOG.Error("open game data world static dir error: %v", err)
+		logger.Error("open game data world static dir error: %v", err)
 		return
 	}
 	err = os.WriteFile(resourcePath+"/WorldStatic/world_terrain.bin", data, 0644)
 	if err != nil {
-		logger.LOG.Error("write world terrain file error: %v", err)
+		logger.Error("write world terrain file error: %v", err)
 		return
 	}
 }

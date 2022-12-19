@@ -6,11 +6,12 @@ package kcp
 import (
 	"bytes"
 	"encoding/binary"
+	"net"
+	"os"
+
 	"github.com/pkg/errors"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"net"
-	"os"
 )
 
 // the read loop for a client session
@@ -37,8 +38,8 @@ func (s *UDPSession) readLoop() {
 				if src == "" { // set source address if nil
 					src = msg.Addr.String()
 				} else if msg.Addr.String() != src {
-					//atomic.AddUint64(&DefaultSnmp.InErrs, 1)
-					//continue
+					// atomic.AddUint64(&DefaultSnmp.InErrs, 1)
+					// continue
 					s.remote = msg.Addr
 					src = msg.Addr.String()
 				}

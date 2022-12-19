@@ -44,7 +44,7 @@ func (g *Grid) RemoveEntityId(entityId uint32) {
 	if exist {
 		delete(g.entityIdMap, entityId)
 	} else {
-		logger.LOG.Error("remove entity id but it not exist, entityId: %v", entityId)
+		logger.Error("remove entity id but it not exist, entityId: %v", entityId)
 	}
 }
 

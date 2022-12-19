@@ -9,7 +9,7 @@ import (
 func (c *CommandManager) GMTeleportPlayer(userId, sceneId uint32, posX, posY, posZ float64) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	GAME_MANAGER.TeleportPlayer(player, sceneId, &model.Vector{
@@ -42,13 +42,13 @@ func (c *CommandManager) GMAddUserWeapon(userId, itemId, itemCount uint32) {
 func (c *CommandManager) GMAddUserAvatar(userId, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	// 添加角色
 	GAME_MANAGER.AddUserAvatar(userId, avatarId)
 	// TODO 设置角色 等以后做到角色升级之类的再说
-	//avatar := player.AvatarMap[avatarId]
+	// avatar := player.AvatarMap[avatarId]
 }
 
 // GMAddUserAllItem 给予玩家所有物品

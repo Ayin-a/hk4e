@@ -1,8 +1,9 @@
 package model
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"hk4e/protocol/proto"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (

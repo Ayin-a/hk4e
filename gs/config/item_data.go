@@ -89,31 +89,31 @@ func (g *GameDataConfig) loadItemData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			itemData := new(ItemData)
 			err = json.Unmarshal(i, itemData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.ItemDataMap[itemData.Id] = itemData
 		}
 	}
-	logger.LOG.Info("load %v ItemData", len(g.ItemDataMap))
+	logger.Info("load %v ItemData", len(g.ItemDataMap))
 
 	for _, itemData := range g.ItemDataMap {
 		itemData.ItemEnumType = constant.ItemTypeConst.STRING_MAP[itemData.ItemType]

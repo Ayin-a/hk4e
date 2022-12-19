@@ -23,29 +23,29 @@ func (g *GameDataConfig) loadGatherData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			gatherData := new(GatherData)
 			err = json.Unmarshal(i, gatherData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.GatherDataMap[gatherData.Id] = gatherData
 		}
 	}
-	logger.LOG.Info("load %v GatherData", len(g.GatherDataMap))
+	logger.Info("load %v GatherData", len(g.GatherDataMap))
 }

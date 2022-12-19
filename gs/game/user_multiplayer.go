@@ -1,12 +1,12 @@
 package game
 
 import (
-	"hk4e/pkg/object"
 	"time"
 
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/object"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -14,7 +14,7 @@ import (
 )
 
 func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user apply enter world, uid: %v", player.PlayerID)
+	logger.Debug("user apply enter world, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerApplyEnterMpReq)
 	targetUid := req.TargetUid
 
@@ -36,7 +36,7 @@ func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user deal world enter apply, uid: %v", player.PlayerID)
+	logger.Debug("user deal world enter apply, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerApplyEnterMpResultReq)
 	applyUid := req.ApplyUid
 	isAgreed := req.IsAgreed
@@ -51,7 +51,7 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 }
 
 func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get world exit ban info, uid: %v", player.PlayerID)
+	logger.Debug("user get world exit ban info, uid: %v", player.PlayerID)
 	ok := true
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	for _, worldPlayer := range world.playerMap {
@@ -68,7 +68,7 @@ func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payload
 }
 
 func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user back world, uid: %v", player.PlayerID)
+	logger.Debug("user back world, uid: %v", player.PlayerID)
 	// 其他玩家
 	ok := g.UserLeaveWorld(player)
 
@@ -80,7 +80,7 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 }
 
 func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change world to single, uid: %v", player.PlayerID)
+	logger.Debug("user change world to single, uid: %v", player.PlayerID)
 	// 房主
 	ok := g.UserLeaveWorld(player)
 
@@ -92,7 +92,7 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 }
 
 func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user kick player, uid: %v", player.PlayerID)
+	logger.Debug("user kick player, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if player.PlayerID != world.owner.PlayerID {
@@ -122,7 +122,7 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user join player scene, uid: %v", player.PlayerID)
+	logger.Debug("user join player scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.JoinPlayerSceneReq)
 	hostPlayer := USER_MANAGER.GetOnlineUser(req.TargetUid)
 	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
@@ -140,7 +140,7 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 
 	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
 
-	//g.LoginNotify(player.PlayerID, player, 0)
+	// g.LoginNotify(player.PlayerID, player, 0)
 
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
 		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)

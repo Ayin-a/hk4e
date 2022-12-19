@@ -48,31 +48,31 @@ func (g *GameDataConfig) loadAvatarData() {
 	for _, fileName := range fileNameList {
 		fileData, err := os.ReadFile(g.excelBinPrefix + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		list := make([]map[string]any, 0)
 		err = json.Unmarshal(fileData, &list)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		for _, v := range list {
 			i, err := json.Marshal(v)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			avatarData := new(AvatarData)
 			err = json.Unmarshal(i, avatarData)
 			if err != nil {
-				logger.LOG.Error("parse file error: %v", err)
+				logger.Error("parse file error: %v", err)
 				continue
 			}
 			g.AvatarDataMap[avatarData.Id] = avatarData
 		}
 	}
-	logger.LOG.Info("load %v AvatarData", len(g.AvatarDataMap))
+	logger.Info("load %v AvatarData", len(g.AvatarDataMap))
 	for _, v := range g.AvatarDataMap {
 		split := strings.Split(v.IconName, "_")
 		if len(split) > 0 {

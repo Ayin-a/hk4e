@@ -1,9 +1,10 @@
 package net
 
 import (
+	"reflect"
+
 	"hk4e/gate/kcp"
 	"hk4e/pkg/logger"
-	"reflect"
 )
 
 const (
@@ -30,22 +31,22 @@ func (k *KcpConnectManager) GetKcpEventOutputChan() chan *KcpEvent {
 }
 
 func (k *KcpConnectManager) eventHandle() {
-	logger.LOG.Debug("event handle start")
+	logger.Debug("event handle start")
 	// 事件处理
 	for {
 		event := <-k.kcpEventInput
-		logger.LOG.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage Type: %v", event.ConvId, event.EventId, reflect.TypeOf(event.EventMessage))
+		logger.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage Type: %v", event.ConvId, event.EventId, reflect.TypeOf(event.EventMessage))
 		switch event.EventId {
 		case KcpConnForceClose:
 			// 强制关闭某个连接
 			session := k.GetSessionByConvId(event.ConvId)
 			if session == nil {
-				logger.LOG.Error("session not exist, convId: %v", event.ConvId)
+				logger.Error("session not exist, convId: %v", event.ConvId)
 				continue
 			}
 			reason, ok := event.EventMessage.(uint32)
 			if !ok {
-				logger.LOG.Error("event KcpConnForceClose msg type error")
+				logger.Error("event KcpConnForceClose msg type error")
 				continue
 			}
 			session.conn.SendEnetNotify(&kcp.Enet{
@@ -53,16 +54,16 @@ func (k *KcpConnectManager) eventHandle() {
 				EnetType: reason,
 			})
 			_ = session.conn.Close()
-			logger.LOG.Info("conn has been force close, convId: %v", event.ConvId)
+			logger.Info("conn has been force close, convId: %v", event.ConvId)
 		case KcpAllConnForceClose:
 			// 强制关闭所有连接
 			k.closeAllKcpConn()
-			logger.LOG.Info("all conn has been force close")
+			logger.Info("all conn has been force close")
 		case KcpGateOpenState:
 			// 改变网关开放状态
 			openState, ok := event.EventMessage.(bool)
 			if !ok {
-				logger.LOG.Error("event KcpGateOpenState msg type error")
+				logger.Error("event KcpGateOpenState msg type error")
 				continue
 			}
 			k.openState = openState

@@ -51,6 +51,6 @@ func (c *Controller) registerRouter() {
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)
 	if err != nil {
-		logger.LOG.Error("gin run error: %v", err)
+		logger.Error("gin run error: %v", err)
 	}
 }

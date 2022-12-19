@@ -244,13 +244,13 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(ServerAnnounceNotify, &proto.ServerAnnounceNotify{})             // 服务器公告通知
 	c.registerMessage(ServerAnnounceRevokeNotify, &proto.ServerAnnounceRevokeNotify{}) // 服务器公告撤销通知
 
-	//// TODO
-	//c.registerMessage(EvtAiSyncSkillCdNotify, &proto.EvtAiSyncSkillCdNotify{})
-	//c.registerMessage(EvtAiSyncCombatThreatInfoNotify, &proto.EvtAiSyncCombatThreatInfoNotify{})
-	//c.registerMessage(EntityConfigHashNotify, &proto.EntityConfigHashNotify{})
-	//c.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
-	//c.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
-	//c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
+	// // TODO
+	// c.registerMessage(EvtAiSyncSkillCdNotify, &proto.EvtAiSyncSkillCdNotify{})
+	// c.registerMessage(EvtAiSyncCombatThreatInfoNotify, &proto.EvtAiSyncCombatThreatInfoNotify{})
+	// c.registerMessage(EntityConfigHashNotify, &proto.EntityConfigHashNotify{})
+	// c.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
+	// c.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
+	// c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
 
 	// 空消息
 	c.registerMessage(65535, &proto.NullMsg{})
@@ -259,7 +259,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 func (c *CmdProtoMap) registerMessage(cmdId uint16, protoObj pb.Message) {
 	_, exist := c.cmdDeDupMap[cmdId]
 	if exist {
-		logger.LOG.Error("reg dup msg, cmd id: %v", cmdId)
+		logger.Error("reg dup msg, cmd id: %v", cmdId)
 		return
 	} else {
 		c.cmdDeDupMap[cmdId] = true
@@ -273,7 +273,7 @@ func (c *CmdProtoMap) registerMessage(cmdId uint16, protoObj pb.Message) {
 func (c *CmdProtoMap) GetProtoObjByCmdId(cmdId uint16) (protoObj pb.Message) {
 	protoObjTypePointer, ok := c.cmdIdProtoObjMap[cmdId]
 	if !ok {
-		logger.LOG.Error("unknown cmd id: %v", cmdId)
+		logger.Error("unknown cmd id: %v", cmdId)
 		protoObj = nil
 		return protoObj
 	}
@@ -286,7 +286,7 @@ func (c *CmdProtoMap) GetCmdIdByProtoObj(protoObj pb.Message) (cmdId uint16) {
 	var ok = false
 	cmdId, ok = c.protoObjCmdIdMap[reflect.TypeOf(protoObj)]
 	if !ok {
-		logger.LOG.Error("unknown proto object: %v", protoObj)
+		logger.Error("unknown proto object: %v", protoObj)
 		cmdId = 0
 	}
 	return cmdId

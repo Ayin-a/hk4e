@@ -1,10 +1,12 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"hk4e/pkg/logger"
 	"net/http"
 	"strconv"
+
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 type TokenVerifyReq struct {
@@ -25,7 +27,7 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 	if err != nil {
 		return
 	}
-	logger.LOG.Debug("gate token verify, req: %v", tokenVerifyReq)
+	logger.Debug("gate token verify, req: %v", tokenVerifyReq)
 	accountId, err := strconv.ParseUint(tokenVerifyReq.AccountId, 10, 64)
 	if err != nil {
 		return

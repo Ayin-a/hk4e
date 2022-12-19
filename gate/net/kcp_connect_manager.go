@@ -3,19 +3,19 @@ package net
 import (
 	"bytes"
 	"encoding/binary"
-	"hk4e/common/region"
-	"hk4e/dispatch/controller"
-	"hk4e/pkg/httpclient"
-	"hk4e/protocol/cmd"
-	"hk4e/protocol/proto"
 	"strconv"
 	"sync"
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/region"
+	"hk4e/dispatch/controller"
 	"hk4e/gate/kcp"
+	"hk4e/pkg/httpclient"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
+	"hk4e/protocol/cmd"
+	"hk4e/protocol/proto"
 )
 
 type KcpConnectManager struct {
@@ -63,15 +63,15 @@ func (k *KcpConnectManager) Start() {
 	// key
 	dispatchEc2bSeedRsp, err := httpclient.Get[controller.DispatchEc2bSeedRsp]("http://127.0.0.1:8080/dispatch/ec2b/seed", "")
 	if err != nil {
-		logger.LOG.Error("get dispatch ec2b seed error: %v", err)
+		logger.Error("get dispatch ec2b seed error: %v", err)
 		return
 	}
 	dispatchEc2bSeed, err := strconv.ParseUint(dispatchEc2bSeedRsp.Seed, 10, 64)
 	if err != nil {
-		logger.LOG.Error("parse dispatch ec2b seed error: %v", err)
+		logger.Error("parse dispatch ec2b seed error: %v", err)
 		return
 	}
-	logger.LOG.Debug("get dispatch ec2b seed: %v", dispatchEc2bSeed)
+	logger.Debug("get dispatch ec2b seed: %v", dispatchEc2bSeed)
 	gateDispatchEc2b := random.NewEc2b()
 	gateDispatchEc2b.SetSeed(dispatchEc2bSeed)
 	k.dispatchKey = gateDispatchEc2b.XorKey()
@@ -79,7 +79,7 @@ func (k *KcpConnectManager) Start() {
 	port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
 	listener, err := kcp.ListenWithOptions(config.CONF.Hk4e.KcpAddr+":"+port, nil, 0, 0)
 	if err != nil {
-		logger.LOG.Error("listen kcp err: %v", err)
+		logger.Error("listen kcp err: %v", err)
 		return
 	}
 	go k.enetHandle(listener)
@@ -89,11 +89,11 @@ func (k *KcpConnectManager) Start() {
 }
 
 func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
-	logger.LOG.Debug("accept handle start")
+	logger.Debug("accept handle start")
 	for {
 		conn, err := listener.AcceptKCP()
 		if err != nil {
-			logger.LOG.Error("accept kcp err: %v", err)
+			logger.Error("accept kcp err: %v", err)
 			return
 		}
 		if k.openState == false {
@@ -103,7 +103,7 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 		conn.SetACKNoDelay(true)
 		conn.SetWriteDelay(false)
 		convId := conn.GetConv()
-		logger.LOG.Debug("client connect, convId: %v", convId)
+		logger.Debug("client connect, convId: %v", convId)
 		kcpRawSendChan := make(chan *ProtoMsg, 1000)
 		session := &Session{
 			conn:      conn,
@@ -129,12 +129,12 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 }
 
 func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
-	logger.LOG.Debug("enet handle start")
+	logger.Debug("enet handle start")
 	// conv短时间内唯一生成
 	convGenMap := make(map[uint64]int64)
 	for {
 		enetNotify := <-listener.EnetNotify
-		logger.LOG.Info("[Enet Notify], addr: %v, conv: %v, conn: %v, enet: %v", enetNotify.Addr, enetNotify.ConvId, enetNotify.ConnType, enetNotify.EnetType)
+		logger.Info("[Enet Notify], addr: %v, conv: %v, conn: %v, enet: %v", enetNotify.Addr, enetNotify.ConvId, enetNotify.ConnType, enetNotify.EnetType)
 		switch enetNotify.ConnType {
 		case kcp.ConnEnetSyn:
 			if enetNotify.EnetType == kcp.EnetClientConnectKey {
@@ -156,7 +156,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 					}
 				}
 				k.sessionMapLock.RUnlock()
-				logger.LOG.Info("clean dead conv list: %v", delConvList)
+				logger.Info("clean dead conv list: %v", delConvList)
 				// 生成没用过的conv
 				var conv uint64
 				for {
@@ -182,7 +182,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 		case kcp.ConnEnetFin:
 			session := k.GetSessionByConvId(enetNotify.ConvId)
 			if session == nil {
-				logger.LOG.Error("session not exist, convId: %v", enetNotify.ConvId)
+				logger.Error("session not exist, convId: %v", enetNotify.ConvId)
 				continue
 			}
 			session.conn.SendEnetNotify(&kcp.Enet{
@@ -218,7 +218,7 @@ type Session struct {
 }
 
 func (k *KcpConnectManager) recvHandle(session *Session) {
-	logger.LOG.Debug("recv handle start")
+	logger.Debug("recv handle start")
 	// 接收
 	conn := session.conn
 	convId := conn.GetConv()
@@ -229,7 +229,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		_ = conn.SetReadDeadline(time.Now().Add(time.Second * 15))
 		recvLen, err := conn.Read(recvBuf)
 		if err != nil {
-			logger.LOG.Error("exit recv loop, conn read err: %v, convId: %v", err, convId)
+			logger.Error("exit recv loop, conn read err: %v, convId: %v", err, convId)
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
@@ -246,7 +246,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		now := time.Now().UnixNano()
 		if now-pktFreqLimitTimer > int64(time.Second) {
 			if pktFreqLimitCounter > 100 {
-				logger.LOG.Error("exit recv loop, client packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
+				logger.Error("exit recv loop, client packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
 				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
 				break
 			} else {
@@ -267,7 +267,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 }
 
 func (k *KcpConnectManager) sendHandle(session *Session) {
-	logger.LOG.Debug("send handle start")
+	logger.Debug("send handle start")
 	// 发送
 	conn := session.conn
 	convId := conn.GetConv()
@@ -276,20 +276,20 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 	for {
 		protoMsg, ok := <-session.kcpRawSendChan
 		if !ok {
-			logger.LOG.Error("exit send loop, send chan close, convId: %v", convId)
+			logger.Error("exit send loop, send chan close, convId: %v", convId)
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
 		kcpMsg := k.protoEncode(protoMsg)
 		if kcpMsg == nil {
-			logger.LOG.Error("decode kcp msg is nil, convId: %v", convId)
+			logger.Error("decode kcp msg is nil, convId: %v", convId)
 			continue
 		}
 		bin := k.encodePayloadToBin(kcpMsg, session.xorKey)
 		_ = conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
 		_, err := conn.Write(bin)
 		if err != nil {
-			logger.LOG.Error("exit send loop, conn write err: %v, convId: %v", err, convId)
+			logger.Error("exit send loop, conn write err: %v, convId: %v", err, convId)
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
@@ -298,7 +298,7 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 		now := time.Now().UnixNano()
 		if now-pktFreqLimitTimer > int64(time.Second) {
 			if pktFreqLimitCounter > 100 {
-				logger.LOG.Error("exit send loop, server packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
+				logger.Error("exit send loop, server packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
 				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
 				break
 			} else {
@@ -336,7 +336,7 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 	netMsg.UserId = session.userId
 	netMsg.EventId = cmd.UserOfflineNotify
 	k.netMsgInput <- netMsg
-	logger.LOG.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, netMsg.UserId)
+	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, netMsg.UserId)
 	k.destroySessionChan <- session
 }
 

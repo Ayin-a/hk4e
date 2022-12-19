@@ -291,7 +291,7 @@ func (s *UDPSession) WriteBuffers(v [][]byte) (n int, err error) {
 			for _, b := range v {
 				n += len(b)
 				// 原神KCP是消息模式 上层不要对消息进行分割 并且保证消息长度小于256*mss
-				//for {
+				// for {
 				//	if len(b) <= int(s.kcp.mss) {
 				//		s.kcp.Send(b)
 				//		break
@@ -299,7 +299,7 @@ func (s *UDPSession) WriteBuffers(v [][]byte) (n int, err error) {
 				//		s.kcp.Send(b[:s.kcp.mss])
 				//		b = b[s.kcp.mss:]
 				//	}
-				//}
+				// }
 				s.kcp.Send(b)
 			}
 

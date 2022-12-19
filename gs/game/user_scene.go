@@ -17,7 +17,7 @@ import (
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user enter scene ready, uid: %v", player.PlayerID)
+	logger.Debug("user enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 
 	enterScenePeerNotify := &proto.EnterScenePeerNotify{
@@ -35,7 +35,7 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user scene init finish, uid: %v", player.PlayerID)
+	logger.Debug("user scene init finish, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 
@@ -220,7 +220,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user enter scene done, uid: %v", player.PlayerID)
+	logger.Debug("user enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 
 	if world.multiplayer && world.IsPlayerFirstEnter(player) {
@@ -240,7 +240,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	g.AddSceneEntityNotify(player, visionType, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)}, true, false)
 
 	// 通过aoi获取场景中在自己周围格子里的全部实体id
-	//entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	// entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
 	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	if world.IsPlayerFirstEnter(player) {
 		visionType = proto.VisionType_VISION_TYPE_MEET
@@ -281,7 +281,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user post enter scene, uid: %v", player.PlayerID)
+	logger.Debug("user post enter scene, uid: %v", player.PlayerID)
 
 	postEnterSceneRsp := &proto.PostEnterSceneRsp{
 		EnterSceneToken: player.EnterSceneToken,
@@ -290,7 +290,7 @@ func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user enter world area, uid: %v", player.PlayerID)
+	logger.Debug("user enter world area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EnterWorldAreaReq)
 
 	enterWorldAreaRsp := &proto.EnterWorldAreaRsp{
@@ -301,7 +301,7 @@ func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change game time, uid: %v", player.PlayerID)
+	logger.Debug("user change game time, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeGameTimeReq)
 	gameTime := req.GameTime
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -394,7 +394,7 @@ func (g *GameManager) AddSceneEntityNotifyToPlayer(player *model.Player, visionT
 		EntityList: entityList,
 	}
 	g.SendMsg(cmd.SceneEntityAppearNotify, player.PlayerID, player.ClientSeq, sceneEntityAppearNotify)
-	logger.LOG.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
+	logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
 		player.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 }
 
@@ -408,7 +408,7 @@ func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene 
 			continue
 		}
 		g.SendMsg(cmd.SceneEntityAppearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityAppearNotify)
-		logger.LOG.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
+		logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
 			scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 	}
 }
@@ -419,7 +419,7 @@ func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visi
 		DisappearType: visionType,
 	}
 	g.SendMsg(cmd.SceneEntityDisappearNotify, player.PlayerID, player.ClientSeq, sceneEntityDisappearNotify)
-	logger.LOG.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
+	logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
 		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
@@ -430,7 +430,7 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 	}
 	for _, scenePlayer := range scene.playerMap {
 		g.SendMsg(cmd.SceneEntityDisappearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityDisappearNotify)
-		logger.LOG.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
+		logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
 			scenePlayer.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 	}
 }
@@ -442,7 +442,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 	for _, entityId := range entityIdList {
 		entity, ok := scene.entityMap[entityId]
 		if !ok {
-			// logger.LOG.Error("get entity is nil, entityId: %v", entityId)
+			// logger.Error("get entity is nil, entityId: %v", entityId)
 			continue
 		}
 		switch entity.entityType {
@@ -452,7 +452,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 			}
 			scenePlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 			if scenePlayer == nil {
-				logger.LOG.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
+				logger.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
 				continue
 			}
 			if entity.avatarEntity.avatarId != world.GetPlayerActiveAvatarId(scenePlayer) {
@@ -719,9 +719,9 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 		BornTime:          uint32(player.AvatarMap[avatarId].BornTime),
 		TeamResonanceList: make([]uint32, 0),
 	}
-	//for id := range player.TeamConfig.TeamResonances {
+	// for id := range player.TeamConfig.TeamResonances {
 	//	sceneAvatarInfo.TeamResonanceList = append(sceneAvatarInfo.TeamResonanceList, uint32(id))
-	//}
+	// }
 	return sceneAvatarInfo
 }
 
@@ -756,13 +756,13 @@ func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVe
 func (g *GameManager) PacketSceneGadgetInfoGather(gadgetGatherEntity *GadgetGatherEntity) *proto.SceneGadgetInfo {
 	gather, ok := gdc.CONF.GatherDataMap[int32(gadgetGatherEntity.gatherId)]
 	if !ok {
-		logger.LOG.Error("gather data error, gatherId: %v", gadgetGatherEntity.gatherId)
+		logger.Error("gather data error, gatherId: %v", gadgetGatherEntity.gatherId)
 		return new(proto.SceneGadgetInfo)
 	}
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId: uint32(gather.GadgetId),
-		//GroupId:          133003011,
-		//ConfigId:         11001,
+		// GroupId:          133003011,
+		// ConfigId:         11001,
 		GadgetState:      0,
 		IsEnableInteract: false,
 		AuthorityPeerId:  1,

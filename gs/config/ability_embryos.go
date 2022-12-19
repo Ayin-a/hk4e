@@ -26,7 +26,7 @@ func (g *GameDataConfig) loadAbilityEmbryos() {
 	dirPath := g.binPrefix + "Avatar"
 	fileList, err := os.ReadDir(dirPath)
 	if err != nil {
-		logger.LOG.Error("open dir error: %v", err)
+		logger.Error("open dir error: %v", err)
 		return
 	}
 	embryoList := make([]*AbilityEmbryoEntry, 0)
@@ -38,19 +38,19 @@ func (g *GameDataConfig) loadAbilityEmbryos() {
 		startIndex := strings.Index(fileName, "ConfigAvatar_")
 		endIndex := strings.Index(fileName, ".json")
 		if startIndex == -1 || endIndex == -1 || startIndex+13 > endIndex {
-			logger.LOG.Error("file name format error: %v", fileName)
+			logger.Error("file name format error: %v", fileName)
 			continue
 		}
 		avatarName := fileName[startIndex+13 : endIndex]
 		fileData, err := os.ReadFile(dirPath + "/" + fileName)
 		if err != nil {
-			logger.LOG.Error("open file error: %v", err)
+			logger.Error("open file error: %v", err)
 			continue
 		}
 		avatarConfig := new(AvatarConfig)
 		err = json.Unmarshal(fileData, avatarConfig)
 		if err != nil {
-			logger.LOG.Error("parse file error: %v", err)
+			logger.Error("parse file error: %v", err)
 			continue
 		}
 		if len(avatarConfig.Abilities) == 0 {
@@ -64,11 +64,11 @@ func (g *GameDataConfig) loadAbilityEmbryos() {
 		embryoList = append(embryoList, abilityEmbryoEntry)
 	}
 	if len(embryoList) == 0 {
-		logger.LOG.Error("no embryo load")
+		logger.Error("no embryo load")
 	}
 	g.AbilityEmbryos = make(map[string]*AbilityEmbryoEntry)
 	for _, v := range embryoList {
 		g.AbilityEmbryos[v.Name] = v
 	}
-	logger.LOG.Info("load %v AbilityEmbryos", len(g.AbilityEmbryos))
+	logger.Info("load %v AbilityEmbryos", len(g.AbilityEmbryos))
 }

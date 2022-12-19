@@ -12,7 +12,7 @@ import (
 )
 
 func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user pause, uid: %v", player.PlayerID)
+	logger.Debug("user pause, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerSetPauseReq)
 	isPaused := req.IsPaused
 	player.Pause = isPaused
@@ -21,7 +21,7 @@ func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get tower all data, uid: %v", player.PlayerID)
+	logger.Debug("user get tower all data, uid: %v", player.PlayerID)
 
 	towerAllDataRsp := &proto.TowerAllDataRsp{
 		TowerScheduleId:        29,
@@ -40,7 +40,7 @@ func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user entity ai sync, uid: %v", player.PlayerID)
+	logger.Debug("user entity ai sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EntityAiSyncNotify)
 
 	entityAiSyncNotify := &proto.EntityAiSyncNotify{
@@ -59,20 +59,20 @@ func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	logger.LOG.Debug("client time notify, uid: %v, time: %v", userId, clientTime)
+	logger.Debug("client time notify, uid: %v, time: %v", userId, clientTime)
 	player.ClientTime = clientTime
 }
 
 func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	logger.LOG.Debug("client rtt notify, uid: %v, rtt: %v", userId, clientRtt)
+	logger.Debug("client rtt notify, uid: %v, rtt: %v", userId, clientRtt)
 	player.ClientRTT = clientRtt
 }
 
@@ -102,14 +102,14 @@ func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
 }
 
 func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user ttm enter scene, uid: %v", player.PlayerID)
+	logger.Debug("user ttm enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
 	_ = req
 	g.SendMsg(cmd.ToTheMoonEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
 }
 
 func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user set entity client data, uid: %v", player.PlayerID)
+	logger.Debug("user set entity client data, uid: %v", player.PlayerID)
 	ntf := payloadMsg.(*proto.SetEntityClientDataNotify)
 	g.SendMsg(cmd.SetEntityClientDataNotify, player.PlayerID, player.ClientSeq, ntf)
 }

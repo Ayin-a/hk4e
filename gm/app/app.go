@@ -19,11 +19,11 @@ func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
 	logger.InitLogger("gm")
-	logger.LOG.Info("gm start")
+	logger.Warn("gm start")
 
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
 	if err != nil {
-		logger.LOG.Error("connect nats error: %v", err)
+		logger.Error("connect nats error: %v", err)
 		return err
 	}
 	defer conn.Close()
@@ -41,10 +41,10 @@ func Run(ctx context.Context, configFile string) error {
 		case <-ctx.Done():
 			return nil
 		case s := <-c:
-			logger.LOG.Info("get a signal %s", s.String())
+			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.LOG.Info("gm exit")
+				logger.Warn("gm exit")
 				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:

@@ -1,7 +1,6 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
 	"time"
 
 	gdc "hk4e/gs/config"
@@ -11,10 +10,12 @@ import (
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32) {
-	logger.LOG.Info("user login, uid: %v", userId)
+	logger.Info("user login, uid: %v", userId)
 	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq)
 	if !asyncWait {
 		g.OnLoginOk(userId, player, clientSeq)
@@ -31,7 +32,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	// 初始化
 	player.InitAll()
-	//player.TeamConfig.UpdateTeam()
+	// player.TeamConfig.UpdateTeam()
 	// 创建世界
 	world := WORLD_MANAGER.CreateWorld(player)
 	world.AddPlayer(player, player.SceneId)
@@ -40,8 +41,8 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
-	//// TODO 薄荷标记
-	//if world.IsBigWorld() {
+	// // TODO 薄荷标记
+	// if world.IsBigWorld() {
 	//	bigWorld := world.GetSceneById(3)
 	//	for pos := range g.worldManager.worldStatic.terrain {
 	//		bigWorld.CreateEntityGadget(&model.Vector{
@@ -50,7 +51,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	//			Z: float64(pos.Z),
 	//		}, 3003009)
 	//	}
-	//}
+	// }
 
 	g.LoginNotify(userId, player, clientSeq)
 
@@ -59,9 +60,9 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 }
 
 func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	logger.LOG.Debug("user reg, uid: %v", userId)
+	logger.Debug("user reg, uid: %v", userId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
-	logger.LOG.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
+	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
 
 	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq)
 	if !asyncWait {
@@ -71,20 +72,20 @@ func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Messa
 
 func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32) {
 	if exist {
-		logger.LOG.Error("recv reg req, but user is already exist, userId: %v", userId)
+		logger.Error("recv reg req, but user is already exist, userId: %v", userId)
 		return
 	}
 
 	nickName := req.NickName
 	mainCharAvatarId := req.GetAvatarId()
 	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
-		logger.LOG.Error("invalid main char avatar id: %v", mainCharAvatarId)
+		logger.Error("invalid main char avatar id: %v", mainCharAvatarId)
 		return
 	}
 
 	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
 	if player == nil {
-		logger.LOG.Error("player is nil, uid: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	USER_MANAGER.AddUser(player)
@@ -94,10 +95,10 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 }
 
 func (g *GameManager) OnUserOffline(userId uint32) {
-	logger.LOG.Info("user offline, uid: %v", userId)
+	logger.Info("user offline, uid: %v", userId)
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.LOG.Error("player is nil, userId: %v", userId)
+		logger.Error("player is nil, userId: %v", userId)
 		return
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -164,7 +165,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		}
 		itemData, ok := itemDataMapConfig[int32(weapon.ItemId)]
 		if !ok {
-			logger.LOG.Error("config is nil, itemId: %v", weapon.ItemId)
+			logger.Error("config is nil, itemId: %v", weapon.ItemId)
 			return nil
 		}
 		if itemData.ItemEnumType != constant.ItemTypeConst.ITEM_WEAPON {
@@ -364,7 +365,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	// 添加初始武器
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(mainCharAvatarId)]
 	if !ok {
-		logger.LOG.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
+		logger.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
 		return nil
 	}
 	weaponId := uint64(g.snowflake.GenId())

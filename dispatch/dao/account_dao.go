@@ -2,8 +2,8 @@ package dao
 
 import (
 	"context"
-	"hk4e/dispatch/model"
 
+	"hk4e/dispatch/model"
 	"hk4e/pkg/logger"
 
 	"github.com/pkg/errors"
@@ -96,7 +96,7 @@ func (d *Dao) InsertAccount(account *model.Account) (primitive.ObjectID, error) 
 	} else {
 		_id, ok := id.InsertedID.(primitive.ObjectID)
 		if !ok {
-			logger.LOG.Error("get insert id error")
+			logger.Error("get insert id error")
 			return primitive.ObjectID{}, nil
 		}
 		return _id, nil

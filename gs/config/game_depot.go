@@ -16,15 +16,15 @@ func (g *GameDataConfig) loadGameDepot() {
 	playerElementsFilePath := g.binPrefix + "AbilityGroup/AbilityGroup_Other_PlayerElementAbility.json"
 	playerElementsFile, err := os.ReadFile(playerElementsFilePath)
 	if err != nil {
-		logger.LOG.Error("open file error: %v", err)
+		logger.Error("open file error: %v", err)
 		return
 	}
 	playerAbilities := make(map[string]*AvatarConfig)
 	err = json.Unmarshal(playerElementsFile, &playerAbilities)
 	if err != nil {
-		logger.LOG.Error("parse file error: %v", err)
+		logger.Error("parse file error: %v", err)
 		return
 	}
 	g.GameDepot.PlayerAbilities = playerAbilities
-	logger.LOG.Info("load %v PlayerAbilities", len(g.GameDepot.PlayerAbilities))
+	logger.Info("load %v PlayerAbilities", len(g.GameDepot.PlayerAbilities))
 }

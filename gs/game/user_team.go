@@ -13,7 +13,7 @@ import (
 )
 
 func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change avatar, uid: %v", player.PlayerID)
+	logger.Debug("user change avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeAvatarReq)
 	targetAvatarGuid := req.Guid
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -21,12 +21,12 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	targetAvatarId := player.GetAvatarIdByGuid(targetAvatarGuid)
 	oldAvatarId := world.GetPlayerActiveAvatarId(player)
 	if targetAvatarId == oldAvatarId {
-		logger.LOG.Error("can not change to the same avatar, uid: %v, oldAvatarId: %v, targetAvatarId: %v", player.PlayerID, oldAvatarId, targetAvatarId)
+		logger.Error("can not change to the same avatar, uid: %v, oldAvatarId: %v, targetAvatarId: %v", player.PlayerID, oldAvatarId, targetAvatarId)
 		return
 	}
 	newAvatarIndex := world.GetPlayerAvatarIndexByAvatarId(player, targetAvatarId)
 	if newAvatarIndex == -1 {
-		logger.LOG.Error("can not find the target avatar in team, uid: %v, targetAvatarId: %v", player.PlayerID, targetAvatarId)
+		logger.Error("can not find the target avatar in team, uid: %v, targetAvatarId: %v", player.PlayerID, targetAvatarId)
 		return
 	}
 	if !world.multiplayer {
@@ -36,7 +36,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	oldAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, oldAvatarId)
 	oldAvatarEntity := scene.GetEntity(oldAvatarEntityId)
 	if oldAvatarEntity == nil {
-		logger.LOG.Error("can not find old avatar entity, entity id: %v", oldAvatarEntityId)
+		logger.Error("can not find old avatar entity, entity id: %v", oldAvatarEntityId)
 		return
 	}
 	oldAvatarEntity.moveState = uint16(proto.MotionState_MOTION_STATE_STANDBY)
@@ -67,7 +67,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change team avatar, uid: %v", player.PlayerID)
+	logger.Debug("user change team avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetUpAvatarTeamReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
@@ -111,7 +111,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.AvatarTeamUpdateNotify, player.PlayerID, player.ClientSeq, avatarTeamUpdateNotify)
 
 	if selfTeam {
-		//player.TeamConfig.UpdateTeam()
+		// player.TeamConfig.UpdateTeam()
 		world.SetPlayerLocalTeam(player, avatarIdList)
 		world.UpdateMultiplayerTeam()
 		world.InitPlayerWorldAvatar(player)
@@ -135,7 +135,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user switch team, uid: %v", player.PlayerID)
+	logger.Debug("user switch team, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChooseCurAvatarTeamReq)
 	teamId := req.TeamId
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -149,7 +149,7 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 	}
 	player.TeamConfig.CurrTeamIndex = uint8(teamId) - 1
 	player.TeamConfig.CurrAvatarIndex = 0
-	//player.TeamConfig.UpdateTeam()
+	// player.TeamConfig.UpdateTeam()
 	world.SetPlayerAvatarIndex(player, 0)
 	world.SetPlayerLocalTeam(player, team.GetAvatarIdList())
 	world.UpdateMultiplayerTeam()
@@ -165,7 +165,7 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user change mp team avatar, uid: %v", player.PlayerID)
+	logger.Debug("user change mp team avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeMpTeamAvatarReq)
 	avatarGuidList := req.AvatarGuidList
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -265,8 +265,8 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			}
 			acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 		}
-		//// add team resonances
-		//for id := range worldPlayer.TeamConfig.TeamResonancesConfig {
+		// // add team resonances
+		// for id := range worldPlayer.TeamConfig.TeamResonancesConfig {
 		//	embryoId++
 		//	emb := &proto.AbilityEmbryo{
 		//		AbilityId:               uint32(embryoId),
@@ -274,7 +274,7 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 		//		AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
 		//	}
 		//	acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
-		//}
+		// }
 		// add skill depot abilities
 		skillDepot := gdc.CONF.AvatarSkillDepotDataMap[int32(worldPlayerAvatar.SkillDepotId)]
 		if skillDepot != nil && len(skillDepot.Abilities) != 0 {

@@ -29,10 +29,10 @@ func init() {
 }
 
 func dialEcho(port int) (*UDPSession, error) {
-	//block, _ := NewNoneBlockCrypt(pass)
-	//block, _ := NewSimpleXORBlockCrypt(pass)
-	//block, _ := NewTEABlockCrypt(pass[:16])
-	//block, _ := NewAESBlockCrypt(pass)
+	// block, _ := NewNoneBlockCrypt(pass)
+	// block, _ := NewSimpleXORBlockCrypt(pass)
+	// block, _ := NewTEABlockCrypt(pass[:16])
+	// block, _ := NewAESBlockCrypt(pass)
 	block, _ := NewSalsa20BlockCrypt(pass)
 	sess, err := DialWithOptions(fmt.Sprintf("127.0.0.1:%v", port), block, 10, 3)
 	if err != nil {
@@ -75,10 +75,10 @@ func dialSink(port int) (*UDPSession, error) {
 }
 
 func dialTinyBufferEcho(port int) (*UDPSession, error) {
-	//block, _ := NewNoneBlockCrypt(pass)
-	//block, _ := NewSimpleXORBlockCrypt(pass)
-	//block, _ := NewTEABlockCrypt(pass[:16])
-	//block, _ := NewAESBlockCrypt(pass)
+	// block, _ := NewNoneBlockCrypt(pass)
+	// block, _ := NewSimpleXORBlockCrypt(pass)
+	// block, _ := NewTEABlockCrypt(pass[:16])
+	// block, _ := NewAESBlockCrypt(pass)
 	block, _ := NewSalsa20BlockCrypt(pass)
 	sess, err := DialWithOptions(fmt.Sprintf("127.0.0.1:%v", port), block, 10, 3)
 	if err != nil {
@@ -89,18 +89,18 @@ func dialTinyBufferEcho(port int) (*UDPSession, error) {
 
 // ////////////////////////
 func listenEcho(port int) (net.Listener, error) {
-	//block, _ := NewNoneBlockCrypt(pass)
-	//block, _ := NewSimpleXORBlockCrypt(pass)
-	//block, _ := NewTEABlockCrypt(pass[:16])
-	//block, _ := NewAESBlockCrypt(pass)
+	// block, _ := NewNoneBlockCrypt(pass)
+	// block, _ := NewSimpleXORBlockCrypt(pass)
+	// block, _ := NewTEABlockCrypt(pass[:16])
+	// block, _ := NewAESBlockCrypt(pass)
 	block, _ := NewSalsa20BlockCrypt(pass)
 	return ListenWithOptions(fmt.Sprintf("127.0.0.1:%v", port), block, 10, 0)
 }
 func listenTinyBufferEcho(port int) (net.Listener, error) {
-	//block, _ := NewNoneBlockCrypt(pass)
-	//block, _ := NewSimpleXORBlockCrypt(pass)
-	//block, _ := NewTEABlockCrypt(pass[:16])
-	//block, _ := NewAESBlockCrypt(pass)
+	// block, _ := NewNoneBlockCrypt(pass)
+	// block, _ := NewSimpleXORBlockCrypt(pass)
+	// block, _ := NewTEABlockCrypt(pass[:16])
+	// block, _ := NewAESBlockCrypt(pass)
 	block, _ := NewSalsa20BlockCrypt(pass)
 	return ListenWithOptions(fmt.Sprintf("127.0.0.1:%v", port), block, 10, 3)
 }
@@ -178,7 +178,7 @@ func tinyBufferEchoServer(port int) net.Listener {
 	return l
 }
 
-///////////////////////////
+// /////////////////////////
 
 func handleEcho(conn *UDPSession) {
 	conn.SetStreamMode(true)
@@ -229,7 +229,7 @@ func handleTinyBufferEcho(conn *UDPSession) {
 	}
 }
 
-///////////////////////////
+// /////////////////////////
 
 func TestTimeout(t *testing.T) {
 	port := int(atomic.AddUint32(&baseport, 1))
@@ -242,7 +242,7 @@ func TestTimeout(t *testing.T) {
 	}
 	buf := make([]byte, 10)
 
-	//timeout
+	// timeout
 	cli.SetDeadline(time.Now().Add(time.Second))
 	<-time.After(2 * time.Second)
 	n, err := cli.Read(buf)
@@ -554,7 +554,7 @@ func TestListenerClose(t *testing.T) {
 	}
 
 	l.Close()
-	//fakeaddr, _ := net.ResolveUDPAddr("udp6", "127.0.0.1:1111")
+	// fakeaddr, _ := net.ResolveUDPAddr("udp6", "127.0.0.1:1111")
 	fakeConvId := uint64(0)
 	if l.closeSession(fakeConvId) {
 		t.Fail()

@@ -1,12 +1,14 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
+	"time"
+
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"time"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 // CreateVehicleReq 创建载具
@@ -37,7 +39,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 	rot := &model.Vector{X: float64(req.Rot.X), Y: float64(req.Rot.Y), Z: float64(req.Rot.Z)}
 	entityId := scene.CreateEntityGadgetVehicle(player.PlayerID, pos, rot, req.VehicleId)
 	if entityId == 0 {
-		logger.LOG.Error("vehicle entityId is 0, uid: %v", player.PlayerID)
+		logger.Error("vehicle entityId is 0, uid: %v", player.PlayerID)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
 		return
 	}
@@ -89,9 +91,9 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 	}
 	// 目前原神仅有一种载具 多载具时可能跟载具耐力回复冲突 到时候再改
 	// 确保载具Id为将要创建的 (每种载具允许存在1个)
-	//if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
+	// if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
 	//	return
-	//}
+	// }
 	// 该载具是否为此玩家的
 	if entity.gadgetEntity.gadgetVehicleEntity.owner != player {
 		return
@@ -147,7 +149,7 @@ func (g *GameManager) EnterVehicle(player *model.Player, entity *Entity, avatarG
 func (g *GameManager) ExitVehicle(player *model.Player, entity *Entity, avatarGuid uint64) {
 	// 玩家是否进入载具
 	if !g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
-		logger.LOG.Error("vehicle not has player, uid: %v", player.PlayerID)
+		logger.Error("vehicle not has player, uid: %v", player.PlayerID)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{}, proto.Retcode_RET_NOT_IN_VEHICLE)
 		return
 	}
@@ -185,13 +187,13 @@ func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Mes
 	// 获取载具实体
 	entity := g.GetSceneVehicleEntity(scene, req.EntityId)
 	if entity == nil {
-		logger.LOG.Error("vehicle entity is nil, entityId: %v", req.EntityId)
+		logger.Error("vehicle entity is nil, entityId: %v", req.EntityId)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{}, proto.Retcode_RET_ENTITY_NOT_EXIST)
 		return
 	}
 	// 判断实体类型是否为载具
 	if entity.entityType != uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET) || entity.gadgetEntity.gadgetType != GADGET_TYPE_VEHICLE {
-		logger.LOG.Error("vehicle entity error, entityType: %v", entity.entityType)
+		logger.Error("vehicle entity error, entityType: %v", entity.entityType)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{}, proto.Retcode_RET_GADGET_NOT_VEHICLE)
 		return
 	}

@@ -59,7 +59,7 @@ func (w *WorldStatic) InitTerrain() bool {
 	decoder := gob.NewDecoder(bytes.NewReader(data))
 	err := decoder.Decode(&w.terrain)
 	if err != nil {
-		logger.LOG.Error("unmarshal world terrain data error: %v", err)
+		logger.Error("unmarshal world terrain data error: %v", err)
 		return false
 	}
 	return true
@@ -70,7 +70,7 @@ func (w *WorldStatic) SaveTerrain() bool {
 	encoder := gob.NewEncoder(&buffer)
 	err := encoder.Encode(w.terrain)
 	if err != nil {
-		logger.LOG.Error("marshal world terrain data error: %v", err)
+		logger.Error("marshal world terrain data error: %v", err)
 		return false
 	}
 	gdc.CONF.WriteWorldTerrain(buffer.Bytes())
@@ -140,10 +140,10 @@ func (w *WorldStatic) Pathfinding() {
 	)
 	pathVectorList := bfs.Pathfinding()
 	if pathVectorList == nil {
-		logger.LOG.Error("could not find path")
+		logger.Error("could not find path")
 		return
 	}
-	logger.LOG.Debug("find path success, path: %v", pathVectorList)
+	logger.Debug("find path success, path: %v", pathVectorList)
 	w.pathVectorList = w.ConvPFPVLToWSPVL(pathVectorList)
 }
 

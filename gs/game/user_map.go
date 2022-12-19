@@ -14,7 +14,7 @@ import (
 )
 
 func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get scene trans to point, uid: %v", player.PlayerID)
+	logger.Debug("user get scene trans to point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneTransToPointReq)
 
 	transPointId := strconv.Itoa(int(req.SceneId)) + "_" + strconv.Itoa(int(req.PointId))
@@ -43,15 +43,15 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 }
 
 func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user mark map, uid: %v", player.PlayerID)
+	logger.Debug("user mark map, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.MarkMapReq)
 	operation := req.Op
 	if operation == proto.MarkMapReq_OPERATION_ADD {
-		logger.LOG.Debug("user mark type: %v", req.Mark.PointType)
+		logger.Debug("user mark type: %v", req.Mark.PointType)
 		if req.Mark.PointType == proto.MapMarkPointType_MAP_MARK_POINT_TYPE_NPC {
 			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
 			if err != nil {
-				logger.LOG.Error("parse pos y error: %v", err)
+				logger.Error("parse pos y error: %v", err)
 				posYInt = 300
 			}
 			// 传送玩家
@@ -99,10 +99,10 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 
 	var enterType proto.EnterType
 	if jumpScene {
-		logger.LOG.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+		logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_TYPE_JUMP
 	} else {
-		logger.LOG.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+		logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_TYPE_GOTO
 	}
 	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(constant.EnterReasonConst.TransPoint), oldSceneId, oldPos)
@@ -110,12 +110,12 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 }
 
 func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user pathfinding enter scene, uid: %v", player.PlayerID)
+	logger.Debug("user pathfinding enter scene, uid: %v", player.PlayerID)
 	g.SendMsg(cmd.PathfindingEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.PathfindingEnterSceneRsp))
 }
 
 func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user query path, uid: %v", player.PlayerID)
+	logger.Debug("user query path, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.QueryPathReq)
 
 	queryPathRsp := &proto.QueryPathRsp{
@@ -127,7 +127,7 @@ func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) 
 }
 
 func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get scene point, uid: %v", player.PlayerID)
+	logger.Debug("user get scene point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetScenePointReq)
 
 	if req.SceneId != 3 {
@@ -150,7 +150,7 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 }
 
 func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.LOG.Debug("user get scene area, uid: %v", player.PlayerID)
+	logger.Debug("user get scene area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetSceneAreaReq)
 
 	if req.SceneId != 3 {

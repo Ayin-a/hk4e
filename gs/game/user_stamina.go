@@ -308,15 +308,8 @@ func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 
 	// 获取玩家处于的载具实体
 	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
-	if entity == nil {
-		return
-	}
-	// 确保实体类型是否为载具
-	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
-		return
-	}
-	// 根据玩家是否处于载具中更新耐力
-	if g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
+	// 确保实体类型是否为载具 且 根据玩家是否处于载具中更新耐力
+	if entity != nil && (entity.gadgetEntity != nil && entity.gadgetEntity.gadgetVehicleEntity != nil) && g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
 		// 更新载具耐力
 		g.UpdateVehicleStamina(player, entity, player.StaminaInfo.CostStamina)
 	} else {
@@ -442,7 +435,7 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
-	// logger.Debug("player stamina set, stamina: %v", stamina)
+	//logger.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)

@@ -278,8 +278,12 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 	}
 
 	// 获取玩家创建的载具实体
-	entity := g.GetSceneVehicleEntity(scene, player.VehicleInfo.LastCreateEntityId)
+	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
 	if entity == nil {
+		return
+	}
+	// 确保实体类型是否为载具
+	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
 		return
 	}
 	// 判断玩家处于载具中
@@ -303,9 +307,16 @@ func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	}
 
 	// 获取玩家处于的载具实体
-	entity := g.GetSceneVehicleEntity(scene, player.VehicleInfo.InVehicleEntityId)
+	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
+	if entity == nil {
+		return
+	}
+	// 确保实体类型是否为载具
+	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
+		return
+	}
 	// 根据玩家是否处于载具中更新耐力
-	if entity != nil && g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
+	if g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
 		// 更新载具耐力
 		g.UpdateVehicleStamina(player, entity, player.StaminaInfo.CostStamina)
 	} else {

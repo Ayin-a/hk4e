@@ -82,6 +82,7 @@ func (p *Player) InitAll() {
 	p.CoopApplyMap = make(map[uint32]int64)
 	p.StaminaInfo = new(StaminaInfo)
 	p.VehicleInfo = new(VehicleInfo)
+	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
 	p.InitAllAvatar()
 	p.InitAllWeapon()
 	p.InitAllItem()

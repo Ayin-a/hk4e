@@ -30,8 +30,9 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 	// TODO 验证将要创建的载具位置是否有效 Retcode_RET_CREATE_VEHICLE_POS_INVALID
 
 	// 清除已创建的载具
-	if player.VehicleInfo.LastCreateEntityId != 0 {
-		g.DestroyVehicleEntity(player, scene, req.VehicleId, player.VehicleInfo.LastCreateEntityId)
+	lastEntityId, ok := player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId]
+	if ok {
+		g.DestroyVehicleEntity(player, scene, req.VehicleId, lastEntityId)
 	}
 
 	// 创建载具实体
@@ -46,7 +47,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{entityId}, true, false)
 
 	// 记录创建的载具信息
-	player.VehicleInfo.LastCreateEntityId = entityId
+	player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId] = entityId
 	player.VehicleInfo.LastCreateTime = time.Now().UnixMilli()
 
 	// PacketCreateVehicleRsp
@@ -55,19 +56,6 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 		EntityId:  entityId,
 	}
 	g.SendMsg(cmd.CreateVehicleRsp, player.PlayerID, player.ClientSeq, createVehicleRsp)
-}
-
-// GetSceneVehicleEntity 获取场景内的载具实体
-func (g *GameManager) GetSceneVehicleEntity(scene *Scene, entityId uint32) *Entity {
-	entity := scene.GetEntity(entityId)
-	if entity == nil {
-		return nil
-	}
-	// 确保实体类型是否为载具
-	if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET) && entity.gadgetEntity.gadgetType == GADGET_TYPE_VEHICLE {
-		return entity
-	}
-	return nil
 }
 
 // IsPlayerInVehicle 判断玩家是否在载具中
@@ -85,15 +73,19 @@ func (g *GameManager) IsPlayerInVehicle(player *model.Player, gadgetVehicleEntit
 
 // DestroyVehicleEntity 删除载具实体
 func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, vehicleId uint32, entityId uint32) {
-	entity := g.GetSceneVehicleEntity(scene, entityId)
+	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return
 	}
-	// 目前原神仅有一种载具 多载具时可能跟载具耐力回复冲突 到时候再改
+	// 确保实体类型是否为载具
+	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
+		return
+	}
+	// 目前原神仅有一种载具 多载具目前理论上是兼容了 到时候有问题再改
 	// 确保载具Id为将要创建的 (每种载具允许存在1个)
-	// if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
-	//	return
-	// }
+	if entity.gadgetEntity.gadgetVehicleEntity.vehicleId != vehicleId {
+		return
+	}
 	// 该载具是否为此玩家的
 	if entity.gadgetEntity.gadgetVehicleEntity.owner != player {
 		return
@@ -185,14 +177,14 @@ func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Mes
 	scene := world.GetSceneById(player.SceneId)
 
 	// 获取载具实体
-	entity := g.GetSceneVehicleEntity(scene, req.EntityId)
+	entity := scene.GetEntity(req.EntityId)
 	if entity == nil {
 		logger.Error("vehicle entity is nil, entityId: %v", req.EntityId)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{}, proto.Retcode_RET_ENTITY_NOT_EXIST)
 		return
 	}
 	// 判断实体类型是否为载具
-	if entity.entityType != uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET) || entity.gadgetEntity.gadgetType != GADGET_TYPE_VEHICLE {
+	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
 		logger.Error("vehicle entity error, entityType: %v", entity.entityType)
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{}, proto.Retcode_RET_GADGET_NOT_VEHICLE)
 		return

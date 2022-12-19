@@ -11,6 +11,17 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// VehicleDestroyMotion 载具销毁动作
+func (g *GameManager) VehicleDestroyMotion(player *model.Player, entity *Entity, state proto.MotionState) {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+
+	// 状态等于 MOTION_STATE_DESTROY_VEHICLE 代表请求销毁
+	if state == proto.MotionState_MOTION_STATE_DESTROY_VEHICLE {
+		g.DestroyVehicleEntity(player, scene, entity.gadgetEntity.gadgetVehicleEntity.vehicleId, entity.id)
+	}
+}
+
 // CreateVehicleReq 创建载具
 func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.CreateVehicleReq)

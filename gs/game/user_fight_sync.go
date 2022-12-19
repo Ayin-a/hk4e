@@ -119,6 +119,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				player.Rot.X = float64(motionInfo.Rot.X)
 				player.Rot.Y = float64(motionInfo.Rot.Y)
 				player.Rot.Z = float64(motionInfo.Rot.Z)
+
+				// 处理耐力消耗
+				g.ImmediateStamina(player, motionInfo.State)
 			} else {
 				// 非玩家实体在移动 更新场景实体的位置信息
 				sceneEntity.pos = &model.Vector{
@@ -131,16 +134,17 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 					Y: float64(motionInfo.Rot.Y),
 					Z: float64(motionInfo.Rot.Z),
 				}
+				// 载具耐力消耗
+				if sceneEntity.gadgetEntity != nil && sceneEntity.gadgetEntity.gadgetVehicleEntity != nil {
+					// 处理耐力消耗
+					g.ImmediateStamina(player, motionInfo.State)
+					// 处理载具销毁请求
+					g.VehicleDestroyMotion(player, sceneEntity, motionInfo.State)
+				}
 			}
 			sceneEntity.moveState = uint16(motionInfo.State)
 			sceneEntity.lastMoveSceneTimeMs = entityMoveInfo.SceneTime
 			sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
-
-			// 角色和载具的耐力消耗
-			if sceneEntity.avatarEntity != nil || (sceneEntity.gadgetEntity != nil && sceneEntity.gadgetEntity.gadgetVehicleEntity != nil) {
-				// 处理耐力消耗
-				g.ImmediateStamina(player, motionInfo.State)
-			}
 
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ANIMATOR_STATE_CHANGED:

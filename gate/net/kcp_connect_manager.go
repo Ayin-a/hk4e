@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/mq"
 	"hk4e/common/region"
 	"hk4e/dispatch/controller"
 	"hk4e/gate/kcp"
@@ -18,6 +19,8 @@ import (
 	"hk4e/protocol/proto"
 )
 
+const PacketFreqLimit = 1000
+
 type KcpConnectManager struct {
 	openState          bool
 	sessionConvIdMap   map[uint64]*Session
@@ -26,8 +29,7 @@ type KcpConnectManager struct {
 	kcpEventInput      chan *KcpEvent
 	kcpEventOutput     chan *KcpEvent
 	cmdProtoMap        *cmd.CmdProtoMap
-	netMsgInput        chan *cmd.NetMsg
-	netMsgOutput       chan *cmd.NetMsg
+	messageQueue       *mq.MessageQueue
 	localMsgOutput     chan *ProtoMsg
 	createSessionChan  chan *Session
 	destroySessionChan chan *Session
@@ -38,7 +40,7 @@ type KcpConnectManager struct {
 	encRsaKeyMap map[string][]byte
 }
 
-func NewKcpConnectManager(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *KcpConnectManager) {
+func NewKcpConnectManager(messageQueue *mq.MessageQueue) (r *KcpConnectManager) {
 	r = new(KcpConnectManager)
 	r.openState = true
 	r.sessionConvIdMap = make(map[uint64]*Session)
@@ -46,8 +48,7 @@ func NewKcpConnectManager(netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.N
 	r.kcpEventInput = make(chan *KcpEvent, 1000)
 	r.kcpEventOutput = make(chan *KcpEvent, 1000)
 	r.cmdProtoMap = cmd.NewCmdProtoMap()
-	r.netMsgInput = netMsgInput
-	r.netMsgOutput = netMsgOutput
+	r.messageQueue = messageQueue
 	r.localMsgOutput = make(chan *ProtoMsg, 1000)
 	r.createSessionChan = make(chan *Session, 1000)
 	r.destroySessionChan = make(chan *Session, 1000)
@@ -245,7 +246,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		pktFreqLimitCounter++
 		now := time.Now().UnixNano()
 		if now-pktFreqLimitTimer > int64(time.Second) {
-			if pktFreqLimitCounter > 100 {
+			if pktFreqLimitCounter > PacketFreqLimit {
 				logger.Error("exit recv loop, client packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
 				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
 				break
@@ -271,8 +272,6 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 	// 发送
 	conn := session.conn
 	convId := conn.GetConv()
-	pktFreqLimitCounter := 0
-	pktFreqLimitTimer := time.Now().UnixNano()
 	for {
 		protoMsg, ok := <-session.kcpRawSendChan
 		if !ok {
@@ -292,19 +291,6 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			logger.Error("exit send loop, conn write err: %v, convId: %v", err, convId)
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
-		}
-		// 发包频率限制
-		pktFreqLimitCounter++
-		now := time.Now().UnixNano()
-		if now-pktFreqLimitTimer > int64(time.Second) {
-			if pktFreqLimitCounter > 100 {
-				logger.Error("exit send loop, server packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
-				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
-				break
-			} else {
-				pktFreqLimitCounter = 0
-			}
-			pktFreqLimitTimer = now
 		}
 	}
 }
@@ -332,11 +318,14 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 		EventId: KcpConnCloseNotify,
 	}
 	// 通知GS玩家下线
-	netMsg := new(cmd.NetMsg)
-	netMsg.UserId = session.userId
-	netMsg.EventId = cmd.UserOfflineNotify
-	k.netMsgInput <- netMsg
-	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, netMsg.UserId)
+	gameMsg := new(mq.GameMsg)
+	gameMsg.UserId = session.userId
+	k.messageQueue.SendToGs("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeGame,
+		EventId: mq.UserOfflineNotify,
+		GameMsg: gameMsg,
+	})
+	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, gameMsg.UserId)
 	k.destroySessionChan <- session
 }
 

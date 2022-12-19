@@ -94,7 +94,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
+			continue
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)

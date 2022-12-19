@@ -115,7 +115,7 @@ func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user query path, uid: %v", player.PlayerID)
+	// logger.Debug("user query path, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.QueryPathReq)
 
 	queryPathRsp := &proto.QueryPathRsp{

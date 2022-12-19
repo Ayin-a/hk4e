@@ -1,6 +1,7 @@
 package game
 
 import (
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -116,19 +117,23 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.VehicleInteractReq, GAME_MANAGER.VehicleInteractReq)
 }
 
-func (r *RouteManager) RouteHandle(netMsg *cmd.NetMsg) {
+func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
+	if netMsg.MsgType != mq.MsgTypeGame {
+		return
+	}
+	gameMsg := netMsg.GameMsg
 	switch netMsg.EventId {
-	case cmd.NormalMsg:
-		r.doRoute(netMsg.CmdId, netMsg.UserId, netMsg.ClientSeq, netMsg.PayloadMessage)
-	case cmd.UserRegNotify:
-		GAME_MANAGER.OnReg(netMsg.UserId, netMsg.ClientSeq, netMsg.PayloadMessage)
-	case cmd.UserLoginNotify:
-		GAME_MANAGER.OnLogin(netMsg.UserId, netMsg.ClientSeq)
-	case cmd.UserOfflineNotify:
-		GAME_MANAGER.OnUserOffline(netMsg.UserId)
-	case cmd.ClientRttNotify:
-		GAME_MANAGER.ClientRttNotify(netMsg.UserId, netMsg.ClientRtt)
-	case cmd.ClientTimeNotify:
-		GAME_MANAGER.ClientTimeNotify(netMsg.UserId, netMsg.ClientTime)
+	case mq.NormalMsg:
+		r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+	case mq.UserRegNotify:
+		GAME_MANAGER.OnReg(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+	case mq.UserLoginNotify:
+		GAME_MANAGER.OnLogin(gameMsg.UserId, gameMsg.ClientSeq)
+	case mq.UserOfflineNotify:
+		GAME_MANAGER.OnUserOffline(gameMsg.UserId)
+	case mq.ClientRttNotify:
+		GAME_MANAGER.ClientRttNotify(gameMsg.UserId, gameMsg.ClientRtt)
+	case mq.ClientTimeNotify:
+		GAME_MANAGER.ClientTimeNotify(gameMsg.UserId, gameMsg.ClientTime)
 	}
 }

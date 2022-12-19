@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"hk4e/common/mq"
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
@@ -24,16 +25,14 @@ var COMMAND_MANAGER *CommandManager = nil
 
 type GameManager struct {
 	dao          *dao.Dao
-	netMsgInput  chan *cmd.NetMsg
-	netMsgOutput chan *cmd.NetMsg
+	messageQueue *mq.MessageQueue
 	snowflake    *alg.SnowflakeWorker
 }
 
-func NewGameManager(dao *dao.Dao, netMsgInput chan *cmd.NetMsg, netMsgOutput chan *cmd.NetMsg) (r *GameManager) {
+func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue) (r *GameManager) {
 	r = new(GameManager)
 	r.dao = dao
-	r.netMsgInput = netMsgInput
-	r.netMsgOutput = netMsgOutput
+	r.messageQueue = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(1)
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
@@ -49,20 +48,62 @@ func (g *GameManager) Start() {
 	ROUTE_MANAGER.InitRoute()
 	USER_MANAGER.StartAutoSaveUser()
 	go func() {
+		intervalTime := time.Second.Nanoseconds() * 60
+		lastTime := time.Now().UnixNano()
+		routeCost := int64(0)
+		tickCost := int64(0)
+		localEventCost := int64(0)
+		commandCost := int64(0)
 		for {
+			now := time.Now().UnixNano()
+			if now-lastTime > intervalTime {
+				routeCost /= 1e6
+				tickCost /= 1e6
+				localEventCost /= 1e6
+				commandCost /= 1e6
+				logger.Info("[GAME MAIN LOOP] cpu time cost detail, routeCost: %vms, tickCost: %vms, localEventCost: %vms, commandCost: %vms",
+					routeCost, tickCost, localEventCost, commandCost)
+				totalCost := routeCost + tickCost + localEventCost + commandCost
+				logger.Info("[GAME MAIN LOOP] cpu time cost percent, routeCost: %v%%, tickCost: %v%%, localEventCost: %v%%, commandCost: %v%%",
+					float32(routeCost)/float32(totalCost)*100.0,
+					float32(tickCost)/float32(totalCost)*100.0,
+					float32(localEventCost)/float32(totalCost)*100.0,
+					float32(commandCost)/float32(totalCost)*100.0)
+				logger.Info("[GAME MAIN LOOP] total cpu time cost detail, totalCost: %vms",
+					totalCost)
+				logger.Info("[GAME MAIN LOOP] total cpu time cost percent, totalCost: %v%%",
+					float32(totalCost)/float32(intervalTime/1e6)*100.0)
+				lastTime = now
+				routeCost = 0
+				tickCost = 0
+				localEventCost = 0
+				commandCost = 0
+			}
 			select {
-			case netMsg := <-g.netMsgOutput:
+			case netMsg := <-g.messageQueue.GetNetMsg():
 				// 接收客户端消息
+				start := time.Now().UnixNano()
 				ROUTE_MANAGER.RouteHandle(netMsg)
+				end := time.Now().UnixNano()
+				routeCost += end - start
 			case <-TICK_MANAGER.ticker.C:
 				// 游戏服务器定时帧
+				start := time.Now().UnixNano()
 				TICK_MANAGER.OnGameServerTick()
+				end := time.Now().UnixNano()
+				tickCost += end - start
 			case localEvent := <-LOCAL_EVENT_MANAGER.localEventChan:
 				// 处理本地事件
+				start := time.Now().UnixNano()
 				LOCAL_EVENT_MANAGER.LocalEventHandle(localEvent)
+				end := time.Now().UnixNano()
+				localEventCost += end - start
 			case command := <-COMMAND_MANAGER.commandTextInput:
 				// 处理传入的命令 (普通玩家 GM命令)
+				start := time.Now().UnixNano()
 				COMMAND_MANAGER.HandleCommand(command)
+				end := time.Now().UnixNano()
+				commandCost += end - start
 			}
 		}
 	}()
@@ -82,19 +123,22 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 	if userId < 100000000 || payloadMsg == nil {
 		return
 	}
-	netMsg := new(cmd.NetMsg)
-	netMsg.UserId = userId
-	netMsg.EventId = cmd.NormalMsg
-	netMsg.CmdId = cmdId
-	netMsg.ClientSeq = clientSeq
+	gameMsg := new(mq.GameMsg)
+	gameMsg.UserId = userId
+	gameMsg.CmdId = cmdId
+	gameMsg.ClientSeq = clientSeq
 	// 在这里直接序列化成二进制数据 防止发送的消息内包含各种游戏数据指针 而造成并发读写的问题
 	payloadMessageData, err := pb.Marshal(payloadMsg)
 	if err != nil {
 		logger.Error("parse payload msg to bin error: %v", err)
 		return
 	}
-	netMsg.PayloadMessageData = payloadMessageData
-	g.netMsgInput <- netMsg
+	gameMsg.PayloadMessageData = payloadMessageData
+	g.messageQueue.SendToGate("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeGame,
+		EventId: mq.NormalMsg,
+		GameMsg: gameMsg,
+	})
 }
 
 // CommonRetError 通用返回错误码

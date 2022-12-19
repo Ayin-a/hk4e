@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"hk4e/common/mq"
 	"hk4e/gs/constant"
 	"hk4e/gs/game/aoi"
 	"hk4e/gs/model"
@@ -73,6 +74,13 @@ func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 	}
 	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.EntityIdTypeConst.MPLEVEL)
 	w.worldMap[worldId] = world
+	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.AddFightRoutine,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId: world.id,
+		},
+	})
 	return world
 }
 
@@ -83,6 +91,13 @@ func (w *WorldManager) DestroyWorld(worldId uint32) {
 		player.WorldId = 0
 	}
 	delete(w.worldMap, worldId)
+	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.DelFightRoutine,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId: world.id,
+		},
+	})
 }
 
 // GetBigWorld 获取本服务器的AI世界
@@ -624,6 +639,17 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 	if avatarId == s.world.GetPlayerActiveAvatarId(player) {
 		s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	}
+	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.FightRoutineAddEntity,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId: s.world.id,
+			EntityId:       entity.id,
+			FightPropMap:   entity.fightProp,
+			Uid:            entity.avatarEntity.uid,
+			AvatarGuid:     player.AvatarMap[avatarId].Guid,
+		},
+	})
 	return entity.id
 }
 
@@ -661,6 +687,15 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	}
 	s.entityMap[entity.id] = entity
 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.FightRoutineAddEntity,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId: s.world.id,
+			EntityId:       entity.id,
+			FightPropMap:   entity.fightProp,
+		},
+	})
 	return entity.id
 }
 
@@ -771,6 +806,14 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	}
 	s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	delete(s.entityMap, entityId)
+	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.FightRoutineDelEntity,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId: s.world.id,
+			EntityId:       entity.id,
+		},
+	})
 }
 
 func (s *Scene) GetEntity(entityId uint32) *Entity {

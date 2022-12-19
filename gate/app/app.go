@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"hk4e/common/config"
-	"hk4e/gate/mq"
+	"hk4e/common/mq"
 	"hk4e/gate/net"
 	"hk4e/pkg/logger"
-	"hk4e/protocol/cmd"
 )
 
 func Run(ctx context.Context, configFile string) error {
@@ -21,10 +20,9 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("gate")
 	logger.Warn("gate start")
 
-	netMsgInput := make(chan *cmd.NetMsg, 10000)
-	netMsgOutput := make(chan *cmd.NetMsg, 10000)
+	messageQueue := mq.NewMessageQueue(mq.GATE, "1")
 
-	connectManager := net.NewKcpConnectManager(netMsgInput, netMsgOutput)
+	connectManager := net.NewKcpConnectManager(messageQueue)
 	connectManager.Start()
 
 	go func() {
@@ -33,10 +31,6 @@ func Run(ctx context.Context, configFile string) error {
 			<-outputChan
 		}
 	}()
-
-	messageQueue := mq.NewMessageQueue(netMsgInput, netMsgOutput)
-	messageQueue.Start()
-	defer messageQueue.Close()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)

@@ -132,32 +132,6 @@ func (t *TickManager) onTick10Second(now int64) {
 				GAME_MANAGER.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
 			}
 		}
-		if !world.IsBigWorld() && (world.multiplayer || !world.owner.Pause) {
-			// 刷怪
-			scene := world.GetSceneById(3)
-			monsterEntityCount := 0
-			for _, entity := range scene.entityMap {
-				if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
-					monsterEntityCount++
-				}
-			}
-			if monsterEntityCount < 30 {
-				monsterEntityId := t.createMonster(scene)
-				bigWorldOwner := USER_MANAGER.GetOnlineUser(1)
-				GAME_MANAGER.AddSceneEntityNotify(bigWorldOwner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
-			}
-		}
-		for _, player := range world.playerMap {
-			if world.multiplayer || !world.owner.Pause {
-				// 改面板
-				for _, worldAvatar := range world.GetPlayerWorldAvatarList(player) {
-					avatar := player.AvatarMap[worldAvatar.avatarId]
-					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)] = 1000000
-					avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)] = 1.0
-					GAME_MANAGER.UpdateUserAvatarFightProp(player.PlayerID, worldAvatar.avatarId)
-				}
-			}
-		}
 	}
 }
 
@@ -235,6 +209,20 @@ func (t *TickManager) onTickSecond(now int64) {
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
 			}
 			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
+		}
+		if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
+			// 刷怪
+			scene := world.GetSceneById(3)
+			monsterEntityCount := 0
+			for _, entity := range scene.entityMap {
+				if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
+					monsterEntityCount++
+				}
+			}
+			if monsterEntityCount < 30 {
+				monsterEntityId := t.createMonster(scene)
+				GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
+			}
 		}
 	}
 }

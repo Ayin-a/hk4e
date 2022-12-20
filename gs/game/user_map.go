@@ -1,10 +1,10 @@
 package game
 
 import (
+	"hk4e/gs/constant"
 	"strconv"
 
 	gdc "hk4e/gs/config"
-	"hk4e/gs/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -32,7 +32,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 		Y: transPos.Y,
 		Z: transPos.Z,
 	}
-	g.TeleportPlayer(player, sceneId, pos)
+	g.TeleportPlayer(player, uint32(constant.EnterReasonConst.TransPoint), sceneId, pos)
 
 	sceneTransToPointRsp := &proto.SceneTransToPointRsp{
 		Retcode: 0,
@@ -60,13 +60,13 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 				Y: float64(posYInt),
 				Z: float64(req.Mark.Pos.Z),
 			}
-			g.TeleportPlayer(player, req.Mark.SceneId, pos)
+			g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Gm), req.Mark.SceneId, pos)
 		}
 	}
 }
 
 // TeleportPlayer 传送玩家至地图上的某个位置
-func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *model.Vector) {
+func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint32, sceneId uint32, pos *model.Vector) {
 	// 传送玩家
 	newSceneId := sceneId
 	oldSceneId := player.SceneId
@@ -105,7 +105,7 @@ func (g *GameManager) TeleportPlayer(player *model.Player, sceneId uint32, pos *
 		logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_TYPE_GOTO
 	}
-	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(constant.EnterReasonConst.TransPoint), oldSceneId, oldPos)
+	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, enterReason, oldSceneId, oldPos)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 }
 

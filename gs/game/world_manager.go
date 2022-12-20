@@ -634,11 +634,16 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			return
 		}
 		// 设置角色存活状态
-		avatar.LifeState = lifeState
+		if lifeState == constant.LifeStateConst.LIFE_REVIVE {
+			avatar.LifeState = constant.LifeStateConst.LIFE_ALIVE
+			// 设置血量
+			entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = 110
+			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP))
+		}
 
 		// PacketAvatarLifeStateChangeNotify
 		avatarLifeStateChangeNotify := &proto.AvatarLifeStateChangeNotify{
-			LifeState:       uint32(avatar.LifeState),
+			LifeState:       uint32(lifeState),
 			AttackTag:       "",
 			DieType:         dieType,
 			ServerBuffList:  nil,
@@ -665,7 +670,7 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			AttackTag:       "",
 			MoveReliableSeq: entity.lastMoveReliableSeq,
 			DieType:         dieType,
-			LifeState:       uint32(entity.lifeState),
+			LifeState:       uint32(lifeState),
 			SourceEntityId:  0,
 		}
 		for _, p := range s.playerMap {

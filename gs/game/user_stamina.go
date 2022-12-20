@@ -422,26 +422,54 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	if player.StaminaInfo.DrownBackTime == 0 {
 		return
 	}
-	if time.Now().UnixMilli() >= player.StaminaInfo.DrownBackTime {
-		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-		scene := world.GetSceneById(player.SceneId)
-		activeAvatar := world.GetPlayerWorldAvatar(player, player.TeamConfig.GetActiveAvatarId())
-		avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
-		if avatarEntity == nil {
-			logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
-			return
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
+	avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
+	if avatarEntity == nil {
+		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
+		return
+	}
+
+	// 记录溺水安全点
+	// 溺水安全点可能需要读取附近锚点坐标
+	// 多次溺水后提示溺水的死亡信息
+	// 官服 游戏离线也会回到安全位置
+	// 很显然目前这个很不完善
+	switch player.StaminaInfo.State {
+	case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
+		proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
+		proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
+		proto.MotionState_MOTION_STATE_DASH:
+		player.StaminaInfo.DrownBackPos.X = player.Pos.X
+		player.StaminaInfo.DrownBackPos.Y = player.Pos.Y
+		player.StaminaInfo.DrownBackPos.Z = player.Pos.Z
+	}
+
+	// 临时
+	if player.StaminaInfo.DrownBackPos.X == 0 && player.StaminaInfo.DrownBackPos.Y == 0 && player.StaminaInfo.DrownBackPos.Z == 0 {
+		player.StaminaInfo.DrownBackPos.X = player.Pos.X
+		player.StaminaInfo.DrownBackPos.Y = player.Pos.Y
+		player.StaminaInfo.DrownBackPos.Z = player.Pos.Z
+	}
+
+	if player.StaminaInfo.DrownBackTime == 1 {
+		// 确保玩家已经完成加载场景
+		if player.SceneLoadState == model.SceneEnterDone {
+			// 设置角色存活
+			scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
+			// 重置溺水返回时间
+			player.StaminaInfo.DrownBackTime = 0
 		}
-		// TODO 目前存在的问题
-		// 传送会显示玩家实体后再传送 返回安全位置写的不是很好可能存在问题
-		// 官服 游戏离线也会回到安全位置
-
-		// 设置角色存活
-		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_ALIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
+	} else if time.Now().UnixMilli() >= player.StaminaInfo.DrownBackTime {
+		// 临时 防止一直淹死 尚未完善
+		g.SetPlayerStamina(player, 10000)
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, player.SceneId, player.Pos)
+		g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Revival), player.SceneId, player.StaminaInfo.DrownBackPos)
 
-		// 重置溺水返回时间
-		player.StaminaInfo.DrownBackTime = 0
+		// 设置溺水返回时间为1
+		// 1代表加载完场景后再复活玩家
+		player.StaminaInfo.DrownBackTime = 1
 		// 重置动作状态否则可能会导致多次溺水
 		player.StaminaInfo.State = 0
 	}
@@ -456,7 +484,7 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
-	activeAvatar := world.GetPlayerWorldAvatar(player, player.TeamConfig.GetActiveAvatarId())
+	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
 	avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
 	if avatarEntity == nil {
 		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)

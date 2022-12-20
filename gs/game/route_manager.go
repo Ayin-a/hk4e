@@ -38,7 +38,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		// 临时为了调试便捷搞的重连 生产环境请务必去除 不然新用户会一直重连不能进入
-		// GAME_MANAGER.ReconnectPlayer(userId)
+		GAME_MANAGER.ReconnectPlayer(userId)
 		return
 	}
 	player.ClientSeq = clientSeq

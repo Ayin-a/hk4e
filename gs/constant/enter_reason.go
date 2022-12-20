@@ -4,37 +4,37 @@ var EnterReasonConst *EnterReason
 
 type EnterReason struct {
 	None                    uint16
-	Login                   uint16
-	DungeonReplay           uint16
-	DungeonReviveOnWaypoint uint16
-	DungeonEnter            uint16
-	DungeonQuit             uint16
-	Gm                      uint16
-	QuestRollback           uint16
-	Revival                 uint16
-	PersonalScene           uint16
-	TransPoint              uint16
-	ClientTransmit          uint16
-	ForceDragBack           uint16
-	TeamKick                uint16
-	TeamJoin                uint16
-	TeamBack                uint16
-	Muip                    uint16
-	DungeonInviteAccept     uint16
-	Lua                     uint16
-	ActivityLoadTerrain     uint16
-	HostFromSingleToMp      uint16
-	MpPlay                  uint16
-	AnchorPoint             uint16
-	LuaSkipUi               uint16
-	ReloadTerrain           uint16
-	DraftTransfer           uint16
-	EnterHome               uint16
-	ExitHome                uint16
-	ChangeHomeModule        uint16
-	Gallery                 uint16
-	HomeSceneJump           uint16
-	HideAndSeek             uint16
+	Login                   uint16 // 登录
+	DungeonReplay           uint16 // 秘境重新挑战
+	DungeonReviveOnWaypoint uint16 // 秘境重生
+	DungeonEnter            uint16 // 秘境进入
+	DungeonQuit             uint16 // 秘境离开
+	Gm                      uint16 // 管理员
+	QuestRollback           uint16 // 任务回滚
+	Revival                 uint16 // 重生
+	PersonalScene           uint16 // 个人场景
+	TransPoint              uint16 // 传送点
+	ClientTransmit          uint16 // 客户端传送
+	ForceDragBack           uint16 // 强制后退
+	TeamKick                uint16 // 队伍踢出
+	TeamJoin                uint16 // 队伍加入
+	TeamBack                uint16 // 队伍返回
+	Muip                    uint16 // ??
+	DungeonInviteAccept     uint16 // 秘境邀请接受
+	Lua                     uint16 // 脚本
+	ActivityLoadTerrain     uint16 // 活动加载地形
+	HostFromSingleToMp      uint16 // 房主从单人到多人
+	MpPlay                  uint16 // 多人游戏
+	AnchorPoint             uint16 // 迷你锚点
+	LuaSkipUi               uint16 // 脚本跳过UI
+	ReloadTerrain           uint16 // 重载地形
+	DraftTransfer           uint16 // 某个东西传送 ??
+	EnterHome               uint16 // 进入尘歌壶
+	ExitHome                uint16 // 离开尘歌壶
+	ChangeHomeModule        uint16 // 更改尘歌壶模块
+	Gallery                 uint16 // ??
+	HomeSceneJump           uint16 // 尘歌壶场景跳转
+	HideAndSeek             uint16 // 隐藏和搜索 ??
 }
 
 func InitEnterReasonConst() {

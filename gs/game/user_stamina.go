@@ -58,8 +58,14 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		if avatarAbility == nil {
 			return
 		}
-		// 重击对应的耐力消耗
-		g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
+		// 距离技能开始过去的时间
+		pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
+		// 法器角色轻击也会算触发重击消耗
+		// 所以通过策略判断 必须距离技能开始过去200ms才算重击
+		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && pastTime > 200 {
+			// 重击对应的耐力消耗
+			g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
+		}
 	default:
 		break
 	}

@@ -1,6 +1,7 @@
 package game
 
 import (
+	gdc "hk4e/gs/config"
 	"strings"
 	"time"
 
@@ -418,10 +419,15 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 
 // DrownBackHandler 玩家溺水返回安全点
 func (g *GameManager) DrownBackHandler(player *model.Player) {
-	// 溺水返回时间为0代表不进行返回
-	if player.StaminaInfo.DrownBackTime == 0 {
+	// 玩家暂停跳过
+	if player.Pause {
 		return
 	}
+	// 溺水返回时间为0代表不进行返回
+	if player.StaminaInfo.DrownBackDelay == 0 {
+		return
+	}
+
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
@@ -431,54 +437,58 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		return
 	}
 
-	// 记录溺水安全点
+	// TODO
 	// 溺水安全点可能需要读取附近锚点坐标
 	// 多次溺水后提示溺水的死亡信息
 	// 官服 游戏离线也会回到安全位置
 	// 很显然目前这个很不完善
-	switch player.StaminaInfo.State {
-	case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
-		proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
-		proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
-		proto.MotionState_MOTION_STATE_DASH:
-		player.StaminaInfo.DrownBackPos.X = player.Pos.X
-		player.StaminaInfo.DrownBackPos.Y = player.Pos.Y
-		player.StaminaInfo.DrownBackPos.Z = player.Pos.Z
-	}
 
-	// 临时
-	if player.StaminaInfo.DrownBackPos.X == 0 && player.StaminaInfo.DrownBackPos.Y == 0 && player.StaminaInfo.DrownBackPos.Z == 0 {
-		player.StaminaInfo.DrownBackPos.X = player.Pos.X
-		player.StaminaInfo.DrownBackPos.Y = player.Pos.Y
-		player.StaminaInfo.DrownBackPos.Z = player.Pos.Z
-	}
-
-	if player.StaminaInfo.DrownBackTime == 1 {
-		// 确保玩家已经完成加载场景
-		if player.SceneLoadState == model.SceneEnterDone {
-			// 设置角色存活
-			scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
-			// 重置溺水返回时间
-			player.StaminaInfo.DrownBackTime = 0
+	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
+	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {
+		// 设置角色存活
+		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
+		// 重置溺水返回时间
+		player.StaminaInfo.DrownBackDelay = 0
+	} else if player.StaminaInfo.DrownBackDelay == 20 {
+		// TODO 队伍扣血
+		maxStamina := player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA]
+		// 设置玩家耐力为一半
+		g.SetPlayerStamina(player, maxStamina/2)
+		// 如果玩家的位置比锚点距离近则优先使用玩家位置
+		pos := &model.Vector{
+			X: player.Pos.X,
+			Y: player.Pos.Y,
+			Z: player.Pos.Z,
 		}
-	} else if time.Now().UnixMilli() >= player.StaminaInfo.DrownBackTime {
-		// 临时 防止一直淹死 尚未完善
-		g.SetPlayerStamina(player, 10000)
+		// 获取最近角色实体的锚点
+		// TODO 阻塞优化 16ms我感觉有点慢
+		for _, entry := range gdc.CONF.ScenePointEntries {
+			if entry.PointData == nil || entry.PointData.TranPos == nil {
+				continue
+			}
+			pointPos := &model.Vector{
+				X: entry.PointData.TranPos.X,
+				Y: entry.PointData.TranPos.Y,
+				Z: entry.PointData.TranPos.Z,
+			}
+			// 该坐标距离小于之前的则赋值
+			if player.StaminaInfo.ActiveAvatarPos.Distance(pointPos) < player.StaminaInfo.ActiveAvatarPos.Distance(pos) {
+				pos = pointPos
+			}
+		}
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Revival), player.SceneId, player.StaminaInfo.DrownBackPos)
-
-		// 设置溺水返回时间为1
-		// 1代表加载完场景后再复活玩家
-		player.StaminaInfo.DrownBackTime = 1
-		// 重置动作状态否则可能会导致多次溺水
-		player.StaminaInfo.State = 0
+		g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Revival), player.SceneId, pos)
+	}
+	// 防止重置后又被修改
+	if player.StaminaInfo.DrownBackDelay != 0 {
+		player.StaminaInfo.DrownBackDelay++
 	}
 }
 
 // HandleDrown 处理玩家溺水
 func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
-	// 溺水需要耐力等于0 返回时间不等于0代表已处理过溺水正在等待返回
-	if stamina != 0 || player.StaminaInfo.DrownBackTime != 0 {
+	// 溺水需要耐力等于0 返回延时不等于0代表已处理过溺水正在等待返回
+	if stamina != 0 || player.StaminaInfo.DrownBackDelay != 0 {
 		return
 	}
 
@@ -496,8 +506,8 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
 		// 设置角色为死亡
 		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_TYPE_DRAWN)
-		// 溺水返回安全点的时间
-		player.StaminaInfo.DrownBackTime = time.Now().Add(time.Second * 4).UnixMilli()
+		// 溺水返回安全点 计时开始
+		player.StaminaInfo.DrownBackDelay = 1
 	}
 }
 

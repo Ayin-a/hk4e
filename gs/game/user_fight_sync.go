@@ -113,27 +113,35 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if sceneEntity.avatarEntity != nil {
 				// 玩家实体在移动
 				// 更新玩家的位置信息
-				player.Pos.X = float64(motionInfo.Pos.X)
-				player.Pos.Y = float64(motionInfo.Pos.Y)
-				player.Pos.Z = float64(motionInfo.Pos.Z)
-				player.Rot.X = float64(motionInfo.Rot.X)
-				player.Rot.Y = float64(motionInfo.Rot.Y)
-				player.Rot.Z = float64(motionInfo.Rot.Z)
+				switch player.StaminaInfo.State {
+				case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
+					proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
+					proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
+					proto.MotionState_MOTION_STATE_DASH:
+					// 仅在陆地时更新玩家位置
+					player.Pos.X = float64(motionInfo.Pos.X)
+					player.Pos.Y = float64(motionInfo.Pos.Y)
+					player.Pos.Z = float64(motionInfo.Pos.Z)
+					player.Rot.X = float64(motionInfo.Rot.X)
+					player.Rot.Y = float64(motionInfo.Rot.Y)
+					player.Rot.Z = float64(motionInfo.Rot.Z)
+				default:
+					player.StaminaInfo.ActiveAvatarPos.X = float64(motionInfo.Pos.X)
+					player.StaminaInfo.ActiveAvatarPos.Y = float64(motionInfo.Pos.Y)
+					player.StaminaInfo.ActiveAvatarPos.Z = float64(motionInfo.Pos.Z)
+				}
 
 				// 处理耐力消耗
 				g.ImmediateStamina(player, motionInfo.State)
 			} else {
-				// 非玩家实体在移动 更新场景实体的位置信息
-				sceneEntity.pos = &model.Vector{
-					X: float64(motionInfo.Pos.X),
-					Y: float64(motionInfo.Pos.Y),
-					Z: float64(motionInfo.Pos.Z),
-				}
-				sceneEntity.rot = &model.Vector{
-					X: float64(motionInfo.Rot.X),
-					Y: float64(motionInfo.Rot.Y),
-					Z: float64(motionInfo.Rot.Z),
-				}
+				// 非玩家实体在移动
+				// 更新场景实体的位置信息
+				sceneEntity.pos.X = float64(motionInfo.Pos.X)
+				sceneEntity.pos.Y = float64(motionInfo.Pos.Y)
+				sceneEntity.pos.Z = float64(motionInfo.Pos.Z)
+				sceneEntity.rot.X = float64(motionInfo.Rot.X)
+				sceneEntity.rot.Y = float64(motionInfo.Rot.Y)
+				sceneEntity.rot.Z = float64(motionInfo.Rot.Z)
 				// 载具耐力消耗
 				if sceneEntity.gadgetEntity != nil && sceneEntity.gadgetEntity.gadgetVehicleEntity != nil {
 					// 处理耐力消耗

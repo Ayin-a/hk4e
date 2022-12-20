@@ -97,6 +97,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(LeaveWorldNotify, &proto.LeaveWorldNotify{})                             // 删除客户端世界通知
 	c.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{})           // 缓慢游泳或缓慢攀爬时消耗耐力请求
 	c.registerMessage(SceneAvatarStaminaStepRsp, &proto.SceneAvatarStaminaStepRsp{})           // 缓慢游泳或缓慢攀爬时消耗耐力响应
+	c.registerMessage(LifeStateChangeNotify, &proto.LifeStateChangeNotify{})                   // 实体存活状态改变通知
+	c.registerMessage(SceneEntityDrownReq, &proto.SceneEntityDrownReq{})                       // 场景实体溺水请求
+	c.registerMessage(SceneEntityDrownRsp, &proto.SceneEntityDrownRsp{})                       // 场景实体溺水响应
 
 	// 战斗与同步
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
@@ -113,7 +116,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(EvtEntityRenderersChangedNotify, &proto.EvtEntityRenderersChangedNotify{})     // 实体可视状态改变通知
 	c.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})                         // 创建实体通知
 	c.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})                       // 销毁实体通知
-	c.registerMessage(LifeStateChangeNotify, &proto.LifeStateChangeNotify{})                         // 实体存活状态改变通知
 
 	// 队伍
 	c.registerMessage(ChangeAvatarReq, &proto.ChangeAvatarReq{})                             // 更换角色请求 切人

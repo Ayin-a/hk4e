@@ -533,6 +533,18 @@ func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint3
 	return fightPropList
 }
 
+// SceneEntityDrownReq 实体溺水请求
+func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.SceneEntityDrownReq)
+
+	logger.Error("entity drown, entityId: %v", req.EntityId)
+
+	// PacketSceneEntityDrownRsp
+	sceneEntityDrownRsp := new(proto.SceneEntityDrownRsp)
+	sceneEntityDrownRsp.EntityId = req.EntityId
+	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
+}
+
 func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(scene.world.GetPlayerWorldAvatarEntityId(player, avatarId))
 	if entity == nil {

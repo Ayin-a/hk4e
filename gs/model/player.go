@@ -81,7 +81,7 @@ func (p *Player) InitAll() {
 	p.GameObjectGuidMap = make(map[uint64]GameObject)
 	p.CoopApplyMap = make(map[uint32]int64)
 	p.StaminaInfo = new(StaminaInfo)
-	p.StaminaInfo.DrownBackPos = new(Vector)
+	p.StaminaInfo.ActiveAvatarPos = new(Vector)
 	p.VehicleInfo = new(VehicleInfo)
 	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
 	p.InitAllAvatar()

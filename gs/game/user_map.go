@@ -35,7 +35,6 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	g.TeleportPlayer(player, uint32(constant.EnterReasonConst.TransPoint), sceneId, pos)
 
 	sceneTransToPointRsp := &proto.SceneTransToPointRsp{
-		Retcode: 0,
 		PointId: req.PointId,
 		SceneId: req.SceneId,
 	}

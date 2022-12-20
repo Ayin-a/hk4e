@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"time"
 
 	"hk4e/gdconf"
@@ -57,14 +58,8 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		if avatarAbility == nil {
 			return
 		}
-		// 距离技能开始过去的时间
-		pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
-		// 法器角色轻击也会算触发重击消耗
-		// 所以通过策略判断 必须距离技能开始过去200ms才算重击
-		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && pastTime > 200 {
-			// 重击对应的耐力消耗
-			g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
-		}
+		// 重击对应的耐力消耗
+		g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
 	default:
 		break
 	}
@@ -205,6 +200,10 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 
 // ChargedAttackStamina 处理重击技能即时耐力消耗
 func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
+	// 确保技能为重击
+	if !strings.Contains(skillData.AbilityName, "ExtraAttack") {
+		return
+	}
 	// 获取现行角色的配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
 	if !ok {

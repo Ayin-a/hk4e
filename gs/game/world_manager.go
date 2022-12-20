@@ -1,6 +1,7 @@
 package game
 
 import (
+	"hk4e/protocol/cmd"
 	"math"
 	"time"
 
@@ -572,6 +573,7 @@ type GadgetEntity struct {
 type Entity struct {
 	id                  uint32
 	scene               *Scene
+	lifeState           uint16
 	pos                 *model.Vector
 	rot                 *model.Vector
 	moveState           uint16
@@ -617,11 +619,71 @@ func (s *Scene) RemovePlayer(player *model.Player) {
 	}
 }
 
+func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType proto.PlayerDieType) {
+	if entity.avatarEntity != nil {
+		// 获取玩家对象
+		player := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
+		if player == nil {
+			logger.Error("player is nil, uid: %v", entity.avatarEntity.uid)
+			return
+		}
+		// 获取角色
+		avatar, ok := player.AvatarMap[entity.avatarEntity.avatarId]
+		if !ok {
+			logger.Error("avatar is nil, avatarId: %v", avatar)
+			return
+		}
+		// 设置角色存活状态
+		avatar.LifeState = lifeState
+
+		// PacketAvatarLifeStateChangeNotify
+		avatarLifeStateChangeNotify := &proto.AvatarLifeStateChangeNotify{
+			LifeState:       uint32(avatar.LifeState),
+			AttackTag:       "",
+			DieType:         dieType,
+			ServerBuffList:  nil,
+			MoveReliableSeq: entity.lastMoveReliableSeq,
+			SourceEntityId:  0,
+			AvatarGuid:      avatar.Guid,
+		}
+		for _, p := range s.playerMap {
+			GAME_MANAGER.SendMsg(cmd.AvatarLifeStateChangeNotify, p.PlayerID, p.ClientSeq, avatarLifeStateChangeNotify)
+		}
+	} else {
+		// 设置存活状态
+		entity.lifeState = lifeState
+
+		if lifeState == constant.LifeStateConst.LIFE_DEAD {
+			// 设置血量
+			entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = 0
+			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP))
+		}
+
+		// PacketLifeStateChangeNotify
+		lifeStateChangeNotify := &proto.LifeStateChangeNotify{
+			EntityId:        entity.id,
+			AttackTag:       "",
+			MoveReliableSeq: entity.lastMoveReliableSeq,
+			DieType:         dieType,
+			LifeState:       uint32(entity.lifeState),
+			SourceEntityId:  0,
+		}
+		for _, p := range s.playerMap {
+			GAME_MANAGER.SendMsg(cmd.LifeStateChangeNotify, p.PlayerID, p.ClientSeq, lifeStateChangeNotify)
+		}
+
+		// 删除实体
+		s.DestroyEntity(entity.id)
+		GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(s, proto.VisionType_VISION_TYPE_DIE, []uint32{entity.id})
+	}
+}
+
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.AVATAR)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 player.Pos,
 		rot:                 player.Rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
@@ -658,6 +720,7 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 new(model.Vector),
 		rot:                 new(model.Vector),
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
@@ -676,6 +739,7 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 new(model.Vector),
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
@@ -703,6 +767,7 @@ func (s *Scene) ClientCreateEntityGadget(pos, rot *model.Vector, entityId uint32
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
@@ -736,6 +801,7 @@ func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 new(model.Vector),
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
@@ -770,6 +836,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),

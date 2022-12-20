@@ -113,12 +113,21 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if sceneEntity.avatarEntity != nil {
 				// 玩家实体在移动
 				// 更新玩家的位置信息
-				player.Pos.X = float64(motionInfo.Pos.X)
-				player.Pos.Y = float64(motionInfo.Pos.Y)
-				player.Pos.Z = float64(motionInfo.Pos.Z)
-				player.Rot.X = float64(motionInfo.Rot.X)
-				player.Rot.Y = float64(motionInfo.Rot.Y)
-				player.Rot.Z = float64(motionInfo.Rot.Z)
+
+				switch motionInfo.State {
+				case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
+					proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
+					proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
+					proto.MotionState_MOTION_STATE_DASH:
+					// 为了实现游泳返回安全位置 但是我觉得这么做肯定会出问题
+					player.Pos.X = float64(motionInfo.Pos.X)
+					player.Pos.Y = float64(motionInfo.Pos.Y)
+					player.Pos.Z = float64(motionInfo.Pos.Z)
+					player.Rot.X = float64(motionInfo.Rot.X)
+					player.Rot.Y = float64(motionInfo.Rot.Y)
+					player.Rot.Z = float64(motionInfo.Rot.Z)
+
+				}
 
 				// 处理耐力消耗
 				g.ImmediateStamina(player, motionInfo.State)

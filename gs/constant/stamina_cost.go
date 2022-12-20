@@ -42,7 +42,7 @@ func InitStaminaCostConst() {
 	StaminaCostConst.DASH = -360
 	StaminaCostConst.FLY = -60
 	StaminaCostConst.SPRINT = -1800
-	StaminaCostConst.SWIM_DASH_START = -2000
+	StaminaCostConst.SWIM_DASH_START = -200
 	StaminaCostConst.SWIM_DASH = -204
 	StaminaCostConst.SWIMMING = -400
 	StaminaCostConst.POWERED_FLY = 500

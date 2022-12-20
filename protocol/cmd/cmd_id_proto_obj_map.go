@@ -113,6 +113,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(EvtEntityRenderersChangedNotify, &proto.EvtEntityRenderersChangedNotify{})     // 实体可视状态改变通知
 	c.registerMessage(EvtCreateGadgetNotify, &proto.EvtCreateGadgetNotify{})                         // 创建实体通知
 	c.registerMessage(EvtDestroyGadgetNotify, &proto.EvtDestroyGadgetNotify{})                       // 销毁实体通知
+	c.registerMessage(LifeStateChangeNotify, &proto.LifeStateChangeNotify{})                         // 实体存活状态改变通知
 
 	// 队伍
 	c.registerMessage(ChangeAvatarReq, &proto.ChangeAvatarReq{})                             // 更换角色请求 切人
@@ -199,14 +200,15 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(DoGachaRsp, &proto.DoGachaRsp{})           // 抽卡响应
 
 	// 角色
-	c.registerMessage(AvatarDataNotify, &proto.AvatarDataNotify{})                     // 角色信息通知
-	c.registerMessage(AvatarAddNotify, &proto.AvatarAddNotify{})                       // 角色新增通知
-	c.registerMessage(AvatarChangeCostumeReq, &proto.AvatarChangeCostumeReq{})         // 角色换装请求
-	c.registerMessage(AvatarChangeCostumeRsp, &proto.AvatarChangeCostumeRsp{})         // 角色换装响应
-	c.registerMessage(AvatarChangeCostumeNotify, &proto.AvatarChangeCostumeNotify{})   // 角色换装通知
-	c.registerMessage(AvatarWearFlycloakReq, &proto.AvatarWearFlycloakReq{})           // 角色换风之翼请求
-	c.registerMessage(AvatarWearFlycloakRsp, &proto.AvatarWearFlycloakRsp{})           // 角色换风之翼响应
-	c.registerMessage(AvatarFlycloakChangeNotify, &proto.AvatarFlycloakChangeNotify{}) // 角色换风之翼通知
+	c.registerMessage(AvatarDataNotify, &proto.AvatarDataNotify{})                       // 角色信息通知
+	c.registerMessage(AvatarAddNotify, &proto.AvatarAddNotify{})                         // 角色新增通知
+	c.registerMessage(AvatarChangeCostumeReq, &proto.AvatarChangeCostumeReq{})           // 角色换装请求
+	c.registerMessage(AvatarChangeCostumeRsp, &proto.AvatarChangeCostumeRsp{})           // 角色换装响应
+	c.registerMessage(AvatarChangeCostumeNotify, &proto.AvatarChangeCostumeNotify{})     // 角色换装通知
+	c.registerMessage(AvatarWearFlycloakReq, &proto.AvatarWearFlycloakReq{})             // 角色换风之翼请求
+	c.registerMessage(AvatarWearFlycloakRsp, &proto.AvatarWearFlycloakRsp{})             // 角色换风之翼响应
+	c.registerMessage(AvatarFlycloakChangeNotify, &proto.AvatarFlycloakChangeNotify{})   // 角色换风之翼通知
+	c.registerMessage(AvatarLifeStateChangeNotify, &proto.AvatarLifeStateChangeNotify{}) // 角色存活状态改变通知
 
 	// 背包与道具
 	c.registerMessage(PlayerStoreNotify, &proto.PlayerStoreNotify{})           // 玩家背包数据通知

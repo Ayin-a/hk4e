@@ -340,10 +340,6 @@ func (g *GameManager) GetChangeStamina(curStamina int32, maxStamina int32, stami
 
 // UpdateVehicleStamina 更新载具耐力
 func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity, staminaCost int32) {
-	// 耐力增加0是没有意义的
-	if staminaCost == 0 {
-		return
-	}
 	staminaInfo := player.StaminaInfo
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {
@@ -385,11 +381,6 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 
 // UpdatePlayerStamina 更新玩家耐力
 func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int32) {
-	// 耐力增加0是没有意义的
-	if staminaCost == 0 {
-		return
-	}
-
 	staminaInfo := player.StaminaInfo
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {
@@ -413,6 +404,9 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 	// 将被变更的耐力
 	stamina := g.GetChangeStamina(curStamina, maxStamina, staminaCost)
 
+	// 检测玩家是否没耐力后执行溺水
+	g.HandleDrown(player, stamina)
+
 	// 当前无变动不要频繁发包
 	if uint32(curStamina) == stamina {
 		return
@@ -420,6 +414,63 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 
 	// 更改玩家的耐力
 	g.SetPlayerStamina(player, stamina)
+}
+
+// DrownBackHandler 玩家溺水返回安全点
+func (g *GameManager) DrownBackHandler(player *model.Player) {
+	// 溺水返回时间为0代表不进行返回
+	if player.StaminaInfo.DrownBackTime == 0 {
+		return
+	}
+	if time.Now().UnixMilli() >= player.StaminaInfo.DrownBackTime {
+		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+		scene := world.GetSceneById(player.SceneId)
+		activeAvatar := world.GetPlayerWorldAvatar(player, player.TeamConfig.GetActiveAvatarId())
+		avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
+		if avatarEntity == nil {
+			logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
+			return
+		}
+		// TODO 目前存在的问题
+		// 传送会显示玩家实体后再传送 返回安全位置写的不是很好可能存在问题
+		// 官服 游戏离线也会回到安全位置
+
+		// 设置角色存活
+		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_ALIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
+		// 传送玩家至安全位置
+		g.TeleportPlayer(player, player.SceneId, player.Pos)
+
+		// 重置溺水返回时间
+		player.StaminaInfo.DrownBackTime = 0
+		// 重置动作状态否则可能会导致多次溺水
+		player.StaminaInfo.State = 0
+	}
+}
+
+// HandleDrown 处理玩家溺水
+func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
+	// 溺水需要耐力等于0 返回时间不等于0代表已处理过溺水正在等待返回
+	if stamina != 0 || player.StaminaInfo.DrownBackTime != 0 {
+		return
+	}
+
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	activeAvatar := world.GetPlayerWorldAvatar(player, player.TeamConfig.GetActiveAvatarId())
+	avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
+	if avatarEntity == nil {
+		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
+		return
+	}
+
+	// 确保玩家正在游泳
+	if player.StaminaInfo.State == proto.MotionState_MOTION_STATE_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_STATE_SWIM_DASH {
+		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
+		// 设置角色为死亡
+		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_TYPE_DRAWN)
+		// 溺水返回安全点的时间
+		player.StaminaInfo.DrownBackTime = time.Now().Add(time.Second * 4).UnixMilli()
+	}
 }
 
 // SetVehicleStamina 设置载具耐力
@@ -443,13 +494,18 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	//logger.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
+	g.PlayerPropNotify(player, prop)
+}
+
+func (g *GameManager) PlayerPropNotify(player *model.Player, playerPropId uint16) {
+	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)
 	playerPropNotify.PropMap = make(map[uint32]*proto.PropValue)
-	playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
-		Type: uint32(prop),
-		Val:  int64(player.PropertiesMap[prop]),
+	playerPropNotify.PropMap[uint32(playerPropId)] = &proto.PropValue{
+		Type: uint32(playerPropId),
+		Val:  int64(player.PropertiesMap[playerPropId]),
 		Value: &proto.PropValue_Ival{
-			Ival: int64(player.PropertiesMap[prop]),
+			Ival: int64(player.PropertiesMap[playerPropId]),
 		},
 	}
 	g.SendMsg(cmd.PlayerPropNotify, player.PlayerID, player.ClientSeq, playerPropNotify)

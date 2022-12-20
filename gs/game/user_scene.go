@@ -476,6 +476,17 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 	}
 }
 
+func (g *GameManager) EntityFightPropUpdateNotifyBroadcast(scene *Scene, entity *Entity, fightPropId uint32) {
+	for _, player := range scene.playerMap {
+		// PacketEntityFightPropUpdateNotify
+		entityFightPropUpdateNotify := new(proto.EntityFightPropUpdateNotify)
+		entityFightPropUpdateNotify.EntityId = entity.id
+		entityFightPropUpdateNotify.FightPropMap = make(map[uint32]float32)
+		entityFightPropUpdateNotify.FightPropMap[fightPropId] = entity.fightProp[fightPropId]
+		g.SendMsg(cmd.EntityFightPropUpdateNotify, player.PlayerID, player.ClientSeq, entityFightPropUpdateNotify)
+	}
+}
+
 func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint32]float32) []*proto.FightPropPair {
 	fightPropList := []*proto.FightPropPair{
 		{

@@ -233,6 +233,7 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 		for _, player := range world.playerMap {
 			GAME_MANAGER.SustainStaminaHandler(player)
 			GAME_MANAGER.VehicleRestoreStaminaHandler(player)
+			GAME_MANAGER.DrownBackHandler(player)
 		}
 	}
 }

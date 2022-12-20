@@ -239,7 +239,11 @@ func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) 
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	avatar := player.AvatarMap[avatarId]
+	avatar, ok := player.AvatarMap[avatarId]
+	if !ok {
+		logger.Error("avatar is nil, avatarId: %v", avatar)
+		return
+	}
 	avatarFightPropNotify := &proto.AvatarFightPropNotify{
 		AvatarGuid:   avatar.Guid,
 		FightPropMap: avatar.FightPropMap,
@@ -283,7 +287,7 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 				Value: &proto.PropValue_Ival{Ival: 0},
 			},
 		},
-		LifeState:     1,
+		LifeState:     uint32(avatar.LifeState),
 		EquipGuidList: object.ConvMapToList(avatar.EquipGuidList),
 		FightPropMap:  nil,
 		SkillDepotId:  avatar.SkillDepotId,

@@ -55,7 +55,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
 		return
 	}
-	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{entityId}, true, false)
+	GAME_MANAGER.AddSceneEntityNotifyBroadcast(player, scene, proto.VisionType_VISION_TYPE_BORN, []*proto.SceneEntityInfo{GAME_MANAGER.PacketSceneEntityInfoGadget(scene, entityId)}, false)
 
 	// 记录创建的载具信息
 	player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId] = entityId
@@ -101,7 +101,7 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 	if entity.gadgetEntity.gadgetVehicleEntity.owner != player {
 		return
 	}
-	// 确保玩家正在载具中
+	// 如果玩家正在载具中
 	if g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
 		// 离开载具
 		g.ExitVehicle(player, entity, player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid)

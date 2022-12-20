@@ -10,6 +10,7 @@ import (
 
 type Avatar struct {
 	AvatarId            uint32             `bson:"avatarId"`         // 角色id
+	LifeState           uint16             `bson:"lifeState"`        // 存活状态
 	Level               uint8              `bson:"level"`            // 等级
 	Exp                 uint32             `bson:"exp"`              // 经验值
 	Promote             uint8              `bson:"promote"`          // 突破等阶
@@ -110,6 +111,7 @@ func (p *Player) AddAvatar(avatarId uint32) {
 	}
 	avatar := &Avatar{
 		AvatarId:            avatarId,
+		LifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		Level:               1,
 		Exp:                 0,
 		Promote:             0,

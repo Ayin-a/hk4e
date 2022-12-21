@@ -14,8 +14,7 @@ type StaminaInfo struct {
 	LastSkillId         uint32            // 最后释放的技能Id
 	LastSkillTime       int64             // 最后释放技能的时间
 	LastSkillStartTime  int64             // 最后执行开始技能耐力消耗的时间
-	DrownBackDelay      int64             // 溺水返回安全点延时
-	ActiveAvatarPos     *Vector           // 当前角色位置
+	DrownBackDelay      uint8             // 溺水返回安全点延时
 }
 
 // SetStaminaCost 设置动作需要消耗的耐力

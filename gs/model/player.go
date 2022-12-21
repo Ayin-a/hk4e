@@ -42,6 +42,7 @@ type Player struct {
 	FlyCloakList     []uint32              `bson:"flyCloakList"`     // 风之翼列表
 	CostumeList      []uint32              `bson:"costumeList"`      // 角色衣装列表
 	SceneId          uint32                `bson:"sceneId"`          // 场景
+	SafePos          *Vector               `bson:"safePos"`          // 玩家在陆地时的坐标
 	Pos              *Vector               `bson:"pos"`              // 玩家坐标
 	Rot              *Vector               `bson:"rot"`              // 玩家朝向
 	ItemMap          map[uint32]*Item      `bson:"itemMap"`          // 玩家统一大背包仓库
@@ -81,7 +82,6 @@ func (p *Player) InitAll() {
 	p.GameObjectGuidMap = make(map[uint64]GameObject)
 	p.CoopApplyMap = make(map[uint32]int64)
 	p.StaminaInfo = new(StaminaInfo)
-	p.StaminaInfo.ActiveAvatarPos = new(Vector)
 	p.VehicleInfo = new(VehicleInfo)
 	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
 	p.InitAllAvatar()

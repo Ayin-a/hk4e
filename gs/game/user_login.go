@@ -47,6 +47,12 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	// 初始化
 	player.InitAll()
 	// player.TeamConfig.UpdateTeam()
+
+	// 确保玩家位置安全
+	player.Pos.X = player.SafePos.X
+	player.Pos.Y = player.SafePos.Y
+	player.Pos.Z = player.SafePos.Z
+
 	// 创建世界
 	world := WORLD_MANAGER.CreateWorld(player)
 	world.AddPlayer(player, player.SceneId)
@@ -374,6 +380,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.CostumeList = append(player.CostumeList, 201601)
 	player.CostumeList = append(player.CostumeList, 203101)
 
+	player.SafePos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 	player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 	player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
 

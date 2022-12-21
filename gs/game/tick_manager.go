@@ -143,39 +143,39 @@ func (t *TickManager) onTick5Second(now int64) {
 			}
 		}
 		for _, player := range world.playerMap {
-			if world.multiplayer {
-				scene := world.GetSceneById(player.SceneId)
-
-				// 多人世界其他玩家的坐标位置广播
-				worldPlayerLocationNotify := &proto.WorldPlayerLocationNotify{
-					PlayerWorldLocList: make([]*proto.PlayerWorldLocationInfo, 0),
-				}
-				for _, worldPlayer := range world.playerMap {
-					playerWorldLocationInfo := &proto.PlayerWorldLocationInfo{
-						SceneId: worldPlayer.SceneId,
-						PlayerLoc: &proto.PlayerLocationInfo{
-							Uid: worldPlayer.PlayerID,
-							Pos: &proto.Vector{
-								X: float32(worldPlayer.Pos.X),
-								Y: float32(worldPlayer.Pos.Y),
-								Z: float32(worldPlayer.Pos.Z),
-							},
-							Rot: &proto.Vector{
-								X: float32(worldPlayer.Rot.X),
-								Y: float32(worldPlayer.Rot.Y),
-								Z: float32(worldPlayer.Rot.Z),
-							},
+			// 多人世界其他玩家的坐标位置广播
+			worldPlayerLocationNotify := &proto.WorldPlayerLocationNotify{
+				PlayerWorldLocList: make([]*proto.PlayerWorldLocationInfo, 0),
+			}
+			for _, worldPlayer := range world.playerMap {
+				playerWorldLocationInfo := &proto.PlayerWorldLocationInfo{
+					SceneId: worldPlayer.SceneId,
+					PlayerLoc: &proto.PlayerLocationInfo{
+						Uid: worldPlayer.PlayerID,
+						Pos: &proto.Vector{
+							X: float32(worldPlayer.Pos.X),
+							Y: float32(worldPlayer.Pos.Y),
+							Z: float32(worldPlayer.Pos.Z),
 						},
-					}
-					worldPlayerLocationNotify.PlayerWorldLocList = append(worldPlayerLocationNotify.PlayerWorldLocList, playerWorldLocationInfo)
+						Rot: &proto.Vector{
+							X: float32(worldPlayer.Rot.X),
+							Y: float32(worldPlayer.Rot.Y),
+							Z: float32(worldPlayer.Rot.Z),
+						},
+					},
 				}
-				GAME_MANAGER.SendMsg(cmd.WorldPlayerLocationNotify, player.PlayerID, 0, worldPlayerLocationNotify)
+				worldPlayerLocationNotify.PlayerWorldLocList = append(worldPlayerLocationNotify.PlayerWorldLocList, playerWorldLocationInfo)
+			}
+			GAME_MANAGER.SendMsg(cmd.WorldPlayerLocationNotify, player.PlayerID, 0, worldPlayerLocationNotify)
 
+			for _, scene := range world.sceneMap {
 				scenePlayerLocationNotify := &proto.ScenePlayerLocationNotify{
-					SceneId:       player.SceneId,
-					PlayerLocList: make([]*proto.PlayerLocationInfo, 0),
+					SceneId:        scene.id,
+					PlayerLocList:  make([]*proto.PlayerLocationInfo, 0),
+					VehicleLocList: make([]*proto.VehicleLocationInfo, 0),
 				}
 				for _, scenePlayer := range scene.playerMap {
+					// 玩家位置
 					playerLocationInfo := &proto.PlayerLocationInfo{
 						Uid: scenePlayer.PlayerID,
 						Pos: &proto.Vector{
@@ -190,6 +190,35 @@ func (t *TickManager) onTick5Second(now int64) {
 						},
 					}
 					scenePlayerLocationNotify.PlayerLocList = append(scenePlayerLocationNotify.PlayerLocList, playerLocationInfo)
+					// 载具位置
+					for _, entityId := range scenePlayer.VehicleInfo.LastCreateEntityIdMap {
+						entity := scene.GetEntity(entityId)
+						// 确保实体类型是否为载具
+						if entity != nil && entity.gadgetEntity != nil && entity.gadgetEntity.gadgetVehicleEntity != nil {
+							vehicleLocationInfo := &proto.VehicleLocationInfo{
+								Rot: &proto.Vector{
+									X: float32(entity.rot.X),
+									Y: float32(entity.rot.Y),
+									Z: float32(entity.rot.Z),
+								},
+								EntityId: entity.id,
+								CurHp:    entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)],
+								OwnerUid: entity.gadgetEntity.gadgetVehicleEntity.owner.PlayerID,
+								Pos: &proto.Vector{
+									X: float32(entity.pos.X),
+									Y: float32(entity.pos.Y),
+									Z: float32(entity.pos.Z),
+								},
+								UidList:  make([]uint32, 0, len(entity.gadgetEntity.gadgetVehicleEntity.memberMap)),
+								GadgetId: entity.gadgetEntity.gadgetVehicleEntity.vehicleId,
+								MaxHp:    entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP)],
+							}
+							for _, p := range entity.gadgetEntity.gadgetVehicleEntity.memberMap {
+								vehicleLocationInfo.UidList = append(vehicleLocationInfo.UidList, p.PlayerID)
+							}
+							scenePlayerLocationNotify.VehicleLocList = append(scenePlayerLocationNotify.VehicleLocList, vehicleLocationInfo)
+						}
+					}
 				}
 				GAME_MANAGER.SendMsg(cmd.ScenePlayerLocationNotify, player.PlayerID, 0, scenePlayerLocationNotify)
 			}
@@ -209,19 +238,30 @@ func (t *TickManager) onTickSecond(now int64) {
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
 			}
 			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
+			// 玩家安全位置更新
+			switch player.StaminaInfo.State {
+			case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
+				proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
+				proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
+				proto.MotionState_MOTION_STATE_DASH:
+				// 仅在陆地时更新玩家安全位置
+				player.SafePos.X = player.Pos.X
+				player.SafePos.Y = player.Pos.Y
+				player.SafePos.Z = player.Pos.Z
+			}
+		}
+		if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
 			// 刷怪
-			if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
-				scene := world.GetSceneById(3)
-				monsterEntityCount := 0
-				for _, entity := range scene.entityMap {
-					if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
-						monsterEntityCount++
-					}
+			scene := world.GetSceneById(3)
+			monsterEntityCount := 0
+			for _, entity := range scene.entityMap {
+				if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
+					monsterEntityCount++
 				}
-				if monsterEntityCount < 30 {
-					monsterEntityId := t.createMonster(world.owner, scene)
-					GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
-				}
+			}
+			if monsterEntityCount < 30 {
+				monsterEntityId := t.createMonster(scene)
+				GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
 			}
 		}
 	}
@@ -241,7 +281,7 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 func (t *TickManager) onTick100MilliSecond(now int64) {
 }
 
-func (t *TickManager) createMonster(player *model.Player, scene *Scene) uint32 {
+func (t *TickManager) createMonster(scene *Scene) uint32 {
 	pos := &model.Vector{
 		X: 2747,
 		Y: 194,

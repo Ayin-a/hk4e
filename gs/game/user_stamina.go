@@ -4,8 +4,6 @@ import (
 	"strings"
 	"time"
 
-	gdc "hk4e/gs/config"
-
 	"hk4e/gdconf"
 	"hk4e/gs/constant"
 	"hk4e/gs/model"
@@ -438,11 +436,12 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		return
 	}
 
-	// TODO
-	// 溺水安全点可能需要读取附近锚点坐标
-	// 多次溺水后提示溺水的死亡信息
-	// 官服 游戏离线也会回到安全位置
-	// 很显然目前这个很不完善
+	// TODO 耐力未完成的内容：
+	// 一直溺水回到距离最近的位置 ?
+	// 溺水队伍扣血
+	// 队伍都没血了显示死亡界面
+	// 技能耐力消耗配置表
+	// 食物影响消耗的耐力
 
 	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
 	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {
@@ -457,26 +456,26 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		g.SetPlayerStamina(player, maxStamina/2)
 		// 如果玩家的位置比锚点距离近则优先使用玩家位置
 		pos := &model.Vector{
-			X: player.Pos.X,
-			Y: player.Pos.Y,
-			Z: player.Pos.Z,
+			X: player.SafePos.X,
+			Y: player.SafePos.Y,
+			Z: player.SafePos.Z,
 		}
 		// 获取最近角色实体的锚点
 		// TODO 阻塞优化 16ms我感觉有点慢
-		for _, entry := range gdc.CONF.ScenePointEntries {
-			if entry.PointData == nil || entry.PointData.TranPos == nil {
-				continue
-			}
-			pointPos := &model.Vector{
-				X: entry.PointData.TranPos.X,
-				Y: entry.PointData.TranPos.Y,
-				Z: entry.PointData.TranPos.Z,
-			}
-			// 该坐标距离小于之前的则赋值
-			if player.StaminaInfo.ActiveAvatarPos.Distance(pointPos) < player.StaminaInfo.ActiveAvatarPos.Distance(pos) {
-				pos = pointPos
-			}
-		}
+		//for _, entry := range gdc.CONF.ScenePointEntries {
+		//	if entry.PointData == nil || entry.PointData.TranPos == nil {
+		//		continue
+		//	}
+		//	pointPos := &model.Vector{
+		//		X: entry.PointData.TranPos.X,
+		//		Y: entry.PointData.TranPos.Y,
+		//		Z: entry.PointData.TranPos.Z,
+		//	}
+		//	// 该坐标距离小于之前的则赋值
+		//	if player.SafePos.Distance(pointPos) < player.SafePos.Distance(pos) {
+		//		pos = pointPos
+		//	}
+		//}
 		// 传送玩家至安全位置
 		g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Revival), player.SceneId, pos)
 	}

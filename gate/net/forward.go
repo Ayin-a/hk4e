@@ -22,26 +22,23 @@ import (
 )
 
 const (
-	ConnWaitToken = iota
-	ConnWaitLogin
-	ConnAlive
+	ConnEst = iota
+	ConnActive
 	ConnClose
 )
 
 // 发送消息到GS
 func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) {
 	userId := session.userId
-	headMeta := session.headMeta
 	connState := session.connState
 	if protoMsg.HeadMessage == nil {
 		logger.Error("recv null head msg: %v", protoMsg)
 	}
-	headMeta.seq = protoMsg.HeadMessage.ClientSequenceId
 	// gate本地处理的请求
 	switch protoMsg.CmdId {
 	case cmd.GetPlayerTokenReq:
 		// 获取玩家token请求
-		if connState != ConnWaitToken {
+		if connState != ConnEst {
 			return
 		}
 		getPlayerTokenReq := protoMsg.PayloadMessage.(*proto.GetPlayerTokenReq)
@@ -56,51 +53,9 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		rsp.HeadMessage = k.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
 		rsp.PayloadMessage = getPlayerTokenRsp
 		k.localMsgOutput <- rsp
-	case cmd.PlayerLoginReq:
-		// 玩家登录请求
-		if connState != ConnWaitLogin {
-			return
-		}
-		playerLoginReq := protoMsg.PayloadMessage.(*proto.PlayerLoginReq)
-		playerLoginRsp := k.playerLogin(playerLoginReq, session)
-		if playerLoginRsp == nil {
-			return
-		}
-		// 返回数据到客户端
-		rsp := new(ProtoMsg)
-		rsp.ConvId = protoMsg.ConvId
-		rsp.CmdId = cmd.PlayerLoginRsp
-		rsp.HeadMessage = k.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
-		rsp.PayloadMessage = playerLoginRsp
-		k.localMsgOutput <- rsp
-		// 登录成功 通知GS初始化相关数据
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.ClientSeq = headMeta.seq
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.UserLoginNotify,
-			GameMsg: gameMsg,
-		})
-		logger.Info("send to gs user login ok, ConvId: %v, UserId: %v", protoMsg.ConvId, gameMsg.UserId)
-	case cmd.SetPlayerBornDataReq:
-		// 玩家注册请求
-		if connState != ConnAlive {
-			return
-		}
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.CmdId = cmd.SetPlayerBornDataReq
-		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-		gameMsg.PayloadMessage = protoMsg.PayloadMessage
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.UserRegNotify,
-			GameMsg: gameMsg,
-		})
 	case cmd.PlayerForceExitReq:
 		// 玩家退出游戏请求
-		if connState != ConnAlive {
+		if connState != ConnActive {
 			return
 		}
 		k.kcpEventInput <- &KcpEvent{
@@ -110,13 +65,9 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		}
 	case cmd.PingReq:
 		// ping请求
-		if connState != ConnAlive {
-			return
-		}
 		pingReq := protoMsg.PayloadMessage.(*proto.PingReq)
 		logger.Debug("user ping req, data: %v", pingReq.String())
 		// 返回数据到客户端
-		// TODO 记录客户端最后一次ping时间做超时下线处理
 		pingRsp := new(proto.PingRsp)
 		pingRsp.ClientTime = pingReq.ClientTime
 		rsp := new(ProtoMsg)
@@ -125,32 +76,45 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		rsp.HeadMessage = k.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
 		rsp.PayloadMessage = pingRsp
 		k.localMsgOutput <- rsp
-		// 通知GS玩家客户端的本地时钟
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.ClientTime = pingReq.ClientTime
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.ClientTimeNotify,
-			GameMsg: gameMsg,
-		})
-		// RTT
 		logger.Debug("convId: %v, RTO: %v, SRTT: %v, RTTVar: %v", protoMsg.ConvId, session.conn.GetRTO(), session.conn.GetSRTT(), session.conn.GetSRTTVar())
-		rtt := session.conn.GetSRTT()
-		// 通知GS玩家客户端往返时延
-		gameMsg = new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.ClientRtt = uint32(rtt)
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.ClientRttNotify,
-			GameMsg: gameMsg,
-		})
-	default:
-		// 未登录禁止访问
-		if connState != ConnAlive {
+		if connState != ConnActive {
 			return
 		}
+		// 通知GS玩家客户端的本地时钟
+		connCtrlMsg := new(mq.ConnCtrlMsg)
+		connCtrlMsg.UserId = userId
+		connCtrlMsg.ClientTime = pingReq.ClientTime
+		k.messageQueue.SendToGs("1", &mq.NetMsg{
+			MsgType:     mq.MsgTypeConnCtrl,
+			EventId:     mq.ClientTimeNotify,
+			ConnCtrlMsg: connCtrlMsg,
+		})
+		// 通知GS玩家客户端往返时延
+		rtt := session.conn.GetSRTT()
+		connCtrlMsg = new(mq.ConnCtrlMsg)
+		connCtrlMsg.UserId = userId
+		connCtrlMsg.ClientRtt = uint32(rtt)
+		k.messageQueue.SendToGs("1", &mq.NetMsg{
+			MsgType:     mq.MsgTypeConnCtrl,
+			EventId:     mq.ClientRttNotify,
+			ConnCtrlMsg: connCtrlMsg,
+		})
+	default:
+		if connState != ConnActive && !(protoMsg.CmdId == cmd.PlayerLoginReq || protoMsg.CmdId == cmd.SetPlayerBornDataReq) {
+			logger.Error("conn not active so drop packet, cmdId: %v, userId: %v, convId: %v", protoMsg.CmdId, userId, protoMsg.ConvId)
+			return
+		}
+		// 转发到GS
+		gameMsg := new(mq.GameMsg)
+		gameMsg.UserId = userId
+		gameMsg.CmdId = protoMsg.CmdId
+		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
+		gameMsg.PayloadMessage = protoMsg.PayloadMessage
+		k.messageQueue.SendToGs("1", &mq.NetMsg{
+			MsgType: mq.MsgTypeGame,
+			EventId: mq.NormalMsg,
+			GameMsg: gameMsg,
+		})
 		// 转发到FIGHT
 		if protoMsg.CmdId == cmd.CombatInvocationsNotify {
 			gameMsg := new(mq.GameMsg)
@@ -164,17 +128,6 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 				GameMsg: gameMsg,
 			})
 		}
-		// 转发到GS
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.CmdId = protoMsg.CmdId
-		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-		gameMsg.PayloadMessage = protoMsg.PayloadMessage
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.NormalMsg,
-			GameMsg: gameMsg,
-		})
 	}
 }
 
@@ -208,26 +161,40 @@ func (k *KcpConnectManager) sendMsgHandle() {
 		case protoMsg := <-k.localMsgOutput:
 			sendToClientFn(protoMsg)
 		case netMsg := <-k.messageQueue.GetNetMsg():
-			if netMsg.MsgType != mq.MsgTypeGame {
-				logger.Error("recv unknown msg type from game server, msg type: %v", netMsg.MsgType)
-				continue
+			switch netMsg.MsgType {
+			case mq.MsgTypeGame:
+				if netMsg.EventId != mq.NormalMsg {
+					logger.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
+					continue
+				}
+				gameMsg := netMsg.GameMsg
+				convId, exist := userIdConvMap[gameMsg.UserId]
+				if !exist {
+					logger.Error("can not find convId by userId")
+					continue
+				}
+				protoMsg := new(ProtoMsg)
+				protoMsg.ConvId = convId
+				protoMsg.CmdId = gameMsg.CmdId
+				protoMsg.HeadMessage = k.getHeadMsg(gameMsg.ClientSeq)
+				protoMsg.PayloadMessage = gameMsg.PayloadMessage
+				sendToClientFn(protoMsg)
+			case mq.MsgTypeConnCtrl:
+				if netMsg.EventId != mq.KickPlayerNotify {
+					continue
+				}
+				connCtrlMsg := netMsg.ConnCtrlMsg
+				convId, exist := userIdConvMap[connCtrlMsg.KickUserId]
+				if !exist {
+					logger.Error("can not find convId by userId")
+					continue
+				}
+				k.kcpEventInput <- &KcpEvent{
+					ConvId:       convId,
+					EventId:      KcpConnForceClose,
+					EventMessage: connCtrlMsg.KickReason,
+				}
 			}
-			if netMsg.EventId != mq.NormalMsg {
-				logger.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
-				continue
-			}
-			gameMsg := netMsg.GameMsg
-			convId, exist := userIdConvMap[gameMsg.UserId]
-			if !exist {
-				logger.Error("can not find convId by userId")
-				continue
-			}
-			protoMsg := new(ProtoMsg)
-			protoMsg.ConvId = convId
-			protoMsg.CmdId = gameMsg.CmdId
-			protoMsg.HeadMessage = k.getHeadMsg(gameMsg.ClientSeq)
-			protoMsg.PayloadMessage = gameMsg.PayloadMessage
-			sendToClientFn(protoMsg)
 		}
 	}
 }
@@ -276,15 +243,16 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	oldSession := k.GetSessionByUserId(tokenVerifyRsp.PlayerID)
 	if oldSession != nil {
 		// 顶号
+		kickFinishNotifyChan := make(chan bool)
 		k.kcpEventInput <- &KcpEvent{
 			ConvId:       oldSession.conn.GetConv(),
-			EventId:      KcpConnForceClose,
-			EventMessage: uint32(kcp.EnetServerRelogin),
+			EventId:      KcpConnRelogin,
+			EventMessage: kickFinishNotifyChan,
 		}
+		<-kickFinishNotifyChan
 	}
 	// 关联玩家uid和连接信息
 	session.userId = tokenVerifyRsp.PlayerID
-	session.connState = ConnWaitLogin
 	k.SetSession(session, session.conn.GetConv(), session.userId)
 	k.createSessionChan <- session
 	// 返回响应
@@ -344,7 +312,6 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		timeRand := random.GetTimeRand()
 		serverSeedUint64 := timeRand.Uint64()
 		session.seed = serverSeedUint64
-		session.changeXorKey = true
 		seedUint64 := serverSeedUint64 ^ clientSeedUint64
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
@@ -367,29 +334,5 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)
 		rsp.Sign = base64.StdEncoding.EncodeToString(seedSign)
 	}
-	return rsp
-}
-
-func (k *KcpConnectManager) playerLogin(req *proto.PlayerLoginReq, session *Session) (rsp *proto.PlayerLoginRsp) {
-	logger.Debug("player login, info: %v", req.String())
-	// TODO 验证token
-	session.connState = ConnAlive
-	// 返回响应
-	rsp = new(proto.PlayerLoginRsp)
-	rsp.IsUseAbilityHash = true
-	rsp.AbilityHashCode = -228935105
-	rsp.GameBiz = "hk4e_cn"
-	rsp.IsScOpen = false
-	rsp.RegisterCps = "taptap"
-	rsp.CountryCode = "CN"
-	rsp.Birthday = "2000-01-01"
-	rsp.TotalTickTime = 1185941.871788
-	rsp.ClientDataVersion = k.regionCurr.RegionInfo.ClientDataVersion
-	rsp.ClientSilenceDataVersion = k.regionCurr.RegionInfo.ClientSilenceDataVersion
-	rsp.ClientMd5 = k.regionCurr.RegionInfo.ClientDataMd5
-	rsp.ClientSilenceMd5 = k.regionCurr.RegionInfo.ClientSilenceDataMd5
-	rsp.ResVersionConfig = k.regionCurr.RegionInfo.ResVersionConfig
-	rsp.ClientVersionSuffix = k.regionCurr.RegionInfo.ClientVersionSuffix
-	rsp.ClientSilenceVersionSuffix = k.regionCurr.RegionInfo.ClientSilenceVersionSuffix
 	return rsp
 }

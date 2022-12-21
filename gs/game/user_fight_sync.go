@@ -18,6 +18,9 @@ func DoForward[IET model.InvokeEntryType](player *model.Player, req pb.Message, 
 	}
 	cmdId := cmdProtoMap.GetCmdIdByProtoObj(req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
 		ntf := cmdProtoMap.GetProtoObjByCmdId(cmdId)
 		for _, fieldName := range copyFieldList {
@@ -90,6 +93,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		return
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {

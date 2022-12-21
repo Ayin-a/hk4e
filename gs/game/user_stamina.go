@@ -1,9 +1,10 @@
 package game
 
 import (
-	gdc "hk4e/gs/config"
 	"strings"
 	"time"
+
+	gdc "hk4e/gs/config"
 
 	"hk4e/gdconf"
 	"hk4e/gs/constant"
@@ -529,7 +530,7 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
 	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
-	//logger.Debug("player stamina set, stamina: %v", stamina)
+	// logger.Debug("player stamina set, stamina: %v", stamina)
 
 	// PacketPlayerPropNotify
 	g.PlayerPropNotify(player, prop)

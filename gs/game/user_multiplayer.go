@@ -140,7 +140,7 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 
 	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
 
-	// g.LoginNotify(player.PlayerID, player, 0)
+	g.LoginNotify(player.PlayerID, player, 0)
 
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
 		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)
@@ -268,7 +268,6 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 			return false
 		}
 	}
-	g.UserWorldRemovePlayer(oldWorld, player)
 	g.ReconnectPlayer(player.PlayerID)
 	return true
 }
@@ -318,12 +317,13 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	world.RemovePlayer(player)
 	player.WorldId = 0
-	if world.multiplayer && world.GetWorldPlayerNum() > 0 {
-		g.UpdateWorldPlayerInfo(world, player)
-	}
 	if world.owner.PlayerID == player.PlayerID {
 		// 房主离开销毁世界
 		WORLD_MANAGER.DestroyWorld(world.id)
+		return
+	}
+	if world.multiplayer && world.GetWorldPlayerNum() > 0 {
+		g.UpdateWorldPlayerInfo(world, player)
 	}
 }
 

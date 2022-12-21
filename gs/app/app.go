@@ -49,7 +49,6 @@ func Run(ctx context.Context, configFile string) error {
 	defer messageQueue.Close()
 
 	gameManager := game.NewGameManager(db, messageQueue)
-	gameManager.Start()
 	defer gameManager.Stop()
 
 	c := make(chan os.Signal, 1)

@@ -2,6 +2,7 @@ package game
 
 import (
 	"hk4e/common/mq"
+	"hk4e/gate/kcp"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -37,8 +38,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
-		// 临时为了调试便捷搞的重连 生产环境请务必去除 不然新用户会一直重连不能进入
-		// GAME_MANAGER.ReconnectPlayer(userId)
+		GAME_MANAGER.DisconnectPlayer(userId, kcp.EnetNotFoundSession)
 		return
 	}
 	player.ClientSeq = clientSeq
@@ -119,22 +119,30 @@ func (r *RouteManager) InitRoute() {
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
-	if netMsg.MsgType != mq.MsgTypeGame {
-		return
-	}
-	gameMsg := netMsg.GameMsg
-	switch netMsg.EventId {
-	case mq.NormalMsg:
-		r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
-	case mq.UserRegNotify:
-		GAME_MANAGER.OnReg(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
-	case mq.UserLoginNotify:
-		GAME_MANAGER.OnLogin(gameMsg.UserId, gameMsg.ClientSeq)
-	case mq.UserOfflineNotify:
-		GAME_MANAGER.OnUserOffline(gameMsg.UserId)
-	case mq.ClientRttNotify:
-		GAME_MANAGER.ClientRttNotify(gameMsg.UserId, gameMsg.ClientRtt)
-	case mq.ClientTimeNotify:
-		GAME_MANAGER.ClientTimeNotify(gameMsg.UserId, gameMsg.ClientTime)
+	switch netMsg.MsgType {
+	case mq.MsgTypeGame:
+		gameMsg := netMsg.GameMsg
+		switch netMsg.EventId {
+		case mq.NormalMsg:
+			if gameMsg.CmdId == cmd.PlayerLoginReq {
+				GAME_MANAGER.PlayerLoginReq(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+				return
+			}
+			if gameMsg.CmdId == cmd.SetPlayerBornDataReq {
+				GAME_MANAGER.SetPlayerBornDataReq(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+				return
+			}
+			r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+		case mq.UserOfflineNotify:
+			GAME_MANAGER.OnUserOffline(gameMsg.UserId)
+		}
+	case mq.MsgTypeConnCtrl:
+		connCtrlMsg := netMsg.ConnCtrlMsg
+		switch netMsg.EventId {
+		case mq.ClientRttNotify:
+			GAME_MANAGER.ClientRttNotify(connCtrlMsg.UserId, connCtrlMsg.ClientRtt)
+		case mq.ClientTimeNotify:
+			GAME_MANAGER.ClientTimeNotify(connCtrlMsg.UserId, connCtrlMsg.ClientTime)
+		}
 	}
 }

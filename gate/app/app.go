@@ -24,6 +24,7 @@ func Run(ctx context.Context, configFile string) error {
 
 	connectManager := net.NewKcpConnectManager(messageQueue)
 	connectManager.Start()
+	defer connectManager.Stop()
 
 	go func() {
 		outputChan := connectManager.GetKcpEventOutputChan()

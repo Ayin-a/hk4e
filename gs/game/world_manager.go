@@ -1,9 +1,10 @@
 package game
 
 import (
-	"hk4e/protocol/cmd"
 	"math"
 	"time"
+
+	"hk4e/protocol/cmd"
 
 	"hk4e/common/mq"
 	"hk4e/gs/constant"
@@ -64,7 +65,7 @@ func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 		playerFirstEnterMap: make(map[uint32]int64),
 		waitEnterPlayerMap:  make(map[uint32]int64),
 		multiplayerTeam:     CreateMultiplayerTeam(),
-		peerMap:             make(map[uint32]*model.Player),
+		peerList:            make([]*model.Player, 0),
 	}
 	if world.IsBigWorld() {
 		world.aoiManager = aoi.NewAoiManager(
@@ -132,7 +133,7 @@ type World struct {
 	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
 	waitEnterPlayerMap  map[uint32]int64  // 等待进入世界的列表 key:uid value:开始时间
 	multiplayerTeam     *MultiplayerTeam
-	peerMap             map[uint32]*model.Player // key:玩家编号 value:player对象
+	peerList            []*model.Player // 玩家编号列表
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
@@ -157,17 +158,23 @@ func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
 
 // GetPlayerPeerId 获取当前玩家世界内编号
 func (w *World) GetPlayerPeerId(player *model.Player) uint32 {
-	for peerId, worldPlayer := range w.peerMap {
+	peerId := uint32(0)
+	for peerIdIndex, worldPlayer := range w.peerList {
 		if worldPlayer.PlayerID == player.PlayerID {
-			return peerId
+			peerId = uint32(peerIdIndex) + 1
 		}
 	}
-	return 0
+	logger.Debug("get player peer id is: %v, uid: %v", peerId, player.PlayerID)
+	return peerId
 }
 
-// GetNextPeerId 获取下一个世界内玩家编号
-func (w *World) GetNextPeerId() uint32 {
-	return uint32(len(w.playerMap) + 1)
+// GetPlayerByPeerId 通过世界内编号获取玩家
+func (w *World) GetPlayerByPeerId(peerId uint32) *model.Player {
+	peerIdIndex := int(peerId) - 1
+	if peerIdIndex >= len(w.peerList) {
+		return nil
+	}
+	return w.peerList[peerIdIndex]
 }
 
 // GetWorldPlayerNum 获取世界中玩家的数量
@@ -176,7 +183,7 @@ func (w *World) GetWorldPlayerNum() int {
 }
 
 func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
-	w.peerMap[w.GetNextPeerId()] = player
+	w.peerList = append(w.peerList, player)
 	w.playerMap[player.PlayerID] = player
 	// 将玩家自身当前的队伍角色信息复制到世界的玩家本地队伍
 	team := player.TeamConfig.GetActiveTeam()
@@ -203,7 +210,8 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 }
 
 func (w *World) RemovePlayer(player *model.Player) {
-	delete(w.peerMap, w.GetPlayerPeerId(player))
+	peerId := w.GetPlayerPeerId(player)
+	w.peerList = append(w.peerList[:peerId-1], w.peerList[peerId:]...)
 	scene := w.sceneMap[player.SceneId]
 	scene.RemovePlayer(player)
 	delete(w.playerMap, player.PlayerID)
@@ -416,7 +424,7 @@ func (w *World) SetPlayerLocalTeam(player *model.Player, avatarIdList []uint32) 
 }
 
 func (w *World) copyLocalTeamToWorld(start int, end int, peerId uint32) {
-	player := w.peerMap[peerId]
+	player := w.GetPlayerByPeerId(peerId)
 	localTeam := w.GetPlayerLocalTeam(player)
 	localTeamIndex := 0
 	for index := start; index <= end; index++ {
@@ -438,6 +446,10 @@ func (w *World) copyLocalTeamToWorld(start int, end int, peerId uint32) {
 
 // UpdateMultiplayerTeam 整合所有玩家的本地队伍计算出世界队伍
 func (w *World) UpdateMultiplayerTeam() {
+	_, exist := w.playerMap[w.owner.PlayerID]
+	if !exist {
+		return
+	}
 	w.multiplayerTeam.worldTeam = make([]*WorldAvatar, 4)
 	switch w.GetWorldPlayerNum() {
 	case 1:

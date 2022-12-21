@@ -14,6 +14,20 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+func (g *GameManager) PlayerLoginReq(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
+	logger.Info("user login req, uid: %v", userId)
+	req := payloadMsg.(*proto.PlayerLoginReq)
+	logger.Debug("login data: %v", req)
+	g.OnLogin(userId, clientSeq)
+}
+
+func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
+	logger.Info("user reg req, uid: %v", userId)
+	req := payloadMsg.(*proto.SetPlayerBornDataReq)
+	logger.Debug("reg data: %v", req)
+	g.OnReg(userId, clientSeq, req)
+}
+
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32) {
 	logger.Info("user login, uid: %v", userId)
 	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq)
@@ -117,6 +131,17 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
 	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, g.PacketAvatarDataNotify(player))
 	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, g.PacketOpenStateUpdateNotify())
+	playerLoginRsp := &proto.PlayerLoginRsp{
+		IsUseAbilityHash: true,
+		AbilityHashCode:  -228935105,
+		GameBiz:          "hk4e_cn",
+		IsScOpen:         false,
+		RegisterCps:      "taptap",
+		CountryCode:      "CN",
+		Birthday:         "2000-01-01",
+		TotalTickTime:    1185941.871788,
+	}
+	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
 }
 
 func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {

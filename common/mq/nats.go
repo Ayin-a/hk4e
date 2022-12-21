@@ -61,7 +61,7 @@ func (m *MessageQueue) recvHandler() {
 		switch netMsg.MsgType {
 		case MsgTypeGame:
 			gameMsg := netMsg.GameMsg
-			if netMsg.EventId == NormalMsg || netMsg.EventId == UserRegNotify {
+			if netMsg.EventId == NormalMsg {
 				// protobuf PayloadMessage
 				payloadMessage := m.cmdProtoMap.GetProtoObjByCmdId(gameMsg.CmdId)
 				if payloadMessage == nil {
@@ -76,6 +76,7 @@ func (m *MessageQueue) recvHandler() {
 				gameMsg.PayloadMessage = payloadMessage
 			}
 		case MsgTypeFight:
+		case MsgTypeConnCtrl:
 		}
 		m.netMsgOutput <- netMsg
 	}
@@ -97,6 +98,7 @@ func (m *MessageQueue) sendHandler() {
 				gameMsg.PayloadMessageData = payloadMessageData
 			}
 		case MsgTypeFight:
+		case MsgTypeConnCtrl:
 		}
 		// msgpack NetMsg
 		netMsgData, err := msgpack.Marshal(netMsg)

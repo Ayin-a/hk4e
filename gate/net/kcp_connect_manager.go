@@ -16,7 +16,6 @@ import (
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
-	"hk4e/protocol/proto"
 )
 
 const PacketFreqLimit = 1000
@@ -35,7 +34,6 @@ type KcpConnectManager struct {
 	destroySessionChan chan *Session
 	// 密钥相关
 	dispatchKey  []byte
-	regionCurr   *proto.QueryCurrRegionHttpRsp
 	signRsaKey   []byte
 	encRsaKeyMap map[string][]byte
 }
@@ -58,9 +56,6 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue) (r *KcpConnectManager) 
 func (k *KcpConnectManager) Start() {
 	// 读取密钥相关文件
 	k.signRsaKey, k.encRsaKeyMap, _ = region.LoadRsaKey()
-	// region
-	regionCurr, _, _ := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
-	k.regionCurr = regionCurr
 	// key
 	dispatchEc2bSeedRsp, err := httpclient.Get[controller.DispatchEc2bSeedRsp]("http://127.0.0.1:8080/dispatch/ec2b/seed", "")
 	if err != nil {
@@ -89,6 +84,11 @@ func (k *KcpConnectManager) Start() {
 	go k.acceptHandle(listener)
 }
 
+func (k *KcpConnectManager) Stop() {
+	k.closeAllKcpConn()
+	time.Sleep(time.Second * 3)
+}
+
 func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 	logger.Debug("accept handle start")
 	for {
@@ -107,16 +107,13 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 		logger.Debug("client connect, convId: %v", convId)
 		kcpRawSendChan := make(chan *ProtoMsg, 1000)
 		session := &Session{
-			conn:      conn,
-			connState: ConnWaitToken,
-			userId:    0,
-			headMeta: &ClientHeadMeta{
-				seq: 0,
-			},
-			kcpRawSendChan: kcpRawSendChan,
-			seed:           0,
-			xorKey:         k.dispatchKey,
-			changeXorKey:   false,
+			conn:            conn,
+			connState:       ConnEst,
+			userId:          0,
+			kcpRawSendChan:  kcpRawSendChan,
+			seed:            0,
+			xorKey:          k.dispatchKey,
+			changeXorKeyFin: false,
 		}
 		go k.recvHandle(session)
 		go k.sendHandle(session)
@@ -203,24 +200,19 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 	}
 }
 
-type ClientHeadMeta struct {
-	seq uint32
-}
-
 type Session struct {
-	conn           *kcp.UDPSession
-	connState      uint8
-	userId         uint32
-	headMeta       *ClientHeadMeta
-	kcpRawSendChan chan *ProtoMsg
-	seed           uint64
-	xorKey         []byte
-	changeXorKey   bool
+	conn            *kcp.UDPSession
+	connState       uint8
+	userId          uint32
+	kcpRawSendChan  chan *ProtoMsg
+	seed            uint64
+	xorKey          []byte
+	changeXorKeyFin bool
 }
 
+// 接收
 func (k *KcpConnectManager) recvHandle(session *Session) {
 	logger.Debug("recv handle start")
-	// 接收
 	conn := session.conn
 	convId := conn.GetConv()
 	pktFreqLimitCounter := 0
@@ -233,14 +225,6 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 			logger.Error("exit recv loop, conn read err: %v, convId: %v", err, convId)
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
-		}
-		if session.changeXorKey {
-			session.changeXorKey = false
-			keyBlock := random.NewKeyBlock(session.seed)
-			xorKey := keyBlock.XorKey()
-			key := make([]byte, 4096)
-			copy(key, xorKey[:])
-			session.xorKey = key
 		}
 		// 收包频率限制
 		pktFreqLimitCounter++
@@ -267,9 +251,9 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 	}
 }
 
+// 发送
 func (k *KcpConnectManager) sendHandle(session *Session) {
 	logger.Debug("send handle start")
-	// 发送
 	conn := session.conn
 	convId := conn.GetConv()
 	for {
@@ -292,7 +276,31 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
+		if session.changeXorKeyFin == false && protoMsg.CmdId == cmd.GetPlayerTokenRsp {
+			logger.Debug("change session xor key, convId: %v", convId)
+			session.changeXorKeyFin = true
+			keyBlock := random.NewKeyBlock(session.seed)
+			xorKey := keyBlock.XorKey()
+			key := make([]byte, 4096)
+			copy(key, xorKey[:])
+			session.xorKey = key
+		}
+		if protoMsg.CmdId == cmd.PlayerLoginRsp {
+			logger.Debug("session active, convId: %v", convId)
+			session.connState = ConnActive
+		}
 	}
+}
+
+func (k *KcpConnectManager) forceCloseKcpConn(convId uint64, reason uint32) {
+	// 强制关闭某个连接
+	session := k.GetSessionByConvId(convId)
+	if session == nil {
+		logger.Error("session not exist, convId: %v", convId)
+		return
+	}
+	k.closeKcpConn(session, reason)
+	logger.Info("conn has been force close, convId: %v", convId)
 }
 
 func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
@@ -330,19 +338,14 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 }
 
 func (k *KcpConnectManager) closeAllKcpConn() {
-	closeConnList := make([]*kcp.UDPSession, 0)
+	sessionList := make([]*Session, 0)
 	k.sessionMapLock.RLock()
-	for _, v := range k.sessionConvIdMap {
-		closeConnList = append(closeConnList, v.conn)
+	for _, session := range k.sessionConvIdMap {
+		sessionList = append(sessionList, session)
 	}
 	k.sessionMapLock.RUnlock()
-	for _, v := range closeConnList {
-		// 关闭连接
-		v.SendEnetNotify(&kcp.Enet{
-			ConnType: kcp.ConnEnetFin,
-			EnetType: kcp.EnetServerShutdown,
-		})
-		_ = v.Close()
+	for _, session := range sessionList {
+		k.closeKcpConn(session, kcp.EnetServerShutdown)
 	}
 }
 

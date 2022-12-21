@@ -11,6 +11,7 @@ const (
 	KcpConnForceClose = iota
 	KcpAllConnForceClose
 	KcpGateOpenState
+	KcpConnRelogin
 	KcpConnCloseNotify
 	KcpConnEstNotify
 	KcpConnAddrChangeNotify
@@ -38,23 +39,12 @@ func (k *KcpConnectManager) eventHandle() {
 		logger.Info("kcp manager recv event, ConvId: %v, EventId: %v, EventMessage Type: %v", event.ConvId, event.EventId, reflect.TypeOf(event.EventMessage))
 		switch event.EventId {
 		case KcpConnForceClose:
-			// 强制关闭某个连接
-			session := k.GetSessionByConvId(event.ConvId)
-			if session == nil {
-				logger.Error("session not exist, convId: %v", event.ConvId)
-				continue
-			}
 			reason, ok := event.EventMessage.(uint32)
 			if !ok {
 				logger.Error("event KcpConnForceClose msg type error")
-				continue
+				return
 			}
-			session.conn.SendEnetNotify(&kcp.Enet{
-				ConnType: kcp.ConnEnetFin,
-				EnetType: reason,
-			})
-			_ = session.conn.Close()
-			logger.Info("conn has been force close, convId: %v", event.ConvId)
+			k.forceCloseKcpConn(event.ConvId, reason)
 		case KcpAllConnForceClose:
 			// 强制关闭所有连接
 			k.closeAllKcpConn()
@@ -70,6 +60,14 @@ func (k *KcpConnectManager) eventHandle() {
 			if openState == false {
 				k.closeAllKcpConn()
 			}
+		case KcpConnRelogin:
+			kickFinishNotifyChan, ok := event.EventMessage.(chan bool)
+			if !ok {
+				logger.Error("event KcpConnRelogin msg type error")
+				continue
+			}
+			k.forceCloseKcpConn(event.ConvId, kcp.EnetServerRelogin)
+			kickFinishNotifyChan <- true
 		}
 	}
 }

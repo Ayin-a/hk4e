@@ -66,7 +66,6 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.ChooseCurAvatarTeamReq, GAME_MANAGER.ChooseCurAvatarTeamReq)
 	r.registerRouter(cmd.GetGachaInfoReq, GAME_MANAGER.GetGachaInfoReq)
 	r.registerRouter(cmd.DoGachaReq, GAME_MANAGER.DoGachaReq)
-	r.registerRouter(cmd.QueryPathReq, GAME_MANAGER.QueryPathReq)
 	r.registerRouter(cmd.CombatInvocationsNotify, GAME_MANAGER.CombatInvocationsNotify)
 	r.registerRouter(cmd.AbilityInvocationsNotify, GAME_MANAGER.AbilityInvocationsNotify)
 	r.registerRouter(cmd.ClientAbilityInitFinishNotify, GAME_MANAGER.ClientAbilityInitFinishNotify)

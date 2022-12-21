@@ -1,4 +1,8 @@
-package alg
+package pfalg
+
+import (
+	"hk4e/pkg/alg"
+)
 
 const (
 	NODE_NONE = iota
@@ -27,7 +31,7 @@ func NewBFS() (r *BFS) {
 	return r
 }
 
-func (b *BFS) InitMap(terrain map[MeshMapPos]bool, start MeshMapPos, end MeshMapPos, extR int16) {
+func (b *BFS) InitMap(terrain map[MeshVector]bool, start MeshVector, end MeshVector, extR int16) {
 	xLen := end.X - start.X
 	yLen := end.Y - start.Y
 	zLen := end.Z - start.Z
@@ -58,7 +62,7 @@ func (b *BFS) InitMap(terrain map[MeshMapPos]bool, start MeshMapPos, end MeshMap
 				} else if x == end.X && y == end.Y && z == end.Z {
 					state = NODE_END
 				} else {
-					_, exist := terrain[MeshMapPos{
+					_, exist := terrain[MeshVector{
 						X: x,
 						Y: y,
 						Z: z,
@@ -161,8 +165,8 @@ func (b *BFS) GetPath() []*PathNode {
 	return path
 }
 
-func (b *BFS) Pathfinding() []MeshMapPos {
-	queue := NewALQueue[*PathNode]()
+func (b *BFS) Pathfinding() []MeshVector {
+	queue := alg.NewALQueue[*PathNode]()
 	b.startPathNode.visit = true
 	queue.EnQueue(b.startPathNode)
 	for queue.Len() > 0 {
@@ -183,10 +187,10 @@ func (b *BFS) Pathfinding() []MeshMapPos {
 	if path == nil {
 		return nil
 	}
-	pathVectorList := make([]MeshMapPos, 0)
+	pathVectorList := make([]MeshVector, 0)
 	for i := len(path) - 1; i >= 0; i-- {
 		node := path[i]
-		pathVectorList = append(pathVectorList, MeshMapPos{
+		pathVectorList = append(pathVectorList, MeshVector{
 			X: node.x,
 			Y: node.y,
 			Z: node.z,

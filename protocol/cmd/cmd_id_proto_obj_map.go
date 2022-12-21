@@ -100,6 +100,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(LifeStateChangeNotify, &proto.LifeStateChangeNotify{})                   // 实体存活状态改变通知
 	c.registerMessage(SceneEntityDrownReq, &proto.SceneEntityDrownReq{})                       // 场景实体溺水请求
 	c.registerMessage(SceneEntityDrownRsp, &proto.SceneEntityDrownRsp{})                       // 场景实体溺水响应
+	c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})                     // 寻路阻挡变动通知
 
 	// 战斗与同步
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
@@ -254,7 +255,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	// c.registerMessage(EntityConfigHashNotify, &proto.EntityConfigHashNotify{})
 	// c.registerMessage(MonsterAIConfigHashNotify, &proto.MonsterAIConfigHashNotify{})
 	// c.registerMessage(GetRegionSearchReq, &proto.GetRegionSearchReq{})
-	// c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})
 
 	// 空消息
 	c.registerMessage(65535, &proto.NullMsg{})

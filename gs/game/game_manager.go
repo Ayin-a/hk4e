@@ -140,7 +140,6 @@ func (g *GameManager) Stop() {
 		EventId: RunUserCopyAndSave,
 	}
 	time.Sleep(time.Second * 5)
-	// g.worldManager.worldStatic.SaveTerrain()
 }
 
 // SendMsg 发送消息给客户端

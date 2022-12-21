@@ -1,8 +1,9 @@
 package game
 
 import (
-	"hk4e/gs/constant"
 	"strconv"
+
+	"hk4e/gs/constant"
 
 	gdc "hk4e/gs/config"
 	"hk4e/gs/model"
@@ -106,23 +107,6 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint32, s
 	}
 	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, enterReason, oldSceneId, oldPos)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
-}
-
-func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user pathfinding enter scene, uid: %v", player.PlayerID)
-	g.SendMsg(cmd.PathfindingEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.PathfindingEnterSceneRsp))
-}
-
-func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user query path, uid: %v", player.PlayerID)
-	req := payloadMsg.(*proto.QueryPathReq)
-
-	queryPathRsp := &proto.QueryPathRsp{
-		Corners:     []*proto.Vector{req.DestinationPos[0]},
-		QueryId:     req.QueryId,
-		QueryStatus: proto.QueryPathRsp_PATH_STATUS_TYPE_SUCC,
-	}
-	g.SendMsg(cmd.QueryPathRsp, player.PlayerID, player.ClientSeq, queryPathRsp)
 }
 
 func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Message) {

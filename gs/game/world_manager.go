@@ -18,20 +18,15 @@ import (
 // 世界管理器
 
 type WorldManager struct {
-	worldMap    map[uint32]*World
-	snowflake   *alg.SnowflakeWorker
-	worldStatic *WorldStatic
-	bigWorld    *World
+	worldMap  map[uint32]*World
+	snowflake *alg.SnowflakeWorker
+	bigWorld  *World
 }
 
 func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 	r = new(WorldManager)
 	r.worldMap = make(map[uint32]*World)
 	r.snowflake = snowflake
-	r.worldStatic = NewWorldStatic()
-	r.worldStatic.InitTerrain()
-	// r.worldStatic.Pathfinding()
-	// r.worldStatic.ConvPathVectorListToAiMoveVectorList()
 	return r
 }
 

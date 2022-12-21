@@ -209,19 +209,19 @@ func (t *TickManager) onTickSecond(now int64) {
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
 			}
 			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
-		}
-		if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
 			// 刷怪
-			scene := world.GetSceneById(3)
-			monsterEntityCount := 0
-			for _, entity := range scene.entityMap {
-				if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
-					monsterEntityCount++
+			if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
+				scene := world.GetSceneById(3)
+				monsterEntityCount := 0
+				for _, entity := range scene.entityMap {
+					if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
+						monsterEntityCount++
+					}
 				}
-			}
-			if monsterEntityCount < 30 {
-				monsterEntityId := t.createMonster(scene)
-				GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
+				if monsterEntityCount < 30 {
+					monsterEntityId := t.createMonster(world.owner, scene)
+					GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
+				}
 			}
 		}
 	}
@@ -241,7 +241,7 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 func (t *TickManager) onTick100MilliSecond(now int64) {
 }
 
-func (t *TickManager) createMonster(scene *Scene) uint32 {
+func (t *TickManager) createMonster(player *model.Player, scene *Scene) uint32 {
 	pos := &model.Vector{
 		X: 2747,
 		Y: 194,

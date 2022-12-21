@@ -108,6 +108,13 @@ func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb
 	g.SendMsg(cmd.ToTheMoonEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
 }
 
+func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user pf enter scene, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.PathfindingEnterSceneReq)
+	_ = req
+	g.SendMsg(cmd.PathfindingEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.PathfindingEnterSceneRsp))
+}
+
 func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user set entity client data, uid: %v", player.PlayerID)
 	ntf := payloadMsg.(*proto.SetEntityClientDataNotify)

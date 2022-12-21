@@ -104,18 +104,21 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			logger.Error("conn not active so drop packet, cmdId: %v, userId: %v, convId: %v", protoMsg.CmdId, userId, protoMsg.ConvId)
 			return
 		}
-		// 转发到GS
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.CmdId = protoMsg.CmdId
-		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-		gameMsg.PayloadMessage = protoMsg.PayloadMessage
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType: mq.MsgTypeGame,
-			EventId: mq.NormalMsg,
-			GameMsg: gameMsg,
-		})
-		// 转发到FIGHT
+		// 只转发到寻路服务器
+		if protoMsg.CmdId == cmd.QueryPathReq || protoMsg.CmdId == cmd.ObstacleModifyNotify {
+			gameMsg := new(mq.GameMsg)
+			gameMsg.UserId = userId
+			gameMsg.CmdId = protoMsg.CmdId
+			gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
+			gameMsg.PayloadMessage = protoMsg.PayloadMessage
+			k.messageQueue.SendToPathfinding("1", &mq.NetMsg{
+				MsgType: mq.MsgTypeGame,
+				EventId: mq.NormalMsg,
+				GameMsg: gameMsg,
+			})
+			return
+		}
+		// 同时转发到战斗服务器
 		if protoMsg.CmdId == cmd.CombatInvocationsNotify {
 			gameMsg := new(mq.GameMsg)
 			gameMsg.UserId = userId
@@ -128,6 +131,17 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 				GameMsg: gameMsg,
 			})
 		}
+		// 转发到GS
+		gameMsg := new(mq.GameMsg)
+		gameMsg.UserId = userId
+		gameMsg.CmdId = protoMsg.CmdId
+		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
+		gameMsg.PayloadMessage = protoMsg.PayloadMessage
+		k.messageQueue.SendToGs("1", &mq.NetMsg{
+			MsgType: mq.MsgTypeGame,
+			EventId: mq.NormalMsg,
+			GameMsg: gameMsg,
+		})
 	}
 }
 

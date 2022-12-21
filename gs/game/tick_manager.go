@@ -250,8 +250,8 @@ func (t *TickManager) onTickSecond(now int64) {
 				player.SafePos.Z = player.Pos.Z
 			}
 		}
+		// 刷怪
 		if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
-			// 刷怪
 			scene := world.GetSceneById(3)
 			monsterEntityCount := 0
 			for _, entity := range scene.entityMap {

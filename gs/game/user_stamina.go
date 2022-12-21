@@ -440,8 +440,8 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	// 一直溺水回到距离最近的位置 ?
 	// 溺水队伍扣血
 	// 队伍都没血了显示死亡界面
-	// 技能耐力消耗配置表
-	// 食物影响消耗的耐力
+	// 角色技能影响重击耐力消耗 雷神开大后修改重击耐力为20 达达利亚 一斗
+	// 食物影响消耗的耐力 还有 角色天赋也会影响
 
 	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
 	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {

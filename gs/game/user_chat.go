@@ -157,6 +157,12 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 		// 输入命令 会检测是否为命令的
 		COMMAND_MANAGER.InputCommand(player, text)
 
+		if text == "VPU" {
+			g.VideoPlayerUpdate(false)
+		} else if text == "VPUR" {
+			g.VideoPlayerUpdate(true)
+		}
+
 	case *proto.PrivateChatReq_Icon:
 		icon := content.(*proto.PrivateChatReq_Icon).Icon
 

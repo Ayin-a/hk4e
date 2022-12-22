@@ -61,18 +61,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
-	// // TODO 薄荷标记
-	// if world.IsBigWorld() {
-	//	bigWorld := world.GetSceneById(3)
-	//	for pos := range g.worldManager.worldStatic.terrain {
-	//		bigWorld.CreateEntityGadget(&model.Vector{
-	//			X: float64(pos.X),
-	//			Y: float64(pos.Y),
-	//			Z: float64(pos.Z),
-	//		}, 3003009)
-	//	}
-	// }
-
 	g.LoginNotify(userId, player, clientSeq)
 
 	player.SceneLoadState = model.SceneNone

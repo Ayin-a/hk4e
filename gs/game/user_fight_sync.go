@@ -347,7 +347,7 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 	logger.Debug("EvtCreateGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
-	scene.ClientCreateEntityGadget(&model.Vector{
+	scene.CreateEntityGadgetClient(&model.Vector{
 		X: float64(req.InitPos.X),
 		Y: float64(req.InitPos.Y),
 		Z: float64(req.InitPos.Z),

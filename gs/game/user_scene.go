@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"strconv"
 	"time"
 
@@ -435,44 +436,55 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 	}
 }
 
+const ENTITY_BATCH_SIZE = 1000
+
 func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
-	entityList := make([]*proto.SceneEntityInfo, 0)
-	for _, entityId := range entityIdList {
-		entity, ok := scene.entityMap[entityId]
-		if !ok {
-			// logger.Error("get entity is nil, entityId: %v", entityId)
-			continue
+	// 如果总数量太多则分包发送
+	times := int(math.Ceil(float64(len(entityIdList)) / float64(ENTITY_BATCH_SIZE)))
+	for i := 0; i < times; i++ {
+		begin := ENTITY_BATCH_SIZE * i
+		end := ENTITY_BATCH_SIZE * (i + 1)
+		if i == times-1 {
+			end = len(entityIdList)
 		}
-		switch entity.entityType {
-		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR):
-			if visionType == proto.VisionType_VISION_TYPE_MEET && entity.avatarEntity.uid == player.PlayerID {
+		entityList := make([]*proto.SceneEntityInfo, 0)
+		for _, entityId := range entityIdList[begin:end] {
+			entity, ok := scene.entityMap[entityId]
+			if !ok {
+				// logger.Error("get entity is nil, entityId: %v", entityId)
 				continue
 			}
-			scenePlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
-			if scenePlayer == nil {
-				logger.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
-				continue
+			switch entity.entityType {
+			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR):
+				if visionType == proto.VisionType_VISION_TYPE_MEET && entity.avatarEntity.uid == player.PlayerID {
+					continue
+				}
+				scenePlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
+				if scenePlayer == nil {
+					logger.Error("get scene player is nil, world id: %v, scene id: %v", world.id, scene.id)
+					continue
+				}
+				if entity.avatarEntity.avatarId != world.GetPlayerActiveAvatarId(scenePlayer) {
+					continue
+				}
+				sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, world.GetPlayerActiveAvatarId(scenePlayer))
+				entityList = append(entityList, sceneEntityInfoAvatar)
+			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_WEAPON):
+			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER):
+				sceneEntityInfoMonster := g.PacketSceneEntityInfoMonster(scene, entity.id)
+				entityList = append(entityList, sceneEntityInfoMonster)
+			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET):
+				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.id)
+				entityList = append(entityList, sceneEntityInfoGadget)
 			}
-			if entity.avatarEntity.avatarId != world.GetPlayerActiveAvatarId(scenePlayer) {
-				continue
-			}
-			sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, world.GetPlayerActiveAvatarId(scenePlayer))
-			entityList = append(entityList, sceneEntityInfoAvatar)
-		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_WEAPON):
-		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER):
-			sceneEntityInfoMonster := g.PacketSceneEntityInfoMonster(scene, entity.id)
-			entityList = append(entityList, sceneEntityInfoMonster)
-		case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET):
-			sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.id)
-			entityList = append(entityList, sceneEntityInfoGadget)
 		}
-	}
-	if broadcast {
-		g.AddSceneEntityNotifyBroadcast(player, scene, visionType, entityList, aec)
-	} else {
-		g.AddSceneEntityNotifyToPlayer(player, visionType, entityList)
+		if broadcast {
+			g.AddSceneEntityNotifyBroadcast(player, scene, visionType, entityList, aec)
+		} else {
+			g.AddSceneEntityNotifyToPlayer(player, visionType, entityList)
+		}
 	}
 }
 
@@ -694,20 +706,22 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 		},
 	}
 	switch entity.gadgetEntity.gadgetType {
-	case GADGET_TYPE_CLIENT:
+	case GADGET_TYPE_NORMAL:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoAbility(entity.gadgetEntity.gadgetClientEntity),
+			Gadget: g.PacketSceneGadgetInfoNormal(entity.gadgetEntity.gadgetId),
 		}
 	case GADGET_TYPE_GATHER:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
 			Gadget: g.PacketSceneGadgetInfoGather(entity.gadgetEntity.gadgetGatherEntity),
 		}
+	case GADGET_TYPE_CLIENT:
+		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
+			Gadget: g.PacketSceneGadgetInfoClient(entity.gadgetEntity.gadgetClientEntity),
+		}
 	case GADGET_TYPE_VEHICLE:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
 			Gadget: g.PacketSceneGadgetInfoVehicle(entity.gadgetEntity.gadgetVehicleEntity),
 		}
-	default:
-		break
 	}
 	return sceneEntityInfo
 }
@@ -760,18 +774,14 @@ func (g *GameManager) PacketSceneMonsterInfo() *proto.SceneMonsterInfo {
 	return sceneMonsterInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVehicleEntity) *proto.SceneGadgetInfo {
+func (g *GameManager) PacketSceneGadgetInfoNormal(gadgetId uint32) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
-		GadgetId:         gadgetVehicleEntity.vehicleId,
-		AuthorityPeerId:  WORLD_MANAGER.GetWorldByID(gadgetVehicleEntity.owner.WorldId).GetPlayerPeerId(gadgetVehicleEntity.owner),
+		GadgetId:         gadgetId,
+		GroupId:          133220271,
+		ConfigId:         271003,
+		GadgetState:      901,
 		IsEnableInteract: true,
-		Content: &proto.SceneGadgetInfo_VehicleInfo{
-			VehicleInfo: &proto.VehicleInfo{
-				MemberList: make([]*proto.VehicleMember, 0, len(gadgetVehicleEntity.memberMap)),
-				OwnerUid:   gadgetVehicleEntity.owner.PlayerID,
-				CurStamina: gadgetVehicleEntity.curStamina,
-			},
-		},
+		AuthorityPeerId:  1,
 	}
 	return sceneGadgetInfo
 }
@@ -799,7 +809,7 @@ func (g *GameManager) PacketSceneGadgetInfoGather(gadgetGatherEntity *GadgetGath
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoAbility(gadgetClientEntity *GadgetClientEntity) *proto.SceneGadgetInfo {
+func (g *GameManager) PacketSceneGadgetInfoClient(gadgetClientEntity *GadgetClientEntity) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId:         gadgetClientEntity.configId,
 		OwnerEntityId:    gadgetClientEntity.ownerEntityId,
@@ -814,6 +824,22 @@ func (g *GameManager) PacketSceneGadgetInfoAbility(gadgetClientEntity *GadgetCli
 			},
 		},
 		PropOwnerEntityId: gadgetClientEntity.propOwnerEntityId,
+	}
+	return sceneGadgetInfo
+}
+
+func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVehicleEntity) *proto.SceneGadgetInfo {
+	sceneGadgetInfo := &proto.SceneGadgetInfo{
+		GadgetId:         gadgetVehicleEntity.vehicleId,
+		AuthorityPeerId:  WORLD_MANAGER.GetWorldByID(gadgetVehicleEntity.owner.WorldId).GetPlayerPeerId(gadgetVehicleEntity.owner),
+		IsEnableInteract: true,
+		Content: &proto.SceneGadgetInfo_VehicleInfo{
+			VehicleInfo: &proto.VehicleInfo{
+				MemberList: make([]*proto.VehicleMember, 0, len(gadgetVehicleEntity.memberMap)),
+				OwnerUid:   gadgetVehicleEntity.owner.PlayerID,
+				CurStamina: gadgetVehicleEntity.curStamina,
+			},
+		},
 	}
 	return sceneGadgetInfo
 }

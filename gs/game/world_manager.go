@@ -542,8 +542,9 @@ type MonsterEntity struct {
 }
 
 const (
-	GADGET_TYPE_CLIENT = iota
+	GADGET_TYPE_NORMAL = iota
 	GADGET_TYPE_GATHER
+	GADGET_TYPE_CLIENT
 	GADGET_TYPE_VEHICLE // 载具
 )
 
@@ -570,6 +571,7 @@ type GadgetVehicleEntity struct {
 
 type GadgetEntity struct {
 	gadgetType          int
+	gadgetId            uint32
 	gadgetClientEntity  *GadgetClientEntity
 	gadgetGatherEntity  *GadgetGatherEntity
 	gadgetVehicleEntity *GadgetVehicleEntity
@@ -775,7 +777,65 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	return entity.id
 }
 
-func (s *Scene) ClientCreateEntityGadget(pos, rot *model.Vector, entityId uint32, configId, campId, campType, ownerEntityId, targetEntityId, propOwnerEntityId uint32) {
+func (s *Scene) CreateEntityGadgetNormal(pos *model.Vector, gadgetId uint32) uint32 {
+	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
+	entity := &Entity{
+		id:                  entityId,
+		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
+		pos:                 pos,
+		rot:                 new(model.Vector),
+		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		lastMoveSceneTimeMs: 0,
+		lastMoveReliableSeq: 0,
+		fightProp: map[uint32]float32{
+			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
+		},
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		level:      0,
+		gadgetEntity: &GadgetEntity{
+			gadgetId:   gadgetId,
+			gadgetType: GADGET_TYPE_NORMAL,
+		},
+	}
+	s.entityMap[entity.id] = entity
+	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	return entity.id
+}
+
+func (s *Scene) CreateEntityGadgetGather(pos *model.Vector, gatherId uint32) uint32 {
+	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
+	entity := &Entity{
+		id:                  entityId,
+		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
+		pos:                 pos,
+		rot:                 new(model.Vector),
+		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		lastMoveSceneTimeMs: 0,
+		lastMoveReliableSeq: 0,
+		fightProp: map[uint32]float32{
+			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
+		},
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		level:      0,
+		gadgetEntity: &GadgetEntity{
+			gadgetType: GADGET_TYPE_GATHER,
+			gadgetGatherEntity: &GadgetGatherEntity{
+				gatherId: gatherId,
+			},
+		},
+	}
+	s.entityMap[entity.id] = entity
+	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	return entity.id
+}
+
+func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32, configId, campId, campType, ownerEntityId, targetEntityId, propOwnerEntityId uint32) {
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -806,36 +866,6 @@ func (s *Scene) ClientCreateEntityGadget(pos, rot *model.Vector, entityId uint32
 	}
 	s.entityMap[entity.id] = entity
 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-}
-
-func (s *Scene) CreateEntityGadget(pos *model.Vector, gatherId uint32) uint32 {
-	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
-	entity := &Entity{
-		id:                  entityId,
-		scene:               s,
-		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
-		pos:                 pos,
-		rot:                 new(model.Vector),
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
-		lastMoveSceneTimeMs: 0,
-		lastMoveReliableSeq: 0,
-		fightProp: map[uint32]float32{
-			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
-			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
-			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
-		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
-		level:      0,
-		gadgetEntity: &GadgetEntity{
-			gadgetType: GADGET_TYPE_GATHER,
-			gadgetGatherEntity: &GadgetGatherEntity{
-				gatherId: gatherId,
-			},
-		},
-	}
-	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	return entity.id
 }
 
 func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {

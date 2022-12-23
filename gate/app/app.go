@@ -10,19 +10,38 @@ import (
 
 	"hk4e/common/config"
 	"hk4e/common/mq"
+	"hk4e/common/rpc"
 	"hk4e/gate/net"
+	"hk4e/node/api"
 	"hk4e/pkg/logger"
 )
+
+var APPID string
 
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("gate")
-	logger.Warn("gate start")
+	// natsrpc client
+	client, err := rpc.NewClient()
+	if err != nil {
+		return err
+	}
 
-	messageQueue := mq.NewMessageQueue(mq.GATE, "1")
+	// 注册到节点服务器
+	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
+		ServerType: api.GATE,
+	})
+	if err != nil {
+		return err
+	}
+	APPID = rsp.GetAppId()
 
-	connectManager := net.NewKcpConnectManager(messageQueue)
+	logger.InitLogger("gate_" + APPID)
+	logger.Warn("gate start, appid: %v", APPID)
+
+	messageQueue := mq.NewMessageQueue(api.GATE, APPID)
+
+	connectManager := net.NewKcpConnectManager(messageQueue, client.Discovery)
 	connectManager.Start()
 	defer connectManager.Stop()
 
@@ -43,7 +62,7 @@ func Run(ctx context.Context, configFile string) error {
 			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.Warn("gate exit")
+				logger.Warn("gate exit, appid: %v", APPID)
 				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:

@@ -134,17 +134,47 @@ func (g *GameManager) Stop() {
 	for _, player := range userList {
 		g.DisconnectPlayer(player.PlayerID, kcp.EnetServerShutdown)
 	}
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
 	// 保存玩家数据
 	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 		EventId: RunUserCopyAndSave,
 	}
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
+}
+
+func (g *GameManager) SendMsgEx(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+	if userId < 100000000 {
+		return
+	}
+	if payloadMsg == nil {
+		logger.Error("payload msg is nil")
+		return
+	}
+	gameMsg := &mq.GameMsg{
+		UserId:         userId,
+		CmdId:          cmdId,
+		ClientSeq:      clientSeq,
+		PayloadMessage: payloadMsg,
+	}
+	g.messageQueue.SendToGate(gateAppId, &mq.NetMsg{
+		MsgType: mq.MsgTypeGame,
+		EventId: mq.NormalMsg,
+		GameMsg: gameMsg,
+	})
 }
 
 // SendMsg 发送消息给客户端
 func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	if userId < 100000000 || payloadMsg == nil {
+	if userId < 100000000 {
+		return
+	}
+	if payloadMsg == nil {
+		logger.Error("payload msg is nil")
+		return
+	}
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player not exist, uid: %v", userId)
 		return
 	}
 	gameMsg := new(mq.GameMsg)
@@ -158,7 +188,7 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 		return
 	}
 	gameMsg.PayloadMessageData = payloadMessageData
-	g.messageQueue.SendToGate("1", &mq.NetMsg{
+	g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.NormalMsg,
 		GameMsg: gameMsg,
@@ -222,7 +252,11 @@ func (g *GameManager) ReconnectPlayer(userId uint32) {
 }
 
 func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
-	g.messageQueue.SendToGate("1", &mq.NetMsg{
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		return
+	}
+	g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeConnCtrl,
 		EventId: mq.KickPlayerNotify,
 		ConnCtrlMsg: &mq.ConnCtrlMsg{

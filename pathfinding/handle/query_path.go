@@ -41,9 +41,9 @@ func (h *Handle) ConvMeshVecListToPbVecList(meshVecList []pfalg.MeshVector) []*p
 	return ret
 }
 
-func (h *Handle) QueryPath(userId uint32, payloadMsg pb.Message) {
+func (h *Handle) QueryPath(userId uint32, gateAppId string, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.QueryPathReq)
-	logger.Debug("query path req: %v, uid: %v", req, userId)
+	logger.Debug("query path req: %v, uid: %v, gateAppId: %v", req, userId, gateAppId)
 	var ok = false
 	var path []pfalg.MeshVector = nil
 	for _, destinationPos := range req.DestinationPos {
@@ -57,7 +57,7 @@ func (h *Handle) QueryPath(userId uint32, payloadMsg pb.Message) {
 			QueryId:     req.QueryId,
 			QueryStatus: proto.QueryPathRsp_PATH_STATUS_TYPE_FAIL,
 		}
-		h.SendMsg(cmd.QueryPathRsp, userId, queryPathRsp)
+		h.SendMsg(cmd.QueryPathRsp, userId, gateAppId, queryPathRsp)
 		return
 	}
 	queryPathRsp := &proto.QueryPathRsp{
@@ -65,10 +65,10 @@ func (h *Handle) QueryPath(userId uint32, payloadMsg pb.Message) {
 		QueryStatus: proto.QueryPathRsp_PATH_STATUS_TYPE_SUCC,
 		Corners:     h.ConvMeshVecListToPbVecList(path),
 	}
-	h.SendMsg(cmd.QueryPathRsp, userId, queryPathRsp)
+	h.SendMsg(cmd.QueryPathRsp, userId, gateAppId, queryPathRsp)
 }
 
-func (h *Handle) ObstacleModifyNotify(userId uint32, payloadMsg pb.Message) {
+func (h *Handle) ObstacleModifyNotify(userId uint32, gateAppId string, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ObstacleModifyNotify)
-	logger.Debug("obstacle modify req: %v, uid: %v", req, userId)
+	logger.Debug("obstacle modify req: %v, uid: %v, gateAppId: %v", req, userId, gateAppId)
 }

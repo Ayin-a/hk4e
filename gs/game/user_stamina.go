@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"hk4e/common/constant"
 	"hk4e/gdconf"
-	"hk4e/gs/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
@@ -462,7 +462,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		}
 		// 获取最近角色实体的锚点
 		// TODO 阻塞优化 16ms我感觉有点慢
-		//for _, entry := range gdc.CONF.ScenePointEntries {
+		// for _, entry := range gdc.CONF.ScenePointEntries {
 		//	if entry.PointData == nil || entry.PointData.TranPos == nil {
 		//		continue
 		//	}
@@ -475,7 +475,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		//	if player.SafePos.Distance(pointPos) < player.SafePos.Distance(pos) {
 		//		pos = pointPos
 		//	}
-		//}
+		// }
 		// 传送玩家至安全位置
 		g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Revival), player.SceneId, pos)
 	}

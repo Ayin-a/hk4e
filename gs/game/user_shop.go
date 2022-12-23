@@ -3,7 +3,7 @@ package game
 import (
 	"time"
 
-	"hk4e/gs/constant"
+	"hk4e/common/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"

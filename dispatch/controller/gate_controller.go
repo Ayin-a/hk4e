@@ -49,14 +49,3 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		PlayerID:      uint32(account.PlayerID),
 	})
 }
-
-type DispatchEc2bSeedRsp struct {
-	Seed string `json:"seed"`
-}
-
-func (c *Controller) getDispatchEc2bSeed(context *gin.Context) {
-	dispatchEc2bSeed := c.dispatchEc2b.Seed()
-	context.JSON(http.StatusOK, &DispatchEc2bSeedRsp{
-		Seed: strconv.FormatUint(dispatchEc2bSeed, 10),
-	})
-}

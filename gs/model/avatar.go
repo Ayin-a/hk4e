@@ -3,8 +3,8 @@ package model
 import (
 	"time"
 
+	"hk4e/common/constant"
 	gdc "hk4e/gs/config"
-	"hk4e/gs/constant"
 	"hk4e/pkg/logger"
 )
 

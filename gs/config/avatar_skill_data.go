@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"hk4e/gs/constant"
+	"hk4e/common/constant"
 	"hk4e/pkg/logger"
 )
 

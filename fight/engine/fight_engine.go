@@ -3,8 +3,8 @@ package engine
 import (
 	"time"
 
+	"hk4e/common/constant"
 	"hk4e/common/mq"
-	"hk4e/gs/constant"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
@@ -29,16 +29,24 @@ func (f *FightEngine) fightHandle() {
 	userIdFightRoutineIdMap := make(map[uint32]uint32)
 	for {
 		netMsg := <-f.messageQueue.GetNetMsg()
-		// logger.Debug("recv net msg, netMsg: %v", netMsg)
+		logger.Debug("recv net msg, netMsg: %v", netMsg)
 		switch netMsg.MsgType {
 		case mq.MsgTypeGame:
 			gameMsg := netMsg.GameMsg
 			if netMsg.EventId != mq.NormalMsg {
 				continue
 			}
-			// logger.Debug("recv game msg, gameMsg: %v", gameMsg)
-			fightRoutineId := userIdFightRoutineIdMap[gameMsg.UserId]
-			fightRoutineMsgChan := fightRoutineMsgChanMap[fightRoutineId]
+			logger.Debug("recv game msg, gameMsg: %v", gameMsg)
+			fightRoutineId, exist := userIdFightRoutineIdMap[gameMsg.UserId]
+			if !exist {
+				logger.Error("could not found fight routine id by uid: %v", gameMsg.UserId)
+				continue
+			}
+			fightRoutineMsgChan, exist := fightRoutineMsgChanMap[fightRoutineId]
+			if !exist {
+				logger.Error("could not found fight routine msg chan by fight routine id: %v", fightRoutineId)
+				continue
+			}
 			fightRoutineMsgChan <- netMsg
 		case mq.MsgTypeFight:
 			fightMsg := netMsg.FightMsg
@@ -49,21 +57,33 @@ func (f *FightEngine) fightHandle() {
 				fightRoutineMsgChanMap[fightMsg.FightRoutineId] = fightRoutineMsgChan
 				fightRoutineCloseChan := make(chan bool, 1)
 				fightRoutineCloseChanMap[fightMsg.FightRoutineId] = fightRoutineCloseChan
-				go runFightRoutine(fightMsg.FightRoutineId, fightRoutineMsgChan, fightRoutineCloseChan, f.messageQueue)
+				go runFightRoutine(fightMsg.FightRoutineId, fightMsg.GateServerAppId, fightRoutineMsgChan, fightRoutineCloseChan, f.messageQueue)
 			case mq.DelFightRoutine:
-				fightRoutineCloseChan := fightRoutineCloseChanMap[fightMsg.FightRoutineId]
+				fightRoutineCloseChan, exist := fightRoutineCloseChanMap[fightMsg.FightRoutineId]
+				if !exist {
+					logger.Error("could not found fight routine close chan by fight routine id: %v", fightMsg.FightRoutineId)
+					continue
+				}
 				fightRoutineCloseChan <- true
 			case mq.FightRoutineAddEntity:
 				if fightMsg.Uid != 0 {
 					userIdFightRoutineIdMap[fightMsg.Uid] = fightMsg.FightRoutineId
 				}
-				fightRoutineMsgChan := fightRoutineMsgChanMap[fightMsg.FightRoutineId]
+				fightRoutineMsgChan, exist := fightRoutineMsgChanMap[fightMsg.FightRoutineId]
+				if !exist {
+					logger.Error("could not found fight routine msg chan by fight routine id: %v", fightMsg.FightRoutineId)
+					continue
+				}
 				fightRoutineMsgChan <- netMsg
 			case mq.FightRoutineDelEntity:
 				if fightMsg.Uid != 0 {
 					delete(userIdFightRoutineIdMap, fightMsg.Uid)
 				}
-				fightRoutineMsgChan := fightRoutineMsgChanMap[fightMsg.FightRoutineId]
+				fightRoutineMsgChan, exist := fightRoutineMsgChanMap[fightMsg.FightRoutineId]
+				if !exist {
+					logger.Error("could not found fight routine msg chan by fight routine id: %v", fightMsg.FightRoutineId)
+					continue
+				}
 				fightRoutineMsgChan <- netMsg
 			}
 		}
@@ -71,7 +91,7 @@ func (f *FightEngine) fightHandle() {
 }
 
 // SendMsg 发送消息给客户端
-func SendMsg(messageQueue *mq.MessageQueue, cmdId uint16, userId uint32, payloadMsg pb.Message) {
+func SendMsg(messageQueue *mq.MessageQueue, cmdId uint16, userId uint32, gateAppId string, payloadMsg pb.Message) {
 	if userId < 100000000 || payloadMsg == nil {
 		return
 	}
@@ -86,7 +106,7 @@ func SendMsg(messageQueue *mq.MessageQueue, cmdId uint16, userId uint32, payload
 		return
 	}
 	gameMsg.PayloadMessageData = payloadMessageData
-	messageQueue.SendToGate("1", &mq.NetMsg{
+	messageQueue.SendToGate(gateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.NormalMsg,
 		GameMsg: gameMsg,
@@ -106,14 +126,16 @@ type FightRoutine struct {
 	entityMap             map[uint32]*Entity
 	combatInvokeEntryList []*proto.CombatInvokeEntry
 	tickCount             uint64
+	gateAppId             string
 }
 
-func runFightRoutine(fightRoutineId uint32, fightRoutineMsgChan chan *mq.NetMsg, fightRoutineCloseChan chan bool, messageQueue *mq.MessageQueue) {
+func runFightRoutine(fightRoutineId uint32, gateAppId string, fightRoutineMsgChan chan *mq.NetMsg, fightRoutineCloseChan chan bool, messageQueue *mq.MessageQueue) {
 	f := new(FightRoutine)
 	f.messageQueue = messageQueue
 	f.entityMap = make(map[uint32]*Entity)
 	f.combatInvokeEntryList = make([]*proto.CombatInvokeEntry, 0)
 	f.tickCount = 0
+	f.gateAppId = gateAppId
 	logger.Debug("create fight routine, fightRoutineId: %v", fightRoutineId)
 	ticker := time.NewTicker(time.Millisecond * 10)
 	for {
@@ -162,7 +184,7 @@ func (f *FightRoutine) onTick50MilliSecond(now int64) {
 		combatInvocationsNotifyAll := new(proto.CombatInvocationsNotify)
 		combatInvocationsNotifyAll.InvokeList = f.combatInvokeEntryList
 		for _, uid := range f.getAllPlayer(f.entityMap) {
-			SendMsg(f.messageQueue, cmd.CombatInvocationsNotify, uid, combatInvocationsNotifyAll)
+			SendMsg(f.messageQueue, cmd.CombatInvocationsNotify, uid, f.gateAppId, combatInvocationsNotifyAll)
 		}
 		f.combatInvokeEntryList = make([]*proto.CombatInvokeEntry, 0)
 	}
@@ -180,7 +202,7 @@ func (f *FightRoutine) onTickSecond(now int64) {
 			AvatarGuid:   entity.avatarGuid,
 			FightPropMap: entity.fightPropMap,
 		}
-		SendMsg(f.messageQueue, cmd.AvatarFightPropNotify, entity.uid, avatarFightPropNotify)
+		SendMsg(f.messageQueue, cmd.AvatarFightPropNotify, entity.uid, f.gateAppId, avatarFightPropNotify)
 	}
 }
 
@@ -231,7 +253,7 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 			entityFightPropUpdateNotify.FightPropMap = make(map[uint32]float32)
 			entityFightPropUpdateNotify.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
 			for _, uid := range f.getAllPlayer(f.entityMap) {
-				SendMsg(f.messageQueue, cmd.EntityFightPropUpdateNotify, uid, entityFightPropUpdateNotify)
+				SendMsg(f.messageQueue, cmd.EntityFightPropUpdateNotify, uid, f.gateAppId, entityFightPropUpdateNotify)
 			}
 			combatData, err := pb.Marshal(hitInfo)
 			if err != nil {

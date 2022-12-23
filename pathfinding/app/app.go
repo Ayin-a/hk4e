@@ -10,17 +10,36 @@ import (
 
 	"hk4e/common/config"
 	"hk4e/common/mq"
+	"hk4e/common/rpc"
+	"hk4e/node/api"
 	"hk4e/pathfinding/handle"
 	"hk4e/pkg/logger"
 )
 
+var APPID string
+
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("pathfinding")
-	logger.Warn("pathfinding start")
+	// natsrpc client
+	client, err := rpc.NewClient()
+	if err != nil {
+		return err
+	}
 
-	messageQueue := mq.NewMessageQueue(mq.PATHFINDING, "1")
+	// 注册到节点服务器
+	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
+		ServerType: api.PATHFINDING,
+	})
+	if err != nil {
+		return err
+	}
+	APPID = rsp.GetAppId()
+
+	logger.InitLogger("pathfinding_" + APPID)
+	logger.Warn("pathfinding start, appid: %v", APPID)
+
+	messageQueue := mq.NewMessageQueue(api.PATHFINDING, APPID)
 	defer messageQueue.Close()
 
 	_ = handle.NewHandle(messageQueue)
@@ -35,7 +54,7 @@ func Run(ctx context.Context, configFile string) error {
 			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.Warn("pathfinding exit")
+				logger.Warn("pathfinding exit, appid: %v", APPID)
 				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:

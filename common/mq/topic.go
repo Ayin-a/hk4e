@@ -1,37 +1,48 @@
 package mq
 
 import (
-	"strings"
+	"hk4e/node/api"
 )
 
-const (
-	GATE        = "GATE_${APPID}_HK4E"
-	GS          = "GS_${APPID}_HK4E"
-	FIGHT       = "FIGHT_${APPID}_HK4E"
-	PATHFINDING = "PATHFINDING_${APPID}_HK4E"
-)
+func (m *MessageQueue) getOriginServer() (originServerType string, originServerAppId string) {
+	originServerType = m.serverType
+	originServerAppId = m.appId
+	return originServerType, originServerAppId
+}
 
 func (m *MessageQueue) getTopic(serverType string, appId string) string {
-	topic := strings.ReplaceAll(serverType, "${APPID}", appId)
+	topic := serverType + "_" + appId + "_" + "HK4E"
 	return topic
 }
 
 func (m *MessageQueue) SendToGate(appId string, netMsg *NetMsg) {
-	netMsg.Topic = m.getTopic(GATE, appId)
+	netMsg.Topic = m.getTopic(api.GATE, appId)
+	originServerType, originServerAppId := m.getOriginServer()
+	netMsg.OriginServerType = originServerType
+	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
 }
 
 func (m *MessageQueue) SendToGs(appId string, netMsg *NetMsg) {
-	netMsg.Topic = m.getTopic(GS, appId)
+	netMsg.Topic = m.getTopic(api.GS, appId)
+	originServerType, originServerAppId := m.getOriginServer()
+	netMsg.OriginServerType = originServerType
+	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
 }
 
 func (m *MessageQueue) SendToFight(appId string, netMsg *NetMsg) {
-	netMsg.Topic = m.getTopic(FIGHT, appId)
+	netMsg.Topic = m.getTopic(api.FIGHT, appId)
+	originServerType, originServerAppId := m.getOriginServer()
+	netMsg.OriginServerType = originServerType
+	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
 }
 
 func (m *MessageQueue) SendToPathfinding(appId string, netMsg *NetMsg) {
-	netMsg.Topic = m.getTopic(PATHFINDING, appId)
+	netMsg.Topic = m.getTopic(api.PATHFINDING, appId)
+	originServerType, originServerAppId := m.getOriginServer()
+	netMsg.OriginServerType = originServerType
+	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
 }

@@ -4,10 +4,10 @@ import (
 	"math"
 	"time"
 
+	"hk4e/common/constant"
 	"hk4e/protocol/cmd"
 
 	"hk4e/common/mq"
-	"hk4e/gs/constant"
 	"hk4e/gs/game/aoi"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
@@ -71,13 +71,6 @@ func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 	}
 	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.EntityIdTypeConst.MPLEVEL)
 	w.worldMap[worldId] = world
-	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.AddFightRoutine,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId: world.id,
-		},
-	})
 	return world
 }
 
@@ -88,13 +81,6 @@ func (w *WorldManager) DestroyWorld(worldId uint32) {
 		player.WorldId = 0
 	}
 	delete(w.worldMap, worldId)
-	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.DelFightRoutine,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId: world.id,
-		},
-	})
 }
 
 // GetBigWorld 获取本服务器的AI世界
@@ -715,7 +701,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 	if avatarId == s.world.GetPlayerActiveAvatarId(player) {
 		s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	}
-	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
 		FightMsg: &mq.FightMsg{
@@ -765,7 +751,7 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	}
 	s.entityMap[entity.id] = entity
 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
 		FightMsg: &mq.FightMsg{
@@ -915,7 +901,7 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	}
 	s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	delete(s.entityMap, entityId)
-	GAME_MANAGER.messageQueue.SendToFight("1", &mq.NetMsg{
+	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineDelEntity,
 		FightMsg: &mq.FightMsg{

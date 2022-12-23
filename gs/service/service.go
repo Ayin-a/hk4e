@@ -30,5 +30,4 @@ func NewService(conn *nats.Conn) (*Service, error) {
 // Close 关闭
 func (s *Service) Close() {
 	// TODO
-
 }

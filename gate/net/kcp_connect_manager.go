@@ -2,6 +2,7 @@ package net
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"strconv"
 	"sync"
@@ -10,9 +11,9 @@ import (
 	"hk4e/common/config"
 	"hk4e/common/mq"
 	"hk4e/common/region"
-	"hk4e/dispatch/controller"
+	"hk4e/common/rpc"
 	"hk4e/gate/kcp"
-	"hk4e/pkg/httpclient"
+	"hk4e/node/api"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
@@ -21,6 +22,7 @@ import (
 const PacketFreqLimit = 1000
 
 type KcpConnectManager struct {
+	discovery          *rpc.DiscoveryClient
 	openState          bool
 	sessionConvIdMap   map[uint64]*Session
 	sessionUserIdMap   map[uint32]*Session
@@ -38,8 +40,9 @@ type KcpConnectManager struct {
 	encRsaKeyMap map[string][]byte
 }
 
-func NewKcpConnectManager(messageQueue *mq.MessageQueue) (r *KcpConnectManager) {
+func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.DiscoveryClient) (r *KcpConnectManager) {
 	r = new(KcpConnectManager)
+	r.discovery = discovery
 	r.openState = true
 	r.sessionConvIdMap = make(map[uint64]*Session)
 	r.sessionUserIdMap = make(map[uint32]*Session)
@@ -57,20 +60,19 @@ func (k *KcpConnectManager) Start() {
 	// 读取密钥相关文件
 	k.signRsaKey, k.encRsaKeyMap, _ = region.LoadRsaKey()
 	// key
-	dispatchEc2bSeedRsp, err := httpclient.Get[controller.DispatchEc2bSeedRsp]("http://127.0.0.1:8080/dispatch/ec2b/seed", "")
+	rsp, err := k.discovery.GetRegionEc2B(context.TODO(), &api.NullMsg{})
 	if err != nil {
-		logger.Error("get dispatch ec2b seed error: %v", err)
+		logger.Error("get region ec2b error: %v", err)
 		return
 	}
-	dispatchEc2bSeed, err := strconv.ParseUint(dispatchEc2bSeedRsp.Seed, 10, 64)
+	ec2b, err := random.LoadEc2bKey(rsp.Data)
 	if err != nil {
-		logger.Error("parse dispatch ec2b seed error: %v", err)
+		logger.Error("parse region ec2b error: %v", err)
 		return
 	}
-	logger.Debug("get dispatch ec2b seed: %v", dispatchEc2bSeed)
-	gateDispatchEc2b := random.NewEc2b()
-	gateDispatchEc2b.SetSeed(dispatchEc2bSeed)
-	k.dispatchKey = gateDispatchEc2b.XorKey()
+	regionEc2b := random.NewEc2b()
+	regionEc2b.SetSeed(ec2b.Seed())
+	k.dispatchKey = regionEc2b.XorKey()
 	// kcp
 	port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
 	listener, err := kcp.ListenWithOptions(config.CONF.Hk4e.KcpAddr+":"+port, nil, 0, 0)
@@ -201,13 +203,16 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 }
 
 type Session struct {
-	conn            *kcp.UDPSession
-	connState       uint8
-	userId          uint32
-	kcpRawSendChan  chan *ProtoMsg
-	seed            uint64
-	xorKey          []byte
-	changeXorKeyFin bool
+	conn                   *kcp.UDPSession
+	connState              uint8
+	userId                 uint32
+	kcpRawSendChan         chan *ProtoMsg
+	seed                   uint64
+	xorKey                 []byte
+	changeXorKeyFin        bool
+	gsServerAppId          string
+	fightServerAppId       string
+	pathfindingServerAppId string
 }
 
 // 接收
@@ -288,6 +293,15 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 		if protoMsg.CmdId == cmd.PlayerLoginRsp {
 			logger.Debug("session active, convId: %v", convId)
 			session.connState = ConnActive
+			// 通知GS玩家战斗服务器的appid
+			connCtrlMsg := new(mq.ConnCtrlMsg)
+			connCtrlMsg.UserId = session.userId
+			connCtrlMsg.FightServerAppId = session.fightServerAppId
+			k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
+				MsgType:     mq.MsgTypeConnCtrl,
+				EventId:     mq.FightServerSelectNotify,
+				ConnCtrlMsg: connCtrlMsg,
+			})
 		}
 	}
 }
@@ -328,7 +342,7 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 	// 通知GS玩家下线
 	gameMsg := new(mq.GameMsg)
 	gameMsg.UserId = session.userId
-	k.messageQueue.SendToGs("1", &mq.NetMsg{
+	k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.UserOfflineNotify,
 		GameMsg: gameMsg,

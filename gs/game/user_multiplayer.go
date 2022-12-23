@@ -3,7 +3,8 @@ package game
 import (
 	"time"
 
-	"hk4e/gs/constant"
+	"hk4e/common/constant"
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -320,6 +321,13 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	if world.owner.PlayerID == player.PlayerID {
 		// 房主离开销毁世界
 		WORLD_MANAGER.DestroyWorld(world.id)
+		GAME_MANAGER.messageQueue.SendToFight(world.owner.FightAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeFight,
+			EventId: mq.DelFightRoutine,
+			FightMsg: &mq.FightMsg{
+				FightRoutineId: world.id,
+			},
+		})
 		return
 	}
 	if world.multiplayer && world.GetWorldPlayerNum() > 0 {

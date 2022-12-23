@@ -47,7 +47,8 @@ func NewCommandManager() *CommandManager {
 	r := new(CommandManager)
 
 	// 创建AI世界
-	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0)
+	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0, "")
+	GAME_MANAGER.FightServerSelectNotify(1, "")
 	r.system = USER_MANAGER.GetOnlineUser(1)
 	r.system.DbState = model.DbNormal
 	r.system.SceneLoadState = model.SceneEnterDone

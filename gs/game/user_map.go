@@ -3,8 +3,7 @@ package game
 import (
 	"strconv"
 
-	"hk4e/gs/constant"
-
+	"hk4e/common/constant"
 	gdc "hk4e/gs/config"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"

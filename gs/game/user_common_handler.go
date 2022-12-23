@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -56,6 +57,16 @@ func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.EntityAiSyncNotify, player.PlayerID, player.ClientSeq, entityAiSyncNotify)
 }
 
+func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	logger.Debug("client rtt notify, uid: %v, rtt: %v", userId, clientRtt)
+	player.ClientRTT = clientRtt
+}
+
 func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
@@ -66,14 +77,29 @@ func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
 	player.ClientTime = clientTime
 }
 
-func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
+func (g *GameManager) FightServerSelectNotify(userId uint32, fightAppId string) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	logger.Debug("client rtt notify, uid: %v, rtt: %v", userId, clientRtt)
-	player.ClientRTT = clientRtt
+	logger.Debug("fight server select notify, uid: %v, fightAppId: %v", userId, fightAppId)
+	player.FightAppId = fightAppId
+	// 创建世界
+	world := WORLD_MANAGER.CreateWorld(player)
+	GAME_MANAGER.messageQueue.SendToFight(fightAppId, &mq.NetMsg{
+		MsgType: mq.MsgTypeFight,
+		EventId: mq.AddFightRoutine,
+		FightMsg: &mq.FightMsg{
+			FightRoutineId:  world.id,
+			GateServerAppId: player.GateAppId,
+		},
+	})
+	world.AddPlayer(player, player.SceneId)
+	player.WorldId = world.id
+	// 进入场景
+	player.SceneLoadState = model.SceneNone
+	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
 }
 
 func (g *GameManager) ServerAnnounceNotify(announceId uint32, announceMsg string) {

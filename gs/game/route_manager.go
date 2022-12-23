@@ -4,6 +4,7 @@ import (
 	"hk4e/common/mq"
 	"hk4e/gate/kcp"
 	"hk4e/gs/model"
+	"hk4e/node/api"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 
@@ -120,15 +121,18 @@ func (r *RouteManager) InitRoute() {
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 	switch netMsg.MsgType {
 	case mq.MsgTypeGame:
+		if netMsg.OriginServerType != api.GATE {
+			return
+		}
 		gameMsg := netMsg.GameMsg
 		switch netMsg.EventId {
 		case mq.NormalMsg:
 			if gameMsg.CmdId == cmd.PlayerLoginReq {
-				GAME_MANAGER.PlayerLoginReq(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+				GAME_MANAGER.PlayerLoginReq(gameMsg.UserId, gameMsg.ClientSeq, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
 				return
 			}
 			if gameMsg.CmdId == cmd.SetPlayerBornDataReq {
-				GAME_MANAGER.SetPlayerBornDataReq(gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
+				GAME_MANAGER.SetPlayerBornDataReq(gameMsg.UserId, gameMsg.ClientSeq, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
 				return
 			}
 			r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
@@ -136,12 +140,17 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			GAME_MANAGER.OnUserOffline(gameMsg.UserId)
 		}
 	case mq.MsgTypeConnCtrl:
+		if netMsg.OriginServerType != api.GATE {
+			return
+		}
 		connCtrlMsg := netMsg.ConnCtrlMsg
 		switch netMsg.EventId {
 		case mq.ClientRttNotify:
 			GAME_MANAGER.ClientRttNotify(connCtrlMsg.UserId, connCtrlMsg.ClientRtt)
 		case mq.ClientTimeNotify:
 			GAME_MANAGER.ClientTimeNotify(connCtrlMsg.UserId, connCtrlMsg.ClientTime)
+		case mq.FightServerSelectNotify:
+			GAME_MANAGER.FightServerSelectNotify(connCtrlMsg.UserId, connCtrlMsg.FightServerAppId)
 		}
 	}
 }

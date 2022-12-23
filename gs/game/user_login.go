@@ -3,8 +3,8 @@ package game
 import (
 	"time"
 
+	"hk4e/common/constant"
 	gdc "hk4e/gs/config"
-	"hk4e/gs/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/reflection"
@@ -14,35 +14,37 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) PlayerLoginReq(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	logger.Info("user login req, uid: %v", userId)
+func (g *GameManager) PlayerLoginReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+	logger.Info("user login req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.PlayerLoginReq)
 	logger.Debug("login data: %v", req)
-	g.OnLogin(userId, clientSeq)
+	g.OnLogin(userId, clientSeq, gateAppId)
 }
 
-func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	logger.Info("user reg req, uid: %v", userId)
+func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+	logger.Info("user reg req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("reg data: %v", req)
-	g.OnReg(userId, clientSeq, req)
+	g.OnReg(userId, clientSeq, gateAppId, req)
 }
 
-func (g *GameManager) OnLogin(userId uint32, clientSeq uint32) {
+func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string) {
 	logger.Info("user login, uid: %v", userId)
-	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq)
+	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
 	if !asyncWait {
-		g.OnLoginOk(userId, player, clientSeq)
+		g.OnLoginOk(userId, player, clientSeq, gateAppId)
 	}
 }
 
-func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq uint32) {
+func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq uint32, gateAppId string) {
 	if player == nil {
-		g.SendMsg(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, new(proto.DoSetPlayerBornDataNotify))
+		g.SendMsgEx(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
 	}
 	player.OnlineTime = uint32(time.Now().UnixMilli())
 	player.Online = true
+
+	player.GateAppId = gateAppId
 
 	// 初始化
 	player.InitAll()
@@ -53,32 +55,24 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.Pos.Y = player.SafePos.Y
 	player.Pos.Z = player.SafePos.Z
 
-	// 创建世界
-	world := WORLD_MANAGER.CreateWorld(player)
-	world.AddPlayer(player, player.SceneId)
-	player.WorldId = world.id
-
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
 	g.LoginNotify(userId, player, clientSeq)
-
-	player.SceneLoadState = model.SceneNone
-	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, clientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
 }
 
-func (g *GameManager) OnReg(userId uint32, clientSeq uint32, payloadMsg pb.Message) {
+func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	logger.Debug("user reg, uid: %v", userId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
 
-	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq)
+	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq, gateAppId)
 	if !asyncWait {
-		g.OnRegOk(exist, req, userId, clientSeq)
+		g.OnRegOk(exist, req, userId, clientSeq, gateAppId)
 	}
 }
 
-func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32) {
+func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32, gateAppId string) {
 	if exist {
 		logger.Error("recv reg req, but user is already exist, userId: %v", userId)
 		return
@@ -98,8 +92,8 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 	}
 	USER_MANAGER.AddUser(player)
 
-	g.SendMsg(cmd.SetPlayerBornDataRsp, userId, clientSeq, new(proto.SetPlayerBornDataRsp))
-	g.OnLogin(userId, clientSeq)
+	g.SendMsgEx(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
+	g.OnLogin(userId, clientSeq, gateAppId)
 }
 
 func (g *GameManager) OnUserOffline(userId uint32) {

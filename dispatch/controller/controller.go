@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"strconv"
 
 	"hk4e/common/config"
 	"hk4e/common/region"
+	"hk4e/common/rpc"
 	"hk4e/dispatch/dao"
+	"hk4e/node/api"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 
@@ -17,22 +20,32 @@ import (
 
 type Controller struct {
 	dao              *dao.Dao
+	discovery        *rpc.DiscoveryClient
 	regionListBase64 string
 	regionCurrBase64 string
 	signRsaKey       []byte
 	encRsaKeyMap     map[string][]byte
 	pwdRsaKey        []byte
-	dispatchEc2b     *random.Ec2b
 }
 
-func NewController(dao *dao.Dao) (r *Controller) {
+func NewController(dao *dao.Dao, discovery *rpc.DiscoveryClient) (r *Controller) {
 	r = new(Controller)
 	r.dao = dao
+	r.discovery = discovery
 	r.regionListBase64 = ""
 	r.regionCurrBase64 = ""
-	regionCurr, regionList, dispatchEc2b := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort)
-	r.dispatchEc2b = dispatchEc2b
 	r.signRsaKey, r.encRsaKeyMap, r.pwdRsaKey = region.LoadRsaKey()
+	rsp, err := r.discovery.GetRegionEc2B(context.TODO(), &api.NullMsg{})
+	if err != nil {
+		logger.Error("get region ec2b error: %v", err)
+		return nil
+	}
+	ec2b, err := random.LoadEc2bKey(rsp.Data)
+	if err != nil {
+		logger.Error("parse region ec2b error: %v", err)
+		return nil
+	}
+	regionCurr, regionList, _ := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort, ec2b)
 	regionCurrModify, err := pb.Marshal(regionCurr)
 	if err != nil {
 		logger.Error("Marshal QueryCurrRegionHttpRsp error")
@@ -143,7 +156,6 @@ func (c *Controller) registerRouter() {
 	}
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)
-	engine.GET("/dispatch/ec2b/seed", c.getDispatchEc2bSeed)
 	port := config.CONF.HttpPort
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)

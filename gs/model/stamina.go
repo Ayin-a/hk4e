@@ -1,7 +1,7 @@
 package model
 
 import (
-	"hk4e/gs/constant"
+	"hk4e/common/constant"
 	"hk4e/protocol/proto"
 )
 

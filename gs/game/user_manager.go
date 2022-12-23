@@ -66,9 +66,10 @@ type PlayerRegInfo struct {
 	Req       *proto.SetPlayerBornDataReq
 	UserId    uint32
 	ClientSeq uint32
+	GateAppId string
 }
 
-func (u *UserManager) CheckUserExistOnReg(userId uint32, req *proto.SetPlayerBornDataReq, clientSeq uint32) (exist bool, asyncWait bool) {
+func (u *UserManager) CheckUserExistOnReg(userId uint32, req *proto.SetPlayerBornDataReq, clientSeq uint32, gateAppId string) (exist bool, asyncWait bool) {
 	_, exist = u.playerMap[userId]
 	if exist {
 		return true, false
@@ -86,6 +87,7 @@ func (u *UserManager) CheckUserExistOnReg(userId uint32, req *proto.SetPlayerBor
 					Req:       req,
 					UserId:    userId,
 					ClientSeq: clientSeq,
+					GateAppId: gateAppId,
 				},
 			}
 		}()
@@ -137,9 +139,10 @@ type PlayerLoginInfo struct {
 	UserId    uint32
 	Player    *model.Player
 	ClientSeq uint32
+	GateAppId string
 }
 
-func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32) (*model.Player, bool) {
+func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId string) (*model.Player, bool) {
 	player, exist := u.playerMap[userId]
 	if exist {
 		u.ChangeUserDbState(player, model.DbNormal)
@@ -158,6 +161,7 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32) (*model.Player
 					UserId:    userId,
 					Player:    player,
 					ClientSeq: clientSeq,
+					GateAppId: gateAppId,
 				},
 			}
 		}()

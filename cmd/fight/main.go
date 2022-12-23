@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"hk4e/fight/app"
+	"hk4e/pkg/statsviz_serve"
 )
 
 var (
@@ -16,7 +17,9 @@ var (
 
 func main() {
 	flag.Parse()
-	// go statsviz_serve.Serve("0.0.0.0:2345")
+	go func() {
+		_ = statsviz_serve.Serve("0.0.0.0:5678")
+	}()
 	err := app.Run(context.TODO(), *config)
 	if err != nil {
 		fmt.Println(err)

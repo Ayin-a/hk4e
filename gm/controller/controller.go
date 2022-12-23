@@ -5,19 +5,19 @@ import (
 	"strconv"
 
 	"hk4e/common/config"
-	"hk4e/gm/rpc_client"
+	"hk4e/common/rpc"
 	"hk4e/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Controller struct {
-	rpc *rpc_client.Client
+	gm *rpc.GMClient
 }
 
-func NewController(rpc *rpc_client.Client) (r *Controller) {
+func NewController(gm *rpc.GMClient) (r *Controller) {
 	r = new(Controller)
-	r.rpc = rpc
+	r.gm = gm
 	go r.registerRouter()
 	return r
 }

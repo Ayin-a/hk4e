@@ -10,12 +10,20 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// 用于服务器之间传输游戏协议
+// 仅用于传递数据平面(client<--->server)和控制平面(server<--->server)的消息
+// 目前是全部消息都走NATS 之后可以做优化服务器之间socket直连
+// 请不要用这个来搞RPC写一大堆异步回调!!!
+// 要用RPC有专门的NATSRPC
+
 type MessageQueue struct {
 	natsConn     *nats.Conn
 	natsMsgChan  chan *nats.Msg
 	netMsgInput  chan *NetMsg
 	netMsgOutput chan *NetMsg
 	cmdProtoMap  *cmd.CmdProtoMap
+	serverType   string
+	appId        string
 }
 
 func NewMessageQueue(serverType string, appId string) (r *MessageQueue) {
@@ -35,6 +43,8 @@ func NewMessageQueue(serverType string, appId string) (r *MessageQueue) {
 	r.netMsgInput = make(chan *NetMsg, 1000)
 	r.netMsgOutput = make(chan *NetMsg, 1000)
 	r.cmdProtoMap = cmd.NewCmdProtoMap()
+	r.serverType = serverType
+	r.appId = appId
 	go r.recvHandler()
 	go r.sendHandler()
 	return r

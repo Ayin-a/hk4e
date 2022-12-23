@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"hk4e/common/constant"
 	gdc "hk4e/gs/config"
-	"hk4e/gs/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"

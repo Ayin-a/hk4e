@@ -9,12 +9,14 @@ const (
 )
 
 type NetMsg struct {
-	MsgType     uint8        `msgpack:"MsgType"`
-	EventId     uint16       `msgpack:"EventId"`
-	Topic       string       `msgpack:"-"`
-	GameMsg     *GameMsg     `msgpack:"GameMsg"`
-	FightMsg    *FightMsg    `msgpack:"FightMsg"`
-	ConnCtrlMsg *ConnCtrlMsg `msgpack:"ConnCtrlMsg"`
+	MsgType           uint8        `msgpack:"MsgType"`
+	EventId           uint16       `msgpack:"EventId"`
+	Topic             string       `msgpack:"-"`
+	GameMsg           *GameMsg     `msgpack:"GameMsg"`
+	FightMsg          *FightMsg    `msgpack:"FightMsg"`
+	ConnCtrlMsg       *ConnCtrlMsg `msgpack:"ConnCtrlMsg"`
+	OriginServerType  string       `msgpack:"OriginServerType"`
+	OriginServerAppId string       `msgpack:"OriginServerAppId"`
 }
 
 const (
@@ -33,15 +35,17 @@ type GameMsg struct {
 const (
 	ClientRttNotify = iota
 	ClientTimeNotify
+	FightServerSelectNotify
 	KickPlayerNotify
 )
 
 type ConnCtrlMsg struct {
-	UserId     uint32 `msgpack:"UserId"`
-	ClientRtt  uint32 `msgpack:"ClientRtt"`
-	ClientTime uint32 `msgpack:"ClientTime"`
-	KickUserId uint32 `msgpack:"KickUserId"`
-	KickReason uint32 `msgpack:"KickReason"`
+	UserId           uint32 `msgpack:"UserId"`
+	ClientRtt        uint32 `msgpack:"ClientRtt"`
+	ClientTime       uint32 `msgpack:"ClientTime"`
+	FightServerAppId string `msgpack:"FightServerAppId"`
+	KickUserId       uint32 `msgpack:"KickUserId"`
+	KickReason       uint32 `msgpack:"KickReason"`
 }
 
 const (
@@ -52,9 +56,10 @@ const (
 )
 
 type FightMsg struct {
-	FightRoutineId uint32             `msgpack:"FightRoutineId"`
-	EntityId       uint32             `msgpack:"EntityId"`
-	FightPropMap   map[uint32]float32 `msgpack:"FightPropMap"`
-	Uid            uint32             `msgpack:"Uid"`
-	AvatarGuid     uint64             `msgpack:"AvatarGuid"`
+	FightRoutineId  uint32             `msgpack:"FightRoutineId"`
+	EntityId        uint32             `msgpack:"EntityId"`
+	FightPropMap    map[uint32]float32 `msgpack:"FightPropMap"`
+	Uid             uint32             `msgpack:"Uid"`
+	AvatarGuid      uint64             `msgpack:"AvatarGuid"`
+	GateServerAppId string             `msgpack:"GateServerAppId"`
 }

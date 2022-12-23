@@ -2,6 +2,7 @@ package handle
 
 import (
 	"hk4e/common/mq"
+	"hk4e/node/api"
 	"hk4e/pathfinding/world"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -34,12 +35,15 @@ func (h *Handle) run() {
 				if netMsg.EventId != mq.NormalMsg {
 					continue
 				}
+				if netMsg.OriginServerType != api.GATE {
+					continue
+				}
 				gameMsg := netMsg.GameMsg
 				switch gameMsg.CmdId {
 				case cmd.QueryPathReq:
-					h.QueryPath(gameMsg.UserId, gameMsg.PayloadMessage)
+					h.QueryPath(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
 				case cmd.ObstacleModifyNotify:
-					h.ObstacleModifyNotify(gameMsg.UserId, gameMsg.PayloadMessage)
+					h.ObstacleModifyNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
 				}
 			}
 		}()
@@ -47,7 +51,7 @@ func (h *Handle) run() {
 }
 
 // SendMsg 发送消息给客户端
-func (h *Handle) SendMsg(cmdId uint16, userId uint32, payloadMsg pb.Message) {
+func (h *Handle) SendMsg(cmdId uint16, userId uint32, gateAppId string, payloadMsg pb.Message) {
 	if userId < 100000000 || payloadMsg == nil {
 		return
 	}
@@ -62,7 +66,7 @@ func (h *Handle) SendMsg(cmdId uint16, userId uint32, payloadMsg pb.Message) {
 		return
 	}
 	gameMsg.PayloadMessageData = payloadMessageData
-	h.messageQueue.SendToGate("1", &mq.NetMsg{
+	h.messageQueue.SendToGate(gateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.NormalMsg,
 		GameMsg: gameMsg,

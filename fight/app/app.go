@@ -9,21 +9,40 @@ import (
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/constant"
 	"hk4e/common/mq"
+	"hk4e/common/rpc"
 	"hk4e/fight/engine"
-	"hk4e/gs/constant"
+	"hk4e/node/api"
 	"hk4e/pkg/logger"
 )
+
+var APPID string
 
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
 
-	logger.InitLogger("fight")
-	logger.Warn("fight start")
+	// natsrpc client
+	client, err := rpc.NewClient()
+	if err != nil {
+		return err
+	}
+
+	// 注册到节点服务器
+	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
+		ServerType: api.FIGHT,
+	})
+	if err != nil {
+		return err
+	}
+	APPID = rsp.GetAppId()
+
+	logger.InitLogger("fight_" + APPID)
+	logger.Warn("fight start, appid: %v", APPID)
 
 	constant.InitConstant()
 
-	messageQueue := mq.NewMessageQueue(mq.FIGHT, "1")
+	messageQueue := mq.NewMessageQueue(api.FIGHT, APPID)
 	defer messageQueue.Close()
 
 	_ = engine.NewFightEngine(messageQueue)
@@ -38,7 +57,7 @@ func Run(ctx context.Context, configFile string) error {
 			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.Warn("fight exit")
+				logger.Warn("fight exit, appid: %v", APPID)
 				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:

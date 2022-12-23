@@ -2,6 +2,7 @@ package net
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"hk4e/common/mq"
 	"hk4e/dispatch/controller"
 	"hk4e/gate/kcp"
+	"hk4e/node/api"
 	"hk4e/pkg/endec"
 	"hk4e/pkg/httpclient"
 	"hk4e/pkg/logger"
@@ -80,23 +82,23 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		if connState != ConnActive {
 			return
 		}
-		// 通知GS玩家客户端的本地时钟
-		connCtrlMsg := new(mq.ConnCtrlMsg)
-		connCtrlMsg.UserId = userId
-		connCtrlMsg.ClientTime = pingReq.ClientTime
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
-			MsgType:     mq.MsgTypeConnCtrl,
-			EventId:     mq.ClientTimeNotify,
-			ConnCtrlMsg: connCtrlMsg,
-		})
 		// 通知GS玩家客户端往返时延
 		rtt := session.conn.GetSRTT()
-		connCtrlMsg = new(mq.ConnCtrlMsg)
+		connCtrlMsg := new(mq.ConnCtrlMsg)
 		connCtrlMsg.UserId = userId
 		connCtrlMsg.ClientRtt = uint32(rtt)
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
+		k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
 			MsgType:     mq.MsgTypeConnCtrl,
 			EventId:     mq.ClientRttNotify,
+			ConnCtrlMsg: connCtrlMsg,
+		})
+		// 通知GS玩家客户端的本地时钟
+		connCtrlMsg = new(mq.ConnCtrlMsg)
+		connCtrlMsg.UserId = userId
+		connCtrlMsg.ClientTime = pingReq.ClientTime
+		k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
+			MsgType:     mq.MsgTypeConnCtrl,
+			EventId:     mq.ClientTimeNotify,
 			ConnCtrlMsg: connCtrlMsg,
 		})
 	default:
@@ -106,12 +108,15 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		}
 		// 只转发到寻路服务器
 		if protoMsg.CmdId == cmd.QueryPathReq || protoMsg.CmdId == cmd.ObstacleModifyNotify {
+			if session.pathfindingServerAppId == "" {
+				return
+			}
 			gameMsg := new(mq.GameMsg)
 			gameMsg.UserId = userId
 			gameMsg.CmdId = protoMsg.CmdId
 			gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
 			gameMsg.PayloadMessage = protoMsg.PayloadMessage
-			k.messageQueue.SendToPathfinding("1", &mq.NetMsg{
+			k.messageQueue.SendToPathfinding(session.pathfindingServerAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeGame,
 				EventId: mq.NormalMsg,
 				GameMsg: gameMsg,
@@ -119,13 +124,13 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			return
 		}
 		// 同时转发到战斗服务器
-		if protoMsg.CmdId == cmd.CombatInvocationsNotify {
+		if protoMsg.CmdId == cmd.CombatInvocationsNotify && session.fightServerAppId != "" {
 			gameMsg := new(mq.GameMsg)
 			gameMsg.UserId = userId
 			gameMsg.CmdId = protoMsg.CmdId
 			gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
 			gameMsg.PayloadMessage = protoMsg.PayloadMessage
-			k.messageQueue.SendToFight("1", &mq.NetMsg{
+			k.messageQueue.SendToFight(session.fightServerAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeGame,
 				EventId: mq.NormalMsg,
 				GameMsg: gameMsg,
@@ -137,7 +142,7 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		gameMsg.CmdId = protoMsg.CmdId
 		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
 		gameMsg.PayloadMessage = protoMsg.PayloadMessage
-		k.messageQueue.SendToGs("1", &mq.NetMsg{
+		k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
 			MsgType: mq.MsgTypeGame,
 			EventId: mq.NormalMsg,
 			GameMsg: gameMsg,
@@ -269,6 +274,32 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	session.userId = tokenVerifyRsp.PlayerID
 	k.SetSession(session, session.conn.GetConv(), session.userId)
 	k.createSessionChan <- session
+	// 绑定各个服务器appid
+	gsServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
+		ServerType: api.GS,
+	})
+	if err != nil {
+		logger.Error("get gs server appid error: %v", err)
+		return nil
+	}
+	session.gsServerAppId = gsServerAppId.AppId
+	fightServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
+		ServerType: api.FIGHT,
+	})
+	if err != nil {
+		logger.Error("get fight server appid error: %v", err)
+	}
+	session.fightServerAppId = fightServerAppId.AppId
+	pathfindingServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
+		ServerType: api.PATHFINDING,
+	})
+	if err != nil {
+		logger.Error("get pathfinding server appid error: %v", err)
+	}
+	session.pathfindingServerAppId = pathfindingServerAppId.AppId
+	logger.Debug("session gs appid: %v", session.gsServerAppId)
+	logger.Debug("session fight appid: %v", session.fightServerAppId)
+	logger.Debug("session pathfinding appid: %v", session.pathfindingServerAppId)
 	// 返回响应
 	rsp = new(proto.GetPlayerTokenRsp)
 	rsp.Uid = tokenVerifyRsp.PlayerID

@@ -1,6 +1,6 @@
 module hk4e
 
-go 1.19
+go 1.18
 
 // toml
 require github.com/BurntSushi/toml v0.3.1
@@ -44,10 +44,11 @@ require github.com/jszwec/csvutil v1.7.1
 // hjson
 require github.com/hjson/hjson-go/v4 v4.2.0
 
-require (
-	github.com/byebyebruce/natsrpc v0.5.5-0.20221125150611-56cd29a4e335
-	github.com/spf13/cobra v1.6.1
-)
+// natsrpc
+require github.com/byebyebruce/natsrpc v0.5.5-0.20221125150611-56cd29a4e335
+
+// cobra
+require github.com/spf13/cobra v1.6.1
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

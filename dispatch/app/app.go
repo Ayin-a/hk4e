@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/rpc"
 	"hk4e/dispatch/controller"
 	"hk4e/dispatch/dao"
 	"hk4e/pkg/logger"
@@ -23,7 +24,12 @@ func Run(ctx context.Context, configFile string) error {
 	db := dao.NewDao()
 	defer db.CloseDao()
 
-	_ = controller.NewController(db)
+	client, err := rpc.NewClient()
+	if err != nil {
+		return err
+	}
+
+	_ = controller.NewController(db, client.Discovery)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)

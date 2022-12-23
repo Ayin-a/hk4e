@@ -20,7 +20,7 @@ func (c *Controller) gmCmd(context *gin.Context) {
 	if err != nil {
 		return
 	}
-	rep, err := c.rpc.Cmd(context.Request.Context(), &api.CmdRequest{
+	rep, err := c.gm.Cmd(context.Request.Context(), &api.CmdRequest{
 		FuncName: gmCmdReq.FuncName,
 		Param:    gmCmdReq.Param,
 	})

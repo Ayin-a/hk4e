@@ -71,6 +71,8 @@ type Player struct {
 	ClientSeq             uint32                                   `bson:"-" msgpack:"-"` // 客户端发包请求的序号
 	CombatInvokeHandler   *InvokeHandler[proto.CombatInvokeEntry]  `bson:"-" msgpack:"-"` // combat转发器
 	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-" msgpack:"-"` // ability转发器
+	GateAppId             string                                   `bson:"-" msgpack:"-"` // 网关服务器的appid
+	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
 }
 
 func (p *Player) GetNextGameObjectGuid() uint64 {

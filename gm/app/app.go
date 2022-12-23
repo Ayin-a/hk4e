@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/rpc"
 	"hk4e/gm/controller"
-	"hk4e/gm/rpc_client"
 	"hk4e/pkg/logger"
-
-	"github.com/nats-io/nats.go"
 )
 
 func Run(ctx context.Context, configFile string) error {
@@ -21,18 +19,12 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("gm")
 	logger.Warn("gm start")
 
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	client, err := rpc.NewClient()
 	if err != nil {
-		logger.Error("connect nats error: %v", err)
 		return err
 	}
-	defer conn.Close()
 
-	rpc, err := rpc_client.New(conn)
-	if err != nil {
-		return err
-	}
-	_ = controller.NewController(rpc)
+	_ = controller.NewController(client.GM)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)

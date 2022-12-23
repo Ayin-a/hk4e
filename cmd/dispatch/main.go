@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"hk4e/dispatch/app"
+	"hk4e/pkg/statsviz_serve"
 )
 
 var (
@@ -16,7 +17,12 @@ var (
 
 func main() {
 	flag.Parse()
-	// go statsviz_serve.Serve("0.0.0.0:2345")
+	go func() {
+		err := statsviz_serve.Serve("0.0.0.0:2345")
+		if err != nil {
+			panic(err)
+		}
+	}()
 	err := app.Run(context.TODO(), *config)
 	if err != nil {
 		fmt.Println(err)

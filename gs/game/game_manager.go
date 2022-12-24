@@ -1,9 +1,12 @@
 package game
 
 import (
+	"reflect"
 	"time"
 
+	appConfig "hk4e/common/config"
 	"hk4e/common/mq"
+	"hk4e/gate/client_proto"
 	"hk4e/gate/kcp"
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
@@ -25,9 +28,11 @@ var TICK_MANAGER *TickManager = nil
 var COMMAND_MANAGER *CommandManager = nil
 
 type GameManager struct {
-	dao          *dao.Dao
-	messageQueue *mq.MessageQueue
-	snowflake    *alg.SnowflakeWorker
+	dao                       *dao.Dao
+	messageQueue              *mq.MessageQueue
+	snowflake                 *alg.SnowflakeWorker
+	clientCmdProtoMap         *client_proto.ClientCmdProtoMap
+	clientCmdProtoMapRefValue reflect.Value
 }
 
 func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r *GameManager) {
@@ -35,6 +40,10 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r
 	r.dao = dao
 	r.messageQueue = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
+	if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
+		r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
+	}
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()
@@ -265,4 +274,14 @@ func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
 		},
 	})
 	// g.SendMsg(cmd.ServerDisconnectClientNotify, userId, 0, new(proto.ServerDisconnectClientNotify))
+}
+
+func (g *GameManager) GetClientProtoObjByName(protoObjName string) pb.Message {
+	if !appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+		return &proto.NullMsg{}
+	}
+	clientProtoObj := g.clientCmdProtoMapRefValue.MethodByName(
+		"GetClientProtoObjByName",
+	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	return clientProtoObj
 }

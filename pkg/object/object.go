@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	pb "google.golang.org/protobuf/proto"
@@ -37,48 +38,72 @@ func FastDeepCopy(dst, src any) error {
 	return nil
 }
 
-func CopyProtoBufSameField(dst, src pb.Message) error {
+func CopyProtoBufSameField(dst, src pb.Message) ([]string, error) {
 	date, err := protojson.Marshal(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	jsonObj := make(map[string]any)
-	err = json.Unmarshal(date, &jsonObj)
-	if err != nil {
-		return err
-	}
+	delList := make([]string, 0)
+	loopCount := 0
 	for {
-		jsonData, err := json.Marshal(jsonObj)
-		if err != nil {
-			return err
+		loopCount++
+		if loopCount > 1000 {
+			return nil, errors.New("loop count limit")
 		}
-		err = protojson.Unmarshal(jsonData, dst)
+		err = protojson.Unmarshal(date, dst)
 		if err != nil {
 			if !strings.Contains(err.Error(), "unknown field") {
-				return err
+				return nil, err
 			}
 			split := strings.Split(err.Error(), "\"")
 			if len(split) != 3 {
-				return err
+				return nil, err
 			}
 			fieldName := split[1]
+			jsonObj := make(map[string]any)
+			err = json.Unmarshal(date, &jsonObj)
+			if err != nil {
+				return nil, err
+			}
 			DeleteAllKeyNameFromStringAnyMap(jsonObj, fieldName)
+			delList = append(delList, fieldName)
+			date, err = json.Marshal(jsonObj)
+			if err != nil {
+				return nil, err
+			}
 			continue
 		} else {
 			break
 		}
 	}
-	return nil
+	return delList, nil
 }
 
 func DeleteAllKeyNameFromStringAnyMap(src map[string]any, keyName string) {
 	for key, value := range src {
-		v, ok := value.(map[string]any)
+		vm, ok := value.(map[string]any)
 		if ok {
-			DeleteAllKeyNameFromStringAnyMap(v, keyName)
+			DeleteAllKeyNameFromStringAnyMap(vm, keyName)
+		}
+		vs, ok := value.([]any)
+		if ok {
+			DeleteAllKeyNameFromAnyList(vs, keyName)
 		}
 		if key == keyName {
 			delete(src, key)
+		}
+	}
+}
+
+func DeleteAllKeyNameFromAnyList(src []any, keyName string) {
+	for _, value := range src {
+		vm, ok := value.(map[string]any)
+		if ok {
+			DeleteAllKeyNameFromStringAnyMap(vm, keyName)
+		}
+		vs, ok := value.([]any)
+		if ok {
+			DeleteAllKeyNameFromAnyList(vs, keyName)
 		}
 	}
 }

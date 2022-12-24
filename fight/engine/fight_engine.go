@@ -1,10 +1,14 @@
 package engine
 
 import (
+	"reflect"
 	"time"
 
+	"hk4e/common/config"
 	"hk4e/common/constant"
 	"hk4e/common/mq"
+	"hk4e/common/utils"
+	"hk4e/gate/client_proto"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
@@ -19,6 +23,7 @@ type FightEngine struct {
 func NewFightEngine(messageQueue *mq.MessageQueue) (r *FightEngine) {
 	r = new(FightEngine)
 	r.messageQueue = messageQueue
+	initClientCmdProtoMap()
 	go r.fightHandle()
 	return r
 }
@@ -223,9 +228,13 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 				continue
 			}
 			hitInfo := new(proto.EvtBeingHitInfo)
-			err := pb.Unmarshal(entry.CombatData, hitInfo)
-			if err != nil {
-				logger.Error("parse combat invocations entity hit info error: %v", err)
+			clientProtoObj := GetClientProtoObjByName("EvtBeingHitInfo")
+			if clientProtoObj == nil {
+				logger.Error("get client proto obj is nil")
+				return
+			}
+			ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
+			if !ok {
 				continue
 			}
 			attackResult := hitInfo.AttackResult
@@ -277,4 +286,24 @@ func (f *FightRoutine) getAllPlayer(entityMap map[uint32]*Entity) []uint32 {
 		uidList = append(uidList, uid)
 	}
 	return uidList
+}
+
+var ClientCmdProtoMap *client_proto.ClientCmdProtoMap
+var ClientCmdProtoMapRefValue reflect.Value
+
+func initClientCmdProtoMap() {
+	if config.CONF.Hk4e.ClientProtoProxyEnable {
+		ClientCmdProtoMap = client_proto.NewClientCmdProtoMap()
+		ClientCmdProtoMapRefValue = reflect.ValueOf(ClientCmdProtoMap)
+	}
+}
+
+func GetClientProtoObjByName(protoObjName string) pb.Message {
+	if !config.CONF.Hk4e.ClientProtoProxyEnable {
+		return &proto.NullMsg{}
+	}
+	clientProtoObj := ClientCmdProtoMapRefValue.MethodByName(
+		"GetClientProtoObjByName",
+	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	return clientProtoObj
 }

@@ -53,8 +53,10 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.kcpEventInput = make(chan *KcpEvent, 1000)
 	r.kcpEventOutput = make(chan *KcpEvent, 1000)
 	r.serverCmdProtoMap = cmd.NewCmdProtoMap()
-	r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
-	r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
+	if config.CONF.Hk4e.ClientProtoProxyEnable {
+		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
+		r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
+	}
 	r.messageQueue = messageQueue
 	r.localMsgOutput = make(chan *ProtoMsg, 1000)
 	r.createSessionChan = make(chan *Session, 1000)

@@ -141,7 +141,7 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 
 	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
 
-	g.LoginNotify(player.PlayerID, player, 0)
+	// g.LoginNotify(player.PlayerID, player, 0)
 
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
 		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)

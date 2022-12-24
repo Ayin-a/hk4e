@@ -2,11 +2,23 @@ package client_proto
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestClientProtoGen(t *testing.T) {
-	clientCmdProtoMap := NewClientCmdProtoMap()
+	dir, err := os.ReadDir("../proto")
+	if err != nil {
+		panic(err)
+	}
+	nameList := make([]string, 0)
+	for _, entry := range dir {
+		split := strings.Split(entry.Name(), ".")
+		if len(split) != 2 {
+			panic("file name error")
+		}
+		nameList = append(nameList, split[0])
+	}
 
 	fileData := "package client_proto\n"
 	fileData += "\n"
@@ -15,10 +27,10 @@ func TestClientProtoGen(t *testing.T) {
 	fileData += "pb \"google.golang.org/protobuf/proto\"\n"
 	fileData += ")\n"
 	fileData += "\n"
-	fileData += "func (c *ClientCmdProtoMap) GetClientProtoObjByCmdName(cmdName string) pb.Message {\n"
-	fileData += "switch cmdName {\n"
-	for cmdName := range clientCmdProtoMap.clientCmdNameCmdIdMap {
-		fileData += "case \"" + cmdName + "\":\nreturn new(proto." + cmdName + ")\n"
+	fileData += "func (c *ClientCmdProtoMap) GetClientProtoObjByName(protoObjName string) pb.Message {\n"
+	fileData += "switch protoObjName {\n"
+	for _, protoObjName := range nameList {
+		fileData += "case \"" + protoObjName + "\":\nreturn new(proto." + protoObjName + ")\n"
 	}
 	fileData += "default:\n"
 	fileData += "return nil\n"
@@ -26,7 +38,7 @@ func TestClientProtoGen(t *testing.T) {
 	fileData += "}\n"
 	fileData += "\n"
 
-	err := os.WriteFile("../client_proto_gen.go", []byte(fileData), 0644)
+	err = os.WriteFile("../client_proto_gen.go", []byte(fileData), 0644)
 	if err != nil {
 		panic(err)
 	}

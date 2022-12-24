@@ -30,20 +30,37 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 		clientCmdId := kcpMsg.CmdId
 		clientProtoData := kcpMsg.ProtoData
 		cmdName := k.clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
-		clientProtoObj := k.clientCmdProtoMapRefValue.MethodByName(
-			"GetClientProtoObjByCmdName",
-		).Call([]reflect.Value{reflect.ValueOf(cmdName)})[0].Interface().(pb.Message)
+		if cmdName == "" {
+			logger.Error("get cmdName is nil, clientCmdId: %v", clientCmdId)
+			return protoMsgList
+		}
+		clientProtoObj := k.getClientProtoObjByName(cmdName)
+		if clientProtoObj == nil {
+			logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
+			return protoMsgList
+		}
 		err := pb.Unmarshal(clientProtoData, clientProtoObj)
 		if err != nil {
 			logger.Error("unmarshal client proto error: %v", err)
 			return protoMsgList
 		}
 		serverCmdId := k.serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
+		if serverCmdId == 0 {
+			logger.Error("get server cmdId is nil, cmdName: %v", cmdName)
+			return protoMsgList
+		}
 		serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
-		err = object.CopyProtoBufSameField(serverProtoObj, clientProtoObj)
+		if serverProtoObj == nil {
+			logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
+			return protoMsgList
+		}
+		delList, err := object.CopyProtoBufSameField(serverProtoObj, clientProtoObj)
 		if err != nil {
 			logger.Error("copy proto obj error: %v", err)
 			return protoMsgList
+		}
+		if len(delList) != 0 {
+			logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
 		}
 		serverProtoData, err := pb.Marshal(serverProtoObj)
 		if err != nil {
@@ -117,6 +134,50 @@ func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byt
 			return
 		}
 		for _, unionCmd := range unionCmdNotify.GetCmdList() {
+			if config.CONF.Hk4e.ClientProtoProxyEnable {
+				clientCmdId := uint16(unionCmd.MessageId)
+				clientProtoData := unionCmd.Body
+				cmdName := k.clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
+				if cmdName == "" {
+					logger.Error("get cmdName is nil, clientCmdId: %v", clientCmdId)
+					continue
+				}
+				clientProtoObj := k.getClientProtoObjByName(cmdName)
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
+					continue
+				}
+				err := pb.Unmarshal(clientProtoData, clientProtoObj)
+				if err != nil {
+					logger.Error("unmarshal client proto error: %v", err)
+					continue
+				}
+				serverCmdId := k.serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
+				if serverCmdId == 0 {
+					logger.Error("get server cmdId is nil, cmdName: %v", cmdName)
+					continue
+				}
+				serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
+				if serverProtoObj == nil {
+					logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
+					continue
+				}
+				delList, err := object.CopyProtoBufSameField(serverProtoObj, clientProtoObj)
+				if err != nil {
+					logger.Error("copy proto obj error: %v", err)
+					continue
+				}
+				if len(delList) != 0 {
+					logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
+				}
+				serverProtoData, err := pb.Marshal(serverProtoObj)
+				if err != nil {
+					logger.Error("marshal server proto error: %v", err)
+					continue
+				}
+				unionCmd.MessageId = uint32(serverCmdId)
+				unionCmd.Body = serverProtoData
+			}
 			k.protoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
 		}
 	}
@@ -165,24 +226,43 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 		serverCmdId := kcpMsg.CmdId
 		serverProtoData := kcpMsg.ProtoData
 		serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
+		if serverProtoObj == nil {
+			logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
+			return nil
+		}
 		err := pb.Unmarshal(serverProtoData, serverProtoObj)
 		if err != nil {
 			logger.Error("unmarshal server proto error: %v", err)
+			return nil
 		}
 		cmdName := k.serverCmdProtoMap.GetCmdNameByCmdId(serverCmdId)
-		clientProtoObj := k.clientCmdProtoMapRefValue.MethodByName(
-			"GetClientProtoObjByCmdName",
-		).Call([]reflect.Value{reflect.ValueOf(cmdName)})[0].Interface().(pb.Message)
-		err = object.CopyProtoBufSameField(clientProtoObj, serverProtoObj)
+		if cmdName == "" {
+			logger.Error("get cmdName is nil, serverCmdId: %v", serverCmdId)
+			return nil
+		}
+		clientProtoObj := k.getClientProtoObjByName(cmdName)
+		if clientProtoObj == nil {
+			logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
+			return nil
+		}
+		delList, err := object.CopyProtoBufSameField(clientProtoObj, serverProtoObj)
 		if err != nil {
 			logger.Error("copy proto obj error: %v", err)
 			return nil
 		}
+		if len(delList) != 0 {
+			logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
+		}
 		clientProtoData, err := pb.Marshal(clientProtoObj)
 		if err != nil {
 			logger.Error("marshal client proto error: %v", err)
+			return nil
 		}
 		clientCmdId := k.clientCmdProtoMap.GetClientCmdIdByCmdName(cmdName)
+		if clientCmdId == 0 {
+			logger.Error("get client cmdId is nil, cmdName: %v", cmdName)
+			return nil
+		}
 		kcpMsg.CmdId = clientCmdId
 		kcpMsg.ProtoData = clientProtoData
 	}
@@ -212,4 +292,11 @@ func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uin
 		return 0, nil
 	}
 	return cmdId, protoData
+}
+
+func (k *KcpConnectManager) getClientProtoObjByName(protoObjName string) pb.Message {
+	clientProtoObj := k.clientCmdProtoMapRefValue.MethodByName(
+		"GetClientProtoObjByName",
+	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	return clientProtoObj
 }

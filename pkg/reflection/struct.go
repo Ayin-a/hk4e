@@ -11,7 +11,6 @@ func ConvStructToMap(value any) map[string]any {
 		return nil
 	}
 	fieldNum := refType.NumField()
-	result := make(map[string]any)
 	nameList := make([]string, 0)
 	for i := 0; i < fieldNum; i++ {
 		nameList = append(nameList, refType.Field(i).Name)
@@ -20,6 +19,7 @@ func ConvStructToMap(value any) map[string]any {
 	if refValue.Kind() == reflect.Ptr {
 		refValue = refValue.Elem()
 	}
+	result := make(map[string]any)
 	for i := 0; i < fieldNum; i++ {
 		result[nameList[i]] = refValue.FieldByName(nameList[i]).Interface()
 	}
@@ -74,6 +74,62 @@ func CopyStructField(dst any, src any, fieldName string) bool {
 	ok = SetStructFieldValue(dst, fieldName, value)
 	if !ok {
 		return false
+	}
+	return true
+}
+
+func CopyStructSameField(dst any, src any) bool {
+	// dst
+	dstRefType := reflect.TypeOf(dst)
+	if dstRefType.Kind() != reflect.Ptr {
+		return false
+	}
+	dstRefType = dstRefType.Elem()
+	if dstRefType.Kind() != reflect.Struct {
+		return false
+	}
+	dstRefValue := reflect.ValueOf(dst)
+	if dstRefValue.Kind() != reflect.Ptr {
+		return false
+	}
+	dstRefValue = dstRefValue.Elem()
+	// src
+	srcRefType := reflect.TypeOf(src)
+	if srcRefType.Kind() != reflect.Ptr {
+		return false
+	}
+	srcRefType = srcRefType.Elem()
+	if srcRefType.Kind() != reflect.Struct {
+		return false
+	}
+	srcRefValue := reflect.ValueOf(src)
+	if srcRefValue.Kind() != reflect.Ptr {
+		return false
+	}
+	srcRefValue = srcRefValue.Elem()
+	// copy
+	fieldNum := srcRefType.NumField()
+	for i := 0; i < fieldNum; i++ {
+		srcFieldType := srcRefType.Field(i)
+		if !srcFieldType.IsExported() {
+			continue
+		}
+		fieldName := srcFieldType.Name
+		dstFieldType, ok := dstRefType.FieldByName(fieldName)
+		if !ok {
+			continue
+		}
+		srcField := srcRefValue.FieldByName(fieldName)
+		dstField := dstRefValue.FieldByName(fieldName)
+		if srcField.Kind() == reflect.Ptr {
+			dstField.Set(reflect.New(dstFieldType.Type.Elem()))
+			CopyStructSameField(dstField.Interface(), srcField.Interface())
+			continue
+		}
+		if dstField.Type() != reflect.TypeOf(srcField.Interface()) {
+			return false
+		}
+		dstField.Set(reflect.ValueOf(srcField.Interface()))
 	}
 	return true
 }

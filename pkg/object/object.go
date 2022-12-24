@@ -3,12 +3,16 @@ package object
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/vmihailenco/msgpack/v5"
+	"google.golang.org/protobuf/encoding/protojson"
+	pb "google.golang.org/protobuf/proto"
 )
 
-func DeepCopy(dst, src any) error {
+func FullDeepCopy(dst, src any) error {
 	var buf bytes.Buffer
 	err := gob.NewEncoder(&buf).Encode(src)
 	if err != nil {
@@ -31,6 +35,52 @@ func FastDeepCopy(dst, src any) error {
 		return err
 	}
 	return nil
+}
+
+func CopyProtoBufSameField(dst, src pb.Message) error {
+	date, err := protojson.Marshal(src)
+	if err != nil {
+		return err
+	}
+	jsonObj := make(map[string]any)
+	err = json.Unmarshal(date, &jsonObj)
+	if err != nil {
+		return err
+	}
+	for {
+		jsonData, err := json.Marshal(jsonObj)
+		if err != nil {
+			return err
+		}
+		err = protojson.Unmarshal(jsonData, dst)
+		if err != nil {
+			if !strings.Contains(err.Error(), "unknown field") {
+				return err
+			}
+			split := strings.Split(err.Error(), "\"")
+			if len(split) != 3 {
+				return err
+			}
+			fieldName := split[1]
+			DeleteAllKeyNameFromStringAnyMap(jsonObj, fieldName)
+			continue
+		} else {
+			break
+		}
+	}
+	return nil
+}
+
+func DeleteAllKeyNameFromStringAnyMap(src map[string]any, keyName string) {
+	for key, value := range src {
+		v, ok := value.(map[string]any)
+		if ok {
+			DeleteAllKeyNameFromStringAnyMap(v, keyName)
+		}
+		if key == keyName {
+			delete(src, key)
+		}
+	}
 }
 
 func ConvBoolToInt64(v bool) int64 {

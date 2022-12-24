@@ -32,11 +32,12 @@ type Database struct {
 
 // Hk4e 原神相关
 type Hk4e struct {
-	KcpPort            int32  `toml:"kcp_port"`
-	KcpAddr            string `toml:"kcp_addr"`
-	ResourcePath       string `toml:"resource_path"`
-	GameDataConfigPath string `toml:"game_data_config_path"`
-	GachaHistoryServer string `toml:"gacha_history_server"`
+	KcpPort                int32  `toml:"kcp_port"`
+	KcpAddr                string `toml:"kcp_addr"`
+	ResourcePath           string `toml:"resource_path"`
+	GameDataConfigPath     string `toml:"game_data_config_path"`
+	GachaHistoryServer     string `toml:"gacha_history_server"`
+	ClientProtoProxyEnable bool   `toml:"client_proto_proxy_enable"`
 }
 
 // MQ 消息队列

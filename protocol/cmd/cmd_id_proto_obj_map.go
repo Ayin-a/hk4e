@@ -13,6 +13,8 @@ type CmdProtoMap struct {
 	cmdIdProtoObjMap map[uint16]reflect.Type
 	protoObjCmdIdMap map[reflect.Type]uint16
 	cmdDeDupMap      map[uint16]bool
+	cmdIdCmdNameMap  map[uint16]string
+	cmdNameCmdIdMap  map[string]uint16
 }
 
 func NewCmdProtoMap() (r *CmdProtoMap) {
@@ -20,6 +22,8 @@ func NewCmdProtoMap() (r *CmdProtoMap) {
 	r.cmdIdProtoObjMap = make(map[uint16]reflect.Type)
 	r.protoObjCmdIdMap = make(map[reflect.Type]uint16)
 	r.cmdDeDupMap = make(map[uint16]bool)
+	r.cmdIdCmdNameMap = make(map[uint16]string)
+	r.cmdNameCmdIdMap = make(map[string]uint16)
 	r.registerAllMessage()
 	return r
 }
@@ -268,30 +272,52 @@ func (c *CmdProtoMap) registerMessage(cmdId uint16, protoObj pb.Message) {
 	} else {
 		c.cmdDeDupMap[cmdId] = true
 	}
+	refType := reflect.TypeOf(protoObj)
 	// cmdId -> protoObj
-	c.cmdIdProtoObjMap[cmdId] = reflect.TypeOf(protoObj)
+	c.cmdIdProtoObjMap[cmdId] = refType
 	// protoObj -> cmdId
-	c.protoObjCmdIdMap[reflect.TypeOf(protoObj)] = cmdId
+	c.protoObjCmdIdMap[refType] = cmdId
+	cmdName := refType.Elem().Name()
+	// cmdId -> cmdName
+	c.cmdIdCmdNameMap[cmdId] = cmdName
+	// cmdName -> cmdId
+	c.cmdNameCmdIdMap[cmdName] = cmdId
 }
 
-func (c *CmdProtoMap) GetProtoObjByCmdId(cmdId uint16) (protoObj pb.Message) {
-	protoObjTypePointer, ok := c.cmdIdProtoObjMap[cmdId]
-	if !ok {
+func (c *CmdProtoMap) GetProtoObjByCmdId(cmdId uint16) pb.Message {
+	refType, exist := c.cmdIdProtoObjMap[cmdId]
+	if !exist {
 		logger.Error("unknown cmd id: %v", cmdId)
-		protoObj = nil
-		return protoObj
+		return nil
 	}
-	protoObjInst := reflect.New(protoObjTypePointer.Elem())
-	protoObj = protoObjInst.Interface().(pb.Message)
+	protoObjInst := reflect.New(refType.Elem())
+	protoObj := protoObjInst.Interface().(pb.Message)
 	return protoObj
 }
 
-func (c *CmdProtoMap) GetCmdIdByProtoObj(protoObj pb.Message) (cmdId uint16) {
-	var ok = false
-	cmdId, ok = c.protoObjCmdIdMap[reflect.TypeOf(protoObj)]
-	if !ok {
+func (c *CmdProtoMap) GetCmdIdByProtoObj(protoObj pb.Message) uint16 {
+	cmdId, exist := c.protoObjCmdIdMap[reflect.TypeOf(protoObj)]
+	if !exist {
 		logger.Error("unknown proto object: %v", protoObj)
-		cmdId = 0
+		return 0
+	}
+	return cmdId
+}
+
+func (c *CmdProtoMap) GetCmdNameByCmdId(cmdId uint16) string {
+	cmdName, exist := c.cmdIdCmdNameMap[cmdId]
+	if !exist {
+		logger.Error("unknown cmd id: %v", cmdId)
+		return ""
+	}
+	return cmdName
+}
+
+func (c *CmdProtoMap) GetCmdIdByCmdName(cmdName string) uint16 {
+	cmdId, exist := c.cmdNameCmdIdMap[cmdName]
+	if !exist {
+		logger.Error("unknown cmd name: %v", cmdName)
+		return 0
 	}
 	return cmdId
 }

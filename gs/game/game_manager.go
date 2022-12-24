@@ -30,11 +30,11 @@ type GameManager struct {
 	snowflake    *alg.SnowflakeWorker
 }
 
-func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue) (r *GameManager) {
+func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r *GameManager) {
 	r = new(GameManager)
 	r.dao = dao
 	r.messageQueue = messageQueue
-	r.snowflake = alg.NewSnowflakeWorker(1)
+	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()

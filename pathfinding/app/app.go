@@ -35,6 +35,12 @@ func Run(ctx context.Context, configFile string) error {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	defer func() {
+		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
+			ServerType: api.PATHFINDING,
+			AppId:      APPID,
+		})
+	}()
 
 	logger.InitLogger("pathfinding_" + APPID)
 	logger.Warn("pathfinding start, appid: %v", APPID)

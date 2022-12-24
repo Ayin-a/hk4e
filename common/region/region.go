@@ -1,12 +1,15 @@
 package region
 
 import (
+	"encoding/base64"
 	"os"
 
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func LoadRsaKey() (signRsaKey []byte, encRsaKeyMap map[string][]byte, pwdRsaKey []byte) {
@@ -33,20 +36,13 @@ func LoadRsaKey() (signRsaKey []byte, encRsaKeyMap map[string][]byte, pwdRsaKey 
 	return signRsaKey, encRsaKeyMap, pwdRsaKey
 }
 
-func InitRegion(kcpAddr string, kcpPort int32, ec2b *random.Ec2b) (*proto.QueryCurrRegionHttpRsp, *proto.QueryRegionListHttpRsp, *random.Ec2b) {
-	dispatchEc2b := random.NewEc2b()
-	if ec2b != nil {
-		dispatchEc2b = ec2b
-	}
-	dispatchEc2bData := dispatchEc2b.Bytes()
-	dispatchXorKey := dispatchEc2b.XorKey()
-	// RegionCurr
-	regionCurr := new(proto.QueryCurrRegionHttpRsp)
-	regionCurr.RegionInfo = &proto.RegionInfo{
-		GateserverIp:   kcpAddr,
-		GateserverPort: uint32(kcpPort),
-		SecretKey:      dispatchEc2bData,
-	}
+func NewRegionEc2b() *random.Ec2b {
+	return random.NewEc2b()
+}
+
+func GetRegionList(ec2b *random.Ec2b) *proto.QueryRegionListHttpRsp {
+	dispatchEc2bData := ec2b.Bytes()
+	dispatchXorKey := ec2b.XorKey()
 	// RegionList
 	customConfigStr := `
 		{
@@ -73,5 +69,37 @@ func InitRegion(kcpAddr string, kcpPort int32, ec2b *random.Ec2b) (*proto.QueryC
 	regionList.ClientSecretKey = dispatchEc2bData
 	regionList.ClientCustomConfigEncrypted = customConfig
 	regionList.EnableLoginPc = true
-	return regionCurr, regionList, dispatchEc2b
+	return regionList
+}
+
+func GetRegionCurr(kcpAddr string, kcpPort int32, ec2b *random.Ec2b) *proto.QueryCurrRegionHttpRsp {
+	dispatchEc2bData := ec2b.Bytes()
+	// RegionCurr
+	regionCurr := new(proto.QueryCurrRegionHttpRsp)
+	regionCurr.RegionInfo = &proto.RegionInfo{
+		GateserverIp:   kcpAddr,
+		GateserverPort: uint32(kcpPort),
+		SecretKey:      dispatchEc2bData,
+	}
+	return regionCurr
+}
+
+func GetRegionListBase64(ec2b *random.Ec2b) string {
+	regionList := GetRegionList(ec2b)
+	regionListData, err := pb.Marshal(regionList)
+	if err != nil {
+		logger.Error("pb marshal QueryRegionListHttpRsp error: %v", err)
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(regionListData)
+}
+
+func GetRegionCurrBase64(kcpAddr string, kcpPort int32, ec2b *random.Ec2b) string {
+	regionCurr := GetRegionCurr(kcpAddr, kcpPort, ec2b)
+	regionCurrData, err := pb.Marshal(regionCurr)
+	if err != nil {
+		logger.Error("pb marshal QueryCurrRegionHttpRsp error: %v", err)
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(regionCurrData)
 }

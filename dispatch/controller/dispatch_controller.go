@@ -9,7 +9,9 @@ import (
 	"regexp"
 	"strconv"
 
-	"hk4e/dispatch/api"
+	"hk4e/common/region"
+	httpapi "hk4e/dispatch/api"
+	"hk4e/node/api"
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 
@@ -17,6 +19,7 @@ import (
 )
 
 func (c *Controller) query_security_file(context *gin.Context) {
+	return
 	file, err := os.ReadFile("static/security_file")
 	if err != nil {
 		logger.Error("open security_file error")
@@ -28,14 +31,21 @@ func (c *Controller) query_security_file(context *gin.Context) {
 
 func (c *Controller) query_region_list(context *gin.Context) {
 	context.Header("Content-type", "text/html; charset=UTF-8")
-	_, _ = context.Writer.WriteString(c.regionListBase64)
+	regionListBase64 := region.GetRegionListBase64(c.ec2b)
+	_, _ = context.Writer.WriteString(regionListBase64)
 }
 
 func (c *Controller) query_cur_region(context *gin.Context) {
 	versionName := context.Query("version")
 	response := "CAESGE5vdCBGb3VuZCB2ZXJzaW9uIGNvbmZpZw=="
 	if len(context.Request.URL.RawQuery) > 0 {
-		response = c.regionCurrBase64
+		addr, err := c.discovery.GetGateServerAddr(context.Request.Context(), &api.NullMsg{})
+		if err != nil {
+			logger.Error("get gate server addr error: %v", err)
+			return
+		}
+		regionCurrBase64 := region.GetRegionCurrBase64(addr.IpAddr, int32(addr.Port), c.ec2b)
+		response = regionCurrBase64
 	}
 	reg, err := regexp.Compile("[0-9]+")
 	if err != nil {
@@ -62,7 +72,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 	if version >= 275 {
 		logger.Debug("do hk4e 2.8 rsa logic")
 		if context.Query("dispatchSeed") == "" {
-			rsp := &api.QueryCurRegionRspJson{
+			rsp := &httpapi.QueryCurRegionRspJson{
 				Content: response,
 				Sign:    "TW9yZSBsb3ZlIGZvciBVQSBQYXRjaCBwbGF5ZXJz",
 			}
@@ -133,7 +143,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 			logger.Error("rsa verify test fail")
 			return
 		}
-		rsp := &api.QueryCurRegionRspJson{
+		rsp := &httpapi.QueryCurRegionRspJson{
 			Content: base64.StdEncoding.EncodeToString(encryptedRegionInfo),
 			Sign:    base64.StdEncoding.EncodeToString(signData),
 		}

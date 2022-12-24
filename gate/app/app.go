@@ -30,11 +30,21 @@ func Run(ctx context.Context, configFile string) error {
 	// 注册到节点服务器
 	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
 		ServerType: api.GATE,
+		GateServerAddr: &api.GateServerAddr{
+			IpAddr: config.CONF.Hk4e.KcpAddr,
+			Port:   uint32(config.CONF.Hk4e.KcpPort),
+		},
 	})
 	if err != nil {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	defer func() {
+		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
+			ServerType: api.GATE,
+			AppId:      APPID,
+		})
+	}()
 
 	logger.InitLogger("gate_" + APPID)
 	logger.Warn("gate start, appid: %v", APPID)

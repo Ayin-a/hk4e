@@ -19,6 +19,7 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("gm")
 	logger.Warn("gm start")
 
+	// natsrpc client
 	client, err := rpc.NewClient()
 	if err != nil {
 		return err

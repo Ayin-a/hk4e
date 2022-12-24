@@ -24,6 +24,7 @@ func Run(ctx context.Context, configFile string) error {
 	db := dao.NewDao()
 	defer db.CloseDao()
 
+	// natsrpc client
 	client, err := rpc.NewClient()
 	if err != nil {
 		return err

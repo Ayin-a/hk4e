@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
 	"strconv"
 
@@ -15,25 +14,21 @@ import (
 	"hk4e/pkg/random"
 
 	"github.com/gin-gonic/gin"
-	pb "google.golang.org/protobuf/proto"
 )
 
 type Controller struct {
-	dao              *dao.Dao
-	discovery        *rpc.DiscoveryClient
-	regionListBase64 string
-	regionCurrBase64 string
-	signRsaKey       []byte
-	encRsaKeyMap     map[string][]byte
-	pwdRsaKey        []byte
+	dao          *dao.Dao
+	discovery    *rpc.DiscoveryClient
+	signRsaKey   []byte
+	encRsaKeyMap map[string][]byte
+	pwdRsaKey    []byte
+	ec2b         *random.Ec2b
 }
 
 func NewController(dao *dao.Dao, discovery *rpc.DiscoveryClient) (r *Controller) {
 	r = new(Controller)
 	r.dao = dao
 	r.discovery = discovery
-	r.regionListBase64 = ""
-	r.regionCurrBase64 = ""
 	r.signRsaKey, r.encRsaKeyMap, r.pwdRsaKey = region.LoadRsaKey()
 	rsp, err := r.discovery.GetRegionEc2B(context.TODO(), &api.NullMsg{})
 	if err != nil {
@@ -45,19 +40,7 @@ func NewController(dao *dao.Dao, discovery *rpc.DiscoveryClient) (r *Controller)
 		logger.Error("parse region ec2b error: %v", err)
 		return nil
 	}
-	regionCurr, regionList, _ := region.InitRegion(config.CONF.Hk4e.KcpAddr, config.CONF.Hk4e.KcpPort, ec2b)
-	regionCurrModify, err := pb.Marshal(regionCurr)
-	if err != nil {
-		logger.Error("Marshal QueryCurrRegionHttpRsp error")
-		return nil
-	}
-	r.regionCurrBase64 = base64.StdEncoding.EncodeToString(regionCurrModify)
-	regionListModify, err := pb.Marshal(regionList)
-	if err != nil {
-		logger.Error("Marshal QueryRegionListHttpRsp error")
-		return nil
-	}
-	r.regionListBase64 = base64.StdEncoding.EncodeToString(regionListModify)
+	r.ec2b = ec2b
 	go r.registerRouter()
 	return r
 }

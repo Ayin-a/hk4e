@@ -36,6 +36,12 @@ func Run(ctx context.Context, configFile string) error {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	defer func() {
+		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
+			ServerType: api.FIGHT,
+			AppId:      APPID,
+		})
+	}()
 
 	logger.InitLogger("fight_" + APPID)
 	logger.Warn("fight start, appid: %v", APPID)

@@ -24,6 +24,7 @@ import (
 )
 
 var APPID string
+var GSID uint32
 
 func Run(ctx context.Context, configFile string) error {
 	config.InitConfig(configFile)
@@ -42,9 +43,16 @@ func Run(ctx context.Context, configFile string) error {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	GSID = rsp.GetGsId()
+	defer func() {
+		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
+			ServerType: api.GS,
+			AppId:      APPID,
+		})
+	}()
 
 	logger.InitLogger("gs_" + APPID)
-	logger.Warn("gs start, appid: %v", APPID)
+	logger.Warn("gs start, appid: %v, gsid: %v", APPID, GSID)
 
 	constant.InitConstant()
 
@@ -60,7 +68,7 @@ func Run(ctx context.Context, configFile string) error {
 	messageQueue := mq.NewMessageQueue(api.GS, APPID)
 	defer messageQueue.Close()
 
-	gameManager := game.NewGameManager(db, messageQueue)
+	gameManager := game.NewGameManager(db, messageQueue, GSID)
 	defer gameManager.Stop()
 
 	// natsrpc server

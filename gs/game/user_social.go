@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"hk4e/common/constant"
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -333,6 +334,46 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 		getOnlinePlayerListRsp.PlayerInfoList = append(getOnlinePlayerListRsp.PlayerInfoList, onlinePlayerInfo)
 	}
 	g.SendMsg(cmd.GetOnlinePlayerListRsp, player.PlayerID, player.ClientSeq, getOnlinePlayerListRsp)
+}
+
+func (g *GameManager) GetOnlinePlayerInfoReq(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user get online player info, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.GetOnlinePlayerInfoReq)
+	targetUid, ok := req.PlayerId.(*proto.GetOnlinePlayerInfoReq_TargetUid)
+	if !ok {
+		return
+	}
+
+	// TODO 删除我
+	g.JoinPlayerSceneReq(player, &proto.JoinPlayerSceneReq{
+		TargetUid: targetUid.TargetUid,
+	})
+
+	if USER_MANAGER.GetUserOnlineState(targetUid.TargetUid) {
+		g.SendMsg(cmd.GetOnlinePlayerInfoRsp, player.PlayerID, player.ClientSeq, &proto.GetOnlinePlayerInfoRsp{
+			TargetUid:        targetUid.TargetUid,
+			TargetPlayerInfo: g.PacketOnlinePlayerInfo(player),
+		})
+		return
+	}
+	if USER_MANAGER.GetRemoteUserOnlineState(targetUid.TargetUid) {
+		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid.TargetUid)
+		g.messageQueue.SendToGs(gsAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerGetUserBaseInfoReq,
+			ServerMsg: &mq.ServerMsg{
+				UserBaseInfo: &mq.UserBaseInfo{
+					OriginInfo: &mq.OriginInfo{
+						CmdName: "GetOnlinePlayerInfoReq",
+						UserId:  player.PlayerID,
+					},
+					UserId: targetUid.TargetUid,
+				},
+			},
+		})
+		return
+	}
+	g.CommonRetError(cmd.GetOnlinePlayerInfoRsp, player, &proto.GetOnlinePlayerInfoRsp{}, proto.Retcode_RET_PLAYER_NOT_ONLINE)
 }
 
 func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.OnlinePlayerInfo {

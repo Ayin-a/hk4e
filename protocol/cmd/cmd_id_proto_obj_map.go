@@ -199,6 +199,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(PlayerChatReq, &proto.PlayerChatReq{})                         // 多人聊天消息发送请求
 	c.registerMessage(PlayerChatRsp, &proto.PlayerChatRsp{})                         // 多人聊天消息发送响应
 	c.registerMessage(PlayerChatNotify, &proto.PlayerChatNotify{})                   // 多人聊天消息通知
+	c.registerMessage(GetOnlinePlayerInfoReq, &proto.GetOnlinePlayerInfoReq{})       // 在线玩家信息请求
+	c.registerMessage(GetOnlinePlayerInfoRsp, &proto.GetOnlinePlayerInfoRsp{})       // 在线玩家信息响应
 
 	// 卡池
 	c.registerMessage(GetGachaInfoReq, &proto.GetGachaInfoReq{}) // 卡池获取请求

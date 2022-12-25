@@ -40,6 +40,11 @@ func NewMessageQueue(serverType string, appId string) (r *MessageQueue) {
 		logger.Error("nats subscribe error: %v", err)
 		return nil
 	}
+	_, err = r.natsConn.ChanSubscribe("ALL_SERVER_HK4E", r.natsMsgChan)
+	if err != nil {
+		logger.Error("nats subscribe error: %v", err)
+		return nil
+	}
 	r.netMsgInput = make(chan *NetMsg, 1000)
 	r.netMsgOutput = make(chan *NetMsg, 1000)
 	r.cmdProtoMap = cmd.NewCmdProtoMap()
@@ -85,8 +90,6 @@ func (m *MessageQueue) recvHandler() {
 				}
 				gameMsg.PayloadMessage = payloadMessage
 			}
-		case MsgTypeFight:
-		case MsgTypeConnCtrl:
 		}
 		m.netMsgOutput <- netMsg
 	}
@@ -107,8 +110,6 @@ func (m *MessageQueue) sendHandler() {
 				}
 				gameMsg.PayloadMessageData = payloadMessageData
 			}
-		case MsgTypeFight:
-		case MsgTypeConnCtrl:
 		}
 		// msgpack NetMsg
 		netMsgData, err := msgpack.Marshal(netMsg)

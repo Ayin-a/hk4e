@@ -46,3 +46,11 @@ func (m *MessageQueue) SendToPathfinding(appId string, netMsg *NetMsg) {
 	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
 }
+
+func (m *MessageQueue) SendToAll(netMsg *NetMsg) {
+	netMsg.Topic = "ALL_SERVER_HK4E"
+	originServerType, originServerAppId := m.getOriginServer()
+	netMsg.OriginServerType = originServerType
+	netMsg.OriginServerAppId = originServerAppId
+	m.netMsgInput <- netMsg
+}

@@ -27,7 +27,7 @@ func TestClientProtoGen(t *testing.T) {
 	fileData += "pb \"google.golang.org/protobuf/proto\"\n"
 	fileData += ")\n"
 	fileData += "\n"
-	fileData += "func (c *ClientCmdProtoMap) GetClientProtoObjByName(protoObjName string) pb.Message {\n"
+	fileData += "func (c *ClientCmdProtoMap) GetClientProtoObjByName(protoObjName string) any {\n"
 	fileData += "switch protoObjName {\n"
 	for _, protoObjName := range nameList {
 		fileData += "case \"" + protoObjName + "\":\nreturn new(proto." + protoObjName + ")\n"

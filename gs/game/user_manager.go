@@ -15,9 +15,10 @@ type SaveUserData struct {
 }
 
 type UserManager struct {
-	dao          *dao.Dao
-	playerMap    map[uint32]*model.Player
-	saveUserChan chan *SaveUserData
+	dao             *dao.Dao
+	playerMap       map[uint32]*model.Player
+	saveUserChan    chan *SaveUserData
+	remotePlayerMap map[uint32]string // 远程玩家 key:userId value:玩家所在gs的appid
 }
 
 func NewUserManager(dao *dao.Dao) (r *UserManager) {
@@ -25,7 +26,34 @@ func NewUserManager(dao *dao.Dao) (r *UserManager) {
 	r.dao = dao
 	r.playerMap = make(map[uint32]*model.Player)
 	r.saveUserChan = make(chan *SaveUserData)
+	r.remotePlayerMap = make(map[uint32]string)
 	return r
+}
+
+func (u *UserManager) GetRemoteUserOnlineState(userId uint32) bool {
+	_, exist := u.remotePlayerMap[userId]
+	if !exist {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (u *UserManager) GetRemoteUserGsAppId(userId uint32) string {
+	appId, exist := u.remotePlayerMap[userId]
+	if !exist {
+		return ""
+	} else {
+		return appId
+	}
+}
+
+func (u *UserManager) SetRemoteUserOnlineState(userId uint32, isOnline bool, appId string) {
+	if isOnline {
+		u.remotePlayerMap[userId] = appId
+	} else {
+		delete(u.remotePlayerMap, userId)
+	}
 }
 
 func (u *UserManager) GetUserOnlineState(userId uint32) bool {
@@ -117,6 +145,14 @@ func (u *UserManager) loadUserFromDb(userId uint32) *model.Player {
 		return nil
 	}
 	return player
+}
+
+func (u *UserManager) saveUserToDb(player *model.Player) {
+	err := u.dao.UpdatePlayer(player)
+	if err != nil {
+		logger.Error("update player error: %v", err)
+		return
+	}
 }
 
 func (u *UserManager) AddUser(player *model.Player) {

@@ -117,13 +117,18 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 		logger.Debug("client connect, convId: %v", convId)
 		kcpRawSendChan := make(chan *ProtoMsg, 1000)
 		session := &Session{
-			conn:            conn,
-			connState:       ConnEst,
-			userId:          0,
-			kcpRawSendChan:  kcpRawSendChan,
-			seed:            0,
-			xorKey:          k.dispatchKey,
-			changeXorKeyFin: false,
+			conn:                   conn,
+			connState:              ConnEst,
+			userId:                 0,
+			kcpRawSendChan:         kcpRawSendChan,
+			seed:                   0,
+			xorKey:                 k.dispatchKey,
+			changeXorKeyFin:        false,
+			gsServerAppId:          "",
+			fightServerAppId:       "",
+			pathfindingServerAppId: "",
+			changeGameServer:       false,
+			joinHostUserId:         0,
 		}
 		go k.recvHandle(session)
 		go k.sendHandle(session)
@@ -221,6 +226,8 @@ type Session struct {
 	gsServerAppId          string
 	fightServerAppId       string
 	pathfindingServerAppId string
+	changeGameServer       bool
+	joinHostUserId         uint32
 }
 
 // 接收
@@ -301,14 +308,20 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 		if protoMsg.CmdId == cmd.PlayerLoginRsp {
 			logger.Debug("session active, convId: %v", convId)
 			session.connState = ConnActive
-			// 通知GS玩家战斗服务器的appid
-			connCtrlMsg := new(mq.ConnCtrlMsg)
-			connCtrlMsg.UserId = session.userId
-			connCtrlMsg.FightServerAppId = session.fightServerAppId
+			// 通知GS玩家各个服务器的appid
+			serverMsg := new(mq.ServerMsg)
+			serverMsg.UserId = session.userId
+			if session.changeGameServer {
+				serverMsg.JoinHostUserId = session.joinHostUserId
+				session.changeGameServer = false
+				session.joinHostUserId = 0
+			} else {
+				serverMsg.FightServerAppId = session.fightServerAppId
+			}
 			k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
-				MsgType:     mq.MsgTypeConnCtrl,
-				EventId:     mq.FightServerSelectNotify,
-				ConnCtrlMsg: connCtrlMsg,
+				MsgType:   mq.MsgTypeServer,
+				EventId:   mq.ServerAppidBindNotify,
+				ServerMsg: serverMsg,
 			})
 		}
 	}

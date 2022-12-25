@@ -27,6 +27,8 @@ var WORLD_MANAGER *WorldManager = nil
 var TICK_MANAGER *TickManager = nil
 var COMMAND_MANAGER *CommandManager = nil
 
+var SELF *model.Player
+
 type GameManager struct {
 	dao                       *dao.Dao
 	messageQueue              *mq.MessageQueue
@@ -75,6 +77,10 @@ func (g *GameManager) gameMainLoop() {
 			logger.Error("!!! GAME MAIN LOOP PANIC !!!")
 			logger.Error("error: %v", err)
 			logger.Error("stack: %v", logger.Stack())
+			logger.Error("user: %v", SELF)
+			if SELF != nil {
+				GAME_MANAGER.DisconnectPlayer(SELF.PlayerID, kcp.EnetServerKick)
+			}
 		}
 	}()
 	intervalTime := time.Second.Nanoseconds() * 60

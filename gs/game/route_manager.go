@@ -43,7 +43,9 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 		return
 	}
 	player.ClientSeq = clientSeq
+	SELF = player
 	handlerFunc(player, payloadMsg)
+	SELF = nil
 }
 
 func (r *RouteManager) InitRoute() {
@@ -116,6 +118,7 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.CreateVehicleReq, GAME_MANAGER.CreateVehicleReq)
 	r.registerRouter(cmd.VehicleInteractReq, GAME_MANAGER.VehicleInteractReq)
 	r.registerRouter(cmd.SceneEntityDrownReq, GAME_MANAGER.SceneEntityDrownReq)
+	r.registerRouter(cmd.GetOnlinePlayerInfoReq, GAME_MANAGER.GetOnlinePlayerInfoReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
@@ -149,8 +152,19 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			GAME_MANAGER.ClientRttNotify(connCtrlMsg.UserId, connCtrlMsg.ClientRtt)
 		case mq.ClientTimeNotify:
 			GAME_MANAGER.ClientTimeNotify(connCtrlMsg.UserId, connCtrlMsg.ClientTime)
-		case mq.FightServerSelectNotify:
-			GAME_MANAGER.FightServerSelectNotify(connCtrlMsg.UserId, connCtrlMsg.FightServerAppId)
+		}
+	case mq.MsgTypeServer:
+		serverMsg := netMsg.ServerMsg
+		switch netMsg.EventId {
+		case mq.ServerUserOnlineStateChangeNotify:
+			logger.Debug("remote user online state change, uid: %v, online: %v", serverMsg.UserId, serverMsg.IsOnline)
+			USER_MANAGER.SetRemoteUserOnlineState(serverMsg.UserId, serverMsg.IsOnline, netMsg.OriginServerAppId)
+		case mq.ServerAppidBindNotify:
+			GAME_MANAGER.ServerAppidBindNotify(serverMsg.UserId, serverMsg.FightServerAppId, serverMsg.JoinHostUserId)
+		case mq.ServerGetUserBaseInfoReq:
+			GAME_MANAGER.ServerGetUserBaseInfoReq(serverMsg.UserBaseInfo, netMsg.OriginServerAppId)
+		case mq.ServerGetUserBaseInfoRsp:
+			GAME_MANAGER.ServerGetUserBaseInfoRsp(serverMsg.UserBaseInfo)
 		}
 	}
 }

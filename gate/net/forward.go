@@ -153,28 +153,33 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 // 从GS接收消息
 func (k *KcpConnectManager) sendMsgHandle() {
 	logger.Debug("send msg handle start")
-	kcpRawSendChanMap := make(map[uint64]chan *ProtoMsg)
+	convSessionMap := make(map[uint64]*Session)
 	userIdConvMap := make(map[uint32]uint64)
 	sendToClientFn := func(protoMsg *ProtoMsg) {
 		// 分发到每个连接具体的发送协程
-		kcpRawSendChan := kcpRawSendChanMap[protoMsg.ConvId]
-		if kcpRawSendChan != nil {
-			select {
-			case kcpRawSendChan <- protoMsg:
-			default:
-				logger.Error("kcpRawSendChan is full, convId: %v", protoMsg.ConvId)
-			}
-		} else {
-			logger.Error("kcpRawSendChan is nil, convId: %v", protoMsg.ConvId)
+		session := convSessionMap[protoMsg.ConvId]
+		if session == nil {
+			logger.Error("session is nil, convId: %v", protoMsg.ConvId)
+			return
+		}
+		kcpRawSendChan := session.kcpRawSendChan
+		if kcpRawSendChan == nil {
+			logger.Error("kcpRawSendChan is nil, session: %v", session)
+			return
+		}
+		select {
+		case kcpRawSendChan <- protoMsg:
+		default:
+			logger.Error("kcpRawSendChan is full, session: %v", session)
 		}
 	}
 	for {
 		select {
 		case session := <-k.createSessionChan:
-			kcpRawSendChanMap[session.conn.GetConv()] = session.kcpRawSendChan
+			convSessionMap[session.conn.GetConv()] = session
 			userIdConvMap[session.userId] = session.conn.GetConv()
 		case session := <-k.destroySessionChan:
-			delete(kcpRawSendChanMap, session.conn.GetConv())
+			delete(convSessionMap, session.conn.GetConv())
 			delete(userIdConvMap, session.userId)
 			close(session.kcpRawSendChan)
 		case protoMsg := <-k.localMsgOutput:
@@ -182,36 +187,65 @@ func (k *KcpConnectManager) sendMsgHandle() {
 		case netMsg := <-k.messageQueue.GetNetMsg():
 			switch netMsg.MsgType {
 			case mq.MsgTypeGame:
-				if netMsg.EventId != mq.NormalMsg {
-					logger.Error("recv unknown event from game server, event id: %v", netMsg.EventId)
-					continue
-				}
 				gameMsg := netMsg.GameMsg
-				convId, exist := userIdConvMap[gameMsg.UserId]
-				if !exist {
-					logger.Error("can not find convId by userId")
-					continue
+				switch netMsg.EventId {
+				case mq.NormalMsg:
+					convId, exist := userIdConvMap[gameMsg.UserId]
+					if !exist {
+						logger.Error("can not find convId by userId")
+						continue
+					}
+					protoMsg := new(ProtoMsg)
+					protoMsg.ConvId = convId
+					protoMsg.CmdId = gameMsg.CmdId
+					protoMsg.HeadMessage = k.getHeadMsg(gameMsg.ClientSeq)
+					protoMsg.PayloadMessage = gameMsg.PayloadMessage
+					sendToClientFn(protoMsg)
 				}
-				protoMsg := new(ProtoMsg)
-				protoMsg.ConvId = convId
-				protoMsg.CmdId = gameMsg.CmdId
-				protoMsg.HeadMessage = k.getHeadMsg(gameMsg.ClientSeq)
-				protoMsg.PayloadMessage = gameMsg.PayloadMessage
-				sendToClientFn(protoMsg)
 			case mq.MsgTypeConnCtrl:
-				if netMsg.EventId != mq.KickPlayerNotify {
-					continue
-				}
 				connCtrlMsg := netMsg.ConnCtrlMsg
-				convId, exist := userIdConvMap[connCtrlMsg.KickUserId]
-				if !exist {
-					logger.Error("can not find convId by userId")
-					continue
+				switch netMsg.EventId {
+				case mq.KickPlayerNotify:
+					convId, exist := userIdConvMap[connCtrlMsg.KickUserId]
+					if !exist {
+						logger.Error("can not find convId by userId")
+						continue
+					}
+					k.kcpEventInput <- &KcpEvent{
+						ConvId:       convId,
+						EventId:      KcpConnForceClose,
+						EventMessage: connCtrlMsg.KickReason,
+					}
 				}
-				k.kcpEventInput <- &KcpEvent{
-					ConvId:       convId,
-					EventId:      KcpConnForceClose,
-					EventMessage: connCtrlMsg.KickReason,
+			case mq.MsgTypeServer:
+				serverMsg := netMsg.ServerMsg
+				switch netMsg.EventId {
+				case mq.ServerUserGsChangeNotify:
+					convId, exist := userIdConvMap[serverMsg.UserId]
+					if !exist {
+						logger.Error("can not find convId by userId")
+						continue
+					}
+					session := convSessionMap[convId]
+					if session == nil {
+						logger.Error("session is nil, convId: %v", convId)
+						return
+					}
+					session.gsServerAppId = serverMsg.GameServerAppId
+					session.fightServerAppId = ""
+					session.changeGameServer = true
+					session.joinHostUserId = serverMsg.JoinHostUserId
+					// 网关代发登录请求到新的GS
+					gameMsg := new(mq.GameMsg)
+					gameMsg.UserId = serverMsg.UserId
+					gameMsg.CmdId = cmd.PlayerLoginReq
+					gameMsg.ClientSeq = 0
+					gameMsg.PayloadMessage = new(proto.PlayerLoginReq)
+					k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
+						MsgType: mq.MsgTypeGame,
+						EventId: mq.NormalMsg,
+						GameMsg: gameMsg,
+					})
 				}
 			}
 		}

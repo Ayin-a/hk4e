@@ -5,6 +5,7 @@ import (
 
 	"hk4e/common/constant"
 	"hk4e/common/mq"
+	"hk4e/gate/kcp"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -13,6 +14,8 @@ import (
 
 	pb "google.golang.org/protobuf/proto"
 )
+
+// 进入世界
 
 func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user apply enter world, uid: %v", player.PlayerID)
@@ -50,6 +53,74 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 
 	g.UserDealEnterWorld(player, applyUid, isAgreed)
 }
+
+func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user join player scene, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.JoinPlayerSceneReq)
+
+	joinPlayerSceneRsp := new(proto.JoinPlayerSceneRsp)
+	joinPlayerSceneRsp.Retcode = int32(proto.Retcode_RET_JOIN_OTHER_WAIT)
+	g.SendMsg(cmd.JoinPlayerSceneRsp, player.PlayerID, player.ClientSeq, joinPlayerSceneRsp)
+
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	g.UserWorldRemovePlayer(world, player)
+
+	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
+
+	hostPlayer := USER_MANAGER.GetOnlineUser(req.TargetUid)
+	if hostPlayer == nil {
+		// 要加入的世界属于非本地玩家
+		if !USER_MANAGER.GetRemoteUserOnlineState(req.TargetUid) {
+			// 全服不存在该在线玩家
+			logger.Error("target user not online in any game server, uid: %v", req.TargetUid)
+			g.DisconnectPlayer(player.PlayerID, kcp.EnetServerKick)
+			return
+		}
+		// 走玩家在线跨服迁移流程
+		g.OnUserOffline(player.PlayerID)
+		// TODO 改成异步写入数据库
+		USER_MANAGER.saveUserToDb(player)
+		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(req.TargetUid)
+		g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserGsChangeNotify,
+			ServerMsg: &mq.ServerMsg{
+				UserId:          player.PlayerID,
+				GameServerAppId: gsAppId,
+				JoinHostUserId:  req.TargetUid,
+			},
+		})
+		return
+	}
+
+	g.JoinOtherWorld(player, hostPlayer)
+}
+
+func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
+	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
+	_, exist := hostWorld.waitEnterPlayerMap[player.PlayerID]
+	if !exist {
+		return
+	}
+
+	if hostPlayer.SceneLoadState == model.SceneEnterDone {
+		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)
+		player.Pos.X = hostPlayer.Pos.X
+		player.Pos.Y = hostPlayer.Pos.Y
+		player.Pos.Z = hostPlayer.Pos.Z
+		player.Rot.X = hostPlayer.Rot.X
+		player.Rot.Y = hostPlayer.Rot.Y
+		player.Rot.Z = hostPlayer.Rot.Z
+		player.SceneId = hostPlayer.SceneId
+
+		g.UserWorldAddPlayer(hostWorld, player)
+
+		player.SceneLoadState = model.SceneNone
+		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
+	}
+}
+
+// 退出世界
 
 func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user get world exit ban info, uid: %v", player.PlayerID)
@@ -122,44 +193,6 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
 }
 
-func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user join player scene, uid: %v", player.PlayerID)
-	req := payloadMsg.(*proto.JoinPlayerSceneReq)
-	hostPlayer := USER_MANAGER.GetOnlineUser(req.TargetUid)
-	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-	_, exist := hostWorld.waitEnterPlayerMap[player.PlayerID]
-	if !exist {
-		return
-	}
-
-	joinPlayerSceneRsp := new(proto.JoinPlayerSceneRsp)
-	joinPlayerSceneRsp.Retcode = int32(proto.Retcode_RET_JOIN_OTHER_WAIT)
-	g.SendMsg(cmd.JoinPlayerSceneRsp, player.PlayerID, player.ClientSeq, joinPlayerSceneRsp)
-
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	g.UserWorldRemovePlayer(world, player)
-
-	g.SendMsg(cmd.LeaveWorldNotify, player.PlayerID, player.ClientSeq, new(proto.LeaveWorldNotify))
-
-	// g.LoginNotify(player.PlayerID, player, 0)
-
-	if hostPlayer.SceneLoadState == model.SceneEnterDone {
-		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)
-		player.Pos.X = hostPlayer.Pos.X
-		player.Pos.Y = hostPlayer.Pos.Y
-		player.Pos.Z = hostPlayer.Pos.Z
-		player.Rot.X = hostPlayer.Rot.X
-		player.Rot.Y = hostPlayer.Rot.Y
-		player.Rot.Z = hostPlayer.Rot.Z
-		player.SceneId = hostPlayer.SceneId
-
-		g.UserWorldAddPlayer(hostWorld, player)
-
-		player.SceneLoadState = model.SceneNone
-		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
-	}
-}
-
 func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) bool {
 	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
 	if targetPlayer == nil {
@@ -215,11 +248,14 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	}
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 
-	if !agree {
-		return
+	if agree {
+		g.HostEnterMpWorld(hostPlayer, otherPlayer.PlayerID)
 	}
+}
+
+func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherPlayerId uint32) {
 	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-	world.waitEnterPlayerMap[otherPlayer.PlayerID] = time.Now().UnixMilli()
+	world.waitEnterPlayerMap[otherPlayerId] = time.Now().UnixMilli()
 	if world.multiplayer {
 		return
 	}
@@ -250,7 +286,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 
 	guestBeginEnterSceneNotify := &proto.GuestBeginEnterSceneNotify{
 		SceneId: hostPlayer.SceneId,
-		Uid:     otherPlayer.PlayerID,
+		Uid:     otherPlayerId,
 	}
 	g.SendMsg(cmd.GuestBeginEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, guestBeginEnterSceneNotify)
 

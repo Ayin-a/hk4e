@@ -15,7 +15,8 @@ func TestClientProtoGen(t *testing.T) {
 	for _, entry := range dir {
 		split := strings.Split(entry.Name(), ".")
 		if len(split) != 2 {
-			panic("file name error")
+			continue
+			//panic("file name error")
 		}
 		nameList = append(nameList, split[0])
 	}
@@ -23,20 +24,18 @@ func TestClientProtoGen(t *testing.T) {
 	fileData := "package client_proto\n"
 	fileData += "\n"
 	fileData += "import (\n"
-	fileData += "\"hk4e/gate/client_proto/proto\"\n"
-	fileData += "pb \"google.golang.org/protobuf/proto\"\n"
+	fileData += "\t\"hk4e/gate/client_proto/proto\"\n"
 	fileData += ")\n"
 	fileData += "\n"
 	fileData += "func (c *ClientCmdProtoMap) GetClientProtoObjByName(protoObjName string) any {\n"
-	fileData += "switch protoObjName {\n"
+	fileData += "\tswitch protoObjName {\n"
 	for _, protoObjName := range nameList {
-		fileData += "case \"" + protoObjName + "\":\nreturn new(proto." + protoObjName + ")\n"
+		fileData += "\tcase \"" + protoObjName + "\":\n\t\treturn new(proto." + protoObjName + ")\n"
 	}
-	fileData += "default:\n"
-	fileData += "return nil\n"
+	fileData += "\tdefault:\n"
+	fileData += "\t\treturn nil\n"
+	fileData += "\t}\n"
 	fileData += "}\n"
-	fileData += "}\n"
-	fileData += "\n"
 
 	err = os.WriteFile("../client_proto_gen.go", []byte(fileData), 0644)
 	if err != nil {

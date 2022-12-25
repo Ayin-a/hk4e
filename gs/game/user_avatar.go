@@ -34,12 +34,13 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	player.AddAvatar(avatarId)
-	avatar := player.AvatarMap[avatarId]
-	if avatar == nil {
-		logger.Error("avatar is nil, avatarId", avatarId)
+	// 判断玩家是否已有该角色
+	_, ok := player.AvatarMap[avatarId]
+	if ok {
+		// TODO 如果已有转换命座材料
 		return
 	}
+	player.AddAvatar(avatarId)
 
 	// 添加初始武器
 	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
@@ -55,7 +56,7 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	g.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
 
 	avatarAddNotify := &proto.AvatarAddNotify{
-		Avatar:   g.PacketAvatarInfo(avatar),
+		Avatar:   g.PacketAvatarInfo(player.AvatarMap[avatarId]),
 		IsInTeam: false,
 	}
 	g.SendMsg(cmd.AvatarAddNotify, userId, player.ClientSeq, avatarAddNotify)

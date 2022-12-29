@@ -60,7 +60,6 @@ type LogInfo struct {
 	FuncName    string
 	Line        int
 	GoroutineId string
-	Stack       string
 }
 
 func InitLogger(appName string) {
@@ -81,32 +80,29 @@ func (l *Logger) doLog() {
 		logInfo := <-l.LogInfoChan
 		timeNow := time.Now()
 		timeNowStr := timeNow.Format("2006-01-02 15:04:05.000")
-		logHeader := CYAN + "[" + timeNowStr + "]" + RESET + " "
+		logStr := CYAN + "[" + timeNowStr + "]" + RESET + " "
 		if logInfo.Level == DEBUG {
-			logHeader += BLUE + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+			logStr += BLUE + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET
 		} else if logInfo.Level == INFO {
-			logHeader += GREEN + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+			logStr += GREEN + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET
 		} else if logInfo.Level == WARN {
-			logHeader += YELLOW + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+			logStr += YELLOW + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET
 		} else if logInfo.Level == ERROR {
-			logHeader += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET + " "
+			logStr += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET
+		}
+		if logInfo.Level == ERROR {
+			logStr += " " + RED + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + RESET + " "
+		} else {
+			logStr += " " + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + " "
 		}
 		if l.Track {
-			logHeader += MAGENTA + "[" +
+			logStr += MAGENTA + "[" +
 				logInfo.FileName + ":" + strconv.Itoa(logInfo.Line) + " " +
 				logInfo.FuncName + "()" + " " +
 				"goroutine:" + logInfo.GoroutineId +
-				"]" + RESET + " "
+				"]" + RESET
 		}
-		logStr := logHeader
-		if logInfo.Level == ERROR {
-			logStr += RED + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + RESET + "\n"
-		} else {
-			logStr += fmt.Sprintf(logInfo.Msg, logInfo.Param...) + "\n"
-		}
-		if logInfo.Stack != "" {
-			logStr += logInfo.Stack
-		}
+		logStr += "\n"
 		if l.Mode == CONSOLE {
 			log.Print(logStr)
 		} else if l.Mode == FILE {
@@ -218,22 +214,6 @@ func Error(msg string, param ...any) {
 	if LOG.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
 		logInfo.GoroutineId = LOG.getGoroutineId()
-	}
-	LOG.LogInfoChan <- logInfo
-}
-
-func ErrorStack(msg string, param ...any) {
-	if LOG.Level > ERROR {
-		return
-	}
-	logInfo := new(LogInfo)
-	logInfo.Level = ERROR
-	logInfo.Msg = msg
-	logInfo.Param = param
-	if LOG.Track {
-		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
-		logInfo.GoroutineId = LOG.getGoroutineId()
-		logInfo.Stack = Stack()
 	}
 	LOG.LogInfoChan <- logInfo
 }

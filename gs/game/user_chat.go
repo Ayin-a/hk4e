@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -78,15 +79,14 @@ func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 }
 
 // SendPrivateChat 发送私聊文本消息给玩家
-func (g *GameManager) SendPrivateChat(player, targetPlayer *model.Player, content any) {
+func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, content any) {
 	chatInfo := &proto.ChatInfo{
 		Time:     uint32(time.Now().Unix()),
 		Sequence: 101,
-		ToUid:    targetPlayer.PlayerID,
+		ToUid:    targetUid,
 		Uid:      player.PlayerID,
 		IsRead:   false,
 	}
-
 	// 根据传入的值判断消息类型
 	switch content.(type) {
 	case string:
@@ -100,21 +100,52 @@ func (g *GameManager) SendPrivateChat(player, targetPlayer *model.Player, conten
 			Icon: content.(uint32),
 		}
 	}
-
+	chatMsg := g.ConvChatInfoToChatMsg(chatInfo)
 	// 消息加入自己的队列
-	msgList, exist := player.ChatMsgMap[targetPlayer.PlayerID]
+	msgList, exist := player.ChatMsgMap[targetUid]
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
 	}
-	msgList = append(msgList, g.ConvChatInfoToChatMsg(chatInfo))
-	player.ChatMsgMap[targetPlayer.PlayerID] = msgList
+	msgList = append(msgList, chatMsg)
+	player.ChatMsgMap[targetUid] = msgList
 
+	privateChatNotify := &proto.PrivateChatNotify{
+		ChatInfo: chatInfo,
+	}
+	g.SendMsg(cmd.PrivateChatNotify, player.PlayerID, player.ClientSeq, privateChatNotify)
+
+	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
+	if targetPlayer == nil {
+		if USER_MANAGER.GetRemoteUserOnlineState(targetUid) {
+			// 目标玩家在别的服在线
+			gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid)
+			MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
+				MsgType: mq.MsgTypeServer,
+				EventId: mq.ServerChatMsgNotify,
+				ServerMsg: &mq.ServerMsg{
+					ChatMsgInfo: &mq.ChatMsgInfo{
+						Time:    chatMsg.Time,
+						ToUid:   chatMsg.ToUid,
+						Uid:     chatMsg.Uid,
+						IsRead:  chatMsg.IsRead,
+						MsgType: chatMsg.MsgType,
+						Text:    chatMsg.Text,
+						Icon:    chatMsg.Icon,
+					},
+				},
+			})
+		} else {
+			// 目标玩家全服离线
+			// TODO 接入redis直接同步写入数据
+		}
+		return
+	}
 	// 消息加入目标玩家的队列
 	msgList, exist = targetPlayer.ChatMsgMap[player.PlayerID]
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
 	}
-	msgList = append(msgList, g.ConvChatInfoToChatMsg(chatInfo))
+	msgList = append(msgList, chatMsg)
 	targetPlayer.ChatMsgMap[player.PlayerID] = msgList
 
 	// 如果目标玩家在线发送消息
@@ -124,11 +155,6 @@ func (g *GameManager) SendPrivateChat(player, targetPlayer *model.Player, conten
 		}
 		g.SendMsg(cmd.PrivateChatNotify, targetPlayer.PlayerID, player.ClientSeq, privateChatNotify)
 	}
-
-	privateChatNotify := &proto.PrivateChatNotify{
-		ChatInfo: chatInfo,
-	}
-	g.SendMsg(cmd.PrivateChatNotify, player.PlayerID, player.ClientSeq, privateChatNotify)
 }
 
 func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -137,12 +163,6 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	targetUid := req.TargetUid
 	content := req.Content
 
-	// TODO 同步阻塞待优化
-	targetPlayer := USER_MANAGER.LoadTempOfflineUserSync(targetUid)
-	if targetPlayer == nil {
-		return
-	}
-
 	// 根据发送的类型发送消息
 	switch content.(type) {
 	case *proto.PrivateChatReq_Text:
@@ -150,25 +170,14 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 		if len(text) == 0 {
 			return
 		}
-
 		// 发送私聊文本消息
-		g.SendPrivateChat(player, targetPlayer, text)
-
+		g.SendPrivateChat(player, targetUid, text)
 		// 输入命令 会检测是否为命令的
 		COMMAND_MANAGER.InputCommand(player, text)
-
-		if text == "VPU" {
-			g.VideoPlayerUpdate(false)
-		} else if text == "VPUR" {
-			g.VideoPlayerUpdate(true)
-		}
-
 	case *proto.PrivateChatReq_Icon:
 		icon := content.(*proto.PrivateChatReq_Icon).Icon
-
 		// 发送私聊图标消息
-		g.SendPrivateChat(player, targetPlayer, icon)
-
+		g.SendPrivateChat(player, targetUid, icon)
 	default:
 		return
 	}
@@ -280,4 +289,38 @@ func (g *GameManager) ConvChatMsgToChatInfo(chatMsg *model.ChatMsg) (chatInfo *p
 	default:
 	}
 	return chatInfo
+}
+
+// 跨服玩家聊天通知
+
+func (g *GameManager) ServerChatMsgNotify(chatMsgInfo *mq.ChatMsgInfo) {
+	targetPlayer := USER_MANAGER.GetOnlineUser(chatMsgInfo.ToUid)
+	if targetPlayer == nil {
+		logger.Error("player is nil, uid: %v", chatMsgInfo.ToUid)
+		return
+	}
+	chatMsg := &model.ChatMsg{
+		Time:    chatMsgInfo.Time,
+		ToUid:   chatMsgInfo.ToUid,
+		Uid:     chatMsgInfo.Uid,
+		IsRead:  chatMsgInfo.IsRead,
+		MsgType: chatMsgInfo.MsgType,
+		Text:    chatMsgInfo.Text,
+		Icon:    chatMsgInfo.Icon,
+	}
+	// 消息加入目标玩家的队列
+	msgList, exist := targetPlayer.ChatMsgMap[chatMsgInfo.Uid]
+	if !exist {
+		msgList = make([]*model.ChatMsg, 0)
+	}
+	msgList = append(msgList, chatMsg)
+	targetPlayer.ChatMsgMap[chatMsgInfo.Uid] = msgList
+
+	// 如果目标玩家在线发送消息
+	if targetPlayer.Online {
+		privateChatNotify := &proto.PrivateChatNotify{
+			ChatInfo: g.ConvChatMsgToChatInfo(chatMsg),
+		}
+		g.SendMsg(cmd.PrivateChatNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, privateChatNotify)
+	}
 }

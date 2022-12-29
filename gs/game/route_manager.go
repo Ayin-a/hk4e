@@ -42,6 +42,10 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 		GAME_MANAGER.DisconnectPlayer(userId, kcp.EnetNotFoundSession)
 		return
 	}
+	if !player.Online {
+		logger.Error("player not online, uid: %v", userId)
+		return
+	}
 	player.ClientSeq = clientSeq
 	SELF = player
 	handlerFunc(player, payloadMsg)
@@ -139,8 +143,6 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 				return
 			}
 			r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
-		case mq.UserOfflineNotify:
-			GAME_MANAGER.OnUserOffline(gameMsg.UserId)
 		}
 	case mq.MsgTypeConnCtrl:
 		if netMsg.OriginServerType != api.GATE {
@@ -152,6 +154,10 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			GAME_MANAGER.ClientRttNotify(connCtrlMsg.UserId, connCtrlMsg.ClientRtt)
 		case mq.ClientTimeNotify:
 			GAME_MANAGER.ClientTimeNotify(connCtrlMsg.UserId, connCtrlMsg.ClientTime)
+		case mq.UserOfflineNotify:
+			GAME_MANAGER.OnUserOffline(connCtrlMsg.UserId, &ChangeGsInfo{
+				IsChangeGs: false,
+			})
 		}
 	case mq.MsgTypeServer:
 		serverMsg := netMsg.ServerMsg
@@ -161,10 +167,18 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			USER_MANAGER.SetRemoteUserOnlineState(serverMsg.UserId, serverMsg.IsOnline, netMsg.OriginServerAppId)
 		case mq.ServerAppidBindNotify:
 			GAME_MANAGER.ServerAppidBindNotify(serverMsg.UserId, serverMsg.FightServerAppId, serverMsg.JoinHostUserId)
-		case mq.ServerGetUserBaseInfoReq:
-			GAME_MANAGER.ServerGetUserBaseInfoReq(serverMsg.UserBaseInfo, netMsg.OriginServerAppId)
-		case mq.ServerGetUserBaseInfoRsp:
-			GAME_MANAGER.ServerGetUserBaseInfoRsp(serverMsg.UserBaseInfo)
+		case mq.ServerUserBaseInfoReq:
+			GAME_MANAGER.ServerUserBaseInfoReq(serverMsg.UserBaseInfo, netMsg.OriginServerAppId)
+		case mq.ServerUserBaseInfoRsp:
+			GAME_MANAGER.ServerUserBaseInfoRsp(serverMsg.UserBaseInfo)
+		case mq.ServerUserMpReq:
+			GAME_MANAGER.ServerUserMpReq(serverMsg.UserMpInfo, netMsg.OriginServerAppId)
+		case mq.ServerUserMpRsp:
+			GAME_MANAGER.ServerUserMpRsp(serverMsg.UserMpInfo)
+		case mq.ServerChatMsgNotify:
+			GAME_MANAGER.ServerChatMsgNotify(serverMsg.ChatMsgInfo)
+		case mq.ServerAddFriendNotify:
+			GAME_MANAGER.ServerAddFriendNotify(serverMsg.AddFriendInfo)
 		}
 	}
 }

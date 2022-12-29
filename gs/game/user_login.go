@@ -61,14 +61,16 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	g.LoginNotify(userId, player, clientSeq)
 
-	g.messageQueue.SendToAll(&mq.NetMsg{
-		MsgType: mq.MsgTypeServer,
-		EventId: mq.ServerUserOnlineStateChangeNotify,
-		ServerMsg: &mq.ServerMsg{
-			UserId:   userId,
-			IsOnline: true,
-		},
-	})
+	if userId >= 100000000 {
+		MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserOnlineStateChangeNotify,
+			ServerMsg: &mq.ServerMsg{
+				UserId:   userId,
+				IsOnline: true,
+			},
+		})
+	}
 }
 
 func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
@@ -106,7 +108,7 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 	g.OnLogin(userId, clientSeq, gateAppId)
 }
 
-func (g *GameManager) OnUserOffline(userId uint32) {
+func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	logger.Info("user offline, uid: %v", userId)
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
@@ -120,16 +122,7 @@ func (g *GameManager) OnUserOffline(userId uint32) {
 	player.OfflineTime = uint32(time.Now().Unix())
 	player.Online = false
 	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
-	USER_MANAGER.DeleteUser(player)
-
-	g.messageQueue.SendToAll(&mq.NetMsg{
-		MsgType: mq.MsgTypeServer,
-		EventId: mq.ServerUserOnlineStateChangeNotify,
-		ServerMsg: &mq.ServerMsg{
-			UserId:   userId,
-			IsOnline: false,
-		},
-	})
+	USER_MANAGER.OfflineUser(player, changeGsInfo)
 }
 
 func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {

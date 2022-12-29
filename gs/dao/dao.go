@@ -6,31 +6,55 @@ import (
 	"hk4e/common/config"
 	"hk4e/pkg/logger"
 
+	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type Dao struct {
-	client *mongo.Client
-	db     *mongo.Database
+	mongo *mongo.Client
+	db    *mongo.Database
+	redis *redis.Client
 }
 
 func NewDao() (r *Dao, err error) {
 	r = new(Dao)
-	clientOptions := options.Client().ApplyURI(config.CONF.Database.Url)
+	clientOptions := options.Client().ApplyURI(config.CONF.Database.Url).SetMinPoolSize(1).SetMaxPoolSize(10)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		logger.Error("mongo connect error: %v", err)
 		return nil, err
 	}
-	r.client = client
+	err = client.Ping(context.TODO(), readpref.Primary())
+	if err != nil {
+		logger.Error("mongo ping error: %v", err)
+		return nil, err
+	}
+	r.mongo = client
 	r.db = client.Database("gs_hk4e")
+	r.redis = redis.NewClient(&redis.Options{
+		Addr:         config.CONF.Redis.Addr,
+		Password:     config.CONF.Redis.Password,
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 1,
+	})
+	err = r.redis.Ping(context.TODO()).Err()
+	if err != nil {
+		logger.Error("redis ping error: %v", err)
+		return nil, err
+	}
 	return r, nil
 }
 
 func (d *Dao) CloseDao() {
-	err := d.client.Disconnect(context.TODO())
+	err := d.mongo.Disconnect(context.TODO())
 	if err != nil {
 		logger.Error("mongo close error: %v", err)
+	}
+	err = d.redis.Close()
+	if err != nil {
+		logger.Error("redis close error: %v", err)
 	}
 }

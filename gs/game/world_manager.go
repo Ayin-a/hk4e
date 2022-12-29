@@ -112,7 +112,7 @@ type World struct {
 	chatMsgList         []*proto.ChatInfo // 世界聊天消息列表
 	aoiManager          *aoi.AoiManager   // 当前世界地图的aoi管理器
 	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
-	waitEnterPlayerMap  map[uint32]int64  // 等待进入世界的列表 key:uid value:开始时间
+	waitEnterPlayerMap  map[uint32]int64  // 进入世界的玩家等待列表 key:uid value:开始时间
 	multiplayerTeam     *MultiplayerTeam
 	peerList            []*model.Player // 玩家编号列表
 }
@@ -701,7 +701,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 	if avatarId == s.world.GetPlayerActiveAvatarId(player) {
 		s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	}
-	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
 		FightMsg: &mq.FightMsg{
@@ -751,7 +751,7 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	}
 	s.entityMap[entity.id] = entity
 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
 		FightMsg: &mq.FightMsg{
@@ -901,7 +901,7 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	}
 	s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	delete(s.entityMap, entityId)
-	GAME_MANAGER.messageQueue.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineDelEntity,
 		FightMsg: &mq.FightMsg{

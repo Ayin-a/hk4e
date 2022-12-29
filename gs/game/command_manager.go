@@ -225,7 +225,7 @@ func (c *CommandManager) SendMessage(executor any, msg string, param ...any) {
 	case *model.Player:
 		// 玩家类型
 		player := executor.(*model.Player)
-		GAME_MANAGER.SendPrivateChat(c.system, player, fmt.Sprintf(msg, param...))
+		GAME_MANAGER.SendPrivateChat(c.system, player.PlayerID, fmt.Sprintf(msg, param...))
 	case string:
 		// GM接口等
 		// str := executor.(string)

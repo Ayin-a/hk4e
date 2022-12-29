@@ -206,6 +206,10 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 	empty := new(proto.AbilitySyncStateInfo)
 	for _, worldAvatar := range world.GetWorldAvatarList() {
 		worldPlayer := USER_MANAGER.GetOnlineUser(worldAvatar.uid)
+		if worldPlayer == nil {
+			logger.Error("player is nil, uid: %v", worldAvatar.uid)
+			continue
+		}
 		worldPlayerScene := world.GetSceneById(worldPlayer.SceneId)
 		worldPlayerAvatar := worldPlayer.AvatarMap[worldAvatar.avatarId]
 		equipIdList := make([]uint32, 0)

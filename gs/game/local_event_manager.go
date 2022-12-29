@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -11,9 +12,10 @@ import (
 // 本地事件队列管理器
 
 const (
-	LoadLoginUserFromDbFinish = iota
-	CheckUserExistOnRegFromDbFinish
-	RunUserCopyAndSave
+	LoadLoginUserFromDbFinish       = iota // 玩家登录从数据库加载完成回调
+	CheckUserExistOnRegFromDbFinish        // 玩家注册从数据库查询是否已存在完成回调
+	RunUserCopyAndSave                     // 执行一次在线玩家内存数据复制到数据库写入协程
+	UserOfflineSaveToDbFinish
 )
 
 type LocalEvent struct {
@@ -89,5 +91,30 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime
 		logger.Info("run save user copy cost time: %v ns", costTime)
+	case UserOfflineSaveToDbFinish:
+		playerOfflineInfo := localEvent.Msg.(*PlayerOfflineInfo)
+		USER_MANAGER.DeleteUser(playerOfflineInfo.Player.PlayerID)
+		MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserOnlineStateChangeNotify,
+			ServerMsg: &mq.ServerMsg{
+				UserId:   playerOfflineInfo.Player.PlayerID,
+				IsOnline: false,
+			},
+		})
+		if playerOfflineInfo.ChangeGsInfo.IsChangeGs {
+			gsAppId := USER_MANAGER.GetRemoteUserGsAppId(playerOfflineInfo.ChangeGsInfo.JoinHostUserId)
+			MESSAGE_QUEUE.SendToGate(playerOfflineInfo.Player.GateAppId, &mq.NetMsg{
+				MsgType: mq.MsgTypeServer,
+				EventId: mq.ServerUserGsChangeNotify,
+				ServerMsg: &mq.ServerMsg{
+					UserId:          playerOfflineInfo.Player.PlayerID,
+					GameServerAppId: gsAppId,
+					JoinHostUserId:  playerOfflineInfo.ChangeGsInfo.JoinHostUserId,
+				},
+			})
+			logger.Info("user change gs notify to gate, uid: %v, gate appid: %v, gs appid: %v, host uid: %v",
+				playerOfflineInfo.Player.PlayerID, playerOfflineInfo.Player.GateAppId, gsAppId, playerOfflineInfo.ChangeGsInfo.JoinHostUserId)
+		}
 	}
 }

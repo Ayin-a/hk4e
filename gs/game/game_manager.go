@@ -26,12 +26,12 @@ var USER_MANAGER *UserManager = nil
 var WORLD_MANAGER *WorldManager = nil
 var TICK_MANAGER *TickManager = nil
 var COMMAND_MANAGER *CommandManager = nil
+var MESSAGE_QUEUE *mq.MessageQueue
 
 var SELF *model.Player
 
 type GameManager struct {
 	dao                       *dao.Dao
-	messageQueue              *mq.MessageQueue
 	snowflake                 *alg.SnowflakeWorker
 	clientCmdProtoMap         *client_proto.ClientCmdProtoMap
 	clientCmdProtoMapRefValue reflect.Value
@@ -40,7 +40,7 @@ type GameManager struct {
 func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r *GameManager) {
 	r = new(GameManager)
 	r.dao = dao
-	r.messageQueue = messageQueue
+	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
 	if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
@@ -115,7 +115,7 @@ func (g *GameManager) gameMainLoop() {
 			commandCost = 0
 		}
 		select {
-		case netMsg := <-g.messageQueue.GetNetMsg():
+		case netMsg := <-MESSAGE_QUEUE.GetNetMsg():
 			// 接收客户端消息
 			start := time.Now().UnixNano()
 			ROUTE_MANAGER.RouteHandle(netMsg)
@@ -171,7 +171,7 @@ func (g *GameManager) SendMsgEx(cmdId uint16, userId uint32, clientSeq uint32, g
 		ClientSeq:      clientSeq,
 		PayloadMessage: payloadMsg,
 	}
-	g.messageQueue.SendToGate(gateAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToGate(gateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.NormalMsg,
 		GameMsg: gameMsg,
@@ -203,7 +203,7 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 		return
 	}
 	gameMsg.PayloadMessageData = payloadMessageData
-	g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToGate(player.GateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
 		EventId: mq.NormalMsg,
 		GameMsg: gameMsg,
@@ -271,7 +271,7 @@ func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
 	if player == nil {
 		return
 	}
-	g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToGate(player.GateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeConnCtrl,
 		EventId: mq.KickPlayerNotify,
 		ConnCtrlMsg: &mq.ConnCtrlMsg{

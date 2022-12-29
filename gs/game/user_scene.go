@@ -263,21 +263,14 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	world.PlayerEnter(player)
 
 	for otherPlayerId := range world.waitEnterPlayerMap {
+		// 房主第一次进入多人世界场景完成 开始通知等待列表中的玩家进入场景
 		delete(world.waitEnterPlayerMap, otherPlayerId)
 		otherPlayer := USER_MANAGER.GetOnlineUser(otherPlayerId)
-		otherPlayer.Pos.X = player.Pos.X
-		otherPlayer.Pos.Y = player.Pos.Y
-		otherPlayer.Pos.Z = player.Pos.Z
-		otherPlayer.Rot.X = player.Rot.X
-		otherPlayer.Rot.Y = player.Rot.Y
-		otherPlayer.Rot.Z = player.Rot.Z
-		otherPlayer.SceneId = player.SceneId
-
-		g.UserWorldAddPlayer(world, otherPlayer)
-
-		otherPlayer.SceneLoadState = model.SceneNone
-		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(otherPlayer, proto.EnterType_ENTER_TYPE_OTHER)
-		g.SendMsg(cmd.PlayerEnterSceneNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerEnterSceneNotify)
+		if otherPlayer == nil {
+			logger.Error("player is nil, uid: %v", otherPlayerId)
+			continue
+		}
+		g.JoinOtherWorld(otherPlayer, player)
 	}
 }
 

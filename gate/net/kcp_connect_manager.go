@@ -361,14 +361,14 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 		EventId: KcpConnCloseNotify,
 	}
 	// 通知GS玩家下线
-	gameMsg := new(mq.GameMsg)
-	gameMsg.UserId = session.userId
+	connCtrlMsg := new(mq.ConnCtrlMsg)
+	connCtrlMsg.UserId = session.userId
 	k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeGame,
-		EventId: mq.UserOfflineNotify,
-		GameMsg: gameMsg,
+		MsgType:     mq.MsgTypeConnCtrl,
+		EventId:     mq.UserOfflineNotify,
+		ConnCtrlMsg: connCtrlMsg,
 	})
-	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, gameMsg.UserId)
+	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, connCtrlMsg.UserId)
 	k.destroySessionChan <- session
 }
 

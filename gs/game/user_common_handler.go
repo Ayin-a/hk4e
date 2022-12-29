@@ -3,7 +3,6 @@ package game
 import (
 	"time"
 
-	"hk4e/common/constant"
 	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -131,7 +130,10 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	}
 	if joinHostUserId != 0 {
 		hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
-		g.HostEnterMpWorld(hostPlayer, player.PlayerID)
+		if hostPlayer == nil {
+			logger.Error("player is nil, uid: %v", joinHostUserId)
+			return
+		}
 		g.JoinOtherWorld(player, hostPlayer)
 		return
 	}
@@ -139,7 +141,7 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	player.FightAppId = fightAppId
 	// 创建世界
 	world := WORLD_MANAGER.CreateWorld(player)
-	GAME_MANAGER.messageQueue.SendToFight(fightAppId, &mq.NetMsg{
+	MESSAGE_QUEUE.SendToFight(fightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.AddFightRoutine,
 		FightMsg: &mq.FightMsg{
@@ -152,54 +154,4 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	// 进入场景
 	player.SceneLoadState = model.SceneNone
 	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
-}
-
-func (g *GameManager) ServerGetUserBaseInfoReq(userBaseInfo *mq.UserBaseInfo, gsAppId string) {
-	player := USER_MANAGER.GetOnlineUser(userBaseInfo.UserId)
-	if player == nil {
-		logger.Error("player is nil, uid: %v", userBaseInfo.UserId)
-		return
-	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	g.messageQueue.SendToGs(gsAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeServer,
-		EventId: mq.ServerGetUserBaseInfoRsp,
-		ServerMsg: &mq.ServerMsg{
-			UserBaseInfo: &mq.UserBaseInfo{
-				OriginInfo:     userBaseInfo.OriginInfo,
-				UserId:         player.PlayerID,
-				Nickname:       player.NickName,
-				PlayerLevel:    player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-				MpSettingType:  uint8(player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
-				NameCardId:     player.NameCard,
-				Signature:      player.Signature,
-				HeadImageId:    player.HeadImage,
-				WorldPlayerNum: uint32(world.GetWorldPlayerNum()),
-			},
-		},
-	})
-}
-
-func (g *GameManager) ServerGetUserBaseInfoRsp(userBaseInfo *mq.UserBaseInfo) {
-	switch userBaseInfo.OriginInfo.CmdName {
-	case "GetOnlinePlayerInfoReq":
-		player := USER_MANAGER.GetOnlineUser(userBaseInfo.OriginInfo.UserId)
-		if player == nil {
-			logger.Error("player is nil, uid: %v", userBaseInfo.OriginInfo.UserId)
-			return
-		}
-		g.SendMsg(cmd.GetOnlinePlayerInfoRsp, player.PlayerID, player.ClientSeq, &proto.GetOnlinePlayerInfoRsp{
-			TargetUid: userBaseInfo.UserId,
-			TargetPlayerInfo: &proto.OnlinePlayerInfo{
-				Uid:                 userBaseInfo.UserId,
-				Nickname:            userBaseInfo.Nickname,
-				PlayerLevel:         userBaseInfo.PlayerLevel,
-				MpSettingType:       proto.MpSettingType(userBaseInfo.MpSettingType),
-				NameCardId:          userBaseInfo.NameCardId,
-				Signature:           userBaseInfo.Signature,
-				ProfilePicture:      &proto.ProfilePicture{AvatarId: userBaseInfo.HeadImageId},
-				CurPlayerNumInWorld: userBaseInfo.WorldPlayerNum,
-			},
-		})
-	}
 }

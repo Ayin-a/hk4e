@@ -13,6 +13,7 @@ type Config struct {
 	HttpPort int32    `toml:"http_port"`
 	Logger   Logger   `toml:"logger"`
 	Database Database `toml:"database"`
+	Redis    Redis    `toml:"redis"`
 	Hk4e     Hk4e     `toml:"hk4e"`
 	MQ       MQ       `toml:"mq"`
 }
@@ -28,6 +29,11 @@ type Logger struct {
 // Database 数据库配置
 type Database struct {
 	Url string `toml:"url"`
+}
+
+type Redis struct {
+	Addr     string `toml:"addr"`
+	Password string `toml:"password"`
 }
 
 // Hk4e 原神相关

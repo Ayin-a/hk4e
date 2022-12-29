@@ -5,7 +5,6 @@ import (
 
 	"hk4e/common/constant"
 	"hk4e/common/mq"
-	"hk4e/gate/kcp"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -27,16 +26,7 @@ func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.
 	}
 	g.SendMsg(cmd.PlayerApplyEnterMpRsp, player.PlayerID, player.ClientSeq, playerApplyEnterMpRsp)
 
-	ok := g.UserApplyEnterWorld(player, targetUid)
-	if !ok {
-		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
-			TargetUid:      targetUid,
-			TargetNickname: "",
-			IsAgreed:       false,
-			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
-		}
-		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
-	}
+	g.UserApplyEnterWorld(player, targetUid)
 }
 
 func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadMsg pb.Message) {
@@ -73,22 +63,12 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 		if !USER_MANAGER.GetRemoteUserOnlineState(req.TargetUid) {
 			// 全服不存在该在线玩家
 			logger.Error("target user not online in any game server, uid: %v", req.TargetUid)
-			g.DisconnectPlayer(player.PlayerID, kcp.EnetServerKick)
 			return
 		}
 		// 走玩家在线跨服迁移流程
-		g.OnUserOffline(player.PlayerID)
-		// TODO 改成异步写入数据库
-		USER_MANAGER.saveUserToDb(player)
-		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(req.TargetUid)
-		g.messageQueue.SendToGate(player.GateAppId, &mq.NetMsg{
-			MsgType: mq.MsgTypeServer,
-			EventId: mq.ServerUserGsChangeNotify,
-			ServerMsg: &mq.ServerMsg{
-				UserId:          player.PlayerID,
-				GameServerAppId: gsAppId,
-				JoinHostUserId:  req.TargetUid,
-			},
+		g.OnUserOffline(player.PlayerID, &ChangeGsInfo{
+			IsChangeGs:     true,
+			JoinHostUserId: req.TargetUid,
 		})
 		return
 	}
@@ -98,13 +78,7 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 
 func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
 	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-	_, exist := hostWorld.waitEnterPlayerMap[player.PlayerID]
-	if !exist {
-		return
-	}
-
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
-		delete(hostWorld.waitEnterPlayerMap, player.PlayerID)
 		player.Pos.X = hostPlayer.Pos.X
 		player.Pos.Y = hostPlayer.Pos.Y
 		player.Pos.Z = hostPlayer.Pos.Z
@@ -112,11 +86,13 @@ func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Pla
 		player.Rot.Y = hostPlayer.Rot.Y
 		player.Rot.Z = hostPlayer.Rot.Z
 		player.SceneId = hostPlayer.SceneId
-
 		g.UserWorldAddPlayer(hostWorld, player)
-
 		player.SceneLoadState = model.SceneNone
-		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER))
+
+		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER)
+		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
+	} else {
+		hostWorld.waitEnterPlayerMap[player.PlayerID] = time.Now().UnixMilli()
 	}
 }
 
@@ -173,6 +149,10 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	}
 	targetUid := req.TargetUid
 	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
+	if targetPlayer == nil {
+		logger.Error("player is nil, uid: %v", targetUid)
+		return
+	}
 	ok := g.UserLeaveWorld(targetPlayer)
 	if !ok {
 		g.CommonRetError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
@@ -193,41 +173,112 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
 }
 
-func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) bool {
-	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
-	if targetPlayer == nil {
-		return false
+func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) {
+	applyFailNotify := func() {
+		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+			TargetUid:      targetUid,
+			TargetNickname: "",
+			IsAgreed:       false,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+		}
+		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
-		return false
+		applyFailNotify()
+		return
+	}
+	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
+	if targetPlayer == nil {
+		if !USER_MANAGER.GetRemoteUserOnlineState(targetUid) {
+			// 全服不存在该在线玩家
+			logger.Error("target user not online in any game server, uid: %v", targetUid)
+			applyFailNotify()
+			return
+		}
+		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid)
+		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserMpReq,
+			ServerMsg: &mq.ServerMsg{
+				UserMpInfo: &mq.UserMpInfo{
+					OriginInfo: &mq.OriginInfo{
+						CmdName: "PlayerApplyEnterMpReq",
+						UserId:  player.PlayerID,
+					},
+					HostUserId:  targetUid,
+					ApplyUserId: player.PlayerID,
+					ApplyPlayerOnlineInfo: &mq.UserBaseInfo{
+						UserId:         player.PlayerID,
+						Nickname:       player.NickName,
+						PlayerLevel:    player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
+						MpSettingType:  uint8(player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+						NameCardId:     player.NameCard,
+						Signature:      player.Signature,
+						HeadImageId:    player.HeadImage,
+						WorldPlayerNum: uint32(world.GetWorldPlayerNum()),
+					},
+				},
+			},
+		})
+		return
 	}
 	applyTime, exist := targetPlayer.CoopApplyMap[player.PlayerID]
 	if exist && time.Now().UnixNano() < applyTime+int64(10*time.Second) {
-		return false
+		applyFailNotify()
+		return
 	}
 	targetPlayer.CoopApplyMap[player.PlayerID] = time.Now().UnixNano()
 	targetWorld := WORLD_MANAGER.GetWorldByID(targetPlayer.WorldId)
 	if targetWorld.multiplayer && targetWorld.owner.PlayerID != targetPlayer.PlayerID {
-		return false
+		// 向同一世界内的非房主玩家申请时直接拒绝
+		applyFailNotify()
+		return
 	}
 
 	playerApplyEnterMpNotify := new(proto.PlayerApplyEnterMpNotify)
 	playerApplyEnterMpNotify.SrcPlayerInfo = g.PacketOnlinePlayerInfo(player)
 	g.SendMsg(cmd.PlayerApplyEnterMpNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, playerApplyEnterMpNotify)
-	return true
 }
 
 func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agree bool) {
-	otherPlayer := USER_MANAGER.GetOnlineUser(otherUid)
-	if otherPlayer == nil {
-		return
-	}
 	applyTime, exist := hostPlayer.CoopApplyMap[otherUid]
 	if !exist || time.Now().UnixNano() > applyTime+int64(10*time.Second) {
 		return
 	}
 	delete(hostPlayer.CoopApplyMap, otherUid)
+	if !agree {
+		return
+	}
+	g.HostEnterMpWorld(hostPlayer, otherUid)
+
+	otherPlayer := USER_MANAGER.GetOnlineUser(otherUid)
+	if otherPlayer == nil {
+		if !USER_MANAGER.GetRemoteUserOnlineState(otherUid) {
+			// 全服不存在该在线玩家
+			logger.Error("target user not online in any game server, uid: %v", otherUid)
+			return
+		}
+		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(otherUid)
+		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserMpReq,
+			ServerMsg: &mq.ServerMsg{
+				UserMpInfo: &mq.UserMpInfo{
+					OriginInfo: &mq.OriginInfo{
+						CmdName: "PlayerApplyEnterMpResultReq",
+						UserId:  hostPlayer.PlayerID,
+					},
+					HostUserId:   hostPlayer.PlayerID,
+					ApplyUserId:  otherUid,
+					Agreed:       agree,
+					HostNickname: hostPlayer.NickName,
+				},
+			},
+		})
+		return
+	}
+
 	otherPlayerWorld := WORLD_MANAGER.GetWorldByID(otherPlayer.WorldId)
 	if otherPlayerWorld.multiplayer {
 		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
@@ -247,15 +298,10 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE,
 	}
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
-
-	if agree {
-		g.HostEnterMpWorld(hostPlayer, otherPlayer.PlayerID)
-	}
 }
 
-func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherPlayerId uint32) {
+func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
 	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-	world.waitEnterPlayerMap[otherPlayerId] = time.Now().UnixMilli()
 	if world.multiplayer {
 		return
 	}
@@ -286,7 +332,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherPlayerId u
 
 	guestBeginEnterSceneNotify := &proto.GuestBeginEnterSceneNotify{
 		SceneId: hostPlayer.SceneId,
-		Uid:     otherPlayerId,
+		Uid:     otherUid,
 	}
 	g.SendMsg(cmd.GuestBeginEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, guestBeginEnterSceneNotify)
 
@@ -357,7 +403,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	if world.owner.PlayerID == player.PlayerID {
 		// 房主离开销毁世界
 		WORLD_MANAGER.DestroyWorld(world.id)
-		GAME_MANAGER.messageQueue.SendToFight(world.owner.FightAppId, &mq.NetMsg{
+		MESSAGE_QUEUE.SendToFight(world.owner.FightAppId, &mq.NetMsg{
 			MsgType: mq.MsgTypeFight,
 			EventId: mq.DelFightRoutine,
 			FightMsg: &mq.FightMsg{
@@ -460,5 +506,114 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			SceneId: worldPlayer.SceneId,
 		}
 		g.SendMsg(cmd.SyncScenePlayTeamEntityNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, syncScenePlayTeamEntityNotify)
+	}
+}
+
+// 跨服玩家多人世界相关请求
+
+func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string) {
+	switch userMpInfo.OriginInfo.CmdName {
+	case "PlayerApplyEnterMpReq":
+		applyFailNotify := func() {
+			MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
+				MsgType: mq.MsgTypeServer,
+				EventId: mq.ServerUserMpRsp,
+				ServerMsg: &mq.ServerMsg{
+					UserMpInfo: &mq.UserMpInfo{
+						OriginInfo: userMpInfo.OriginInfo,
+						HostUserId: userMpInfo.HostUserId,
+						ApplyOk:    false,
+					},
+				},
+			})
+		}
+		hostPlayer := USER_MANAGER.GetOnlineUser(userMpInfo.HostUserId)
+		if hostPlayer == nil {
+			logger.Error("player is nil, uid: %v", userMpInfo.HostUserId)
+			applyFailNotify()
+			return
+		}
+		applyTime, exist := hostPlayer.CoopApplyMap[userMpInfo.ApplyUserId]
+		if exist && time.Now().UnixNano() < applyTime+int64(10*time.Second) {
+			applyFailNotify()
+			return
+		}
+		hostPlayer.CoopApplyMap[userMpInfo.ApplyUserId] = time.Now().UnixNano()
+		hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
+		if hostWorld.multiplayer && hostWorld.owner.PlayerID != hostPlayer.PlayerID {
+			// 向同一世界内的非房主玩家申请时直接拒绝
+			applyFailNotify()
+			return
+		}
+
+		playerApplyEnterMpNotify := new(proto.PlayerApplyEnterMpNotify)
+		playerApplyEnterMpNotify.SrcPlayerInfo = &proto.OnlinePlayerInfo{
+			Uid:                 userMpInfo.ApplyPlayerOnlineInfo.UserId,
+			Nickname:            userMpInfo.ApplyPlayerOnlineInfo.Nickname,
+			PlayerLevel:         userMpInfo.ApplyPlayerOnlineInfo.PlayerLevel,
+			MpSettingType:       proto.MpSettingType(userMpInfo.ApplyPlayerOnlineInfo.MpSettingType),
+			NameCardId:          userMpInfo.ApplyPlayerOnlineInfo.NameCardId,
+			Signature:           userMpInfo.ApplyPlayerOnlineInfo.Signature,
+			ProfilePicture:      &proto.ProfilePicture{AvatarId: userMpInfo.ApplyPlayerOnlineInfo.HeadImageId},
+			CurPlayerNumInWorld: userMpInfo.ApplyPlayerOnlineInfo.WorldPlayerNum,
+		}
+		g.SendMsg(cmd.PlayerApplyEnterMpNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, playerApplyEnterMpNotify)
+
+		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserMpRsp,
+			ServerMsg: &mq.ServerMsg{
+				UserMpInfo: &mq.UserMpInfo{
+					OriginInfo: userMpInfo.OriginInfo,
+					HostUserId: userMpInfo.HostUserId,
+					ApplyOk:    true,
+				},
+			},
+		})
+	case "PlayerApplyEnterMpResultReq":
+		applyPlayer := USER_MANAGER.GetOnlineUser(userMpInfo.ApplyUserId)
+		if applyPlayer == nil {
+			logger.Error("player is nil, uid: %v", userMpInfo.ApplyUserId)
+			return
+		}
+		applyPlayerWorld := WORLD_MANAGER.GetWorldByID(applyPlayer.WorldId)
+		if applyPlayerWorld.multiplayer {
+			playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+				TargetUid:      userMpInfo.HostUserId,
+				TargetNickname: userMpInfo.HostNickname,
+				IsAgreed:       false,
+				Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+			}
+			g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, applyPlayer.PlayerID, applyPlayer.ClientSeq, playerApplyEnterMpResultNotify)
+			return
+		}
+
+		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+			TargetUid:      userMpInfo.HostUserId,
+			TargetNickname: userMpInfo.HostNickname,
+			IsAgreed:       userMpInfo.Agreed,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE,
+		}
+		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, applyPlayer.PlayerID, applyPlayer.ClientSeq, playerApplyEnterMpResultNotify)
+	}
+}
+
+func (g *GameManager) ServerUserMpRsp(userMpInfo *mq.UserMpInfo) {
+	switch userMpInfo.OriginInfo.CmdName {
+	case "PlayerApplyEnterMpReq":
+		player := USER_MANAGER.GetOnlineUser(userMpInfo.OriginInfo.UserId)
+		if player == nil {
+			logger.Error("player is nil, uid: %v", userMpInfo.OriginInfo.UserId)
+			return
+		}
+		if !userMpInfo.ApplyOk {
+			playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
+				TargetUid:      userMpInfo.HostUserId,
+				TargetNickname: "",
+				IsAgreed:       false,
+				Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+			}
+			g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
+		}
 	}
 }

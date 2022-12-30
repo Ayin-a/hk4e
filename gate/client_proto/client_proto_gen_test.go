@@ -14,9 +14,8 @@ func TestClientProtoGen(t *testing.T) {
 	nameList := make([]string, 0)
 	for _, entry := range dir {
 		split := strings.Split(entry.Name(), ".")
-		if len(split) != 2 {
+		if len(split) != 2 || split[1] != "proto" {
 			continue
-			//panic("file name error")
 		}
 		nameList = append(nameList, split[0])
 	}

@@ -174,6 +174,7 @@ func (u *UserManager) OfflineUser(player *model.Player, changeGsInfo *ChangeGsIn
 		logger.Error("deep copy player error: %v", err)
 		return
 	}
+	playerCopy.DbState = player.DbState
 	go func() {
 		u.SaveUserToDbSync(playerCopy)
 		u.SaveUserToRedisSync(playerCopy)
@@ -342,6 +343,7 @@ func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 		logger.Error("deep copy player error: %v", err)
 		return
 	}
+	playerCopy.DbState = player.DbState
 	go func() {
 		u.SaveUserToDbSync(playerCopy)
 	}()
@@ -384,10 +386,20 @@ func (u *UserManager) LoadUserFromDbSync(userId uint32) *model.Player {
 }
 
 func (u *UserManager) SaveUserToDbSync(player *model.Player) {
-	err := u.dao.UpdatePlayer(player)
-	if err != nil {
-		logger.Error("update player error: %v", err)
-		return
+	if player.DbState == model.DbInsert {
+		err := u.dao.InsertPlayer(player)
+		if err != nil {
+			logger.Error("insert player error: %v", err)
+			return
+		}
+	} else if player.DbState == model.DbNormal {
+		err := u.dao.UpdatePlayer(player)
+		if err != nil {
+			logger.Error("update player error: %v", err)
+			return
+		}
+	} else {
+		logger.Error("invalid player db state: %v", player.DbState)
 	}
 }
 

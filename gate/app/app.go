@@ -34,11 +34,22 @@ func Run(ctx context.Context, configFile string) error {
 			IpAddr: config.CONF.Hk4e.KcpAddr,
 			Port:   uint32(config.CONF.Hk4e.KcpPort),
 		},
+		Version: config.CONF.Hk4e.Version,
 	})
 	if err != nil {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	go func() {
+		ticker := time.NewTicker(time.Second * 15)
+		for {
+			<-ticker.C
+			_, _ = client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
+				ServerType: api.GATE,
+				AppId:      APPID,
+			})
+		}
+	}()
 	defer func() {
 		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
 			ServerType: api.GATE,

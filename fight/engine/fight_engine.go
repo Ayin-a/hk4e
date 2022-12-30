@@ -238,6 +238,10 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 				continue
 			}
 			attackResult := hitInfo.AttackResult
+			if attackResult == nil {
+				logger.Error("attackResult is nil")
+				continue
+			}
 			// logger.Debug("run attack handler, attackResult: %v", attackResult)
 			target := f.entityMap[attackResult.DefenseId]
 			if target == nil {

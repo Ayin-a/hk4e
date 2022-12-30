@@ -43,6 +43,16 @@ func Run(ctx context.Context, configFile string) error {
 		return err
 	}
 	APPID = rsp.GetAppId()
+	go func() {
+		ticker := time.NewTicker(time.Second * 15)
+		for {
+			<-ticker.C
+			_, _ = client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
+				ServerType: api.GS,
+				AppId:      APPID,
+			})
+		}
+	}()
 	GSID = rsp.GetGsId()
 	defer func() {
 		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{

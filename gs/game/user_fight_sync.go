@@ -263,6 +263,9 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			if worldAvatar == nil {
 				continue
 			}
+			if abilityMetaAddAbility.Ability == nil {
+				continue
+			}
 			worldAvatar.abilityList = append(worldAvatar.abilityList, abilityMetaAddAbility.Ability)
 		case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)

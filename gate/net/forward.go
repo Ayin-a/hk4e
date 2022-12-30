@@ -295,7 +295,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	}
 	oldSession := k.GetSessionByUserId(tokenVerifyRsp.PlayerID)
 	if oldSession != nil {
-		// 顶号
+		// 本地顶号
 		kickFinishNotifyChan := make(chan bool)
 		k.kcpEventInput <- &KcpEvent{
 			ConvId:       oldSession.conn.GetConv(),
@@ -303,6 +303,18 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			EventMessage: kickFinishNotifyChan,
 		}
 		<-kickFinishNotifyChan
+	} else {
+		// 远程全局顶号
+		connCtrlMsg := new(mq.ConnCtrlMsg)
+		connCtrlMsg.KickUserId = tokenVerifyRsp.PlayerID
+		connCtrlMsg.KickReason = kcp.EnetServerRelogin
+		k.messageQueue.SendToAll(&mq.NetMsg{
+			MsgType:     mq.MsgTypeConnCtrl,
+			EventId:     mq.KickPlayerNotify,
+			ConnCtrlMsg: connCtrlMsg,
+		})
+		// TODO 确保旧连接已下线 已通知GS已保存好数据
+		time.Sleep(time.Second)
 	}
 	// 关联玩家uid和连接信息
 	session.userId = tokenVerifyRsp.PlayerID

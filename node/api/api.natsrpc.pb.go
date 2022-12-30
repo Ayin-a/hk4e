@@ -32,7 +32,7 @@ type DiscoveryNATSRPCServer interface {
 	// 获取区服密钥信息
 	GetRegionEc2B(ctx context.Context, req *NullMsg) (*RegionEc2B, error)
 	// 获取负载最小的网关服务器的地址和端口
-	GetGateServerAddr(ctx context.Context, req *NullMsg) (*GateServerAddr, error)
+	GetGateServerAddr(ctx context.Context, req *GetGateServerAddrReq) (*GateServerAddr, error)
 }
 
 // RegisterDiscoveryNATSRPCServer register Discovery service
@@ -53,7 +53,7 @@ type DiscoveryNATSRPCClient interface {
 	// 获取区服密钥信息
 	GetRegionEc2B(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*RegionEc2B, error)
 	// 获取负载最小的网关服务器的地址和端口
-	GetGateServerAddr(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GateServerAddr, error)
+	GetGateServerAddr(ctx context.Context, req *GetGateServerAddrReq, opt ...natsrpc.CallOption) (*GateServerAddr, error)
 }
 
 type _DiscoveryNATSRPCClient struct {
@@ -96,7 +96,7 @@ func (c *_DiscoveryNATSRPCClient) GetRegionEc2B(ctx context.Context, req *NullMs
 	err := c.c.Request(ctx, "GetRegionEc2B", req, rep, opt...)
 	return rep, err
 }
-func (c *_DiscoveryNATSRPCClient) GetGateServerAddr(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GateServerAddr, error) {
+func (c *_DiscoveryNATSRPCClient) GetGateServerAddr(ctx context.Context, req *GetGateServerAddrReq, opt ...natsrpc.CallOption) (*GateServerAddr, error) {
 	rep := &GateServerAddr{}
 	err := c.c.Request(ctx, "GetGateServerAddr", req, rep, opt...)
 	return rep, err

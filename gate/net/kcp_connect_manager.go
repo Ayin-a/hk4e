@@ -83,7 +83,7 @@ func (k *KcpConnectManager) Start() {
 	k.dispatchKey = regionEc2b.XorKey()
 	// kcp
 	port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
-	listener, err := kcp.ListenWithOptions(config.CONF.Hk4e.KcpAddr+":"+port, nil, 0, 0)
+	listener, err := kcp.ListenWithOptions("0.0.0.0:"+port, nil, 0, 0)
 	if err != nil {
 		logger.Error("listen kcp err: %v", err)
 		return

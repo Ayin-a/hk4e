@@ -53,6 +53,7 @@ type Player struct {
 	DropInfo         *DropInfo             `bson:"dropInfo"`         // 掉落信息
 	MainCharAvatarId uint32                `bson:"mainCharAvatarId"` // 主角id
 	ChatMsgMap       map[uint32][]*ChatMsg `bson:"chatMsgMap"`       // 聊天信息
+	GCGInfo          *GCGInfo              `bson:"gcgInfo"`          // 七圣召唤信息
 	IsGM             uint8                 `bson:"isGM"`             // 管理员权限等级
 	// 在线数据 请随意 记得加忽略字段的tag
 	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌
@@ -73,6 +74,7 @@ type Player struct {
 	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-" msgpack:"-"` // ability转发器
 	GateAppId             string                                   `bson:"-" msgpack:"-"` // 网关服务器的appid
 	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
+	GCGCurGameGuid        uint32                                   `bson:"-" msgpack:"-"` // GCG玩家所在的游戏guid
 }
 
 func (p *Player) GetNextGameObjectGuid() uint64 {
@@ -86,6 +88,7 @@ func (p *Player) InitAll() {
 	p.StaminaInfo = new(StaminaInfo)
 	p.VehicleInfo = new(VehicleInfo)
 	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
+	p.GCGInfo = NewGCGInfo()
 	p.InitAllAvatar()
 	p.InitAllWeapon()
 	p.InitAllItem()

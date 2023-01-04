@@ -527,6 +527,13 @@ type AvatarEntity struct {
 type MonsterEntity struct {
 }
 
+type NpcEntity struct {
+	NpcId         uint32
+	RoomId        uint32
+	ParentQuestId uint32
+	BlockId       uint32
+}
+
 const (
 	GADGET_TYPE_NORMAL = iota
 	GADGET_TYPE_GATHER
@@ -579,6 +586,7 @@ type Entity struct {
 	level               uint8
 	avatarEntity        *AvatarEntity
 	monsterEntity       *MonsterEntity
+	npcEntity           *NpcEntity
 	gadgetEntity        *GadgetEntity
 }
 
@@ -748,6 +756,7 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 		fightProp:           fightProp,
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER),
 		level:               level,
+		monsterEntity:       &MonsterEntity{},
 	}
 	s.entityMap[entity.id] = entity
 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
@@ -760,6 +769,36 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 			FightPropMap:   entity.fightProp,
 		},
 	})
+	return entity.id
+}
+
+func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId uint32) uint32 {
+	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.NPC)
+	entity := &Entity{
+		id:                  entityId,
+		scene:               s,
+		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
+		pos:                 pos,
+		rot:                 rot,
+		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		lastMoveSceneTimeMs: 0,
+		lastMoveReliableSeq: 0,
+		fightProp: map[uint32]float32{
+			uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
+			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
+		},
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_NPC),
+		level:      0,
+		npcEntity: &NpcEntity{
+			NpcId:         npcId,
+			RoomId:        roomId,
+			ParentQuestId: parentQuestId,
+			BlockId:       blockId,
+		},
+	}
+	s.entityMap[entity.id] = entity
+	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 

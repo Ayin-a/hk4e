@@ -212,6 +212,8 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	}
 	g.SendMsg(cmd.SyncScenePlayTeamEntityNotify, player.PlayerID, player.ClientSeq, syncScenePlayTeamEntityNotify)
 
+	g.GCGTavernInit(player) // GCG酒馆信息通知
+
 	SceneInitFinishRsp := &proto.SceneInitFinishRsp{
 		EnterSceneToken: player.EnterSceneToken,
 	}
@@ -346,8 +348,9 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyTp(
 	enterReason uint32,
 	prevSceneId uint32,
 	prevPos *model.Vector,
+	dungeonId uint32,
 ) *proto.PlayerEnterSceneNotify {
-	return g.PacketPlayerEnterSceneNotifyMp(player, player, enterType, enterReason, prevSceneId, prevPos)
+	return g.PacketPlayerEnterSceneNotifyMp(player, player, enterType, enterReason, prevSceneId, prevPos, dungeonId)
 }
 
 func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
@@ -357,6 +360,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 	enterReason uint32,
 	prevSceneId uint32,
 	prevPos *model.Vector,
+	dungeonId uint32,
 ) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -373,12 +377,15 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 		WorldLevel:      targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
 		EnterReason:     enterReason,
 		WorldType:       1,
+		DungeonId:       dungeonId,
 	}
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +
 		strconv.Itoa(int(targetPlayer.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
 		"296359"
-	playerEnterSceneNotify.SceneTagIdList = []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}
+	if player.SceneId == 3 {
+		playerEnterSceneNotify.SceneTagIdList = []uint32{102, 111, 112, 116, 118, 126, 135, 140, 142, 149, 1091, 1094, 1095, 1099, 1101, 1103, 1105, 1110, 1120, 1122, 1125, 1127, 1129, 1131, 1133, 1135, 1137, 1138, 1140, 1143, 1146, 1165, 1168}
+	}
 	return playerEnterSceneNotify
 }
 
@@ -468,6 +475,9 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER):
 				sceneEntityInfoMonster := g.PacketSceneEntityInfoMonster(scene, entity.id)
 				entityList = append(entityList, sceneEntityInfoMonster)
+			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_NPC):
+				sceneEntityInfoNpc := g.PacketSceneEntityInfoNpc(scene, entity.id)
+				entityList = append(entityList, sceneEntityInfoNpc)
 			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET):
 				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.id)
 				entityList = append(entityList, sceneEntityInfoGadget)
@@ -580,7 +590,7 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 			Val:   int64(entity.level),
 		}}},
 		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
-		LifeState:        1,
+		LifeState:        uint32(entity.lifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
 		Entity: &proto.SceneEntityInfo_Avatar{
 			Avatar: g.PacketSceneAvatarInfo(scene, player, avatarId),
@@ -637,10 +647,58 @@ func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32
 			Val:   int64(entity.level),
 		}}},
 		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
-		LifeState:        1,
+		LifeState:        uint32(entity.lifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
 		Entity: &proto.SceneEntityInfo_Monster{
 			Monster: g.PacketSceneMonsterInfo(),
+		},
+		EntityClientData: new(proto.EntityClientData),
+		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
+			AbilityInfo:         new(proto.AbilitySyncStateInfo),
+			RendererChangedInfo: new(proto.EntityRendererChangedInfo),
+			AiInfo: &proto.SceneEntityAiInfo{
+				IsAiOpen: true,
+				BornPos:  pos,
+			},
+			BornPos: pos,
+		},
+	}
+	return sceneEntityInfo
+}
+
+func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
+	entity := scene.GetEntity(entityId)
+	if entity == nil {
+		return new(proto.SceneEntityInfo)
+	}
+	pos := &proto.Vector{
+		X: float32(entity.pos.X),
+		Y: float32(entity.pos.Y),
+		Z: float32(entity.pos.Z),
+	}
+	sceneEntityInfo := &proto.SceneEntityInfo{
+		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_NPC,
+		EntityId:   entity.id,
+		MotionInfo: &proto.MotionInfo{
+			Pos: pos,
+			Rot: &proto.Vector{
+				X: float32(entity.rot.X),
+				Y: float32(entity.rot.Y),
+				Z: float32(entity.rot.Z),
+			},
+			Speed: &proto.Vector{},
+			State: proto.MotionState(entity.moveState),
+		},
+		PropList: []*proto.PropPair{{Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL), PropValue: &proto.PropValue{
+			Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+			Value: &proto.PropValue_Ival{Ival: int64(entity.level)},
+			Val:   int64(entity.level),
+		}}},
+		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
+		LifeState:        uint32(entity.lifeState),
+		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
+		Entity: &proto.SceneEntityInfo_Npc{
+			Npc: g.PacketSceneNpcInfo(entity.npcEntity),
 		},
 		EntityClientData: new(proto.EntityClientData),
 		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
@@ -685,7 +743,7 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 			Val:   int64(1),
 		}}},
 		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
-		LifeState:        1,
+		LifeState:        uint32(entity.lifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
 		EntityClientData: new(proto.EntityClientData),
 		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
@@ -765,6 +823,16 @@ func (g *GameManager) PacketSceneMonsterInfo() *proto.SceneMonsterInfo {
 		SpecialNameId:   40,
 	}
 	return sceneMonsterInfo
+}
+
+func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo {
+	sceneNpcInfo := &proto.SceneNpcInfo{
+		NpcId:         entity.NpcId,
+		RoomId:        entity.RoomId,
+		ParentQuestId: entity.ParentQuestId,
+		BlockId:       entity.BlockId,
+	}
+	return sceneNpcInfo
 }
 
 func (g *GameManager) PacketSceneGadgetInfoNormal(gadgetId uint32) *proto.SceneGadgetInfo {

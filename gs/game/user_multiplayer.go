@@ -327,6 +327,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 		uint32(constant.EnterReasonConst.HostFromSingleToMp),
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
+		0,
 	)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, hostPlayerEnterSceneNotify)
 

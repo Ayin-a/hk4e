@@ -248,6 +248,29 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(VehicleInteractRsp, &proto.VehicleInteractRsp{})     // 载具交互响应
 	c.registerMessage(VehicleStaminaNotify, &proto.VehicleStaminaNotify{}) // 载具耐力消耗通知
 
+	// 七圣召唤
+	c.registerMessage(GCGBasicDataNotify, &proto.GCGBasicDataNotify{})                         // GCG基本数据通知
+	c.registerMessage(GCGLevelChallengeNotify, &proto.GCGLevelChallengeNotify{})               // GCG等级挑战通知
+	c.registerMessage(GCGDSBanCardNotify, &proto.GCGDSBanCardNotify{})                         // GCG禁止的卡牌通知
+	c.registerMessage(GCGDSDataNotify, &proto.GCGDSDataNotify{})                               // GCG数据通知 (解锁的内容)
+	c.registerMessage(GCGTCTavernChallengeDataNotify, &proto.GCGTCTavernChallengeDataNotify{}) // GCG酒馆挑战数据通知
+	c.registerMessage(GCGTCTavernInfoNotify, &proto.GCGTCTavernInfoNotify{})                   // GCG酒馆信息通知
+	c.registerMessage(GCGTavernNpcInfoNotify, &proto.GCGTavernNpcInfoNotify{})                 // GCG酒馆NPC信息通知
+	c.registerMessage(GCGGameBriefDataNotify, &proto.GCGGameBriefDataNotify{})                 // GCG游戏简要数据通知
+	c.registerMessage(GCGAskDuelReq, &proto.GCGAskDuelReq{})                                   // GCG决斗请求
+	c.registerMessage(GCGAskDuelRsp, &proto.GCGAskDuelRsp{})                                   // GCG决斗响应
+	c.registerMessage(GCGInitFinishReq, &proto.GCGInitFinishReq{})                             // GCG初始化完成请求
+	c.registerMessage(GCGInitFinishRsp, &proto.GCGInitFinishRsp{})                             // GCG初始化完成响应
+	c.registerMessage(Unk3300_DGBNCDEIIFC, &proto.Unk3300_DGBNCDEIIFC{})                       // GCG
+	c.registerMessage(DungeonWayPointNotify, &proto.DungeonWayPointNotify{})                   // GCG
+	c.registerMessage(DungeonDataNotify, &proto.DungeonDataNotify{})                           // GCG
+
+	//// TODO 客户端开始GCG游戏
+	//c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求
+	//c.registerMessage(GCGStartChallengeByCheckRewardRsp, &proto.GCGStartChallengeByCheckRewardRsp{}) // GCG开始挑战来自检测奖励响应
+	//c.registerMessage(GCGStartChallengeReq, &proto.GCGStartChallengeReq{})                           // GCG开始挑战请求
+	//c.registerMessage(GCGStartChallengeRsp, &proto.GCGStartChallengeRsp{})                           // GCG开始挑战响应
+
 	// 乱七八糟
 	c.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求
 	c.registerMessage(TowerAllDataReq, &proto.TowerAllDataReq{})                       // 深渊数据请求

@@ -131,6 +131,7 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
 	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, g.PacketAvatarDataNotify(player))
 	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, g.PacketOpenStateUpdateNotify())
+	g.GCGLogin(player) // 发送GCG登录相关的通知包
 	playerLoginRsp := &proto.PlayerLoginRsp{
 		IsUseAbilityHash: true,
 		AbilityHashCode:  -228935105,
@@ -385,6 +386,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.GameObjectGuidMap = make(map[uint64]model.GameObject)
 	player.DropInfo = model.NewDropInfo()
 	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
+	player.GCGInfo = model.NewGCGInfo()
 
 	// 添加选定的主角
 	player.AddAvatar(mainCharAvatarId)

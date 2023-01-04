@@ -32,7 +32,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 		Y: transPos.Y,
 		Z: transPos.Z,
 	}
-	g.TeleportPlayer(player, uint32(constant.EnterReasonConst.TransPoint), sceneId, pos)
+	g.TeleportPlayer(player, constant.EnterReasonConst.TransPoint, sceneId, pos, 0)
 
 	sceneTransToPointRsp := &proto.SceneTransToPointRsp{
 		PointId: req.PointId,
@@ -59,13 +59,13 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 				Y: float64(posYInt),
 				Z: float64(req.Mark.Pos.Z),
 			}
-			g.TeleportPlayer(player, uint32(constant.EnterReasonConst.Gm), req.Mark.SceneId, pos)
+			g.TeleportPlayer(player, constant.EnterReasonConst.Gm, req.Mark.SceneId, pos, 0)
 		}
 	}
 }
 
 // TeleportPlayer 传送玩家至地图上的某个位置
-func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint32, sceneId uint32, pos *model.Vector) {
+func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos *model.Vector, dungeonId uint32) {
 	// 传送玩家
 	newSceneId := sceneId
 	oldSceneId := player.SceneId
@@ -97,14 +97,20 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint32, s
 	player.SceneLoadState = model.SceneNone
 
 	var enterType proto.EnterType
-	if jumpScene {
-		logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-		enterType = proto.EnterType_ENTER_TYPE_JUMP
-	} else {
-		logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-		enterType = proto.EnterType_ENTER_TYPE_GOTO
+	switch enterReason {
+	case constant.EnterReasonConst.DungeonEnter:
+		logger.Debug("player dungeon scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+		enterType = proto.EnterType_ENTER_TYPE_DUNGEON
+	default:
+		if jumpScene {
+			logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+			enterType = proto.EnterType_ENTER_TYPE_JUMP
+		} else {
+			logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+			enterType = proto.EnterType_ENTER_TYPE_GOTO
+		}
 	}
-	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, enterReason, oldSceneId, oldPos)
+	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(enterReason), oldSceneId, oldPos, dungeonId)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 }
 

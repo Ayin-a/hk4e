@@ -13,11 +13,11 @@ func (c *CommandManager) GMTeleportPlayer(userId, sceneId uint32, posX, posY, po
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME_MANAGER.TeleportPlayer(player, uint32(constant.EnterReasonConst.Gm), sceneId, &model.Vector{
+	GAME_MANAGER.TeleportPlayer(player, constant.EnterReasonConst.Gm, sceneId, &model.Vector{
 		X: posX,
 		Y: posY,
 		Z: posZ,
-	})
+	}, 0)
 }
 
 // GMAddUserItem 给予玩家物品

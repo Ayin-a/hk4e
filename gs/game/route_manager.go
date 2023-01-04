@@ -123,6 +123,8 @@ func (r *RouteManager) InitRoute() {
 	r.registerRouter(cmd.VehicleInteractReq, GAME_MANAGER.VehicleInteractReq)
 	r.registerRouter(cmd.SceneEntityDrownReq, GAME_MANAGER.SceneEntityDrownReq)
 	r.registerRouter(cmd.GetOnlinePlayerInfoReq, GAME_MANAGER.GetOnlinePlayerInfoReq)
+	r.registerRouter(cmd.GCGAskDuelReq, GAME_MANAGER.GCGAskDuelReq)
+	r.registerRouter(cmd.GCGInitFinishReq, GAME_MANAGER.GCGInitFinishReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

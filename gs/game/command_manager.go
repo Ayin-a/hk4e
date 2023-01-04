@@ -71,6 +71,7 @@ func (c *CommandManager) InitRouter() {
 		c.RegisterRouter(CommandPermNormal, c.OpCommand, "op")
 		c.RegisterRouter(CommandPermNormal, c.TeleportCommand, "teleport", "tp")
 		c.RegisterRouter(CommandPermNormal, c.GiveCommand, "give", "item")
+		c.RegisterRouter(CommandPermNormal, c.GcgCommand, "gcg")
 	}
 	// GM命令
 	{

@@ -26,6 +26,7 @@ var USER_MANAGER *UserManager = nil
 var WORLD_MANAGER *WorldManager = nil
 var TICK_MANAGER *TickManager = nil
 var COMMAND_MANAGER *CommandManager = nil
+var GCG_MANAGER *GCGManager = nil
 var MESSAGE_QUEUE *mq.MessageQueue
 
 var SELF *model.Player
@@ -53,6 +54,7 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r
 	WORLD_MANAGER = NewWorldManager(r.snowflake)
 	TICK_MANAGER = NewTickManager()
 	COMMAND_MANAGER = NewCommandManager()
+	GCG_MANAGER = NewGCGManager()
 	r.run()
 	return r
 }

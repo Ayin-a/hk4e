@@ -55,8 +55,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
 		return
 	}
-	GAME_MANAGER.AddSceneEntityNotifyBroadcast(player, scene, proto.VisionType_VISION_TYPE_BORN, []*proto.SceneEntityInfo{GAME_MANAGER.PacketSceneEntityInfoGadget(scene, entityId)}, false)
-
+	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{entityId}, true, false)
 	// 记录创建的载具信息
 	player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId] = entityId
 	player.VehicleInfo.LastCreateTime = time.Now().UnixMilli()

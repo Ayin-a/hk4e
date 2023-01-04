@@ -1,10 +1,9 @@
 package game
 
 import (
+	"hk4e/gs/model"
 	"strconv"
 	"strings"
-
-	"hk4e/gs/model"
 )
 
 // HelpCommand 帮助命令
@@ -248,4 +247,13 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		c.GMAddUserAllEvery(target.PlayerID, count, count) // TODO 武器额外获取数量
 		c.SendMessage(player, "已给予玩家 UID：%v, 所有内容。", target.PlayerID)
 	}
+}
+
+// GcgCommand Gcg测试命令
+func (c *CommandManager) GcgCommand(cm *CommandMessage) {
+	player := cm.Executor.(*model.Player)
+
+	GAME_MANAGER.GCGStartChallenge(player)
+
+	c.SendMessage(player, "收到命令")
 }

@@ -6,7 +6,7 @@ type LinkList struct {
 	nextNode  *LinkList
 }
 
-// LinkListQueue 无界队列 每个元素可存储不同数据结构
+// LLQueue LinkListQueue 无界队列 每个元素可存储不同数据结构
 type LLQueue struct {
 	headPtr *LinkList
 	tailPtr *LinkList
@@ -48,7 +48,7 @@ func (q *LLQueue) DeQueue() any {
 	return ret
 }
 
-// ArrayListQueue 无界队列 泛型
+// ALQueue ArrayListQueue 无界队列 泛型
 type ALQueue[T any] struct {
 	array []T
 }
@@ -77,7 +77,7 @@ func (q *ALQueue[T]) DeQueue() T {
 	return ret
 }
 
-// RingArrayQueue 有界队列 性能最好
+// RAQueue RingArrayQueue 有界队列 性能最好
 type RAQueue[T any] struct {
 	ringArray    []T
 	ringArrayLen uint64

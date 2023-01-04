@@ -295,8 +295,13 @@ func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uin
 }
 
 func (k *KcpConnectManager) getClientProtoObjByName(protoObjName string) pb.Message {
-	clientProtoObj := k.clientCmdProtoMapRefValue.MethodByName(
-		"GetClientProtoObjByName",
-	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	fn := k.clientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
+	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
+	obj := ret[0].Interface()
+	if obj == nil {
+		logger.Error("try to get a not exist proto obj, protoObjName: %v", protoObjName)
+		return nil
+	}
+	clientProtoObj := obj.(pb.Message)
 	return clientProtoObj
 }

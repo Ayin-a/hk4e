@@ -78,6 +78,7 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 	if newSceneId != oldSceneId {
 		jumpScene = true
 	}
+	player.SceneJump = jumpScene
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	oldScene := world.GetSceneById(oldSceneId)
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
@@ -87,14 +88,14 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 		g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
 
 		oldScene.RemovePlayer(player)
+		player.SceneId = newSceneId
 		newScene := world.GetSceneById(newSceneId)
 		newScene.AddPlayer(player)
 	}
+	player.SceneLoadState = model.SceneNone
 	player.Pos.X = pos.X
 	player.Pos.Y = pos.Y
 	player.Pos.Z = pos.Z
-	player.SceneId = newSceneId
-	player.SceneLoadState = model.SceneNone
 
 	var enterType proto.EnterType
 	switch enterReason {

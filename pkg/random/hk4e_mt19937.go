@@ -26,7 +26,7 @@ func NewSource64() rand.Source64 { return &source{index: N + 1} }
 func (s *source) Seed(seed int64) {
 	s.array[0] = uint64(seed)
 	for s.index = 1; s.index < N; s.index++ {
-		s.array[s.index] = (0x5851F42D4C957F2D*(s.array[s.index-1]^(s.array[s.index-1]>>62)) + s.index)
+		s.array[s.index] = 0x5851F42D4C957F2D*(s.array[s.index-1]^(s.array[s.index-1]>>62)) + s.index
 	}
 }
 
@@ -59,7 +59,7 @@ func (s *source) Uint64() uint64 {
 	x ^= (x >> 29) & 0x5555555555555555
 	x ^= (x << 17) & 0x71D67FFFEDA60000
 	x ^= (x << 37) & 0xFFF7EEE000000000
-	x ^= (x >> 43)
+	x ^= x >> 43
 	return x
 }
 
@@ -68,12 +68,15 @@ type KeyBlock struct {
 	data [4096]byte
 }
 
-func NewKeyBlock(seed uint64) *KeyBlock {
+func NewKeyBlock(seed uint64, useMagicSeed bool) *KeyBlock {
 	b := &KeyBlock{seed: seed}
 	r := NewRand()
 	r.Seed(int64(b.seed))
-	r.Seed(int64(r.Uint64()))
-	r.Uint64()
+	if useMagicSeed {
+		// 2.8.0版本后加入的黑魔法 刘慈欣:6
+		r.Seed(int64(r.Uint64()))
+		r.Uint64()
+	}
 	for i := 0; i < 4096>>3; i++ {
 		binary.BigEndian.PutUint64(b.data[i<<3:], r.Uint64())
 	}

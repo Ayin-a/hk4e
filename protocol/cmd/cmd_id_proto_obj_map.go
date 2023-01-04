@@ -105,6 +105,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(SceneEntityDrownReq, &proto.SceneEntityDrownReq{})                       // 场景实体溺水请求
 	c.registerMessage(SceneEntityDrownRsp, &proto.SceneEntityDrownRsp{})                       // 场景实体溺水响应
 	c.registerMessage(ObstacleModifyNotify, &proto.ObstacleModifyNotify{})                     // 寻路阻挡变动通知
+	c.registerMessage(DungeonWayPointNotify, &proto.DungeonWayPointNotify{})                   // 地牢副本相关
+	c.registerMessage(DungeonDataNotify, &proto.DungeonDataNotify{})                           // 地牢副本相关
 
 	// 战斗与同步
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知
@@ -261,15 +263,12 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(GCGAskDuelRsp, &proto.GCGAskDuelRsp{})                                   // GCG决斗响应
 	c.registerMessage(GCGInitFinishReq, &proto.GCGInitFinishReq{})                             // GCG初始化完成请求
 	c.registerMessage(GCGInitFinishRsp, &proto.GCGInitFinishRsp{})                             // GCG初始化完成响应
-	c.registerMessage(Unk3300_DGBNCDEIIFC, &proto.Unk3300_DGBNCDEIIFC{})                       // GCG
-	c.registerMessage(DungeonWayPointNotify, &proto.DungeonWayPointNotify{})                   // GCG
-	c.registerMessage(DungeonDataNotify, &proto.DungeonDataNotify{})                           // GCG
 
-	//// TODO 客户端开始GCG游戏
-	//c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求
-	//c.registerMessage(GCGStartChallengeByCheckRewardRsp, &proto.GCGStartChallengeByCheckRewardRsp{}) // GCG开始挑战来自检测奖励响应
-	//c.registerMessage(GCGStartChallengeReq, &proto.GCGStartChallengeReq{})                           // GCG开始挑战请求
-	//c.registerMessage(GCGStartChallengeRsp, &proto.GCGStartChallengeRsp{})                           // GCG开始挑战响应
+	// // TODO 客户端开始GCG游戏
+	// c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求
+	// c.registerMessage(GCGStartChallengeByCheckRewardRsp, &proto.GCGStartChallengeByCheckRewardRsp{}) // GCG开始挑战来自检测奖励响应
+	// c.registerMessage(GCGStartChallengeReq, &proto.GCGStartChallengeReq{})                           // GCG开始挑战请求
+	// c.registerMessage(GCGStartChallengeRsp, &proto.GCGStartChallengeRsp{})                           // GCG开始挑战响应
 
 	// 乱七八糟
 	c.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求

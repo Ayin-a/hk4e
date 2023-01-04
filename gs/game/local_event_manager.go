@@ -45,11 +45,17 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)
 		GAME_MANAGER.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
 	case RunUserCopyAndSave:
+		saveUserIdList := localEvent.Msg.([]uint32)
 		startTime := time.Now().UnixNano()
 		// 拷贝一份数据避免并发访问
 		insertPlayerList := make([]*model.Player, 0)
 		updatePlayerList := make([]*model.Player, 0)
-		for uid, player := range USER_MANAGER.playerMap {
+		for _, uid := range saveUserIdList {
+			player := USER_MANAGER.GetOnlineUser(uid)
+			if player == nil {
+				logger.Error("try to save but user not exist or online, uid: %v", uid)
+				continue
+			}
 			if uid < 100000000 {
 				continue
 			}

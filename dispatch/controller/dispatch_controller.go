@@ -44,20 +44,24 @@ func (c *Controller) getClientVersionByName(versionName string) (int, string) {
 	}
 	versionSlice := reg.FindAllString(versionName, -1)
 	version := 0
-	for index := 0; index < len(versionSlice); index++ {
-		v, err := strconv.Atoi(versionSlice[index])
+	for index, value := range versionSlice {
+		v, err := strconv.Atoi(value)
 		if err != nil {
 			logger.Error("parse client version error: %v", err)
 			return 0, ""
 		}
-		for i := 0; i < len(versionSlice)-1-index; i++ {
+		if v >= 10 {
+			// 测试版本
+			if index != 2 {
+				logger.Error("invalid client version")
+				return 0, ""
+			}
+			v /= 10
+		}
+		for i := 0; i < 2-index; i++ {
 			v *= 10
 		}
 		version += v
-	}
-	if version >= 1000 {
-		// 测试版本
-		version /= 10
 	}
 	return version, strconv.Itoa(version)
 }

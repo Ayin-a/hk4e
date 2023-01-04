@@ -222,7 +222,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		logger.Debug("ClientAbilityInitFinishNotify: %v", entry, player.PlayerID)
+		// logger.Debug("ClientAbilityInitFinishNotify: %v", entry, player.PlayerID)
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 	DoForward[proto.AbilityInvokeEntry](player, &proto.ClientAbilityInitFinishNotify{}, []string{"EntityId"}, "Invokes", invokeHandler)
@@ -236,7 +236,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		logger.Debug("ClientAbilityChangeNotify: %v", entry, player.PlayerID)
+		// logger.Debug("ClientAbilityChangeNotify: %v", entry, player.PlayerID)
 
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}

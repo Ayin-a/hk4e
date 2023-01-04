@@ -45,7 +45,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	}
 	g.SendMsg(cmd.ServerTimeNotify, player.PlayerID, player.ClientSeq, serverTimeNotify)
 
-	if world.IsPlayerFirstEnter(player) {
+	if player.SceneJump {
 		worldPlayerInfoNotify := &proto.WorldPlayerInfoNotify{
 			PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
 			PlayerUidList:  make([]uint32, 0),
@@ -214,6 +214,9 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 
 	g.GCGTavernInit(player) // GCG酒馆信息通知
 
+	g.SendMsg(cmd.DungeonWayPointNotify, player.PlayerID, player.ClientSeq, &proto.DungeonWayPointNotify{})
+	g.SendMsg(cmd.DungeonDataNotify, player.PlayerID, player.ClientSeq, &proto.DungeonDataNotify{})
+
 	SceneInitFinishRsp := &proto.SceneInitFinishRsp{
 		EnterSceneToken: player.EnterSceneToken,
 	}
@@ -234,20 +237,25 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 		g.SendMsg(cmd.GuestPostEnterSceneNotify, world.owner.PlayerID, world.owner.ClientSeq, guestPostEnterSceneNotify)
 	}
 
-	var visionType = proto.VisionType_VISION_TYPE_TRANSPORT
+	var visionType = proto.VisionType_VISION_TYPE_NONE
 
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
-	if world.IsPlayerFirstEnter(player) {
+	if player.SceneJump {
 		visionType = proto.VisionType_VISION_TYPE_BORN
+	} else {
+		visionType = proto.VisionType_VISION_TYPE_TRANSPORT
 	}
-	g.AddSceneEntityNotify(player, visionType, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)}, true, false)
+	activeAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)
+	g.AddSceneEntityNotify(player, visionType, []uint32{activeAvatarEntityId}, true, false)
 
 	// 通过aoi获取场景中在自己周围格子里的全部实体id
 	// entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
-	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
-	if world.IsPlayerFirstEnter(player) {
+	if player.SceneJump {
 		visionType = proto.VisionType_VISION_TYPE_MEET
+	} else {
+		visionType = proto.VisionType_VISION_TYPE_TRANSPORT
 	}
+	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
 	g.AddSceneEntityNotify(player, visionType, entityIdList, false, false)
 
 	sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
@@ -453,7 +461,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 		for _, entityId := range entityIdList[begin:end] {
 			entity, ok := scene.entityMap[entityId]
 			if !ok {
-				// logger.Error("get entity is nil, entityId: %v", entityId)
+				logger.Error("get entity is nil, entityId: %v", entityId)
 				continue
 			}
 			switch entity.entityType {

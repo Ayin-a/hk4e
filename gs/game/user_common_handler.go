@@ -152,6 +152,7 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.id
 	// 进入场景
+	player.SceneJump = true
 	player.SceneLoadState = model.SceneNone
 	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
 }

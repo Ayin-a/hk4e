@@ -1,12 +1,10 @@
-package aoi
+package alg
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
 )
 
-// 地图格子
+// Grid 地图格子
 type Grid struct {
 	gid uint32 // 格子id
 	// 格子边界坐标
@@ -19,7 +17,7 @@ type Grid struct {
 	entityIdMap map[uint32]bool // k:entityId v:是否存在
 }
 
-// 初始化格子
+// NewGrid 初始化格子
 func NewGrid(gid uint32, minX, maxX, minY, maxY, minZ, maxZ int16) (r *Grid) {
 	r = new(Grid)
 	r.gid = gid
@@ -33,12 +31,12 @@ func NewGrid(gid uint32, minX, maxX, minY, maxY, minZ, maxZ int16) (r *Grid) {
 	return r
 }
 
-// 向格子中添加一个实体id
+// AddEntityId 向格子中添加一个实体id
 func (g *Grid) AddEntityId(entityId uint32) {
 	g.entityIdMap[entityId] = true
 }
 
-// 从格子中删除一个实体id
+// RemoveEntityId 从格子中删除一个实体id
 func (g *Grid) RemoveEntityId(entityId uint32) {
 	_, exist := g.entityIdMap[entityId]
 	if exist {
@@ -48,17 +46,11 @@ func (g *Grid) RemoveEntityId(entityId uint32) {
 	}
 }
 
-// 获取格子中所有实体id
+// GetEntityIdList 获取格子中所有实体id
 func (g *Grid) GetEntityIdList() (entityIdList []uint32) {
 	entityIdList = make([]uint32, 0)
 	for k := range g.entityIdMap {
 		entityIdList = append(entityIdList, k)
 	}
 	return entityIdList
-}
-
-// 打印信息方法
-func (g *Grid) DebugString() string {
-	return fmt.Sprintf("Grid: gid: %d, minX: %d, maxX: %d, minY: %d, maxY: %d, minZ: %d, maxZ: %d, entityIdMap: %v",
-		g.gid, g.minX, g.maxX, g.minY, g.maxY, g.minZ, g.maxZ, g.entityIdMap)
 }

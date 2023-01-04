@@ -67,8 +67,6 @@ type FightMsg struct {
 const (
 	ServerAppidBindNotify             = iota // 玩家连接绑定的各个服务器appid通知
 	ServerUserOnlineStateChangeNotify        // 广播玩家上线和离线状态以及所在GS的appid
-	ServerUserBaseInfoReq                    // 跨服玩家基础数据请求
-	ServerUserBaseInfoRsp                    // 跨服玩家基础数据响应
 	ServerUserGsChangeNotify                 // 跨服玩家迁移通知
 	ServerUserMpReq                          // 跨服多人世界相关请求
 	ServerUserMpRsp                          // 跨服多人世界相关响应
@@ -80,7 +78,6 @@ type ServerMsg struct {
 	FightServerAppId string         `msgpack:"FightServerAppId"`
 	UserId           uint32         `msgpack:"UserId"`
 	IsOnline         bool           `msgpack:"IsOnline"`
-	UserBaseInfo     *UserBaseInfo  `msgpack:"UserBaseInfo"`
 	GameServerAppId  string         `msgpack:"GameServerAppId"`
 	JoinHostUserId   uint32         `msgpack:"JoinHostUserId"`
 	UserMpInfo       *UserMpInfo    `msgpack:"UserMpInfo"`
@@ -94,17 +91,15 @@ type OriginInfo struct {
 }
 
 type UserBaseInfo struct {
-	OriginInfo     *OriginInfo `msgpack:"OriginInfo"`
-	UserId         uint32      `msgpack:"UserId"`
-	Nickname       string      `msgpack:"Nickname"`
-	PlayerLevel    uint32      `msgpack:"PlayerLevel"`
-	MpSettingType  uint8       `msgpack:"MpSettingType"`
-	NameCardId     uint32      `msgpack:"NameCardId"`
-	Signature      string      `msgpack:"Signature"`
-	HeadImageId    uint32      `msgpack:"HeadImageId"`
-	WorldPlayerNum uint32      `msgpack:"WorldPlayerNum"`
-	WorldLevel     uint32      `msgpack:"WorldLevel"`
-	Birthday       []uint8     `msgpack:"Birthday"`
+	UserId         uint32 `msgpack:"UserId"`
+	Nickname       string `msgpack:"Nickname"`
+	PlayerLevel    uint32 `msgpack:"PlayerLevel"`
+	MpSettingType  uint8  `msgpack:"MpSettingType"`
+	NameCardId     uint32 `msgpack:"NameCardId"`
+	Signature      string `msgpack:"Signature"`
+	HeadImageId    uint32 `msgpack:"HeadImageId"`
+	WorldPlayerNum uint32 `msgpack:"WorldPlayerNum"`
+	WorldLevel     uint32 `msgpack:"WorldLevel"`
 }
 
 type UserMpInfo struct {

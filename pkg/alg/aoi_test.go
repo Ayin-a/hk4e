@@ -1,4 +1,4 @@
-package aoi
+package alg
 
 import (
 	"testing"
@@ -16,7 +16,6 @@ func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 		-150, 150, 3,
 		-150, 150, 3,
 	)
-	logger.Debug("aoiManager: %s", aoiManager.DebugString())
 	for k := range aoiManager.gridMap {
 		// 得到当前格子周边的九宫格
 		gridList := aoiManager.GetSurrGridListByGid(k)

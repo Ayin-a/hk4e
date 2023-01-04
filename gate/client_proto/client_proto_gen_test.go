@@ -13,11 +13,14 @@ func TestClientProtoGen(t *testing.T) {
 	}
 	nameList := make([]string, 0)
 	for _, entry := range dir {
-		split := strings.Split(entry.Name(), ".")
-		if len(split) != 2 || split[1] != "proto" {
+		if entry.IsDir() {
 			continue
 		}
-		nameList = append(nameList, split[0])
+		split := strings.Split(entry.Name(), ".")
+		if len(split) < 2 || split[len(split)-1] != "proto" {
+			continue
+		}
+		nameList = append(nameList, split[len(split)-2])
 	}
 
 	fileData := "package client_proto\n"

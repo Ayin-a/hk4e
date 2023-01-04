@@ -65,6 +65,7 @@ type Player struct {
 	GameObjectGuidMap     map[uint64]GameObject                    `bson:"-" msgpack:"-"` // 游戏对象guid映射表
 	Online                bool                                     `bson:"-" msgpack:"-"` // 在线状态
 	Pause                 bool                                     `bson:"-" msgpack:"-"` // 暂停状态
+	SceneJump             bool                                     `bson:"-" msgpack:"-"` // 是否场景切换
 	SceneLoadState        int                                      `bson:"-" msgpack:"-"` // 场景加载状态
 	CoopApplyMap          map[uint32]int64                         `bson:"-" msgpack:"-"` // 敲门申请的玩家uid及时间
 	StaminaInfo           *StaminaInfo                             `bson:"-" msgpack:"-"` // 耐力临时数据

@@ -129,6 +129,7 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 			pathfindingServerAppId: "",
 			changeGameServer:       false,
 			joinHostUserId:         0,
+			useMagicSeed:           false,
 		}
 		go k.recvHandle(session)
 		go k.sendHandle(session)
@@ -228,6 +229,7 @@ type Session struct {
 	pathfindingServerAppId string
 	changeGameServer       bool
 	joinHostUserId         uint32
+	useMagicSeed           bool
 }
 
 // 接收
@@ -297,32 +299,14 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			break
 		}
 		if session.changeXorKeyFin == false && protoMsg.CmdId == cmd.GetPlayerTokenRsp {
+			// XOR密钥切换
 			logger.Debug("change session xor key, convId: %v", convId)
 			session.changeXorKeyFin = true
-			keyBlock := random.NewKeyBlock(session.seed)
+			keyBlock := random.NewKeyBlock(session.seed, session.useMagicSeed)
 			xorKey := keyBlock.XorKey()
 			key := make([]byte, 4096)
 			copy(key, xorKey[:])
 			session.xorKey = key
-		}
-		if protoMsg.CmdId == cmd.PlayerLoginRsp {
-			logger.Debug("session active, convId: %v", convId)
-			session.connState = ConnActive
-			// 通知GS玩家各个服务器的appid
-			serverMsg := new(mq.ServerMsg)
-			serverMsg.UserId = session.userId
-			if session.changeGameServer {
-				serverMsg.JoinHostUserId = session.joinHostUserId
-				session.changeGameServer = false
-				session.joinHostUserId = 0
-			} else {
-				serverMsg.FightServerAppId = session.fightServerAppId
-			}
-			k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
-				MsgType:   mq.MsgTypeServer,
-				EventId:   mq.ServerAppidBindNotify,
-				ServerMsg: serverMsg,
-			})
 		}
 	}
 }

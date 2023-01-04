@@ -208,7 +208,7 @@ func (c *Controller) v2Login(context *gin.Context) {
 		logger.Error("ParseInt uid error: %v", err)
 		return
 	}
-	responseData := api.NewComboTokenRes()
+	responseData := api.NewComboTokenRsp()
 	account, err := c.dao.QueryAccountByField("accountID", uid)
 	if account == nil || account.Token != loginData.Token {
 		responseData.Retcode = -201

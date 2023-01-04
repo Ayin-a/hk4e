@@ -1,18 +1,19 @@
 package game
 
 import (
-	pb "google.golang.org/protobuf/proto"
 	"hk4e/common/constant"
 	"hk4e/gs/model"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 func (g *GameManager) GCGLogin(player *model.Player) {
-	player.SceneId = 1076
-	player.Pos.X = 8.974
-	player.Pos.Y = 0
-	player.Pos.Z = 9.373
+	// player.SceneId = 1076
+	// player.Pos.X = 8.974
+	// player.Pos.Y = 0
+	// player.Pos.Z = 9.373
 	// GCG基础信息
 	g.SendMsg(cmd.GCGBasicDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGBasicDataNotify(player))
 	// GCG等级挑战解锁
@@ -27,28 +28,25 @@ func (g *GameManager) GCGLogin(player *model.Player) {
 
 // GCGTavernInit GCG酒馆初始化
 func (g *GameManager) GCGTavernInit(player *model.Player) {
-	//// GCG酒馆信息通知
-	//g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
-	//// GCG酒馆NPC信息通知
-	//g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
+	// // GCG酒馆信息通知
+	// g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
+	// // GCG酒馆NPC信息通知
+	// g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
 	// 可能是包没发全导致卡进度条?
-	g.SendMsg(cmd.DungeonWayPointNotify, player.PlayerID, player.ClientSeq, &proto.DungeonWayPointNotify{})
-	g.SendMsg(cmd.DungeonDataNotify, player.PlayerID, player.ClientSeq, &proto.DungeonDataNotify{})
-	g.SendMsg(cmd.Unk3300_DGBNCDEIIFC, player.PlayerID, player.ClientSeq, &proto.Unk3300_DGBNCDEIIFC{})
 }
 
 // GCGStartChallenge GCG开始挑战
 func (g *GameManager) GCGStartChallenge(player *model.Player) {
 	// GCG开始游戏通知
-	//gcgStartChallengeByCheckRewardRsp := &proto.GCGStartChallengeByCheckRewardRsp{
+	// gcgStartChallengeByCheckRewardRsp := &proto.GCGStartChallengeByCheckRewardRsp{
 	//	ExceededItemTypeList: make([]uint32, 0, 0),
 	//	LevelId:              0,
 	//	ExceededItemList:     make([]uint32, 0, 0),
 	//	LevelType:            proto.GCGLevelType_GCG_LEVEL_TYPE_GUIDE_GROUP,
 	//	ConfigId:             7066505,
 	//	Retcode:              0,
-	//}
-	//g.SendMsg(cmd.GCGStartChallengeByCheckRewardRsp, player.PlayerID, player.ClientSeq, gcgStartChallengeByCheckRewardRsp)
+	// }
+	// g.SendMsg(cmd.GCGStartChallengeByCheckRewardRsp, player.PlayerID, player.ClientSeq, gcgStartChallengeByCheckRewardRsp)
 
 	// GCG游戏简要信息通知
 	GAME_MANAGER.SendMsg(cmd.GCGGameBriefDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGGameBriefDataNotify(player, proto.GCGGameBusinessType_GCG_GAME_BUSINESS_TYPE_GUIDE_GROUP, 30102))
@@ -74,7 +72,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		return
 	}
 	// PacketGCGAskDuelRsp
-	//gcgAskDuelRsp := &proto.GCGAskDuelRsp{
+	// gcgAskDuelRsp := &proto.GCGAskDuelRsp{
 	//	Duel: &proto.GCGDuel{
 	//		ServerSeq:                 game.serverSeqCounter,
 	//		ShowInfoList:              make([]*proto.GCGControllerShowInfo, 0, len(game.controllerMap)),
@@ -97,9 +95,9 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	//		Unk3300_JBBMBKGOONO:       0,
 	//		Phase:                     nil,
 	//	},
-	//}
-	//// 玩家信息列表
-	//for _, controller := range game.controllerMap {
+	// }
+	// // 玩家信息列表
+	// for _, controller := range game.controllerMap {
 	//	gcgControllerShowInfo := &proto.GCGControllerShowInfo{
 	//		ControllerId:   controller.controllerId,
 	//		ProfilePicture: &proto.ProfilePicture{},
@@ -110,8 +108,8 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	//		gcgControllerShowInfo.ProfilePicture.AvatarId = player.AvatarMap[player.HeadImage].Costume
 	//	}
 	//	gcgAskDuelRsp.Duel.ShowInfoList = append(gcgAskDuelRsp.Duel.ShowInfoList)
-	//}
-	//GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, gcgAskDuelRsp)
+	// }
+	// GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, gcgAskDuelRsp)
 	// PacketGCGAskDuelRsp
 	gcgAskDuelRsp := new(proto.GCGAskDuelRsp)
 	gcgAskDuelRsp.Duel = &proto.GCGDuel{

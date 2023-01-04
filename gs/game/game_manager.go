@@ -60,8 +60,6 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r
 }
 
 func (g *GameManager) run() {
-	ROUTE_MANAGER.InitRoute()
-	USER_MANAGER.StartAutoSaveUser()
 	go g.gameMainLoopD()
 }
 
@@ -123,7 +121,7 @@ func (g *GameManager) gameMainLoop() {
 			ROUTE_MANAGER.RouteHandle(netMsg)
 			end := time.Now().UnixNano()
 			routeCost += end - start
-		case <-TICK_MANAGER.ticker.C:
+		case <-TICK_MANAGER.globalTick.C:
 			// 游戏服务器定时帧
 			start := time.Now().UnixNano()
 			TICK_MANAGER.OnGameServerTick()
@@ -153,13 +151,20 @@ func (g *GameManager) Stop() {
 	}
 	time.Sleep(time.Second * 3)
 	// 保存玩家数据
+	onlinePlayerMap := USER_MANAGER.GetAllOnlineUserList()
+	saveUserIdList := make([]uint32, 0, len(onlinePlayerMap))
+	for userId := range onlinePlayerMap {
+		saveUserIdList = append(saveUserIdList, userId)
+	}
 	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 		EventId: RunUserCopyAndSave,
+		Msg:     saveUserIdList,
 	}
 	time.Sleep(time.Second * 3)
 }
 
-func (g *GameManager) SendMsgEx(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+// SendMsgToGate 发送消息给客户端 指定网关
+func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	if userId < 100000000 {
 		return
 	}
@@ -245,12 +250,14 @@ func (g *GameManager) CommonRetSucc(cmdId uint16, player *model.Player, rsp pb.M
 	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 
+// SendToWorldA 给世界内所有玩家发消息
 func (g *GameManager) SendToWorldA(world *World, cmdId uint16, seq uint32, msg pb.Message) {
 	for _, v := range world.playerMap {
 		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
 	}
 }
 
+// SendToWorldAEC 给世界内除自己以外的所有玩家发消息
 func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
 	for _, v := range world.playerMap {
 		if uid == v.PlayerID {
@@ -260,6 +267,7 @@ func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg
 	}
 }
 
+// SendToWorldH 给世界房主发消息
 func (g *GameManager) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Message) {
 	GAME_MANAGER.SendMsg(cmdId, world.owner.PlayerID, seq, msg)
 }
@@ -286,10 +294,16 @@ func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
 
 func (g *GameManager) GetClientProtoObjByName(protoObjName string) pb.Message {
 	if !appConfig.CONF.Hk4e.ClientProtoProxyEnable {
-		return &proto.NullMsg{}
+		logger.Error("client proto proxy func not enable")
+		return nil
 	}
-	clientProtoObj := g.clientCmdProtoMapRefValue.MethodByName(
-		"GetClientProtoObjByName",
-	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	fn := g.clientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
+	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
+	obj := ret[0].Interface()
+	if obj == nil {
+		logger.Error("try to get a not exist proto obj, protoObjName: %v", protoObjName)
+		return nil
+	}
+	clientProtoObj := obj.(pb.Message)
 	return clientProtoObj
 }

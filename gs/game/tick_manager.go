@@ -13,48 +13,147 @@ import (
 
 // 游戏服务器定时帧管理器
 
+type UserTimer struct {
+	timer  *time.Timer
+	action int
+}
+
+type UserTick struct {
+	globalTick      *time.Ticker
+	globalTickCount uint64
+	timerIdCounter  uint64
+	timerMap        map[uint64]*UserTimer
+}
+
 type TickManager struct {
-	ticker    *time.Ticker
-	tickCount uint64
+	globalTick      *time.Ticker
+	globalTickCount uint64
+	userTickMap     map[uint32]*UserTick
 }
 
 func NewTickManager() (r *TickManager) {
 	r = new(TickManager)
-	r.ticker = time.NewTicker(time.Millisecond * 100)
+	r.globalTick = time.NewTicker(time.Millisecond * 100)
+	r.globalTickCount = 0
+	r.userTickMap = make(map[uint32]*UserTick)
 	logger.Info("game server tick start at: %v", time.Now().UnixMilli())
 	return r
 }
 
+// 每个玩家自己的tick
+
+// CreateUserGlobalTick 创建玩家tick对象
+func (t *TickManager) CreateUserGlobalTick(userId uint32) {
+	t.userTickMap[userId] = &UserTick{
+		globalTick:      time.NewTicker(time.Second * 1),
+		globalTickCount: 0,
+		timerIdCounter:  0,
+		timerMap:        make(map[uint64]*UserTimer),
+	}
+}
+
+// DestroyUserGlobalTick 销毁玩家tick对象
+func (t *TickManager) DestroyUserGlobalTick(userId uint32) {
+	delete(t.userTickMap, userId)
+}
+
+// CreateUserTimer 创建玩家定时任务
+func (t *TickManager) CreateUserTimer(userId uint32, action int, delay uint32) {
+	userTick, exist := t.userTickMap[userId]
+	if !exist {
+		logger.Error("user not exist, uid: %v", userId)
+		return
+	}
+	userTick.timerIdCounter++
+	userTick.timerMap[userTick.timerIdCounter] = &UserTimer{
+		timer:  time.NewTimer(time.Second * time.Duration(delay)),
+		action: action,
+	}
+	logger.Debug("create user timer, uid: %v, action: %v, time: %v",
+		userId, action, time.Now().Add(time.Second*time.Duration(delay)).Format("2006-01-02 15:04:05"))
+}
+
+func (t *TickManager) onUserTickSecond(userId uint32, now int64) {
+	// logger.Info("on user tick second, uid: %v, time: %v", userId, now)
+}
+
+func (t *TickManager) onUserTickMinute(userId uint32, now int64) {
+	logger.Info("on user tick minute, uid: %v, time: %v", userId, now)
+	// 每分钟保存玩家数据
+	saveUserIdList := []uint32{userId}
+	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+		EventId: RunUserCopyAndSave,
+		Msg:     saveUserIdList,
+	}
+}
+
+// 玩家定时任务常量
+
+const (
+	UserTimerActionTest = iota
+)
+
+func (t *TickManager) userTimerHandle(userId uint32, action int) {
+	switch action {
+	case UserTimerActionTest:
+		logger.Debug("UserTimerActionTest, uid: %v", userId)
+	}
+}
+
+// 服务器全局tick
+
 func (t *TickManager) OnGameServerTick() {
-	t.tickCount++
+	t.globalTickCount++
 	now := time.Now().UnixMilli()
 	t.onTick100MilliSecond(now)
-	if t.tickCount%2 == 0 {
+	if t.globalTickCount%2 == 0 {
 		t.onTick200MilliSecond(now)
 	}
-	if t.tickCount%(10*1) == 0 {
+	if t.globalTickCount%(10*1) == 0 {
 		t.onTickSecond(now)
 	}
-	if t.tickCount%(10*5) == 0 {
+	if t.globalTickCount%(10*5) == 0 {
 		t.onTick5Second(now)
 	}
-	if t.tickCount%(10*10) == 0 {
+	if t.globalTickCount%(10*10) == 0 {
 		t.onTick10Second(now)
 	}
-	if t.tickCount%(10*60) == 0 {
+	if t.globalTickCount%(10*60) == 0 {
 		t.onTickMinute(now)
 	}
-	if t.tickCount%(10*60*10) == 0 {
+	if t.globalTickCount%(10*60*10) == 0 {
 		t.onTick10Minute(now)
 	}
-	if t.tickCount%(10*3600) == 0 {
+	if t.globalTickCount%(10*3600) == 0 {
 		t.onTickHour(now)
 	}
-	if t.tickCount%(10*3600*24) == 0 {
+	if t.globalTickCount%(10*3600*24) == 0 {
 		t.onTickDay(now)
 	}
-	if t.tickCount%(10*3600*24*7) == 0 {
+	if t.globalTickCount%(10*3600*24*7) == 0 {
 		t.onTickWeek(now)
+	}
+	for userId, userTick := range t.userTickMap {
+		if len(userTick.globalTick.C) == 0 {
+			// 跳过还没到时间的定时器
+			continue
+		}
+		userTick.globalTickCount++
+		if userTick.globalTickCount%(10*1) == 0 {
+			t.onUserTickSecond(userId, now)
+		}
+		if userTick.globalTickCount%(10*60) == 0 {
+			t.onUserTickMinute(userId, now)
+		}
+		for timerId, timer := range userTick.timerMap {
+			if len(timer.timer.C) == 0 {
+				// 跳过还没到时间的定时器
+				continue
+			}
+			timer.timer.Stop()
+			delete(userTick.timerMap, timerId)
+			t.userTimerHandle(userId, timer.action)
+		}
 	}
 }
 
@@ -259,7 +358,7 @@ func (t *TickManager) onTickSecond(now int64) {
 					monsterEntityCount++
 				}
 			}
-			if monsterEntityCount < 30 {
+			if monsterEntityCount < 3 {
 				monsterEntityId := t.createMonster(scene)
 				GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
 			}

@@ -21,26 +21,9 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 	req := payloadMsg.(*proto.GetPlayerSocialDetailReq)
 	targetUid := req.Uid
 
-	targetPlayer, _, remote := USER_MANAGER.LoadGlobalPlayer(targetUid)
+	targetPlayer, _, _ := USER_MANAGER.LoadGlobalPlayer(targetUid)
 	if targetPlayer == nil {
 		g.CommonRetError(cmd.GetPlayerSocialDetailRsp, player, &proto.GetPlayerSocialDetailRsp{}, proto.Retcode_RET_PLAYER_NOT_EXIST)
-		return
-	}
-	if remote {
-		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid)
-		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
-			MsgType: mq.MsgTypeServer,
-			EventId: mq.ServerUserBaseInfoReq,
-			ServerMsg: &mq.ServerMsg{
-				UserBaseInfo: &mq.UserBaseInfo{
-					OriginInfo: &mq.OriginInfo{
-						CmdName: "GetPlayerSocialDetailReq",
-						UserId:  player.PlayerID,
-					},
-					UserId: targetUid,
-				},
-			},
-		})
 		return
 	}
 	_, exist := player.FriendList[targetPlayer.PlayerID]
@@ -441,31 +424,16 @@ func (g *GameManager) GetOnlinePlayerInfoReq(player *model.Player, payloadMsg pb
 		return
 	}
 
-	if USER_MANAGER.GetUserOnlineState(targetUid.TargetUid) {
-		g.SendMsg(cmd.GetOnlinePlayerInfoRsp, player.PlayerID, player.ClientSeq, &proto.GetOnlinePlayerInfoRsp{
-			TargetUid:        targetUid.TargetUid,
-			TargetPlayerInfo: g.PacketOnlinePlayerInfo(player),
-		})
+	targetPlayer, online, _ := USER_MANAGER.LoadGlobalPlayer(targetUid.TargetUid)
+	if targetPlayer == nil || !online {
+		g.CommonRetError(cmd.GetOnlinePlayerInfoRsp, player, &proto.GetOnlinePlayerInfoRsp{}, proto.Retcode_RET_PLAYER_NOT_ONLINE)
 		return
 	}
-	if USER_MANAGER.GetRemoteUserOnlineState(targetUid.TargetUid) {
-		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid.TargetUid)
-		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
-			MsgType: mq.MsgTypeServer,
-			EventId: mq.ServerUserBaseInfoReq,
-			ServerMsg: &mq.ServerMsg{
-				UserBaseInfo: &mq.UserBaseInfo{
-					OriginInfo: &mq.OriginInfo{
-						CmdName: "GetOnlinePlayerInfoReq",
-						UserId:  player.PlayerID,
-					},
-					UserId: targetUid.TargetUid,
-				},
-			},
-		})
-		return
-	}
-	g.CommonRetError(cmd.GetOnlinePlayerInfoRsp, player, &proto.GetOnlinePlayerInfoRsp{}, proto.Retcode_RET_PLAYER_NOT_ONLINE)
+
+	g.SendMsg(cmd.GetOnlinePlayerInfoRsp, player.PlayerID, player.ClientSeq, &proto.GetOnlinePlayerInfoRsp{
+		TargetUid:        targetUid.TargetUid,
+		TargetPlayerInfo: g.PacketOnlinePlayerInfo(targetPlayer),
+	})
 }
 
 func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.OnlinePlayerInfo {
@@ -486,89 +454,6 @@ func (g *GameManager) PacketOnlinePlayerInfo(player *model.Player) *proto.Online
 		CurPlayerNumInWorld: worldPlayerNum,
 	}
 	return onlinePlayerInfo
-}
-
-// 跨服玩家基础数据请求
-
-func (g *GameManager) ServerUserBaseInfoReq(userBaseInfo *mq.UserBaseInfo, gsAppId string) {
-	switch userBaseInfo.OriginInfo.CmdName {
-	case "GetOnlinePlayerInfoReq":
-		fallthrough
-	case "GetPlayerSocialDetailReq":
-		player := USER_MANAGER.GetOnlineUser(userBaseInfo.UserId)
-		if player == nil {
-			logger.Error("player is nil, uid: %v", userBaseInfo.UserId)
-			return
-		}
-		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-		MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
-			MsgType: mq.MsgTypeServer,
-			EventId: mq.ServerUserBaseInfoRsp,
-			ServerMsg: &mq.ServerMsg{
-				UserBaseInfo: &mq.UserBaseInfo{
-					OriginInfo:     userBaseInfo.OriginInfo,
-					UserId:         player.PlayerID,
-					Nickname:       player.NickName,
-					PlayerLevel:    player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-					MpSettingType:  uint8(player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
-					NameCardId:     player.NameCard,
-					Signature:      player.Signature,
-					HeadImageId:    player.HeadImage,
-					WorldPlayerNum: uint32(world.GetWorldPlayerNum()),
-					WorldLevel:     player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
-					Birthday:       player.Birthday,
-				},
-			},
-		})
-	}
-}
-
-func (g *GameManager) ServerUserBaseInfoRsp(userBaseInfo *mq.UserBaseInfo) {
-	switch userBaseInfo.OriginInfo.CmdName {
-	case "GetOnlinePlayerInfoReq":
-		player := USER_MANAGER.GetOnlineUser(userBaseInfo.OriginInfo.UserId)
-		if player == nil {
-			logger.Error("player is nil, uid: %v", userBaseInfo.OriginInfo.UserId)
-			return
-		}
-		g.SendMsg(cmd.GetOnlinePlayerInfoRsp, player.PlayerID, player.ClientSeq, &proto.GetOnlinePlayerInfoRsp{
-			TargetUid: userBaseInfo.UserId,
-			TargetPlayerInfo: &proto.OnlinePlayerInfo{
-				Uid:                 userBaseInfo.UserId,
-				Nickname:            userBaseInfo.Nickname,
-				PlayerLevel:         userBaseInfo.PlayerLevel,
-				MpSettingType:       proto.MpSettingType(userBaseInfo.MpSettingType),
-				NameCardId:          userBaseInfo.NameCardId,
-				Signature:           userBaseInfo.Signature,
-				ProfilePicture:      &proto.ProfilePicture{AvatarId: userBaseInfo.HeadImageId},
-				CurPlayerNumInWorld: userBaseInfo.WorldPlayerNum,
-			},
-		})
-	case "GetPlayerSocialDetailReq":
-		player := USER_MANAGER.GetOnlineUser(userBaseInfo.OriginInfo.UserId)
-		if player == nil {
-			logger.Error("player is nil, uid: %v", userBaseInfo.OriginInfo.UserId)
-			return
-		}
-		_, exist := player.FriendList[userBaseInfo.UserId]
-		socialDetail := &proto.SocialDetail{
-			Uid:                  userBaseInfo.UserId,
-			ProfilePicture:       &proto.ProfilePicture{AvatarId: userBaseInfo.HeadImageId},
-			Nickname:             userBaseInfo.Nickname,
-			Signature:            userBaseInfo.Signature,
-			Level:                userBaseInfo.PlayerLevel,
-			Birthday:             &proto.Birthday{Month: uint32(userBaseInfo.Birthday[0]), Day: uint32(userBaseInfo.Birthday[1])},
-			WorldLevel:           userBaseInfo.WorldLevel,
-			NameCardId:           userBaseInfo.NameCardId,
-			IsShowAvatar:         false,
-			FinishAchievementNum: 0,
-			IsFriend:             exist,
-		}
-		getPlayerSocialDetailRsp := &proto.GetPlayerSocialDetailRsp{
-			DetailData: socialDetail,
-		}
-		g.SendMsg(cmd.GetPlayerSocialDetailRsp, player.PlayerID, player.ClientSeq, getPlayerSocialDetailRsp)
-	}
 }
 
 // 跨服添加好友通知

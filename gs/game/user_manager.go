@@ -1,8 +1,6 @@
 package game
 
 import (
-	"time"
-
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -30,6 +28,7 @@ func NewUserManager(dao *dao.Dao) (r *UserManager) {
 	r.playerMap = make(map[uint32]*model.Player)
 	r.saveUserChan = make(chan *SaveUserData) // 无缓冲区chan 避免主协程在写入时被迫加锁
 	r.remotePlayerMap = make(map[uint32]string)
+	go r.saveUserHandle()
 	return r
 }
 
@@ -356,24 +355,12 @@ type SaveUserData struct {
 	updatePlayerList []*model.Player
 }
 
-// StartAutoSaveUser 玩家定时保存
-func (u *UserManager) StartAutoSaveUser() {
-	go func() {
-		ticker := time.NewTicker(time.Minute * 5)
-		for {
-			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
-				EventId: RunUserCopyAndSave,
-			}
-			<-ticker.C
-		}
-	}()
-	go func() {
-		for {
-			saveUserData := <-u.saveUserChan
-			u.SaveUserListToDbSync(saveUserData)
-			u.SaveUserListToRedisSync(saveUserData)
-		}
-	}()
+func (u *UserManager) saveUserHandle() {
+	for {
+		saveUserData := <-u.saveUserChan
+		u.SaveUserListToDbSync(saveUserData)
+		u.SaveUserListToRedisSync(saveUserData)
+	}
 }
 
 func (u *UserManager) LoadUserFromDbSync(userId uint32) *model.Player {

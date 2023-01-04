@@ -23,6 +23,7 @@ type RouteManager struct {
 func NewRouteManager() (r *RouteManager) {
 	r = new(RouteManager)
 	r.handlerFuncRouteMap = make(map[uint16]HandlerFunc)
+	r.initRoute()
 	return r
 }
 
@@ -52,7 +53,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	SELF = nil
 }
 
-func (r *RouteManager) InitRoute() {
+func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.UnionCmdNotify, GAME_MANAGER.UnionCmdNotify)
 	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, GAME_MANAGER.MassiveEntityElementOpBatchNotify)
 	r.registerRouter(cmd.ToTheMoonEnterSceneReq, GAME_MANAGER.ToTheMoonEnterSceneReq)
@@ -169,10 +170,6 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			USER_MANAGER.SetRemoteUserOnlineState(serverMsg.UserId, serverMsg.IsOnline, netMsg.OriginServerAppId)
 		case mq.ServerAppidBindNotify:
 			GAME_MANAGER.ServerAppidBindNotify(serverMsg.UserId, serverMsg.FightServerAppId, serverMsg.JoinHostUserId)
-		case mq.ServerUserBaseInfoReq:
-			GAME_MANAGER.ServerUserBaseInfoReq(serverMsg.UserBaseInfo, netMsg.OriginServerAppId)
-		case mq.ServerUserBaseInfoRsp:
-			GAME_MANAGER.ServerUserBaseInfoRsp(serverMsg.UserBaseInfo)
 		case mq.ServerUserMpReq:
 			GAME_MANAGER.ServerUserMpReq(serverMsg.UserMpInfo, netMsg.OriginServerAppId)
 		case mq.ServerUserMpRsp:

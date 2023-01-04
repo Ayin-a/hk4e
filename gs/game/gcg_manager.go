@@ -85,10 +85,10 @@ func (g *GCGManager) JoinGame(game *GCGGame, player *model.Player) {
 	game.controllerMap[game.controllerIdCounter] = controller
 }
 
-//// CreateGameCardInfo 生成操控者卡牌信息
-//func (g *GCGManager) CreateGameCardInfo(controller *GCGController, gcgDeck *model.GCGDeck) *GCGCardInfo {
+// // CreateGameCardInfo 生成操控者卡牌信息
+// func (g *GCGManager) CreateGameCardInfo(controller *GCGController, gcgDeck *model.GCGDeck) *GCGCardInfo {
 //
-//}
+// }
 
 // GetGameControllerByUserId 通过玩家Id获取GCGController对象
 func (g *GCGManager) GetGameControllerByUserId(game *GCGGame, userId uint32) *GCGController {

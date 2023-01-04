@@ -1,6 +1,6 @@
 package api
 
-type ComboTokenRes struct {
+type ComboTokenRsp struct {
 	Message string    `json:"message"`
 	Retcode int       `json:"retcode"`
 	Data    LoginData `json:"data"`
@@ -16,8 +16,8 @@ type LoginData struct {
 	FatigueRemind any    `json:"fatigue_remind"`
 }
 
-func NewComboTokenRes() (r *ComboTokenRes) {
-	r = &ComboTokenRes{
+func NewComboTokenRsp() (r *ComboTokenRsp) {
+	r = &ComboTokenRsp{
 		Message: "",
 		Retcode: 0,
 		Data: LoginData{

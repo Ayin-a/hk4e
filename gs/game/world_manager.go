@@ -5,13 +5,11 @@ import (
 	"time"
 
 	"hk4e/common/constant"
-	"hk4e/protocol/cmd"
-
 	"hk4e/common/mq"
-	"hk4e/gs/game/aoi"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
+	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )
 
@@ -50,24 +48,24 @@ func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 		multiplayer:     false,
 		mpLevelEntityId: 0,
 		chatMsgList:     make([]*proto.ChatInfo, 0),
-		// aoi划分
-		// TODO 为减少内存占用暂时去掉Y轴AOI格子划分 原来的Y轴格子数量为80
-		aoiManager: aoi.NewAoiManager(
-			-8000, 4000, 120,
-			-2000, 2000, 1,
-			-5500, 6500, 120,
-		),
+		// // aoi划分
+		// // TODO 为减少内存占用暂时去掉Y轴AOI格子划分 原来的Y轴格子数量为80
+		// aoiManager: aoi.NewAoiManager(
+		// 	-8000, 4000, 120,
+		// 	-2000, 2000, 1,
+		// 	-5500, 6500, 120,
+		// ),
 		playerFirstEnterMap: make(map[uint32]int64),
 		waitEnterPlayerMap:  make(map[uint32]int64),
 		multiplayerTeam:     CreateMultiplayerTeam(),
 		peerList:            make([]*model.Player, 0),
 	}
 	if world.IsBigWorld() {
-		world.aoiManager = aoi.NewAoiManager(
-			-8000, 4000, 800,
-			-2000, 2000, 1,
-			-5500, 6500, 800,
-		)
+		// world.aoiManager = aoi.NewAoiManager(
+		// 	-8000, 4000, 800,
+		// 	-2000, 2000, 1,
+		// 	-5500, 6500, 800,
+		// )
 	}
 	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.EntityIdTypeConst.MPLEVEL)
 	w.worldMap[worldId] = world
@@ -101,18 +99,18 @@ func (w *World) IsBigWorld() bool {
 // 世界数据结构
 
 type World struct {
-	id                  uint32
-	owner               *model.Player
-	playerMap           map[uint32]*model.Player
-	sceneMap            map[uint32]*Scene
-	entityIdCounter     uint32 // 世界的实体id生成计数器
-	worldLevel          uint8  // 世界等级
-	multiplayer         bool   // 是否多人世界
-	mpLevelEntityId     uint32
-	chatMsgList         []*proto.ChatInfo // 世界聊天消息列表
-	aoiManager          *aoi.AoiManager   // 当前世界地图的aoi管理器
-	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
-	waitEnterPlayerMap  map[uint32]int64  // 进入世界的玩家等待列表 key:uid value:开始时间
+	id              uint32
+	owner           *model.Player
+	playerMap       map[uint32]*model.Player
+	sceneMap        map[uint32]*Scene
+	entityIdCounter uint32 // 世界的实体id生成计数器
+	worldLevel      uint8  // 世界等级
+	multiplayer     bool   // 是否多人世界
+	mpLevelEntityId uint32
+	chatMsgList     []*proto.ChatInfo // 世界聊天消息列表
+	// aoiManager          *aoi.AoiManager   // 当前世界地图的aoi管理器
+	playerFirstEnterMap map[uint32]int64 // 玩家第一次进入世界的时间 key:uid value:进入时间
+	waitEnterPlayerMap  map[uint32]int64 // 进入世界的玩家等待列表 key:uid value:开始时间
 	multiplayerTeam     *MultiplayerTeam
 	peerList            []*model.Player // 玩家编号列表
 }
@@ -263,7 +261,7 @@ func (w *World) InitPlayerWorldAvatar(player *model.Player) {
 		if worldAvatar.uid != player.PlayerID {
 			continue
 		}
-		if worldAvatar.avatarEntityId != 0 || worldAvatar.weaponEntityId != 0 {
+		if !player.SceneJump && (worldAvatar.avatarEntityId != 0 || worldAvatar.weaponEntityId != 0) {
 			continue
 		}
 		worldAvatar.avatarEntityId = scene.CreateEntityAvatar(player, worldAvatar.avatarId)
@@ -706,9 +704,9 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		},
 	}
 	s.entityMap[entity.id] = entity
-	if avatarId == s.world.GetPlayerActiveAvatarId(player) {
-		s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	}
+	// if avatarId == s.world.GetPlayerActiveAvatarId(player) {
+	// 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// }
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -759,7 +757,7 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 		monsterEntity:       &MonsterEntity{},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -798,7 +796,7 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 		},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 
@@ -826,7 +824,7 @@ func (s *Scene) CreateEntityGadgetNormal(pos *model.Vector, gadgetId uint32) uin
 		},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 
@@ -856,7 +854,7 @@ func (s *Scene) CreateEntityGadgetGather(pos *model.Vector, gatherId uint32) uin
 		},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 
@@ -890,7 +888,7 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 		},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 }
 
 func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
@@ -929,7 +927,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 		},
 	}
 	s.entityMap[entity.id] = entity
-	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 
@@ -938,7 +936,7 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	if entity == nil {
 		return
 	}
-	s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	// s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	delete(s.entityMap, entityId)
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,

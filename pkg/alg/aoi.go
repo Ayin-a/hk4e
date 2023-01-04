@@ -1,12 +1,10 @@
-package aoi
+package alg
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
 )
 
-// aoi管理模块
+// AoiManager aoi管理模块
 type AoiManager struct {
 	// 区域边界坐标
 	minX    int16
@@ -21,7 +19,7 @@ type AoiManager struct {
 	gridMap map[uint32]*Grid // 当前区域中都有哪些格子 key:gid value:格子对象
 }
 
-// 初始化aoi区域
+// NewAoiManager 初始化aoi区域
 func NewAoiManager(minX, maxX, numX, minY, maxY, numY, minZ, maxZ, numZ int16) (r *AoiManager) {
 	r = new(AoiManager)
 	r.minX = minX
@@ -56,25 +54,31 @@ func NewAoiManager(minX, maxX, numX, minY, maxY, numY, minZ, maxZ, numZ int16) (
 		}
 	}
 	logger.Info("init aoi area grid finish")
+	logger.Debug("AoiMgr: minX: %d, maxX: %d, numX: %d, minY: %d, maxY: %d, numY: %d, minZ: %d, maxZ: %d, numZ: %d\n",
+		r.minX, r.maxX, r.numX, r.minY, r.maxY, r.numY, r.minZ, r.maxZ, r.numZ)
+	for _, grid := range r.gridMap {
+		logger.Debug("Grid: gid: %d, minX: %d, maxX: %d, minY: %d, maxY: %d, minZ: %d, maxZ: %d, entityIdMap: %v",
+			grid.gid, grid.minX, grid.maxX, grid.minY, grid.maxY, grid.minZ, grid.maxZ, grid.entityIdMap)
+	}
 	return r
 }
 
-// 每个格子在x轴方向的长度
+// GridXLen 每个格子在x轴方向的长度
 func (a *AoiManager) GridXLen() int16 {
 	return (a.maxX - a.minX) / a.numX
 }
 
-// 每个格子在y轴方向的长度
+// GridYLen 每个格子在y轴方向的长度
 func (a *AoiManager) GridYLen() int16 {
 	return (a.maxY - a.minY) / a.numY
 }
 
-// 每个格子在z轴方向的长度
+// GridZLen 每个格子在z轴方向的长度
 func (a *AoiManager) GridZLen() int16 {
 	return (a.maxZ - a.minZ) / a.numZ
 }
 
-// 通过坐标获取对应的格子id
+// GetGidByPos 通过坐标获取对应的格子id
 func (a *AoiManager) GetGidByPos(x, y, z float32) uint32 {
 	gx := (int16(x) - a.minX) / a.GridXLen()
 	gy := (int16(y) - a.minY) / a.GridYLen()
@@ -82,7 +86,7 @@ func (a *AoiManager) GetGidByPos(x, y, z float32) uint32 {
 	return uint32(gy)*(uint32(a.numX)*uint32(a.numZ)) + uint32(gz)*uint32(a.numX) + uint32(gx)
 }
 
-// 判断坐标是否存在于aoi区域内
+// IsValidAoiPos 判断坐标是否存在于aoi区域内
 func (a *AoiManager) IsValidAoiPos(x, y, z float32) bool {
 	if (int16(x) > a.minX && int16(x) < a.maxX) &&
 		(int16(y) > a.minY && int16(y) < a.maxY) &&
@@ -93,18 +97,7 @@ func (a *AoiManager) IsValidAoiPos(x, y, z float32) bool {
 	}
 }
 
-// 打印信息方法
-func (a *AoiManager) DebugString() string {
-	s := fmt.Sprintf("AoiMgr: minX: %d, maxX: %d, numX: %d, minY: %d, maxY: %d, numY: %d, minZ: %d, maxZ: %d, numZ: %d\n",
-		a.minX, a.maxX, a.numX, a.minY, a.maxY, a.numY, a.minZ, a.maxZ, a.numZ)
-	s += "gridList in AoiMgr:\n"
-	for _, grid := range a.gridMap {
-		s += fmt.Sprintln(grid.DebugString())
-	}
-	return s
-}
-
-// 根据格子的gid得到当前周边的格子信息
+// GetSurrGridListByGid 根据格子的gid得到当前周边的格子信息
 func (a *AoiManager) GetSurrGridListByGid(gid uint32) (gridList []*Grid) {
 	gridList = make([]*Grid, 0)
 	// 判断grid是否存在
@@ -165,7 +158,7 @@ func (a *AoiManager) GetSurrGridListByGid(gid uint32) (gridList []*Grid) {
 	return gridList
 }
 
-// 通过坐标得到周边格子内的全部entityId
+// GetEntityIdListByPos 通过坐标得到周边格子内的全部entityId
 func (a *AoiManager) GetEntityIdListByPos(x, y, z float32) (entityIdList []uint32) {
 	// 根据坐标得到当前坐标属于哪个格子id
 	gid := a.GetGidByPos(x, y, z)
@@ -175,37 +168,37 @@ func (a *AoiManager) GetEntityIdListByPos(x, y, z float32) (entityIdList []uint3
 	for _, v := range gridList {
 		tmp := v.GetEntityIdList()
 		entityIdList = append(entityIdList, tmp...)
-		// logger.Debug("Grid: gid: %d, tmp len: %v", v.gid, len(tmp))
+		logger.Debug("Grid: gid: %d, tmp len: %v", v.gid, len(tmp))
 	}
 	return entityIdList
 }
 
-// 通过gid获取当前格子的全部entityId
+// GetEntityIdListByGid 通过gid获取当前格子的全部entityId
 func (a *AoiManager) GetEntityIdListByGid(gid uint32) (entityIdList []uint32) {
 	grid := a.gridMap[gid]
 	entityIdList = grid.GetEntityIdList()
 	return entityIdList
 }
 
-// 添加一个entityId到一个格子中
+// AddEntityIdToGrid 添加一个entityId到一个格子中
 func (a *AoiManager) AddEntityIdToGrid(entityId uint32, gid uint32) {
 	grid := a.gridMap[gid]
 	grid.AddEntityId(entityId)
 }
 
-// 移除一个格子中的entityId
+// RemoveEntityIdFromGrid 移除一个格子中的entityId
 func (a *AoiManager) RemoveEntityIdFromGrid(entityId uint32, gid uint32) {
 	grid := a.gridMap[gid]
 	grid.RemoveEntityId(entityId)
 }
 
-// 通过坐标添加一个entityId到一个格子中
+// AddEntityIdToGridByPos 通过坐标添加一个entityId到一个格子中
 func (a *AoiManager) AddEntityIdToGridByPos(entityId uint32, x, y, z float32) {
 	gid := a.GetGidByPos(x, y, z)
 	a.AddEntityIdToGrid(entityId, gid)
 }
 
-// 通过坐标把一个entityId从对应的格子中删除
+// RemoveEntityIdFromGridByPos 通过坐标把一个entityId从对应的格子中删除
 func (a *AoiManager) RemoveEntityIdFromGridByPos(entityId uint32, x, y, z float32) {
 	gid := a.GetGidByPos(x, y, z)
 	a.RemoveEntityIdFromGrid(entityId, gid)

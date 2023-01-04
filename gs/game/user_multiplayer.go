@@ -79,15 +79,16 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
 	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
+		player.SceneJump = true
+		player.SceneId = hostPlayer.SceneId
+		player.SceneLoadState = model.SceneNone
 		player.Pos.X = hostPlayer.Pos.X
 		player.Pos.Y = hostPlayer.Pos.Y
 		player.Pos.Z = hostPlayer.Pos.Z
 		player.Rot.X = hostPlayer.Rot.X
 		player.Rot.Y = hostPlayer.Rot.Y
 		player.Rot.Z = hostPlayer.Rot.Z
-		player.SceneId = hostPlayer.SceneId
 		g.UserWorldAddPlayer(hostWorld, player)
-		player.SceneLoadState = model.SceneNone
 
 		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
@@ -318,6 +319,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 	}
 	g.SendMsg(cmd.WorldDataNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, worldDataNotify)
 
+	hostPlayer.SceneJump = true
 	hostPlayer.SceneLoadState = model.SceneNone
 
 	hostPlayerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(

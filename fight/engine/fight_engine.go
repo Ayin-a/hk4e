@@ -304,10 +304,16 @@ func initClientCmdProtoMap() {
 
 func GetClientProtoObjByName(protoObjName string) pb.Message {
 	if !config.CONF.Hk4e.ClientProtoProxyEnable {
-		return &proto.NullMsg{}
+		logger.Error("client proto proxy func not enable")
+		return nil
 	}
-	clientProtoObj := ClientCmdProtoMapRefValue.MethodByName(
-		"GetClientProtoObjByName",
-	).Call([]reflect.Value{reflect.ValueOf(protoObjName)})[0].Interface().(pb.Message)
+	fn := ClientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
+	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
+	obj := ret[0].Interface()
+	if obj == nil {
+		logger.Error("try to get a not exist proto obj, protoObjName: %v", protoObjName)
+		return nil
+	}
+	clientProtoObj := obj.(pb.Message)
 	return clientProtoObj
 }

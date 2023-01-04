@@ -164,13 +164,32 @@ func (k *KcpConnectManager) sendMsgHandle() {
 		}
 		kcpRawSendChan := session.kcpRawSendChan
 		if kcpRawSendChan == nil {
-			logger.Error("kcpRawSendChan is nil, session: %v", session)
+			logger.Error("kcpRawSendChan is nil, convId: %v", protoMsg.ConvId)
 			return
 		}
-		select {
-		case kcpRawSendChan <- protoMsg:
-		default:
-			logger.Error("kcpRawSendChan is full, session: %v", session)
+		if len(kcpRawSendChan) == 1000 {
+			logger.Error("kcpRawSendChan is full, convId: %v", protoMsg.ConvId)
+			return
+		}
+		kcpRawSendChan <- protoMsg
+		if protoMsg.CmdId == cmd.PlayerLoginRsp {
+			logger.Debug("session active, convId: %v", protoMsg.ConvId)
+			session.connState = ConnActive
+			// 通知GS玩家各个服务器的appid
+			serverMsg := new(mq.ServerMsg)
+			serverMsg.UserId = session.userId
+			if session.changeGameServer {
+				serverMsg.JoinHostUserId = session.joinHostUserId
+				session.changeGameServer = false
+				session.joinHostUserId = 0
+			} else {
+				serverMsg.FightServerAppId = session.fightServerAppId
+			}
+			k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
+				MsgType:   mq.MsgTypeServer,
+				EventId:   mq.ServerAppidBindNotify,
+				ServerMsg: serverMsg,
+			})
 		}
 	}
 	for {
@@ -280,7 +299,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		rsp = new(proto.GetPlayerTokenRsp)
 		rsp.Uid = tokenVerifyRsp.PlayerID
 		rsp.IsProficientPlayer = true
-		rsp.Retcode = 21
+		rsp.Retcode = int32(proto.Retcode_RET_BLACK_UID)
 		rsp.Msg = "FORBID_CHEATING_PLUGINS"
 		rsp.BlackUidEndTime = tokenVerifyRsp.ForbidEndTime
 		if rsp.BlackUidEndTime == 0 {
@@ -365,8 +384,12 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	addr := session.conn.RemoteAddr().String()
 	split := strings.Split(addr, ":")
 	rsp.ClientIpStr = split[0]
+	timeRand := random.GetTimeRand()
+	serverSeedUint64 := timeRand.Uint64()
+	session.seed = serverSeedUint64
 	if req.GetKeyId() != 0 {
 		logger.Debug("do hk4e 2.8 rsa logic")
+		session.useMagicSeed = true
 		keyId := strconv.Itoa(int(req.GetKeyId()))
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]
 		if !exist {
@@ -400,9 +423,6 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			logger.Error("parse client seed to uint64 error: %v", err)
 			return rsp
 		}
-		timeRand := random.GetTimeRand()
-		serverSeedUint64 := timeRand.Uint64()
-		session.seed = serverSeedUint64
 		seedUint64 := serverSeedUint64 ^ clientSeedUint64
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
@@ -424,6 +444,10 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		rsp.KeyId = req.KeyId
 		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)
 		rsp.Sign = base64.StdEncoding.EncodeToString(seedSign)
+	} else {
+		session.useMagicSeed = false
+		rsp.SecretKeySeed = serverSeedUint64
+		rsp.SecretKey = fmt.Sprintf("%03x-%012x", data[:3], data[4:16])
 	}
 	return rsp
 }

@@ -1,6 +1,7 @@
 package random
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 )
@@ -18,8 +19,11 @@ func TestKey(t *testing.T) {
 
 	gateDispatchXorKey := gateDispatchEc2b.XorKey()
 
-	keyBlock := NewKeyBlock(uint64(11468049314633205968))
+	fmt.Printf("dispatchXorKey: %v\n", hex.EncodeToString(dispatchXorKey))
+	fmt.Printf("gateDispatchXorKey: %v\n", hex.EncodeToString(gateDispatchXorKey))
+
+	keyBlock := NewKeyBlock(uint64(11468049314633205968), false)
 	gateXorKey := keyBlock.XorKey()
 
-	fmt.Println(dispatchXorKey, gateDispatchXorKey, gateXorKey)
+	fmt.Printf("gateXorKey: %v\n", hex.EncodeToString(gateXorKey[:]))
 }

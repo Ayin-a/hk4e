@@ -39,7 +39,7 @@ func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string)
 
 func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq uint32, gateAppId string) {
 	if player == nil {
-		g.SendMsgEx(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
+		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
 	}
 	player.OnlineTime = uint32(time.Now().UnixMilli())
@@ -56,6 +56,12 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.Pos.Y = player.SafePos.Y
 	player.Pos.Z = player.SafePos.Z
 
+	if player.SceneId > 100 {
+		player.SceneId = 3
+		player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
+		player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
+	}
+
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
@@ -71,6 +77,8 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 			},
 		})
 	}
+	TICK_MANAGER.CreateUserGlobalTick(userId)
+	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100)
 }
 
 func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
@@ -104,7 +112,7 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 	}
 	USER_MANAGER.AddUser(player)
 
-	g.SendMsgEx(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
+	g.SendMsgToGate(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
 	g.OnLogin(userId, clientSeq, gateAppId)
 }
 
@@ -115,6 +123,7 @@ func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 		logger.Error("player is nil, userId: %v", userId)
 		return
 	}
+	TICK_MANAGER.DestroyUserGlobalTick(userId)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world != nil {
 		g.UserWorldRemovePlayer(world, player)

@@ -89,7 +89,7 @@ func (p *Player) InitAll() {
 	p.StaminaInfo = new(StaminaInfo)
 	p.VehicleInfo = new(VehicleInfo)
 	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
-	p.GCGInfo = NewGCGInfo()
+	p.GCGInfo = NewGCGInfo() // 临时测试用数据
 	p.InitAllAvatar()
 	p.InitAllWeapon()
 	p.InitAllItem()

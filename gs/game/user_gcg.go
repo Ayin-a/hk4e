@@ -28,11 +28,12 @@ func (g *GameManager) GCGLogin(player *model.Player) {
 
 // GCGTavernInit GCG酒馆初始化
 func (g *GameManager) GCGTavernInit(player *model.Player) {
-	// // GCG酒馆信息通知
-	// g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
-	// // GCG酒馆NPC信息通知
-	// g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
-	// 可能是包没发全导致卡进度条?
+	if player.SceneId == 1076 {
+		// GCG酒馆信息通知
+		g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
+		// GCG酒馆NPC信息通知
+		g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
+	}
 }
 
 // GCGStartChallenge GCG开始挑战
@@ -48,8 +49,11 @@ func (g *GameManager) GCGStartChallenge(player *model.Player) {
 	// }
 	// g.SendMsg(cmd.GCGStartChallengeByCheckRewardRsp, player.PlayerID, player.ClientSeq, gcgStartChallengeByCheckRewardRsp)
 
+	// 创建GCG游戏
+	game := GCG_MANAGER.CreateGame(30101, []*model.Player{player})
+
 	// GCG游戏简要信息通知
-	GAME_MANAGER.SendMsg(cmd.GCGGameBriefDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGGameBriefDataNotify(player, proto.GCGGameBusinessType_GCG_GAME_BUSINESS_TYPE_GUIDE_GROUP, 30102))
+	GAME_MANAGER.SendMsg(cmd.GCGGameBriefDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGGameBriefDataNotify(player, proto.GCGGameBusinessType_GCG_GAME_BUSINESS_TYPE_GUIDE_GROUP, game))
 
 	// 玩家进入GCG界面
 	g.TeleportPlayer(player, constant.EnterReasonConst.DungeonEnter, 79999, new(model.Vector), 2162)
@@ -63,388 +67,258 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		g.CommonRetError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
 		return
 	}
-	// 计数器+1
-	game.serverSeqCounter++
 	// 获取玩家的操控者对象
-	gameController := GCG_MANAGER.GetGameControllerByUserId(game, player.PlayerID)
+	gameController := game.GetControllerByUserId(player.PlayerID)
 	if gameController == nil {
 		g.CommonRetError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
 		return
 	}
+
+	// 更改操控者加载状态
+	gameController.loadState = ControllerLoadState_AskDuel
+
+	// 计数器+1
+	game.serverSeqCounter++
 	// PacketGCGAskDuelRsp
-	// gcgAskDuelRsp := &proto.GCGAskDuelRsp{
-	//	Duel: &proto.GCGDuel{
-	//		ServerSeq:                 game.serverSeqCounter,
-	//		ShowInfoList:              make([]*proto.GCGControllerShowInfo, 0, len(game.controllerMap)),
-	//		ForbidFinishChallengeList: nil,
-	//		CardList:                  nil,
-	//		Unk3300_BIANMOPDEHO:       0,
-	//		CostRevise:                nil,
-	//		GameId:                    game.gameId,
-	//		FieldList:                 nil,
-	//		Unk3300_CDCMBOKBLAK:       nil,
-	//		BusinessType:              0,
-	//		IntentionList:             nil,
-	//		ChallengeList:             nil,
-	//		HistoryCardList:           nil,
-	//		Round:                     game.round,
-	//		ControllerId:              gameController.controllerId,
-	//		HistoryMsgPackList:        nil,
-	//		Unk3300_JHDDNKFPINA:       0,
-	//		CardIdList:                make([]uint32, 0, 0),
-	//		Unk3300_JBBMBKGOONO:       0,
-	//		Phase:                     nil,
-	//	},
-	// }
-	// // 玩家信息列表
-	// for _, controller := range game.controllerMap {
-	//	gcgControllerShowInfo := &proto.GCGControllerShowInfo{
-	//		ControllerId:   controller.controllerId,
-	//		ProfilePicture: &proto.ProfilePicture{},
-	//	}
-	//	// 如果为玩家则更改为玩家信息
-	//	if controller.controllerType == ControllerType_Player {
-	//		gcgControllerShowInfo.ProfilePicture.AvatarId = player.HeadImage
-	//		gcgControllerShowInfo.ProfilePicture.AvatarId = player.AvatarMap[player.HeadImage].Costume
-	//	}
-	//	gcgAskDuelRsp.Duel.ShowInfoList = append(gcgAskDuelRsp.Duel.ShowInfoList)
-	// }
-	// GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, gcgAskDuelRsp)
-	// PacketGCGAskDuelRsp
-	gcgAskDuelRsp := new(proto.GCGAskDuelRsp)
-	gcgAskDuelRsp.Duel = &proto.GCGDuel{
-		ServerSeq: 1, // 应该每次+1
-		ShowInfoList: []*proto.GCGControllerShowInfo{
-			// 玩家的
-			{
-				// PsnId:  ?
-				NickName: player.NickName,
-				// OnlineId: ?
-				ProfilePicture: &proto.ProfilePicture{
-					AvatarId:  player.TeamConfig.GetActiveAvatarId(),
-					CostumeId: player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Costume,
+	gcgAskDuelRsp := &proto.GCGAskDuelRsp{
+		Duel: &proto.GCGDuel{
+			ServerSeq: game.serverSeqCounter,
+			// ShowInfoList 游戏内显示双方头像名字
+			ShowInfoList:              make([]*proto.GCGControllerShowInfo, 0, len(game.controllerMap)),
+			ForbidFinishChallengeList: nil,
+			// CardList 卡牌列表
+			CardList:            make([]*proto.GCGCard, 0, 0),
+			Unk3300_BIANMOPDEHO: 1, // Unk
+			CostRevise: &proto.GCGCostReviseInfo{ // 暂无数据
+				CanUseHandCardIdList:  nil,
+				SelectOnStageCostList: nil,
+				PlayCardCostList:      nil,
+				AttackCostList:        nil,
+				IsCanAttack:           false,
+			},
+			GameId: 0, // 官服是0
+			// FieldList 玩家牌盒信息 卡牌显示相关
+			FieldList:           make([]*proto.GCGPlayerField, 0, len(game.controllerMap)),
+			Unk3300_CDCMBOKBLAK: make([]*proto.Unk3300_ADHENCIFKNI, 0, len(game.controllerMap)),
+			BusinessType:        0,
+			IntentionList:       nil, // empty
+			// ChallengeList 可能是挑战目标
+			ChallengeList: []*proto.GCGDuelChallenge{
+				// TODO 暂时写死
+				{
+					ChallengeId:   1,
+					CurProgress:   906,
+					TotalProgress: 0,
 				},
-				ControllerId: 1,
-			},
-			// 对手的
-			{
-				ProfilePicture: &proto.ProfilePicture{},
-				ControllerId:   2,
-			},
-		},
-		// ForbidFinishChallengeList: nil,
-		CardList: []*proto.GCGCard{
-			{
-				TagList: []uint32{203, 303, 401},
-				Guid:    1, // 应该每次+1
-				IsShow:  true,
-				TokenList: []*proto.GCGToken{
-					{
-						Key:   1,
-						Value: 10,
-					},
-					{
-						Key:   2,
-						Value: 10,
-					},
-					{
-						Key: 4,
-					},
-					{
-						Key:   5,
-						Value: 3,
-					},
+				{
+					ChallengeId:   1,
+					CurProgress:   907,
+					TotalProgress: 0,
 				},
-				// FaceType:        0, ?
-				SkillIdList: []uint32{13011, 13012, 13013},
-				// SkillLimitsList: nil,
-				Id:           1301,
-				ControllerId: 1,
-			},
-			{
-				TagList: []uint32{201, 301, 401},
-				Guid:    2, // 应该每次+1
-				IsShow:  true,
-				TokenList: []*proto.GCGToken{
-					{
-						Key:   1,
-						Value: 10,
-					},
-					{
-						Key:   2,
-						Value: 10,
-					},
-					{
-						Key: 4,
-					},
-					{
-						Key:   5,
-						Value: 2,
-					},
+				{
+					ChallengeId:   1,
+					CurProgress:   901,
+					TotalProgress: 0,
 				},
-				// FaceType:        0, ?
-				SkillIdList: []uint32{11031, 11032, 11033},
-				// SkillLimitsList: nil,
-				Id:           1103,
-				ControllerId: 1,
-			},
-			{
-				TagList: []uint32{200, 300, 502, 503},
-				Guid:    3, // 应该每次+1
-				IsShow:  true,
-				TokenList: []*proto.GCGToken{
-					{
-						Key:   1,
-						Value: 4,
-					},
-					{
-						Key:   2,
-						Value: 4,
-					},
-					{
-						Key: 4,
-					},
-					{
-						Key:   5,
-						Value: 2,
-					},
+				{
+					ChallengeId:   1,
+					CurProgress:   903,
+					TotalProgress: 0,
 				},
-				// FaceType:        0, ?
-				SkillIdList: []uint32{30011, 30012, 30013},
-				// SkillLimitsList: nil,
-				Id:           3301,
-				ControllerId: 2,
-			},
-			{
-				TagList: []uint32{200, 303, 502, 503},
-				Guid:    4, // 应该每次+1
-				IsShow:  true,
-				TokenList: []*proto.GCGToken{
-					{
-						Key:   1,
-						Value: 8,
-					},
-					{
-						Key:   2,
-						Value: 8,
-					},
-					{
-						Key: 4,
-					},
-					{
-						Key:   5,
-						Value: 2,
-					},
+				{
+					ChallengeId:   1,
+					CurProgress:   904,
+					TotalProgress: 0,
 				},
-				// FaceType:        0, ?
-				SkillIdList: []uint32{33021, 33022, 33023, 33024},
-				// SkillLimitsList: nil,
-				Id:           3302,
-				ControllerId: 2,
-			},
-			{
-				Guid:         5, // 应该每次+1
-				IsShow:       true,
-				SkillIdList:  []uint32{13010111},
-				Id:           1301011,
-				ControllerId: 1,
-			},
-		},
-		Unk3300_BIANMOPDEHO: 1,
-		CostRevise: &proto.GCGCostReviseInfo{
-			CanUseHandCardIdList:  nil,
-			SelectOnStageCostList: nil,
-			PlayCardCostList:      nil,
-			AttackCostList:        nil,
-			IsCanAttack:           false,
-		},
-		// GameId:              0,
-		FieldList: []*proto.GCGPlayerField{
-			{
-				// Unk3300_IKJMGAHCFPM: 0,
-				ModifyZoneMap: map[uint32]*proto.GCGZone{
-					1: {},
-					2: {},
+				{
+					ChallengeId:   1,
+					CurProgress:   905,
+					TotalProgress: 0,
 				},
-				// Unk3300_GGHKFFADEAL: 0,
-				Unk3300_AOPJIOHMPOF: nil,
-				Unk3300_FDFPHNDOJML: 0,
-				Unk3300_IPLMHKCNDLE: &proto.GCGZone{},
-				Unk3300_EIHOMDLENMK: &proto.GCGZone{},
-				// WaitingList:         nil,
-				// Unk3300_PBECINKKHND: 0,
-				ControllerId: 1,
-				Unk3300_INDJNJJJNKL: &proto.GCGZone{
-					CardList: []uint32{1, 2},
+				{
+					ChallengeId:   1,
+					CurProgress:   908,
+					TotalProgress: 0,
 				},
-				Unk3300_EFNAEFBECHD: &proto.GCGZone{},
-				// IsPassed:            false,
-				// IntentionList:       nil,
-				// DiceSideList:        nil,
-				// DeckCardNum:         0,
-				// Unk3300_GLNIFLOKBPM: 0,
-			},
-			{
-				// Unk3300_IKJMGAHCFPM: 0,
-				ModifyZoneMap: map[uint32]*proto.GCGZone{
-					3: {},
-					4: {},
-				},
-				// Unk3300_GGHKFFADEAL: 0,
-				Unk3300_AOPJIOHMPOF: nil,
-				Unk3300_FDFPHNDOJML: 0,
-				Unk3300_IPLMHKCNDLE: &proto.GCGZone{},
-				Unk3300_EIHOMDLENMK: &proto.GCGZone{},
-				// WaitingList:         nil,
-				// Unk3300_PBECINKKHND: 0,
-				ControllerId: 2,
-				Unk3300_INDJNJJJNKL: &proto.GCGZone{
-					CardList: []uint32{3, 4},
-				},
-				Unk3300_EFNAEFBECHD: &proto.GCGZone{},
-				// IsPassed:            false,
-				// IntentionList:       nil,
-				// DiceSideList:        nil,
-				// DeckCardNum:         0,
-				// Unk3300_GLNIFLOKBPM: 0,
-			},
-		},
-		// 应该是玩家成员列表
-		Unk3300_CDCMBOKBLAK: []*proto.Unk3300_ADHENCIFKNI{
-			{
-				ControllerId: 1,
-			},
-			{
-				ControllerId: 2,
-			},
-		},
-		// BusinessType:        0,
-		// IntentionList: nil,
-		ChallengeList: []*proto.GCGDuelChallenge{
-			{
-				ChallengeId:   906,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   907,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   903,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   904,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   905,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   908,
-				TotalProgress: 1,
-			},
-			{
-				ChallengeId:   909,
-				TotalProgress: 1,
-			},
-		},
-		Round:        1,
-		ControllerId: 1,
-		HistoryMsgPackList: []*proto.GCGMessagePack{
-			{
-				MsgList: []*proto.GCGMessage{
-					{
-						Message: &proto.GCGMessage_PhaseChange{PhaseChange: &proto.GCGMsgPhaseChange{
-							BeforePhase: proto.GCGPhaseType_GCG_PHASE_TYPE_START,
-							AllowControllerMap: []*proto.Uint32Pair{
-								{
-									Key:   1,
-									Value: 1,
-								},
-								{
-									Key:   2,
-									Value: 1,
-								},
-							},
-						}},
-					},
+				{
+					ChallengeId:   1,
+					CurProgress:   909,
+					TotalProgress: 0,
 				},
 			},
-			{
-				MsgList: []*proto.GCGMessage{
-					{
-						Message: &proto.GCGMessage_UpdateController{UpdateController: &proto.GCGMsgUpdateController{
-							AllowControllerMap: []*proto.Uint32Pair{
-								{
-									Key:   1,
-									Value: 1,
-								},
-								{
-									Key: 2,
-								},
-							},
-						}},
-					},
-				},
-			},
-			{
-				ActionType: proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE,
-				MsgList: []*proto.GCGMessage{
-					{
-						Message: &proto.GCGMessage_PhaseContinue{},
-					},
-				},
-			},
-		},
-		// Unk3300_JHDDNKFPINA: 0,
-		CardIdList: []uint32{1103, 1301, 3001, 3302, 1301011},
-		// Unk3300_JBBMBKGOONO: 0,
-		Phase: &proto.GCGPhase{
-			PhaseType: proto.GCGPhaseType_GCG_PHASE_TYPE_START,
-			AllowControllerMap: map[uint32]uint32{
-				1: 1,
-				2: 0,
+			// TODO 创建完卡牌都记录到历史卡牌内
+			HistoryCardList:     nil,
+			Round:               game.roundInfo.roundNum,
+			ControllerId:        gameController.controllerId,
+			HistoryMsgPackList:  game.historyMsgPackList,
+			Unk3300_JHDDNKFPINA: 0,
+			// CardIdList 游戏内的所有卡牌Id
+			CardIdList:          make([]uint32, 0, 0),
+			Unk3300_JBBMBKGOONO: 0, // Unk
+			// 阶段数据
+			Phase: &proto.GCGPhase{
+				PhaseType:          game.roundInfo.phaseType,
+				AllowControllerMap: game.roundInfo.allowControllerMap,
 			},
 		},
 	}
-	gcgAskDuelRsp.Duel.HistoryCardList = gcgAskDuelRsp.Duel.CardList
-
+	for _, controller := range game.controllerMap {
+		// 玩家信息列表
+		gcgControllerShowInfo := &proto.GCGControllerShowInfo{
+			ControllerId:   controller.controllerId,
+			ProfilePicture: &proto.ProfilePicture{},
+		}
+		// 如果为玩家则更改为玩家信息
+		if controller.controllerType == ControllerType_Player {
+			gcgControllerShowInfo.ProfilePicture.AvatarId = player.HeadImage
+			gcgControllerShowInfo.ProfilePicture.AvatarId = player.AvatarMap[player.HeadImage].Costume
+		}
+		gcgAskDuelRsp.Duel.ShowInfoList = append(gcgAskDuelRsp.Duel.ShowInfoList)
+		// FieldList 玩家牌盒信息 卡牌显示相关
+		playerField := &proto.GCGPlayerField{
+			Unk3300_IKJMGAHCFPM: 0,
+			// 卡牌图片
+			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.cardMap)),
+			Unk3300_GGHKFFADEAL: 0,
+			Unk3300_AOPJIOHMPOF: &proto.GCGZone{
+				CardList: []uint32{},
+			},
+			Unk3300_FDFPHNDOJML: 0,
+			// 卡牌技能?
+			Unk3300_IPLMHKCNDLE: &proto.GCGZone{
+				CardList: []uint32{}, // 官服CardList: []uint32{5},
+			},
+			Unk3300_EIHOMDLENMK: &proto.GCGZone{
+				CardList: []uint32{},
+			},
+			WaitingList:         []*proto.GCGWaitingCharacter{},
+			Unk3300_PBECINKKHND: 0,
+			ControllerId:        controller.controllerId,
+			// 卡牌位置
+			Unk3300_INDJNJJJNKL: &proto.GCGZone{
+				CardList: make([]uint32, 0, len(controller.cardMap)),
+			},
+			Unk3300_EFNAEFBECHD: &proto.GCGZone{
+				CardList: []uint32{},
+			},
+			IsPassed:            false,
+			IntentionList:       []*proto.GCGPVEIntention{},
+			DiceSideList:        []proto.GCGDiceSideType{},
+			DeckCardNum:         0,
+			Unk3300_GLNIFLOKBPM: 0,
+		}
+		// 卡牌信息
+		for _, info := range controller.cardMap {
+			gcgCard := &proto.GCGCard{
+				TagList:         info.tagList,
+				Guid:            info.guid,
+				IsShow:          info.isShow,
+				TokenList:       make([]*proto.GCGToken, 0, 0),
+				FaceType:        info.faceType,
+				SkillIdList:     info.skillIdList,
+				SkillLimitsList: make([]*proto.GCGSkillLimitsInfo, 0, 0),
+				Id:              info.cardId,
+				ControllerId:    controller.controllerId,
+			}
+			// Token
+			for k, v := range info.tokenMap {
+				gcgCard.TokenList = append(gcgCard.TokenList, &proto.GCGToken{
+					Value: v,
+					Key:   k,
+				})
+			}
+			// TODO SkillLimitsList
+			for _, skillId := range info.skillLimitList {
+				gcgCard.SkillLimitsList = append(gcgCard.SkillLimitsList, &proto.GCGSkillLimitsInfo{
+					SkillId:    skillId,
+					LimitsList: nil, // TODO 技能限制列表
+				})
+			}
+			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, gcgCard)
+			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, info.cardId)
+			// Field
+			playerField.ModifyZoneMap[info.guid] = &proto.GCGZone{CardList: []uint32{}}
+			playerField.Unk3300_INDJNJJJNKL.CardList = append(playerField.Unk3300_INDJNJJJNKL.CardList, info.guid)
+		}
+		// 添加完所有卡牌的位置之类的信息 添加这个牌盒
+		gcgAskDuelRsp.Duel.FieldList = append(gcgAskDuelRsp.Duel.FieldList, playerField)
+		// Unk3300_CDCMBOKBLAK
+		gcgAskDuelRsp.Duel.Unk3300_CDCMBOKBLAK = append(gcgAskDuelRsp.Duel.Unk3300_CDCMBOKBLAK, &proto.Unk3300_ADHENCIFKNI{
+			BeginTime:    0,
+			TimeStamp:    0,
+			ControllerId: controller.controllerId,
+		})
+	}
 	GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, gcgAskDuelRsp)
 }
 
-// GCGInitFinishReq GCG决斗请求
+// GCGInitFinishReq GCG初始化完成请求
 func (g *GameManager) GCGInitFinishReq(player *model.Player, payloadMsg pb.Message) {
-	GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, &proto.GCGInitFinishRsp{})
+	// 获取玩家所在的游戏
+	game, ok := GCG_MANAGER.gameMap[player.GCGCurGameGuid]
+	if !ok {
+		g.CommonRetError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
+		return
+	}
+	// 获取玩家的操控者对象
+	gameController := game.GetControllerByUserId(player.PlayerID)
+	if gameController == nil {
+		g.CommonRetError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
+		return
+	}
+
+	// 更改操控者加载状态
+	gameController.loadState = ControllerLoadState_InitFinish
+
+	GAME_MANAGER.SendMsg(cmd.GCGInitFinishRsp, player.PlayerID, player.ClientSeq, &proto.GCGInitFinishRsp{})
+
+	// 检查所有玩家是否已加载完毕
+	game.CheckAllInitFinish()
+}
+
+// SendGCGMessagePackNotify 发送GCG消息包通知
+func (g *GameManager) SendGCGMessagePackNotify(controller *GCGController, serverSeq uint32, msgPackList []*proto.GCGMessagePack) {
+	// 确保为玩家
+	if controller.player == nil {
+		return
+	}
+	// 确保加载完成
+	if controller.loadState != ControllerLoadState_InitFinish {
+		return
+	}
+	// PacketGCGMessagePackNotify
+	gcgMessagePackNotify := &proto.GCGMessagePackNotify{
+		ServerSeq:   serverSeq,
+		MsgPackList: msgPackList,
+	}
+	GAME_MANAGER.SendMsg(cmd.GCGMessagePackNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgMessagePackNotify)
 }
 
 // PacketGCGGameBriefDataNotify GCG游戏简要数据通知
-func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, businessType proto.GCGGameBusinessType, gameId uint32) *proto.GCGGameBriefDataNotify {
+func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, businessType proto.GCGGameBusinessType, game *GCGGame) *proto.GCGGameBriefDataNotify {
 	gcgGameBriefDataNotify := &proto.GCGGameBriefDataNotify{
 		GcgBriefData: &proto.GCGGameBriefData{
-			BusinessType: businessType,
-			PlatformType: uint32(proto.PlatformType_PLATFORM_TYPE_PC), // TODO 根据玩家设备修改
-			GameId:       gameId,
-			PlayerBriefList: []*proto.GCGPlayerBriefData{
-				{
-					Uid:          player.PlayerID,
-					ControllerId: 1,
-					ProfilePicture: &proto.ProfilePicture{
-						AvatarId:  player.TeamConfig.GetActiveAvatarId(),
-						CostumeId: player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Costume,
-					},
-					NickName:   player.NickName,
-					CardIdList: []uint32{1301, 1103},
-				},
-				{
-					ControllerId:   2,
-					ProfilePicture: &proto.ProfilePicture{},
-					CardIdList:     []uint32{3001, 3302},
-				},
-			},
+			BusinessType:    businessType,
+			PlatformType:    uint32(proto.PlatformType_PLATFORM_TYPE_PC), // TODO 根据玩家设备修改
+			GameId:          game.gameId,
+			PlayerBriefList: make([]*proto.GCGPlayerBriefData, 0, len(game.controllerMap)),
 		},
-		IsNewGame: true,
+		IsNewGame: true, // 根据游戏修改
+	}
+	for _, controller := range game.controllerMap {
+		gcgPlayerBriefData := &proto.GCGPlayerBriefData{
+			ControllerId:   controller.controllerId,
+			ProfilePicture: new(proto.ProfilePicture),
+			CardIdList:     make([]uint32, 0, len(controller.cardMap)),
+		}
+		// 玩家信息
+		if controller.player != nil {
+			gcgPlayerBriefData.Uid = player.PlayerID
+			gcgPlayerBriefData.ProfilePicture.AvatarId = player.TeamConfig.GetActiveAvatarId()
+			gcgPlayerBriefData.ProfilePicture.CostumeId = player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Costume
+			gcgPlayerBriefData.NickName = player.NickName
+		}
+		gcgGameBriefDataNotify.GcgBriefData.PlayerBriefList = append(gcgGameBriefDataNotify.GcgBriefData.PlayerBriefList)
 	}
 	return gcgGameBriefDataNotify
 }

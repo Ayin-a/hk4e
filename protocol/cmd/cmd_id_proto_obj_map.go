@@ -264,6 +264,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(GCGAskDuelRsp, &proto.GCGAskDuelRsp{})                                   // GCG决斗响应
 	c.registerMessage(GCGInitFinishReq, &proto.GCGInitFinishReq{})                             // GCG初始化完成请求
 	c.registerMessage(GCGInitFinishRsp, &proto.GCGInitFinishRsp{})                             // GCG初始化完成响应
+	c.registerMessage(GCGMessagePackNotify, &proto.GCGMessagePackNotify{})                     // GCG消息包通知
 
 	// // TODO 客户端开始GCG游戏
 	// c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求

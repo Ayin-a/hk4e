@@ -252,14 +252,14 @@ func (g *GameManager) CommonRetSucc(cmdId uint16, player *model.Player, rsp pb.M
 
 // SendToWorldA 给世界内所有玩家发消息
 func (g *GameManager) SendToWorldA(world *World, cmdId uint16, seq uint32, msg pb.Message) {
-	for _, v := range world.playerMap {
+	for _, v := range world.GetAllPlayer() {
 		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
 	}
 }
 
 // SendToWorldAEC 给世界内除自己以外的所有玩家发消息
 func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
-	for _, v := range world.playerMap {
+	for _, v := range world.GetAllPlayer() {
 		if uid == v.PlayerID {
 			continue
 		}

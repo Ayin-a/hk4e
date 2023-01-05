@@ -53,6 +53,9 @@ require github.com/spf13/cobra v1.6.1
 // redis
 require github.com/go-redis/redis/v8 v8.11.5
 
+// midi
+require gitlab.com/gomidi/midi/v2 v2.0.25
+
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

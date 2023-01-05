@@ -32,7 +32,7 @@ func (w *WorldManager) GetWorldByID(worldId uint32) *World {
 	return w.worldMap[worldId]
 }
 
-func (w *WorldManager) GetWorldMap() map[uint32]*World {
+func (w *WorldManager) GetAllWorld() map[uint32]*World {
 	return w.worldMap
 }
 
@@ -90,6 +90,7 @@ func (w *WorldManager) GetBigWorld() *World {
 func (w *WorldManager) InitBigWorld(owner *model.Player) {
 	w.bigWorld = w.GetWorldByID(owner.WorldId)
 	w.bigWorld.ChangeToMultiplayer()
+	go RunPlayAudio()
 }
 
 func (w *World) IsBigWorld() bool {
@@ -113,6 +114,14 @@ type World struct {
 	waitEnterPlayerMap  map[uint32]int64 // 进入世界的玩家等待列表 key:uid value:开始时间
 	multiplayerTeam     *MultiplayerTeam
 	peerList            []*model.Player // 玩家编号列表
+}
+
+func (w *World) GetAllPlayer() map[uint32]*model.Player {
+	return w.playerMap
+}
+
+func (w *World) GetAllScene() map[uint32]*Scene {
+	return w.sceneMap
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
@@ -515,6 +524,14 @@ type Scene struct {
 	gameTime   uint32 // 游戏内提瓦特大陆的时间
 	createTime int64
 	meeoIndex  uint32 // 客户端风元素染色同步协议的计数器
+}
+
+func (s *Scene) GetAllPlayer() map[uint32]*model.Player {
+	return s.playerMap
+}
+
+func (s *Scene) GetAllEntity() map[uint32]*Entity {
+	return s.entityMap
 }
 
 type AvatarEntity struct {

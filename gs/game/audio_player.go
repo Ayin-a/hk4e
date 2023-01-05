@@ -42,8 +42,8 @@ func RunPlayAudio() {
 			for _, event := range track {
 				// 单个轨道
 				delay := uint32(float64(event.Delta) * tickTime)
-				busyPoolWaitMilliSecond(delay)
-				// interruptWaitMilliSecond(delay)
+				// busyPollWaitMilliSecond(delay)
+				interruptWaitMilliSecond(delay)
 				totalTick += uint64(delay)
 
 				msg := event.Message
@@ -79,7 +79,7 @@ func interruptWaitMilliSecond(delay uint32) {
 	time.Sleep(time.Millisecond * time.Duration(delay))
 }
 
-func busyPoolWaitMilliSecond(delay uint32) {
+func busyPollWaitMilliSecond(delay uint32) {
 	start := time.Now()
 	end := start.Add(time.Millisecond * time.Duration(delay))
 	for {

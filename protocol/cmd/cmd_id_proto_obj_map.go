@@ -260,11 +260,14 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(GCGTCTavernInfoNotify, &proto.GCGTCTavernInfoNotify{})                   // GCG酒馆信息通知
 	c.registerMessage(GCGTavernNpcInfoNotify, &proto.GCGTavernNpcInfoNotify{})                 // GCG酒馆NPC信息通知
 	c.registerMessage(GCGGameBriefDataNotify, &proto.GCGGameBriefDataNotify{})                 // GCG游戏简要数据通知
-	c.registerMessage(GCGAskDuelReq, &proto.GCGAskDuelReq{})                                   // GCG决斗请求
-	c.registerMessage(GCGAskDuelRsp, &proto.GCGAskDuelRsp{})                                   // GCG决斗响应
-	c.registerMessage(GCGInitFinishReq, &proto.GCGInitFinishReq{})                             // GCG初始化完成请求
-	c.registerMessage(GCGInitFinishRsp, &proto.GCGInitFinishRsp{})                             // GCG初始化完成响应
-	c.registerMessage(GCGMessagePackNotify, &proto.GCGMessagePackNotify{})                     // GCG消息包通知
+	c.registerMessage(GCGAskDuelReq, &proto.GCGAskDuelReq{})                                   // GCG游戏对局信息请求
+	c.registerMessage(GCGAskDuelRsp, &proto.GCGAskDuelRsp{})                                   // GCG游戏对局信息响应
+	c.registerMessage(GCGInitFinishReq, &proto.GCGInitFinishReq{})                             // GCG游戏初始化完成请求
+	c.registerMessage(GCGInitFinishRsp, &proto.GCGInitFinishRsp{})                             // GCG游戏初始化完成响应
+	c.registerMessage(GCGMessagePackNotify, &proto.GCGMessagePackNotify{})                     // GCG游戏消息包通知
+	c.registerMessage(GCGHeartBeatNotify, &proto.GCGHeartBeatNotify{})                         // GCG游戏心跳包通知
+	c.registerMessage(GCGOperationReq, &proto.GCGOperationReq{})                               // GCG游戏客户端操作请求
+	c.registerMessage(GCGOperationRsp, &proto.GCGOperationRsp{})                               // GCG游戏客户端操作响应
 
 	// // TODO 客户端开始GCG游戏
 	// c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求

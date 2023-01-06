@@ -126,6 +126,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.GetOnlinePlayerInfoReq, GAME_MANAGER.GetOnlinePlayerInfoReq)
 	r.registerRouter(cmd.GCGAskDuelReq, GAME_MANAGER.GCGAskDuelReq)
 	r.registerRouter(cmd.GCGInitFinishReq, GAME_MANAGER.GCGInitFinishReq)
+	r.registerRouter(cmd.GCGOperationReq, GAME_MANAGER.GCGOperationReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

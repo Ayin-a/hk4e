@@ -3,6 +3,7 @@ package game
 import (
 	"hk4e/common/constant"
 	"hk4e/gs/model"
+	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -158,7 +159,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			// 阶段数据
 			Phase: &proto.GCGPhase{
 				PhaseType:          game.roundInfo.phaseType,
-				AllowControllerMap: game.roundInfo.allowControllerMap,
+				AllowControllerMap: make(map[uint32]uint32),
 			},
 		},
 	}
@@ -178,7 +179,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		playerField := &proto.GCGPlayerField{
 			Unk3300_IKJMGAHCFPM: 0,
 			// 卡牌图片
-			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.cardMap)),
+			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.cardList)),
 			Unk3300_GGHKFFADEAL: 0,
 			Unk3300_AOPJIOHMPOF: &proto.GCGZone{
 				CardList: []uint32{},
@@ -196,7 +197,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			ControllerId:        controller.controllerId,
 			// 卡牌位置
 			Unk3300_INDJNJJJNKL: &proto.GCGZone{
-				CardList: make([]uint32, 0, len(controller.cardMap)),
+				CardList: make([]uint32, 0, len(controller.cardList)),
 			},
 			Unk3300_EFNAEFBECHD: &proto.GCGZone{
 				CardList: []uint32{},
@@ -208,7 +209,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			Unk3300_GLNIFLOKBPM: 0,
 		}
 		// 卡牌信息
-		for _, info := range controller.cardMap {
+		for _, info := range controller.cardList {
 			gcgCard := &proto.GCGCard{
 				TagList:         info.tagList,
 				Guid:            info.guid,
@@ -239,6 +240,8 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			// Field
 			playerField.ModifyZoneMap[info.guid] = &proto.GCGZone{CardList: []uint32{}}
 			playerField.Unk3300_INDJNJJJNKL.CardList = append(playerField.Unk3300_INDJNJJJNKL.CardList, info.guid)
+			// Phase
+			gcgAskDuelRsp.Duel.Phase.AllowControllerMap[controller.controllerId] = controller.allow
 		}
 		// 添加完所有卡牌的位置之类的信息 添加这个牌盒
 		gcgAskDuelRsp.Duel.FieldList = append(gcgAskDuelRsp.Duel.FieldList, playerField)
@@ -276,12 +279,68 @@ func (g *GameManager) GCGInitFinishReq(player *model.Player, payloadMsg pb.Messa
 	game.CheckAllInitFinish()
 }
 
-// SendGCGMessagePackNotify 发送GCG消息包通知
-func (g *GameManager) SendGCGMessagePackNotify(controller *GCGController, serverSeq uint32, msgPackList []*proto.GCGMessagePack) {
-	// 确保为玩家
-	if controller.player == nil {
+// GCGOperationReq GCG游戏客户端操作请求
+func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.GCGOperationReq)
+
+	// 获取玩家所在的游戏
+	game, ok := GCG_MANAGER.gameMap[player.GCGCurGameGuid]
+	if !ok {
+		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
 		return
 	}
+	// 获取玩家的操控者对象
+	gameController := game.GetControllerByUserId(player.PlayerID)
+	if gameController == nil {
+		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
+		return
+	}
+
+	switch req.Op.Op.(type) {
+	case *proto.GCGOperation_OpSelectOnStage:
+		// 选择角色卡牌
+		op := req.Op.GetOpSelectOnStage()
+		// 操作者是否拥有该卡牌
+		cardInfo := gameController.GetCardByGuid(op.CardGuid)
+		if cardInfo == nil {
+			GAME_MANAGER.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_SELECT_HAND_CARD_GUID_ERROR)
+			return
+		}
+		// 操控者选择角色牌
+		game.ControllerSelectChar(gameController, cardInfo, op.CostDiceIndexList)
+	case *proto.GCGOperation_OpReroll:
+		// 确认骰子不重投
+		op := req.Op.GetOpReroll()
+		diceSideList, ok := game.roundInfo.diceSideMap[gameController.controllerId]
+		if !ok {
+			g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+			return
+		}
+		// 判断骰子索引是否有效
+		for _, diceIndex := range op.DiceIndexList {
+			if diceIndex > uint32(len(diceSideList)) {
+				g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+				return
+			}
+		}
+		// 客户端更新操控者
+		game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, game.GCGMsgUpdateController())
+		// 游戏行动阶段
+		game.GameChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_PRE_MAIN)
+	default:
+		logger.Error("gcg op is not handle, op: %T", req.Op.Op)
+		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_OPERATION_PARAM_ERROR)
+		return
+	}
+
+	// PacketGCGOperationRsp
+	gcgOperationRsp := &proto.GCGOperationRsp{
+		OpSeq: req.OpSeq,
+	}
+	GAME_MANAGER.SendMsg(cmd.GCGOperationRsp, player.PlayerID, player.ClientSeq, gcgOperationRsp)
+}
+
+func (g *GameManager) SendGCGMessagePackNotify(controller *GCGController, serverSeq uint32, msgPackList []*proto.GCGMessagePack) {
 	// 确保加载完成
 	if controller.loadState != ControllerLoadState_InitFinish {
 		return
@@ -291,7 +350,16 @@ func (g *GameManager) SendGCGMessagePackNotify(controller *GCGController, server
 		ServerSeq:   serverSeq,
 		MsgPackList: msgPackList,
 	}
-	GAME_MANAGER.SendMsg(cmd.GCGMessagePackNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgMessagePackNotify)
+	// 根据操控者的类型发送消息包
+	switch controller.controllerType {
+	case ControllerType_Player:
+		GAME_MANAGER.SendMsg(cmd.GCGMessagePackNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgMessagePackNotify)
+	case ControllerType_AI:
+		controller.ai.ReceiveGCGMessagePackNotify(gcgMessagePackNotify)
+	default:
+		logger.Error("controller type error, %v", controller.controllerType)
+		return
+	}
 }
 
 // PacketGCGGameBriefDataNotify GCG游戏简要数据通知
@@ -309,7 +377,7 @@ func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, busines
 		gcgPlayerBriefData := &proto.GCGPlayerBriefData{
 			ControllerId:   controller.controllerId,
 			ProfilePicture: new(proto.ProfilePicture),
-			CardIdList:     make([]uint32, 0, len(controller.cardMap)),
+			CardIdList:     make([]uint32, 0, len(controller.cardList)),
 		}
 		// 玩家信息
 		if controller.player != nil {

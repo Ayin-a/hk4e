@@ -147,8 +147,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 					TotalProgress: 0,
 				},
 			},
-			// TODO 创建完卡牌都记录到历史卡牌内
-			HistoryCardList:     nil,
+			HistoryCardList:     make([]*proto.GCGCard, 0, len(game.historyCardList)),
 			Round:               game.roundInfo.roundNum,
 			ControllerId:        gameController.controllerId,
 			HistoryMsgPackList:  game.historyMsgPackList,
@@ -163,8 +162,8 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			},
 		},
 	}
+	// 玩家信息列表
 	for _, controller := range game.controllerMap {
-		// 玩家信息列表
 		gcgControllerShowInfo := &proto.GCGControllerShowInfo{
 			ControllerId:   controller.controllerId,
 			ProfilePicture: &proto.ProfilePicture{},
@@ -175,6 +174,9 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			gcgControllerShowInfo.ProfilePicture.AvatarId = player.AvatarMap[player.HeadImage].Costume
 		}
 		gcgAskDuelRsp.Duel.ShowInfoList = append(gcgAskDuelRsp.Duel.ShowInfoList)
+	}
+	// 玩家牌盒信息 卡牌显示相关
+	for _, controller := range game.controllerMap {
 		// FieldList 玩家牌盒信息 卡牌显示相关
 		playerField := &proto.GCGPlayerField{
 			Unk3300_IKJMGAHCFPM: 0,
@@ -208,50 +210,38 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			DeckCardNum:         0,
 			Unk3300_GLNIFLOKBPM: 0,
 		}
-		// 卡牌信息
 		for _, info := range controller.cardList {
-			gcgCard := &proto.GCGCard{
-				TagList:         info.tagList,
-				Guid:            info.guid,
-				IsShow:          info.isShow,
-				TokenList:       make([]*proto.GCGToken, 0, 0),
-				FaceType:        info.faceType,
-				SkillIdList:     info.skillIdList,
-				SkillLimitsList: make([]*proto.GCGSkillLimitsInfo, 0, 0),
-				Id:              info.cardId,
-				ControllerId:    controller.controllerId,
-			}
-			// Token
-			for k, v := range info.tokenMap {
-				gcgCard.TokenList = append(gcgCard.TokenList, &proto.GCGToken{
-					Value: v,
-					Key:   k,
-				})
-			}
-			// TODO SkillLimitsList
-			for _, skillId := range info.skillLimitList {
-				gcgCard.SkillLimitsList = append(gcgCard.SkillLimitsList, &proto.GCGSkillLimitsInfo{
-					SkillId:    skillId,
-					LimitsList: nil, // TODO 技能限制列表
-				})
-			}
-			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, gcgCard)
-			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, info.cardId)
-			// Field
 			playerField.ModifyZoneMap[info.guid] = &proto.GCGZone{CardList: []uint32{}}
 			playerField.Unk3300_INDJNJJJNKL.CardList = append(playerField.Unk3300_INDJNJJJNKL.CardList, info.guid)
-			// Phase
-			gcgAskDuelRsp.Duel.Phase.AllowControllerMap[controller.controllerId] = controller.allow
 		}
-		// 添加完所有卡牌的位置之类的信息 添加这个牌盒
+		// 添加完所有卡牌的位置之类的信息后添加这个牌盒
 		gcgAskDuelRsp.Duel.FieldList = append(gcgAskDuelRsp.Duel.FieldList, playerField)
-		// Unk3300_CDCMBOKBLAK
+	}
+	// 历史卡牌信息
+	for _, cardInfo := range game.historyCardList {
+		gcgAskDuelRsp.Duel.HistoryCardList = append(gcgAskDuelRsp.Duel.HistoryCardList, cardInfo.ToProto())
+	}
+	// 卡牌信息
+	for _, controller := range game.controllerMap {
+		for _, cardInfo := range controller.cardList {
+			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
+			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+		}
+	}
+	// 阶段信息
+	for _, controller := range game.controllerMap {
+		// 操控者是否允许操作
+		gcgAskDuelRsp.Duel.Phase.AllowControllerMap[controller.controllerId] = controller.allow
+	}
+	// Unk3300_CDCMBOKBLAK 你问我这是啥? 我也不知道
+	for _, controller := range game.controllerMap {
 		gcgAskDuelRsp.Duel.Unk3300_CDCMBOKBLAK = append(gcgAskDuelRsp.Duel.Unk3300_CDCMBOKBLAK, &proto.Unk3300_ADHENCIFKNI{
 			BeginTime:    0,
 			TimeStamp:    0,
 			ControllerId: controller.controllerId,
 		})
 	}
+
 	GAME_MANAGER.SendMsg(cmd.GCGAskDuelRsp, player.PlayerID, player.ClientSeq, gcgAskDuelRsp)
 }
 
@@ -323,16 +313,12 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 				return
 			}
 		}
-		// 客户端更新操控者
-		game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, game.GCGMsgUpdateController())
-		// 游戏行动阶段
-		game.GameChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_PRE_MAIN)
+		// 操控者确认重投骰子
+		game.ControllerReRollDice(gameController, op.DiceIndexList)
 	default:
 		logger.Error("gcg op is not handle, op: %T", req.Op.Op)
-		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_OPERATION_PARAM_ERROR)
 		return
 	}
-
 	// PacketGCGOperationRsp
 	gcgOperationRsp := &proto.GCGOperationRsp{
 		OpSeq: req.OpSeq,
@@ -340,6 +326,27 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 	GAME_MANAGER.SendMsg(cmd.GCGOperationRsp, player.PlayerID, player.ClientSeq, gcgOperationRsp)
 }
 
+// PacketGCGSkillPreviewNotify GCG游戏技能栏展示通知
+func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *proto.GCGSkillPreviewNotify {
+	// 确保玩家选择了角色牌
+	if controller.selectedCharCard == nil {
+		logger.Error("selected char is nil, controllerId: %v", controller.controllerId)
+		return new(proto.GCGSkillPreviewNotify)
+	}
+	// PacketGCGSkillPreviewNotify
+	gcgSkillPreviewNotify := &proto.GCGSkillPreviewNotify{
+		ControllerId: controller.controllerId,
+		// 当前角色牌拥有的技能信息
+		SkillPreviewList: make([]*proto.GCGSkillPreviewInfo, 0, len(controller.selectedCharCard.skillIdList)),
+		// 切换到其他角色牌的所需消耗信息
+		ChangeOnstagePreviewList: make([]*proto.GCGChangeOnstageInfo, 0, 2), // 暂时写死
+		PlayCardList:             make([]*proto.GCGSkillPreviewPlayCardInfo, 0, 0),
+		OnstageCardGuid:          controller.selectedCharCard.guid, // 当前被选择的角色牌guid
+	}
+	return gcgSkillPreviewNotify
+}
+
+// SendGCGMessagePackNotify 发送GCG游戏消息包通知
 func (g *GameManager) SendGCGMessagePackNotify(controller *GCGController, serverSeq uint32, msgPackList []*proto.GCGMessagePack) {
 	// 确保加载完成
 	if controller.loadState != ControllerLoadState_InitFinish {

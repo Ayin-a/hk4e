@@ -3,7 +3,6 @@ package game
 import (
 	"hk4e/pkg/logger"
 	"hk4e/protocol/proto"
-	"time"
 )
 
 type GCGAi struct {
@@ -29,13 +28,23 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 				switch msg.AfterPhase {
 				case proto.GCGPhaseType_GCG_PHASE_TYPE_ON_STAGE:
 					logger.Error("请选择你的英雄 hhh")
-					go func() {
-						time.Sleep(1000 * 3)
-						// 默认选第一张牌
-						cardInfo := gameController.cardList[0]
-						// 操控者选择角色牌
-						g.game.ControllerSelectChar(gameController, cardInfo, []uint32{})
-					}()
+					// 默认选第一张牌
+					cardInfo := gameController.cardList[0]
+					// 操控者选择角色牌
+					g.game.ControllerSelectChar(gameController, cardInfo, []uint32{})
+				}
+			case *proto.GCGMessage_DiceRoll:
+				// 摇完骰子
+				msg := message.GetPhaseChange()
+				switch msg.AfterPhase {
+				case proto.GCGPhaseType_GCG_PHASE_TYPE_ON_STAGE:
+					logger.Error("战斗意识？！")
+					cardInfo1 := g.game.controllerMap[g.controllerId].cardList[0]
+					cardInfo2 := g.game.controllerMap[g.controllerId].cardList[1]
+					g.game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillIdList[1]}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillIdList[0]}}))
+					g.game.SendAllMsgPack()
+					g.game.SetControllerAllow(g.game.controllerMap[g.controllerId], false, true)
+					g.game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
 				}
 			}
 		}

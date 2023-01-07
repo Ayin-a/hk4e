@@ -268,6 +268,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(GCGHeartBeatNotify, &proto.GCGHeartBeatNotify{})                         // GCG游戏心跳包通知
 	c.registerMessage(GCGOperationReq, &proto.GCGOperationReq{})                               // GCG游戏客户端操作请求
 	c.registerMessage(GCGOperationRsp, &proto.GCGOperationRsp{})                               // GCG游戏客户端操作响应
+	c.registerMessage(GCGSkillPreviewNotify, &proto.GCGSkillPreviewNotify{})                   // GCG游戏技能栏展示通知
 
 	// // TODO 客户端开始GCG游戏
 	// c.registerMessage(GCGStartChallengeByCheckRewardReq, &proto.GCGStartChallengeByCheckRewardReq{}) // GCG开始挑战来自检测奖励请求

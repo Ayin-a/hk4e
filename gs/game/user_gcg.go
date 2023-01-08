@@ -181,7 +181,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		playerField := &proto.GCGPlayerField{
 			Unk3300_IKJMGAHCFPM: 0,
 			// 卡牌图片
-			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.cardList)),
+			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.charCardList)),
 			Unk3300_GGHKFFADEAL: 0,
 			Unk3300_AOPJIOHMPOF: &proto.GCGZone{
 				CardList: []uint32{},
@@ -199,7 +199,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			ControllerId:        controller.controllerId,
 			// 卡牌位置
 			Unk3300_INDJNJJJNKL: &proto.GCGZone{
-				CardList: make([]uint32, 0, len(controller.cardList)),
+				CardList: make([]uint32, 0, len(controller.charCardList)),
 			},
 			Unk3300_EFNAEFBECHD: &proto.GCGZone{
 				CardList: []uint32{},
@@ -210,7 +210,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			DeckCardNum:         0,
 			Unk3300_GLNIFLOKBPM: 0,
 		}
-		for _, info := range controller.cardList {
+		for _, info := range controller.charCardList {
 			playerField.ModifyZoneMap[info.guid] = &proto.GCGZone{CardList: []uint32{}}
 			playerField.Unk3300_INDJNJJJNKL.CardList = append(playerField.Unk3300_INDJNJJJNKL.CardList, info.guid)
 		}
@@ -223,7 +223,12 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	}
 	// 卡牌信息
 	for _, controller := range game.controllerMap {
-		for _, cardInfo := range controller.cardList {
+		// 角色牌以及手牌都要
+		for _, cardInfo := range controller.charCardList {
+			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
+			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+		}
+		for _, cardInfo := range controller.handCardList {
 			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
 			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
 		}
@@ -291,7 +296,7 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		// 选择角色卡牌
 		op := req.Op.GetOpSelectOnStage()
 		// 操作者是否拥有该卡牌
-		cardInfo := gameController.GetCardByGuid(op.CardGuid)
+		cardInfo := gameController.GetCharCardByGuid(op.CardGuid)
 		if cardInfo == nil {
 			GAME_MANAGER.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_SELECT_HAND_CARD_GUID_ERROR)
 			return
@@ -299,7 +304,7 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		// 操控者选择角色牌
 		game.ControllerSelectChar(gameController, cardInfo, op.CostDiceIndexList)
 	case *proto.GCGOperation_OpReroll:
-		// 确认骰子不重投
+		// 确认骰子重投
 		op := req.Op.GetOpReroll()
 		diceSideList, ok := game.roundInfo.diceSideMap[gameController.controllerId]
 		if !ok {
@@ -315,6 +320,23 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		}
 		// 操控者确认重投骰子
 		game.ControllerReRollDice(gameController, op.DiceIndexList)
+	case *proto.GCGOperation_OpAttack:
+		// 角色使用技能
+		op := req.Op.GetOpAttack()
+		diceSideList, ok := game.roundInfo.diceSideMap[gameController.controllerId]
+		if !ok {
+			g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+			return
+		}
+		// 判断骰子索引是否有效
+		for _, diceIndex := range op.CostDiceIndexList {
+			if diceIndex > uint32(len(diceSideList)) {
+				g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+				return
+			}
+		}
+		// 操控者使用技能
+		game.ControllerUseSkill(gameController, op.SkillId, op.CostDiceIndexList)
 	default:
 		logger.Error("gcg op is not handle, op: %T", req.Op.Op)
 		return
@@ -326,22 +348,72 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 	GAME_MANAGER.SendMsg(cmd.GCGOperationRsp, player.PlayerID, player.ClientSeq, gcgOperationRsp)
 }
 
-// PacketGCGSkillPreviewNotify GCG游戏技能栏展示通知
+// PacketGCGSkillPreviewNotify GCG游戏技能预览通知
 func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *proto.GCGSkillPreviewNotify {
+	selectedCharCard := controller.GetSelectedCharCard()
 	// 确保玩家选择了角色牌
-	if controller.selectedCharCard == nil {
-		logger.Error("selected char is nil, controllerId: %v", controller.controllerId)
+	if selectedCharCard == nil {
+		logger.Error("selected char card is nil, cardGuid: %v", controller.selectedCharCardGuid)
 		return new(proto.GCGSkillPreviewNotify)
 	}
 	// PacketGCGSkillPreviewNotify
 	gcgSkillPreviewNotify := &proto.GCGSkillPreviewNotify{
 		ControllerId: controller.controllerId,
 		// 当前角色牌拥有的技能信息
-		SkillPreviewList: make([]*proto.GCGSkillPreviewInfo, 0, len(controller.selectedCharCard.skillIdList)),
+		SkillPreviewList: make([]*proto.GCGSkillPreviewInfo, 0, len(selectedCharCard.skillList)),
 		// 切换到其他角色牌的所需消耗信息
 		ChangeOnstagePreviewList: make([]*proto.GCGChangeOnstageInfo, 0, 2), // 暂时写死
 		PlayCardList:             make([]*proto.GCGSkillPreviewPlayCardInfo, 0, 0),
-		OnstageCardGuid:          controller.selectedCharCard.guid, // 当前被选择的角色牌guid
+		OnstageCardGuid:          selectedCharCard.guid, // 当前被选择的角色牌guid
+	}
+	// SkillPreviewList
+	for _, skillInfo := range selectedCharCard.skillList {
+		gcgSkillPreviewInfo := &proto.GCGSkillPreviewInfo{
+			ChangeOnstageCharacterList: nil,
+			Unk3300_DAJFJEDNLKK:        nil,
+			SkillId:                    skillInfo.skillId,
+			// 技能造成的血量预览信息
+			HpInfoMap:           make(map[uint32]*proto.GCGSkillPreviewHpInfo, 1),
+			Unk3300_AGNONGELFGC: nil,
+			ExtraInfo:           nil,
+			ReactionInfoMap:     nil,
+			// 技能对自身改变预览信息
+			CardTokenChangeMap: make(map[uint32]*proto.GCGSkillPreviewTokenChangeInfo, 1),
+		}
+		// HpInfoMap
+		// 暂时不知道3代表什么意思
+		gcgSkillPreviewInfo.HpInfoMap[3] = &proto.GCGSkillPreviewHpInfo{
+			ChangeType:    proto.GCGSkillHpChangeType_GCG_SKILL_HP_CHANGE_TYPE_DAMAGE,
+			HpChangeValue: skillInfo.damage,
+		}
+		// CardTokenChangeMap
+		// 暂时不知道1代表什么意思
+		gcgSkillPreviewInfo.CardTokenChangeMap[1] = &proto.GCGSkillPreviewTokenChangeInfo{
+			TokenChangeList: []*proto.GCGSkillPreviewTokenInfo{
+				{
+					// Token类型
+					TokenType:           constant.GCGTokenConst.TOKEN_CUR_ELEM,
+					Unk3300_MMIKPPJMHAD: 0,
+					// 更改为的值
+					Unk3300_IKICJMEFEON: selectedCharCard.tokenMap[constant.GCGTokenConst.TOKEN_CUR_ELEM] + 1,
+				},
+			},
+		}
+		gcgSkillPreviewNotify.SkillPreviewList = append(gcgSkillPreviewNotify.SkillPreviewList, gcgSkillPreviewInfo)
+	}
+	// ChangeOnstagePreviewList
+	for _, cardInfo := range controller.charCardList {
+		// 排除当前已选中的角色卡
+		if cardInfo.guid == selectedCharCard.guid {
+			continue
+		}
+		gcgChangeOnstageInfo := &proto.GCGChangeOnstageInfo{
+			IsQuick:  false, // 是否为快速行动
+			CardGuid: cardInfo.guid,
+			// 切换角色预览
+			ChangeOnstagePreviewInfo: &proto.GCGSkillPreviewInfo{},
+		}
+		gcgSkillPreviewNotify.ChangeOnstagePreviewList = append(gcgSkillPreviewNotify.ChangeOnstagePreviewList, gcgChangeOnstageInfo)
 	}
 	return gcgSkillPreviewNotify
 }
@@ -378,13 +450,13 @@ func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, busines
 			GameId:          game.gameId,
 			PlayerBriefList: make([]*proto.GCGPlayerBriefData, 0, len(game.controllerMap)),
 		},
-		IsNewGame: true, // 根据游戏修改
+		IsNewGame: true, // TODO 根据游戏修改
 	}
 	for _, controller := range game.controllerMap {
 		gcgPlayerBriefData := &proto.GCGPlayerBriefData{
 			ControllerId:   controller.controllerId,
 			ProfilePicture: new(proto.ProfilePicture),
-			CardIdList:     make([]uint32, 0, len(controller.cardList)),
+			CardIdList:     make([]uint32, 0, len(controller.charCardList)), // 这里展示给玩家的是角色牌
 		}
 		// 玩家信息
 		if controller.player != nil {

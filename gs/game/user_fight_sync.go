@@ -1,6 +1,7 @@
 package game
 
 import (
+	"hk4e/common/constant"
 	"hk4e/common/utils"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -101,7 +102,51 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
-			continue
+			hitInfo := new(proto.EvtBeingHitInfo)
+			clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
+			if clientProtoObj == nil {
+				logger.Error("get client proto obj is nil")
+				return
+			}
+			ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
+			if !ok {
+				continue
+			}
+			attackResult := hitInfo.AttackResult
+			if attackResult == nil {
+				logger.Error("attackResult is nil")
+				continue
+			}
+			logger.Debug("run attack handler, attackResult: %v", attackResult)
+			target := scene.GetEntity(attackResult.DefenseId)
+			if target == nil {
+				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
+				continue
+			}
+			attackResult.Damage *= 100
+			damage := attackResult.Damage
+			attackerId := attackResult.AttackerId
+			_ = attackerId
+			currHp := float32(0)
+			if target.fightProp != nil {
+				currHp = target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
+				currHp -= damage
+				if currHp < 0 {
+					currHp = 0
+				}
+				target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
+			}
+			entityFightPropUpdateNotify := &proto.EntityFightPropUpdateNotify{
+				FightPropMap: target.fightProp,
+				EntityId:     target.id,
+			}
+			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
+			combatData, err := pb.Marshal(hitInfo)
+			if err != nil {
+				logger.Error("create combat invocations entity hit info error: %v", err)
+			}
+			entry.CombatData = combatData
+			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")

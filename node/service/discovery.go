@@ -33,12 +33,14 @@ func (s ServerInstanceSortList) Swap(i, j int) {
 }
 
 type ServerInstance struct {
-	serverType       string
-	appId            string
-	gateServerIpAddr string
-	gateServerPort   uint32
-	version          string
-	lastAliveTime    int64
+	serverType        string
+	appId             string
+	gateServerKcpAddr string
+	gateServerKcpPort uint32
+	gateServerMqAddr  string
+	gateServerMqPort  uint32
+	version           string
+	lastAliveTime     int64
 }
 
 type DiscoveryService struct {
@@ -80,13 +82,16 @@ func (s *DiscoveryService) RegisterServer(ctx context.Context, req *api.Register
 		}
 	}
 	inst := &ServerInstance{
-		serverType: req.ServerType,
-		appId:      appId,
+		serverType:    req.ServerType,
+		appId:         appId,
+		lastAliveTime: time.Now().Unix(),
 	}
 	if req.ServerType == api.GATE {
-		logger.Info("register new gate server, ip: %v, port: %v", req.GateServerAddr.IpAddr, req.GateServerAddr.Port)
-		inst.gateServerIpAddr = req.GateServerAddr.IpAddr
-		inst.gateServerPort = req.GateServerAddr.Port
+		logger.Info("register new gate server, ip: %v, port: %v", req.GateServerAddr.KcpAddr, req.GateServerAddr.KcpPort)
+		inst.gateServerKcpAddr = req.GateServerAddr.KcpAddr
+		inst.gateServerKcpPort = req.GateServerAddr.KcpPort
+		inst.gateServerMqAddr = req.GateServerAddr.MqAddr
+		inst.gateServerMqPort = req.GateServerAddr.MqPort
 		inst.version = req.Version
 	}
 	instMap.Store(appId, inst)
@@ -109,6 +114,7 @@ func (s *DiscoveryService) CancelServer(ctx context.Context, req *api.CancelServ
 	}
 	_, exist = instMap.Load(req.AppId)
 	if !exist {
+		logger.Error("recv not exist server cancel, server type: %v, appid: %v", req.ServerType, req.AppId)
 		return nil, errors.New("server not exist")
 	}
 	instMap.Delete(req.AppId)
@@ -117,12 +123,14 @@ func (s *DiscoveryService) CancelServer(ctx context.Context, req *api.CancelServ
 
 // KeepaliveServer 服务器在线心跳保持
 func (s *DiscoveryService) KeepaliveServer(ctx context.Context, req *api.KeepaliveServerReq) (*api.NullMsg, error) {
+	logger.Debug("server keepalive, server type: %v, appid: %v", req.ServerType, req.AppId)
 	instMap, exist := s.serverInstanceMap[req.ServerType]
 	if !exist {
 		return nil, errors.New("server type not exist")
 	}
 	inst, exist := instMap.Load(req.AppId)
 	if !exist {
+		logger.Error("recv not exist server keepalive, server type: %v, appid: %v", req.ServerType, req.AppId)
 		return nil, errors.New("server not exist")
 	}
 	serverInstance := inst.(*ServerInstance)
@@ -178,10 +186,35 @@ func (s *DiscoveryService) GetGateServerAddr(ctx context.Context, req *api.GetGa
 		return nil, errors.New("no gate server found")
 	}
 	inst := s.getRandomServerInstance(&versionInstMap)
-	logger.Debug("get gate server addr is, ip: %v, port: %v", inst.gateServerIpAddr, inst.gateServerPort)
+	logger.Debug("get gate server addr is, ip: %v, port: %v", inst.gateServerKcpAddr, inst.gateServerKcpPort)
 	return &api.GateServerAddr{
-		IpAddr: inst.gateServerIpAddr,
-		Port:   inst.gateServerPort,
+		KcpAddr: inst.gateServerKcpAddr,
+		KcpPort: inst.gateServerKcpPort,
+	}, nil
+}
+
+// GetAllGateServerInfoList 获取全部网关服务器信息列表
+func (s *DiscoveryService) GetAllGateServerInfoList(ctx context.Context, req *api.NullMsg) (*api.GateServerInfoList, error) {
+	logger.Debug("get all gate server info list")
+	instMap, exist := s.serverInstanceMap[api.GATE]
+	if !exist {
+		return nil, errors.New("gate server not exist")
+	}
+	if s.getServerInstanceMapLen(instMap) == 0 {
+		return nil, errors.New("no gate server found")
+	}
+	gateServerInfoList := make([]*api.GateServerInfo, 0)
+	instMap.Range(func(key, value any) bool {
+		serverInstance := value.(*ServerInstance)
+		gateServerInfoList = append(gateServerInfoList, &api.GateServerInfo{
+			AppId:  serverInstance.appId,
+			MqAddr: serverInstance.gateServerMqAddr,
+			MqPort: serverInstance.gateServerMqPort,
+		})
+		return true
+	})
+	return &api.GateServerInfoList{
+		GateServerInfoList: gateServerInfoList,
 	}, nil
 }
 
@@ -216,7 +249,8 @@ func (s *DiscoveryService) removeDeadServer() {
 			instMap.Range(func(key, value any) bool {
 				serverInstance := value.(*ServerInstance)
 				if nowTime-serverInstance.lastAliveTime > 60 {
-					logger.Warn("remove dead server, server type: %v, appid: %v", serverInstance.serverType, serverInstance.appId)
+					logger.Warn("remove dead server, server type: %v, appid: %v, last alive time: %v",
+						serverInstance.serverType, serverInstance.appId, serverInstance.lastAliveTime)
 					instMap.Delete(key)
 				}
 				return true

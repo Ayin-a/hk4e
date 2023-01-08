@@ -31,8 +31,10 @@ func Run(ctx context.Context, configFile string) error {
 	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
 		ServerType: api.GATE,
 		GateServerAddr: &api.GateServerAddr{
-			IpAddr: config.CONF.Hk4e.KcpAddr,
-			Port:   uint32(config.CONF.Hk4e.KcpPort),
+			KcpAddr: config.CONF.Hk4e.KcpAddr,
+			KcpPort: uint32(config.CONF.Hk4e.KcpPort),
+			MqAddr:  config.CONF.Hk4e.GateTcpMqAddr,
+			MqPort:  uint32(config.CONF.Hk4e.GateTcpMqPort),
 		},
 		Version: config.CONF.Hk4e.Version,
 	})
@@ -44,10 +46,13 @@ func Run(ctx context.Context, configFile string) error {
 		ticker := time.NewTicker(time.Second * 15)
 		for {
 			<-ticker.C
-			_, _ = client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
+			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
 				ServerType: api.GATE,
 				AppId:      APPID,
 			})
+			if err != nil {
+				logger.Error("keepalive error: %v", err)
+			}
 		}
 	}()
 	defer func() {
@@ -60,7 +65,7 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("gate_" + APPID)
 	logger.Warn("gate start, appid: %v", APPID)
 
-	messageQueue := mq.NewMessageQueue(api.GATE, APPID)
+	messageQueue := mq.NewMessageQueue(api.GATE, APPID, client)
 
 	connectManager := net.NewKcpConnectManager(messageQueue, client.Discovery)
 	connectManager.Start()

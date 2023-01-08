@@ -21,7 +21,10 @@ import (
 	"hk4e/protocol/cmd"
 )
 
-const PacketFreqLimit = 1000
+const (
+	PacketFreqLimit = 1000
+	PacketMaxLen    = 343 * 1024
+)
 
 type KcpConnectManager struct {
 	discovery                 *rpc.DiscoveryClient
@@ -239,7 +242,8 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 	convId := conn.GetConv()
 	pktFreqLimitCounter := 0
 	pktFreqLimitTimer := time.Now().UnixNano()
-	recvBuf := make([]byte, conn.GetMaxPayloadLen())
+	recvBuf := make([]byte, PacketMaxLen)
+	dataBuf := make([]byte, 0, 1500)
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(time.Second * 15))
 		recvLen, err := conn.Read(recvBuf)
@@ -263,7 +267,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		}
 		recvData := recvBuf[:recvLen]
 		kcpMsgList := make([]*KcpMsg, 0)
-		k.decodeBinToPayload(recvData, convId, &kcpMsgList, session.xorKey)
+		k.decodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, session.xorKey)
 		for _, v := range kcpMsgList {
 			protoMsgList := k.protoDecode(v)
 			for _, vv := range protoMsgList {

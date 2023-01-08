@@ -12,6 +12,8 @@ const (
 type NetMsg struct {
 	MsgType           uint8        `msgpack:"MsgType"`
 	EventId           uint16       `msgpack:"EventId"`
+	ServerType        string       `msgpack:"-"`
+	AppId             string       `msgpack:"-"`
 	Topic             string       `msgpack:"-"`
 	GameMsg           *GameMsg     `msgpack:"GameMsg"`
 	FightMsg          *FightMsg    `msgpack:"FightMsg"`

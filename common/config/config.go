@@ -45,6 +45,8 @@ type Hk4e struct {
 	GachaHistoryServer     string `toml:"gacha_history_server"`
 	ClientProtoProxyEnable bool   `toml:"client_proto_proxy_enable"`
 	Version                string `toml:"version"`
+	GateTcpMqAddr          string `toml:"gate_tcp_mq_addr"`
+	GateTcpMqPort          int32  `toml:"gate_tcp_mq_port"`
 }
 
 // MQ 消息队列

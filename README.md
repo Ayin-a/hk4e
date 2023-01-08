@@ -19,13 +19,13 @@ hk4e game server
 
 #### 启动顺序
 
-> 1. 启动节点服务器(仅单节点 有状态) `cmd/node && go run .`
-> 2. 启动http登录服务器(可多节点 无状态) `cmd/dispatch && go run .`
+> 1. 启动节点服务器(仅单节点 有状态) `cd cmd/node && go run .`
+> 2. 启动http登录服务器(可多节点 无状态) `cd cmd/dispatch && go run .`
 > 3. 启动网关服务器(可多节点 有状态) `cd cmd/gate && go run .`
-> 4. 启动战斗服务器(可多节点 有状态) `cmd/fight && go run .`
-> 5. 启动寻路服务器(可多节点 无状态) `cmd/pathfinding && go run .`
+> 4. 启动战斗服务器(可多节点 有状态 非必要) `cd cmd/fight && go run .`
+> 5. 启动寻路服务器(可多节点 无状态 非必要) `cd cmd/pathfinding && go run .`
 > 6. 启动游戏服务器(可多节点 有状态) `cd cmd/gs && go run .`
-> 7. 启动游戏管理服务器(仅单节点 无状态) `cmd/gm && go run .`
+> 7. 启动游戏管理服务器(仅单节点 无状态) `cd cmd/gm && go run .`
 
 #### 其它
 

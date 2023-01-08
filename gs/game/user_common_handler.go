@@ -40,6 +40,18 @@ func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Messag
 	g.SendMsg(cmd.TowerAllDataRsp, player.PlayerID, player.ClientSeq, towerAllDataRsp)
 }
 
+func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
+	// logger.Debug("user query path, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.QueryPathReq)
+
+	queryPathRsp := &proto.QueryPathRsp{
+		QueryId:     req.QueryId,
+		QueryStatus: proto.QueryPathRsp_PATH_STATUS_TYPE_SUCC,
+		Corners:     []*proto.Vector{req.DestinationPos[0]},
+	}
+	g.SendMsg(cmd.QueryPathRsp, player.PlayerID, player.ClientSeq, queryPathRsp)
+}
+
 func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user entity ai sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EntityAiSyncNotify)

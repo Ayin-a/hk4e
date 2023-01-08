@@ -1,7 +1,6 @@
 package net
 
 import (
-	"bytes"
 	"encoding/binary"
 
 	"hk4e/pkg/endec"
@@ -33,13 +32,18 @@ type KcpMsg struct {
 	ProtoData []byte
 }
 
-func (k *KcpConnectManager) decodeBinToPayload(data []byte, convId uint64, kcpMsgList *[]*KcpMsg, xorKey []byte) {
+func (k *KcpConnectManager) decodeBinToPayload(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg, xorKey []byte) {
 	// xor解密
 	endec.Xor(data, xorKey)
-	k.decodeLoop(data, convId, kcpMsgList)
+	k.decodeLoop(data, dataBuf, convId, kcpMsgList)
 }
 
-func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[]*KcpMsg) {
+func (k *KcpConnectManager) decodeLoop(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg) {
+	if len(*dataBuf) != 0 {
+		// 取出之前的缓冲区数据
+		data = append(*dataBuf, data...)
+		*dataBuf = make([]byte, 0, 1500)
+	}
 	// 长度太短
 	if len(data) < 12 {
 		logger.Debug("packet len less 12 byte")
@@ -51,73 +55,45 @@ func (k *KcpConnectManager) decodeLoop(data []byte, convId uint64, kcpMsgList *[
 		return
 	}
 	// 协议号
-	cmdIdByteSlice := make([]byte, 8)
-	cmdIdByteSlice[6] = data[2]
-	cmdIdByteSlice[7] = data[3]
-	cmdIdBuffer := bytes.NewBuffer(cmdIdByteSlice)
-	var cmdId int64
-	err := binary.Read(cmdIdBuffer, binary.BigEndian, &cmdId)
-	if err != nil {
-		logger.Error("packet cmd id parse fail: %v", err)
-		return
-	}
+	cmdId := binary.BigEndian.Uint16(data[2:4])
 	// 头部长度
-	headLenByteSlice := make([]byte, 8)
-	headLenByteSlice[6] = data[4]
-	headLenByteSlice[7] = data[5]
-	headLenBuffer := bytes.NewBuffer(headLenByteSlice)
-	var headLen int64
-	err = binary.Read(headLenBuffer, binary.BigEndian, &headLen)
-	if err != nil {
-		logger.Error("packet head len parse fail: %v", err)
-		return
-	}
+	headLen := binary.BigEndian.Uint16(data[4:6])
 	// proto长度
-	protoLenByteSlice := make([]byte, 8)
-	protoLenByteSlice[4] = data[6]
-	protoLenByteSlice[5] = data[7]
-	protoLenByteSlice[6] = data[8]
-	protoLenByteSlice[7] = data[9]
-	protoLenBuffer := bytes.NewBuffer(protoLenByteSlice)
-	var protoLen int64
-	err = binary.Read(protoLenBuffer, binary.BigEndian, &protoLen)
-	if err != nil {
-		logger.Error("packet proto len parse fail: %v", err)
+	protoLen := binary.BigEndian.Uint32(data[6:10])
+	// 检查长度
+	packetLen := int(headLen) + int(protoLen) + 12
+	if packetLen > PacketMaxLen {
+		logger.Error("packet len too long")
 		return
 	}
-	// 检查最小长度
-	if len(data) < int(headLen+protoLen)+12 {
-		logger.Error("packet len error")
+	haveMorePacket := false
+	if len(data) > packetLen {
+		// 有不止一个包
+		haveMorePacket = true
+	} else if len(data) < packetLen {
+		// 这一次没收够 放入缓冲区
+		*dataBuf = append(*dataBuf, data...)
 		return
 	}
 	// 尾部幻数错误
-	if data[headLen+protoLen+10] != 0x89 || data[headLen+protoLen+11] != 0xAB {
+	if data[int(headLen)+int(protoLen)+10] != 0x89 || data[int(headLen)+int(protoLen)+11] != 0xAB {
 		logger.Error("packet tail magic 0x89AB error")
 		return
 	}
-	// 判断是否有不止一个包
-	haveMoreData := false
-	if len(data) > int(headLen+protoLen)+12 {
-		haveMoreData = true
-	}
 	// 头部数据
-	headData := data[10 : 10+headLen]
+	headData := data[10 : 10+int(headLen)]
 	// proto数据
-	protoData := data[10+headLen : 10+headLen+protoLen]
+	protoData := data[10+int(headLen) : 10+int(headLen)+int(protoLen)]
 	// 返回数据
 	kcpMsg := new(KcpMsg)
 	kcpMsg.ConvId = convId
-	kcpMsg.CmdId = uint16(cmdId)
-	// kcpMsg.HeadData = make([]byte, len(headData))
-	// copy(kcpMsg.HeadData, headData)
-	// kcpMsg.ProtoData = make([]byte, len(protoData))
-	// copy(kcpMsg.ProtoData, protoData)
+	kcpMsg.CmdId = cmdId
 	kcpMsg.HeadData = headData
 	kcpMsg.ProtoData = protoData
 	*kcpMsgList = append(*kcpMsgList, kcpMsg)
 	// 递归解析
-	if haveMoreData {
-		k.decodeLoop(data[int(headLen+protoLen)+12:], convId, kcpMsgList)
+	if haveMorePacket {
+		k.decodeLoop(data[packetLen:], dataBuf, convId, kcpMsgList)
 	}
 }
 
@@ -133,34 +109,11 @@ func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (b
 	bin[0] = 0x45
 	bin[1] = 0x67
 	// 协议号
-	cmdIdBuffer := bytes.NewBuffer([]byte{})
-	err := binary.Write(cmdIdBuffer, binary.BigEndian, kcpMsg.CmdId)
-	if err != nil {
-		logger.Error("cmd id encode err: %v", err)
-		return nil
-	}
-	bin[2] = (cmdIdBuffer.Bytes())[0]
-	bin[3] = (cmdIdBuffer.Bytes())[1]
+	binary.BigEndian.PutUint16(bin[2:4], kcpMsg.CmdId)
 	// 头部长度
-	headLenBuffer := bytes.NewBuffer([]byte{})
-	err = binary.Write(headLenBuffer, binary.BigEndian, uint16(len(kcpMsg.HeadData)))
-	if err != nil {
-		logger.Error("head len encode err: %v", err)
-		return nil
-	}
-	bin[4] = (headLenBuffer.Bytes())[0]
-	bin[5] = (headLenBuffer.Bytes())[1]
+	binary.BigEndian.PutUint16(bin[4:6], uint16(len(kcpMsg.HeadData)))
 	// proto长度
-	protoLenBuffer := bytes.NewBuffer([]byte{})
-	err = binary.Write(protoLenBuffer, binary.BigEndian, uint32(len(kcpMsg.ProtoData)))
-	if err != nil {
-		logger.Error("proto len encode err: %v", err)
-		return nil
-	}
-	bin[6] = (protoLenBuffer.Bytes())[0]
-	bin[7] = (protoLenBuffer.Bytes())[1]
-	bin[8] = (protoLenBuffer.Bytes())[2]
-	bin[9] = (protoLenBuffer.Bytes())[3]
+	binary.BigEndian.PutUint32(bin[6:10], uint32(len(kcpMsg.ProtoData)))
 	// 头部数据
 	copy(bin[10:], kcpMsg.HeadData)
 	// proto数据

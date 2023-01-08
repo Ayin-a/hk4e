@@ -94,7 +94,7 @@ func (c *Controller) query_cur_region(context *gin.Context) {
 		rspError()
 		return
 	}
-	regionCurrBase64 := region.GetRegionCurrBase64(addr.IpAddr, int32(addr.Port), c.ec2b)
+	regionCurrBase64 := region.GetRegionCurrBase64(addr.KcpAddr, int32(addr.KcpPort), c.ec2b)
 	if version < 275 {
 		context.Header("Content-type", "text/html; charset=UTF-8")
 		_, _ = context.Writer.WriteString(regionCurrBase64)

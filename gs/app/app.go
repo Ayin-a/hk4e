@@ -47,10 +47,13 @@ func Run(ctx context.Context, configFile string) error {
 		ticker := time.NewTicker(time.Second * 15)
 		for {
 			<-ticker.C
-			_, _ = client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
+			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
 				ServerType: api.GS,
 				AppId:      APPID,
 			})
+			if err != nil {
+				logger.Error("keepalive error: %v", err)
+			}
 		}
 	}()
 	GSID = rsp.GetGsId()
@@ -75,7 +78,7 @@ func Run(ctx context.Context, configFile string) error {
 	}
 	defer db.CloseDao()
 
-	messageQueue := mq.NewMessageQueue(api.GS, APPID)
+	messageQueue := mq.NewMessageQueue(api.GS, APPID, client)
 	defer messageQueue.Close()
 
 	gameManager := game.NewGameManager(db, messageQueue, GSID)

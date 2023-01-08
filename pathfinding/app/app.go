@@ -39,10 +39,13 @@ func Run(ctx context.Context, configFile string) error {
 		ticker := time.NewTicker(time.Second * 15)
 		for {
 			<-ticker.C
-			_, _ = client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
+			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
 				ServerType: api.PATHFINDING,
 				AppId:      APPID,
 			})
+			if err != nil {
+				logger.Error("keepalive error: %v", err)
+			}
 		}
 	}()
 	defer func() {
@@ -55,7 +58,7 @@ func Run(ctx context.Context, configFile string) error {
 	logger.InitLogger("pathfinding_" + APPID)
 	logger.Warn("pathfinding start, appid: %v", APPID)
 
-	messageQueue := mq.NewMessageQueue(api.PATHFINDING, APPID)
+	messageQueue := mq.NewMessageQueue(api.PATHFINDING, APPID, client)
 	defer messageQueue.Close()
 
 	_ = handle.NewHandle(messageQueue)

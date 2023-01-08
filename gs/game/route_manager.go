@@ -54,6 +54,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 }
 
 func (r *RouteManager) initRoute() {
+	r.registerRouter(cmd.QueryPathReq, GAME_MANAGER.QueryPathReq)
 	r.registerRouter(cmd.UnionCmdNotify, GAME_MANAGER.UnionCmdNotify)
 	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, GAME_MANAGER.MassiveEntityElementOpBatchNotify)
 	r.registerRouter(cmd.ToTheMoonEnterSceneReq, GAME_MANAGER.ToTheMoonEnterSceneReq)

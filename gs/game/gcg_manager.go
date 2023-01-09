@@ -22,9 +22,7 @@ const (
 
 // GCGSkillInfo 游戏对局内卡牌技能信息
 type GCGSkillInfo struct {
-	skillId uint32            // 技能Id
-	costMap map[uint32]uint32 // 消耗的元素骰子
-	damage  uint32            // 技能伤害
+	skillId uint32 // 技能Id
 }
 
 // GCGCardInfo 游戏对局内卡牌
@@ -73,25 +71,38 @@ func (g *GCGCardInfo) ToProto() *proto.GCGCard {
 	return gcgCard
 }
 
+// ControllerLoadState 操控者加载状态
 type ControllerLoadState uint8
 
 const (
-	ControllerLoadState_None ControllerLoadState = iota
-	ControllerLoadState_AskDuel
-	ControllerLoadState_InitFinish
+	ControllerLoadState_None       ControllerLoadState = iota
+	ControllerLoadState_AskDuel                        // 回复决斗
+	ControllerLoadState_InitFinish                     // 初始化完成
+)
+
+// CardInfoType 卡牌信息类型
+type CardInfoType uint8
+
+const (
+	CardInfoType_None CardInfoType = iota
+	CardInfoType_Char              // 角色牌
+	CardInfoType_Hand              // 手牌
 )
 
 // GCGController 操控者
 type GCGController struct {
-	controllerId         uint32              // 操控者Id
-	charCardList         []*GCGCardInfo      // 角色牌列表
-	handCardList         []*GCGCardInfo      // 手牌列表
-	loadState            ControllerLoadState // 加载状态
-	allow                uint32              // 是否允许操控 0 -> 不允许 1 -> 允许
-	selectedCharCardGuid uint32              // 选择的角色卡牌guid
-	controllerType       ControllerType      // 操控者的类型
-	player               *model.Player       // 玩家对象
-	ai                   *GCGAi              // AI对象
+	controllerId         uint32                          // 操控者Id
+	cardMap              map[CardInfoType][]*GCGCardInfo // 卡牌列表
+	loadState            ControllerLoadState             // 加载状态
+	allow                uint32                          // 是否允许操控 0 -> 不允许 1 -> 允许
+	selectedCharCardGuid uint32                          // 选择的角色卡牌guid
+	serverSeqCounter     uint32                          // 请求序列生成计数器
+	msgPackList          []*proto.GCGMessagePack         // 消息包待发送区
+	historyMsgPackList   []*proto.GCGMessagePack         // 历史消息包列表
+	historyCardList      []*GCGCardInfo                  // 历史卡牌列表
+	controllerType       ControllerType                  // 操控者的类型
+	player               *model.Player                   // 玩家对象
+	ai                   *GCGAi                          // AI对象
 }
 
 // GetSelectedCharCard 获取操控者当前选择的角色卡牌
@@ -101,7 +112,8 @@ func (g *GCGController) GetSelectedCharCard() *GCGCardInfo {
 
 // GetCharCardByGuid 通过卡牌的Guid获取卡牌
 func (g *GCGController) GetCharCardByGuid(cardGuid uint32) *GCGCardInfo {
-	for _, info := range g.charCardList {
+	charCardList := g.cardMap[CardInfoType_Char]
+	for _, info := range charCardList {
 		if info.guid == cardGuid {
 			return info
 		}
@@ -111,7 +123,8 @@ func (g *GCGController) GetCharCardByGuid(cardGuid uint32) *GCGCardInfo {
 
 // GetHandCardByGuid 通过卡牌的Guid获取卡牌
 func (g *GCGController) GetHandCardByGuid(cardGuid uint32) *GCGCardInfo {
-	for _, info := range g.charCardList {
+	handCardList := g.cardMap[CardInfoType_Hand]
+	for _, info := range handCardList {
 		if info.guid == cardGuid {
 			return info
 		}
@@ -150,10 +163,7 @@ func (g *GCGManager) CreateGame(gameId uint32, playerList []*model.Player) *GCGG
 			firstController: 1, // 1号操控者为先手
 			diceSideMap:     make(map[uint32][]proto.GCGDiceSideType, 2),
 		},
-		controllerMap:      make(map[uint32]*GCGController, 2),
-		msgPackList:        make([]*proto.GCGMessagePack, 0, 10),
-		historyMsgPackList: make([]*proto.GCGMessagePack, 0, 50),
-		historyCardList:    make([]*GCGCardInfo, 0, 100),
+		controllerMap: make(map[uint32]*GCGController, 2),
 	}
 	// 初始化游戏
 	game.InitGame(playerList)
@@ -167,7 +177,7 @@ func (g *GCGManager) PhaseStart(game *GCGGame) {
 	// 设置除了先手的玩家不允许操控
 	game.SetExceptControllerAllow(game.roundInfo.firstController, false, true)
 	// 游戏跳过阶段消息包
-	game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, game.GCGMsgPhaseContinue())
+	game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, game.GCGMsgPhaseContinue())
 	// 等待玩家进入
 }
 
@@ -187,16 +197,18 @@ func (g *GCGManager) PhaseRollDice(game *GCGGame) {
 		// 玩家需要8个骰子
 		for i := 0; i < 8; i++ {
 			// diceSide := proto.GCGDiceSideType(random.GetRandomInt32(1, 8))
-			diceSide := proto.GCGDiceSideType_GCG_DICE_SIDE_TYPE_PYRO
+			diceSide := proto.GCGDiceSideType_GCG_DICE_SIDE_TYPE_PAIMON
 			diceSideList = append(diceSideList, diceSide)
 		}
 		// 存储该回合玩家的骰子
 		game.roundInfo.diceSideMap[controller.controllerId] = diceSideList
-		// AI仅发送骰子数量
-		if controller.player != nil {
-			game.AddMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ROLL, game.GCGMsgDiceRoll(controller.controllerId, uint32(len(diceSideList)), diceSideList))
-		} else {
-			game.AddMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ROLL, game.GCGMsgDiceRoll(controller.controllerId, 8, []proto.GCGDiceSideType{}))
+		for _, c := range game.controllerMap {
+			// 发送给其他玩家骰子信息时隐藏具体的骰子类型
+			if c == controller {
+				game.AddMsgPack(c, controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ROLL, game.GCGMsgDiceRoll(controller.controllerId, uint32(len(diceSideList)), diceSideList))
+			} else {
+				game.AddMsgPack(c, controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ROLL, game.GCGMsgDiceRoll(controller.controllerId, uint32(len(diceSideList)), []proto.GCGDiceSideType{}))
+			}
 		}
 	}
 	// 等待玩家确认重投骰子
@@ -205,7 +217,7 @@ func (g *GCGManager) PhaseRollDice(game *GCGGame) {
 // PhasePreMain 阶段战斗开始
 func (g *GCGManager) PhasePreMain(game *GCGGame) {
 	// TODO 使用技能完善
-	game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_TRIGGER_SKILL, game.GCGMsgUseSkill(4, 33024), game.GCGMsgUseSkillEnd(4, 33024))
+	game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_TRIGGER_SKILL, game.GCGMsgUseSkill(195, 33024), game.GCGMsgNewCard(), game.GCGMsgModifyAdd(2, proto.GCGReason_GCG_REASON_EFFECT, 4, []uint32{23}), game.GCGMsgUseSkillEnd(181, 33024))
 	// 设置先手允许操控
 	game.SetControllerAllow(game.controllerMap[game.roundInfo.firstController], true, false)
 	// 游戏行动阶段
@@ -216,12 +228,10 @@ func (g *GCGManager) PhasePreMain(game *GCGGame) {
 func (g *GCGManager) PhaseMain(game *GCGGame) {
 	// 消耗费用信息
 	for _, controller := range game.controllerMap {
-		if controller.player == nil {
-			continue
-		}
-		game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NOTIFY_COST, game.GCGMsgCostRevise(controller))
-		if controller.allow == 1 {
-			GAME_MANAGER.SendMsg(cmd.GCGSkillPreviewNotify, controller.player.PlayerID, controller.player.ClientSeq, GAME_MANAGER.PacketGCGSkillPreviewNotify(controller))
+		game.AddMsgPack(controller, 0, proto.GCGActionType_GCG_ACTION_TYPE_NOTIFY_COST, game.GCGMsgCostRevise(controller))
+		// 如果玩家当前允许操作则发送技能预览信息
+		if controller.allow == 1 && controller.player != nil {
+			GAME_MANAGER.SendMsg(cmd.GCGSkillPreviewNotify, controller.player.PlayerID, controller.player.ClientSeq, GAME_MANAGER.PacketGCGSkillPreviewNotify(game, controller))
 		}
 	}
 }
@@ -237,10 +247,12 @@ const (
 
 // GCGRoundInfo 游戏对局回合信息
 type GCGRoundInfo struct {
-	roundNum        uint32                             // 游戏当前回合数
-	phaseType       proto.GCGPhaseType                 // 现在所处的阶段类型
-	firstController uint32                             // 当前回合先手的操控者
-	diceSideMap     map[uint32][]proto.GCGDiceSideType // 操控者骰子列表 uint32 -> controllerId
+	roundNum           uint32                             // 游戏当前回合数
+	phaseType          proto.GCGPhaseType                 // 现在所处的阶段类型
+	allowControllerMap map[uint32]uint32                  // 阶段玩家允许列表 主要用于断线重连
+	firstController    uint32                             // 当前回合先手的操控者
+	diceSideMap        map[uint32][]proto.GCGDiceSideType // 操控者骰子列表 uint32 -> controllerId
+	isLastMsgPack      bool                               // 是否为阶段切换的最后一个消息包 用于粘包模拟官服效果
 }
 
 // GCGGame 游戏对局
@@ -249,59 +261,59 @@ type GCGGame struct {
 	gameId              uint32                    // 游戏Id
 	gameState           GCGGameState              // 游戏运行状态
 	gameTick            uint32                    // 游戏tick
-	serverSeqCounter    uint32                    // 请求序列生成计数器
 	controllerIdCounter uint32                    // 操控者Id生成器
 	cardGuidCounter     uint32                    // 卡牌guid生成计数器
 	roundInfo           *GCGRoundInfo             // 游戏回合信息
 	controllerMap       map[uint32]*GCGController // 操控者列表 uint32 -> controllerId
-	msgPackList         []*proto.GCGMessagePack   // 消息包待发送区
-	isLastMsgPack       bool                      // 是否为阶段切换的最后一个消息包 用于粘包模拟官服效果
-	historyMsgPackList  []*proto.GCGMessagePack   // 历史消息包列表
-	historyCardList     []*GCGCardInfo            // 历史卡牌列表
+}
+
+// CreateController 创建操控者
+func (g *GCGGame) CreateController() *GCGController {
+	// 创建操控者
+	g.controllerIdCounter++
+	controller := &GCGController{
+		controllerId: g.controllerIdCounter,
+		cardMap: map[CardInfoType][]*GCGCardInfo{
+			CardInfoType_Char: make([]*GCGCardInfo, 0, 3),
+			CardInfoType_Hand: make([]*GCGCardInfo, 0, 30),
+		},
+		allow:              1,
+		msgPackList:        make([]*proto.GCGMessagePack, 0, 10),
+		historyMsgPackList: make([]*proto.GCGMessagePack, 0, 50),
+		historyCardList:    make([]*GCGCardInfo, 0, 100),
+	}
+	// 记录操控者
+	g.controllerMap[g.controllerIdCounter] = controller
+	return controller
 }
 
 // AddPlayer GCG游戏添加玩家
 func (g *GCGGame) AddPlayer(player *model.Player) {
 	// 创建操控者
-	g.controllerIdCounter++
-	controller := &GCGController{
-		controllerId:   g.controllerIdCounter,
-		charCardList:   make([]*GCGCardInfo, 0, 3),
-		handCardList:   make([]*GCGCardInfo, 0, 30),
-		loadState:      ControllerLoadState_None,
-		allow:          1,
-		controllerType: ControllerType_Player,
-		player:         player,
-	}
+	controller := g.CreateController()
+	controller.controllerType = ControllerType_Player
+	controller.player = player
 	// 生成卡牌信息
 	g.GiveCharCard(controller, 1301)
 	g.GiveCharCard(controller, 1103)
-	// 记录操控者
-	g.controllerMap[g.controllerIdCounter] = controller
+	// 玩家记录当前所在的游戏guid
 	player.GCGCurGameGuid = g.guid
 }
 
 // AddAI GCG游戏添加AI
 func (g *GCGGame) AddAI() {
 	// 创建操控者
-	g.controllerIdCounter++
-	controller := &GCGController{
-		controllerId:   g.controllerIdCounter,
-		charCardList:   make([]*GCGCardInfo, 0, 3),
-		handCardList:   make([]*GCGCardInfo, 0, 30),
-		loadState:      ControllerLoadState_InitFinish,
-		allow:          1,
-		controllerType: ControllerType_AI,
-		ai: &GCGAi{
-			game:         g,
-			controllerId: g.controllerIdCounter,
-		},
+	controller := g.CreateController()
+	controller.controllerType = ControllerType_AI
+	controller.ai = &GCGAi{
+		game:         g,
+		controllerId: g.controllerIdCounter,
 	}
+	// AI默认加载完毕
+	controller.loadState = ControllerLoadState_InitFinish
 	// 生成卡牌信息
 	g.GiveCharCard(controller, 3001)
 	g.GiveCharCard(controller, 3302)
-	// 记录操控者
-	g.controllerMap[g.controllerIdCounter] = controller
 }
 
 // GiveCharCard 给予操控者角色卡牌
@@ -332,26 +344,17 @@ func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 	}
 	// SkillMap
 	for _, skillId := range gcgCharConfig.SkillList {
-		// 读取卡牌技能配置表
-		gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillId)]
-		if !ok {
-			logger.Error("gcg skill config error, skillId: %v", skillId)
-			return
-		}
 		skillInfo := &GCGSkillInfo{
 			skillId: skillId,
-			costMap: make(map[uint32]uint32, len(gcgSkillConfig.CostMap)),
-			damage:  gcgSkillConfig.SkillDamage,
-		}
-		// 深拷贝CostMap
-		for costType, costValue := range gcgSkillConfig.CostMap {
-			skillInfo.costMap[costType] = costValue
 		}
 		cardInfo.skillList = append(cardInfo.skillList, skillInfo)
 	}
-	controller.charCardList = append(controller.charCardList, cardInfo)
+	controller.cardMap[CardInfoType_Char] = append(controller.cardMap[CardInfoType_Char], cardInfo)
 	// 添加历史卡牌
-	g.historyCardList = append(g.historyCardList, cardInfo)
+	for _, gcgController := range g.controllerMap {
+		// 每位玩家都记录其他玩家的角色卡牌
+		gcgController.historyCardList = append(gcgController.historyCardList, cardInfo)
+	}
 }
 
 // ChangePhase 游戏更改阶段
@@ -360,10 +363,10 @@ func (g *GCGGame) ChangePhase(phase proto.GCGPhaseType) {
 	// 修改游戏的阶段
 	g.roundInfo.phaseType = phase
 	// 改变阶段覆盖掉上层可能有的true
-	g.isLastMsgPack = false
+	g.roundInfo.isLastMsgPack = false
 
 	// 操控者允许操作列表
-	allowControllerMap := make([]*proto.Uint32Pair, 0, len(g.controllerMap))
+	g.roundInfo.allowControllerMap = make(map[uint32]uint32, len(g.controllerMap))
 
 	// 根据阶段改变操控者允许状态
 	switch phase {
@@ -372,11 +375,7 @@ func (g *GCGGame) ChangePhase(phase proto.GCGPhaseType) {
 		g.SetAllControllerAllow(true, false)
 
 		for _, controller := range g.controllerMap {
-			pair := &proto.Uint32Pair{
-				Key:   controller.controllerId,
-				Value: controller.allow,
-			}
-			allowControllerMap = append(allowControllerMap, pair)
+			g.roundInfo.allowControllerMap[controller.controllerId] = controller.allow
 		}
 	case proto.GCGPhaseType_GCG_PHASE_TYPE_MAIN:
 		// 行动阶段仅允许操控者操作
@@ -385,20 +384,24 @@ func (g *GCGGame) ChangePhase(phase proto.GCGPhaseType) {
 			if controller.allow == 0 {
 				continue
 			}
-			g.SetControllerAllow(controller, true, false)
-			pair := &proto.Uint32Pair{
-				Key:   controller.controllerId,
-				Value: controller.allow,
-			}
-			allowControllerMap = append(allowControllerMap, pair)
+			g.roundInfo.allowControllerMap[controller.controllerId] = controller.allow
 		}
 	}
 
+	allowControllerMap := make([]*proto.Uint32Pair, 0, len(g.controllerMap))
+	for controllerId, allow := range g.roundInfo.allowControllerMap {
+		pair := &proto.Uint32Pair{
+			Key:   controllerId,
+			Value: allow,
+		}
+		allowControllerMap = append(allowControllerMap, pair)
+	}
+
 	// 游戏下一阶段切换消息包
-	g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NEXT_PHASE, g.GCGMsgPhaseChange(beforePhase, phase, allowControllerMap))
+	g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NEXT_PHASE, g.GCGMsgPhaseChange(beforePhase, phase, allowControllerMap))
 
 	// 执行阶段处理前假装现在是最后一个阶段处理
-	g.isLastMsgPack = true
+	g.roundInfo.isLastMsgPack = true
 
 	// 执行下一阶段
 	phaseFunc, ok := GCG_MANAGER.phaseFuncMap[g.roundInfo.phaseType]
@@ -409,7 +412,7 @@ func (g *GCGGame) ChangePhase(phase proto.GCGPhaseType) {
 
 	// 如果阶段里不嵌套处理别的阶段了就在此发送消息包
 	// 总之就是确保发送的时候为最后一个阶段变更
-	if g.isLastMsgPack {
+	if g.roundInfo.isLastMsgPack {
 		// 发送阶段处理后的消息包
 		g.SendAllMsgPack()
 	}
@@ -426,7 +429,7 @@ func (g *GCGGame) SetExceptControllerAllow(controllerId uint32, isAllow bool, is
 	// 是否添加消息包
 	if isAddMsg {
 		// 更新客户端操控者允许状态消息包
-		g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
+		g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
 	}
 }
 
@@ -438,7 +441,7 @@ func (g *GCGGame) SetAllControllerAllow(isAllow bool, isAddMsg bool) {
 	// 是否添加消息包
 	if isAddMsg {
 		// 更新客户端操控者允许状态消息包
-		g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
+		g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
 	}
 }
 
@@ -454,7 +457,7 @@ func (g *GCGGame) SetControllerAllow(controller *GCGController, isAllow bool, is
 	// 是否添加消息包
 	if isAddMsg {
 		// 更新客户端操控者允许状态消息包
-		g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
+		g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.GCGMsgUpdateController())
 	}
 }
 
@@ -473,24 +476,24 @@ func (g *GCGGame) ControllerSelectChar(controller *GCGController, cardInfo *GCGC
 	g.SetControllerAllow(controller, false, true)
 
 	// 广播选择的角色卡牌消息包
-	g.AddMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_SELECT_ONSTAGE, g.GCGMsgSelectOnStage(controller.controllerId, cardInfo.guid, proto.GCGReason_GCG_REASON_DEFAULT))
+	g.AddAllMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_SELECT_ONSTAGE, g.GCGMsgSelectOnStage(controller.controllerId, cardInfo.guid, proto.GCGReason_GCG_REASON_DEFAULT))
 
 	// 该阶段确保每位玩家都选择了角色牌
 	isAllSelectedChar := true
-	for _, controller := range g.controllerMap {
-		if controller.selectedCharCardGuid == 0 {
+	for _, c := range g.controllerMap {
+		if c.selectedCharCardGuid == 0 {
 			isAllSelectedChar = false
 		}
 	}
 	// 如果有玩家未选择角色牌不同处理
 	if isAllSelectedChar {
 		// 回合信息
-		g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.GCGMsgDuelDataChange())
+		g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.GCGMsgDuelDataChange())
 		// 游戏投掷骰子阶段
 		g.ChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_DICE)
 	} else {
 		// 跳过该阶段 官服是这样的我也不知道为什么
-		g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.GCGMsgPhaseContinue())
+		g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.GCGMsgPhaseContinue())
 
 		// 立刻发送消息包 模仿官服效果
 		g.SendAllMsgPack()
@@ -508,29 +511,40 @@ func (g *GCGGame) ControllerReRollDice(controller *GCGController, diceIndexList 
 // ControllerUseSkill 操控者使用技能
 func (g *GCGGame) ControllerUseSkill(controller *GCGController, skillId uint32, costDiceIndexList []uint32) {
 	logger.Error("controller use skill, id: %v, skillId: %v", controller.controllerId, skillId)
-	// 获取对方出战的角色牌
-	var targetCharCard *GCGCardInfo
-	for _, gameController := range g.controllerMap {
-		if gameController.controllerId != controller.controllerId {
-			targetCharCard = gameController.GetSelectedCharCard()
-		}
+	// 获取对方的操控者对象
+	targetController := g.GetOtherController(controller.controllerId)
+	if targetController == nil {
+		logger.Error("target controller is nil, controllerId: %v", controller.controllerId)
+		return
 	}
-	// 仅更新此操控者的allow
+	// 获取对方出战的角色牌
+	targetSelectedCharCard := targetController.GetSelectedCharCard()
+	// 确保玩家选择了角色牌
+	if targetController == nil {
+		logger.Error("selected char card is nil, cardGuid: %v", controller.selectedCharCardGuid)
+		return
+	}
+	// 其他操控者允许操作
 	g.SetExceptControllerAllow(controller.controllerId, true, false)
+	// 该操控者禁止操作
 	g.SetControllerAllow(controller, false, true)
+
 	msgList := make([]*proto.GCGMessage, 0, 0)
+
 	// 使用技能消耗元素骰子
 	msgList = append(msgList, g.GCGMsgCostDice(controller, proto.GCGReason_GCG_REASON_COST, costDiceIndexList))
-	msgList = append(msgList, g.GCGMsgUseSkill(235, skillId))
 
-	msgList = append(msgList, g.GCGMsgTokenChange(targetCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT, 11, 2806, 3041))
-	msgList = append(msgList, g.GCGMsgTokenChange(targetCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCGTokenConst.TOKEN_CUR_HEALTH, 2806, 3049))
-	msgList = append(msgList, g.GCGMsgSkillResult(166, skillId, 3))
+	msgList = append(msgList, g.GCGMsgUseSkill(controller.selectedCharCardGuid, skillId))
 
-	msgList = append(msgList, g.GCGMsgUseSkillEnd(161, skillId))
+	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT, 11, 2806, 3041)) // 2808 2 2812 3
+	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCGTokenConst.TOKEN_CUR_HEALTH, 2806, 3041))
+	msgList = append(msgList, g.GCGMsgSkillResult(targetSelectedCharCard.guid, skillId))
+
+	msgList = append(msgList, g.GCGMsgUseSkillEnd(controller.selectedCharCardGuid, skillId))
+
 	// 因为使用技能自身充能+1
 	msgList = append(msgList, g.GCGMsgTokenChange(controller.selectedCharCardGuid, proto.GCGReason_GCG_REASON_ATTACK, constant.GCGTokenConst.TOKEN_CUR_ELEM, 2806, 3041))
-	g.AddMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ATTACK, msgList...)
+	g.AddAllMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ATTACK, msgList...)
 	g.ChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_MAIN)
 }
 
@@ -549,7 +563,7 @@ func (g *GCGGame) onTick() {
 				continue
 			}
 			gcgHeartBeatNotify := &proto.GCGHeartBeatNotify{
-				ServerSeq: g.serverSeqCounter,
+				ServerSeq: controller.serverSeqCounter,
 			}
 			GAME_MANAGER.SendMsg(cmd.GCGHeartBeatNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgHeartBeatNotify)
 		}
@@ -584,7 +598,7 @@ func (g *GCGGame) StartGame() {
 	// 游戏开始设置所有玩家不允许操作
 	g.SetAllControllerAllow(false, true)
 	// 分配先手
-	g.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_PHASE_EXIT, g.GCGMsgClientPerform(proto.GCGClientPerformType_GCG_CLIENT_PERFORM_TYPE_FIRST_HAND, []uint32{g.roundInfo.firstController}))
+	g.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_PHASE_EXIT, g.GCGMsgClientPerform(proto.GCGClientPerformType_GCG_CLIENT_PERFORM_TYPE_FIRST_HAND, []uint32{g.roundInfo.firstController}))
 	// 游戏抽取手牌阶段
 	g.ChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_DRAW)
 }
@@ -607,8 +621,16 @@ func (g *GCGGame) CheckAllInitFinish() {
 	g.StartGame()
 }
 
+// AddAllMsgPack 添加GCG消息包至每位游戏玩家的待发送区
+func (g *GCGGame) AddAllMsgPack(controllerId uint32, actionType proto.GCGActionType, msgList ...*proto.GCGMessage) {
+	// 给每位操控者添加消息包
+	for _, controller := range g.controllerMap {
+		g.AddMsgPack(controller, controllerId, actionType, msgList...)
+	}
+}
+
 // AddMsgPack 添加GCG消息包至待发送区
-func (g *GCGGame) AddMsgPack(controllerId uint32, actionType proto.GCGActionType, msgList ...*proto.GCGMessage) {
+func (g *GCGGame) AddMsgPack(controller *GCGController, controllerId uint32, actionType proto.GCGActionType, msgList ...*proto.GCGMessage) {
 	pack := &proto.GCGMessagePack{
 		ActionType:   actionType,
 		MsgList:      make([]*proto.GCGMessage, 0, len(msgList)),
@@ -619,28 +641,42 @@ func (g *GCGGame) AddMsgPack(controllerId uint32, actionType proto.GCGActionType
 		pack.MsgList = append(pack.MsgList, message)
 	}
 	// 将消息包添加进待发送区
-	g.msgPackList = append(g.msgPackList, pack)
+	controller.msgPackList = append(controller.msgPackList, pack)
 }
 
-// SendAllMsgPack 发送所有待发送区的消息包
-func (g *GCGGame) SendAllMsgPack() {
+// SendMsgPack 发送待发送区的所有消息包
+func (g *GCGGame) SendMsgPack(controller *GCGController) {
 	// 不发送空的消息包
-	if len(g.msgPackList) == 0 {
+	if len(controller.msgPackList) == 0 {
 		return
 	}
 	// 游戏不处于运行状态仅记录历史消息包
 	if g.gameState == GCGGameState_Running {
-		g.serverSeqCounter++
-		for _, controller := range g.controllerMap {
-			GAME_MANAGER.SendGCGMessagePackNotify(controller, g.serverSeqCounter, g.msgPackList)
-		}
+		controller.serverSeqCounter++
+		GAME_MANAGER.SendGCGMessagePackNotify(controller, controller.serverSeqCounter, controller.msgPackList)
 	}
 	// 记录发送的历史消息包
-	for _, pack := range g.msgPackList {
-		g.historyMsgPackList = append(g.historyMsgPackList, pack)
+	for _, pack := range controller.msgPackList {
+		// 根据观察 历史消息包的每个消息都将拆分为单独的消息包
+		for _, message := range pack.MsgList {
+			controller.historyMsgPackList = append(controller.historyMsgPackList, &proto.GCGMessagePack{
+				ActionType: pack.ActionType,
+				MsgList: []*proto.GCGMessage{
+					message,
+				},
+				ControllerId: pack.ControllerId,
+			})
+		}
 	}
 	// 清空待发送区消息包
-	g.msgPackList = make([]*proto.GCGMessagePack, 0, 10)
+	controller.msgPackList = make([]*proto.GCGMessagePack, 0, 10)
+}
+
+// SendAllMsgPack 发送所有玩家的待发送区的消息包
+func (g *GCGGame) SendAllMsgPack() {
+	for _, controller := range g.controllerMap {
+		g.SendMsgPack(controller)
+	}
 }
 
 // GCGMsgPhaseChange GCG消息阶段改变
@@ -676,6 +712,10 @@ func (g *GCGGame) GCGMsgUpdateController() *proto.GCGMessage {
 	}
 	// 操控者的是否允许操作
 	for _, controller := range g.controllerMap {
+		// 如果处于行动阶段只发送允许操作的
+		if g.roundInfo.phaseType == proto.GCGPhaseType_GCG_PHASE_TYPE_MAIN && controller.allow == 0 {
+			continue
+		}
 		pair := &proto.Uint32Pair{
 			Key:   controller.controllerId,
 			Value: controller.allow,
@@ -764,10 +804,25 @@ func (g *GCGGame) GCGMsgDiceRoll(controllerId uint32, diceNum uint32, diceSideLi
 }
 
 // GCGMsgUseSkill GCG消息使用技能
-func (g *GCGGame) GCGMsgUseSkill(cardGuid uint32, skillId uint32) *proto.GCGMessage {
+func (g *GCGGame) GCGMsgUseSkill(selectedCharCardGuid uint32, skillId uint32) *proto.GCGMessage {
+	useSkillCardGuid := uint32(0)
+	switch selectedCharCardGuid {
+	case 1:
+		useSkillCardGuid = 235
+	case 2:
+		useSkillCardGuid = 245 // 没有实际数据这个猜的
+	case 3:
+		useSkillCardGuid = 251
+	case 4:
+		useSkillCardGuid = 195
+	case 5:
+		useSkillCardGuid = 185 // 猜测
+	case 6:
+		useSkillCardGuid = 175 // 猜测
+	}
 	gcgMsgUseSkill := &proto.GCGMsgUseSkill{
 		SkillId:  skillId,
-		CardGuid: cardGuid,
+		CardGuid: useSkillCardGuid,
 	}
 	gcgMessage := &proto.GCGMessage{
 		Message: &proto.GCGMessage_UseSkill{
@@ -778,10 +833,21 @@ func (g *GCGGame) GCGMsgUseSkill(cardGuid uint32, skillId uint32) *proto.GCGMess
 }
 
 // GCGMsgUseSkillEnd GCG消息使用技能结束
-func (g *GCGGame) GCGMsgUseSkillEnd(cardGuid uint32, skillId uint32) *proto.GCGMessage {
+func (g *GCGGame) GCGMsgUseSkillEnd(selectedCharCardGuid uint32, skillId uint32) *proto.GCGMessage {
+	useSkillEndCardGuid := uint32(0)
+	switch selectedCharCardGuid {
+	case 1:
+		useSkillEndCardGuid = 161
+	case 2:
+		useSkillEndCardGuid = 0 // 暂无数据
+	case 3:
+		useSkillEndCardGuid = 169
+	case 4:
+		useSkillEndCardGuid = 181
+	}
 	gcgMsgUseSkillEnd := &proto.GCGMsgUseSkillEnd{
 		SkillId:  skillId,
-		CardGuid: cardGuid,
+		CardGuid: useSkillEndCardGuid,
 	}
 	gcgMessage := &proto.GCGMessage{
 		Message: &proto.GCGMessage_UseSkillEnd{
@@ -803,7 +869,7 @@ func (g *GCGGame) GCGMsgCostRevise(controller *GCGController) *proto.GCGMessage 
 			// 可以使用的手牌Id列表
 			CanUseHandCardIdList: nil,
 			// 切换角色消耗列表
-			SelectOnStageCostList: make([]*proto.GCGSelectOnStageCostInfo, 0, len(controller.charCardList)),
+			SelectOnStageCostList: make([]*proto.GCGSelectOnStageCostInfo, 0, len(controller.cardMap[CardInfoType_Char])),
 			// 打出牌时的消耗列表
 			PlayCardCostList: nil,
 			// 技能攻击消耗列表
@@ -815,12 +881,18 @@ func (g *GCGGame) GCGMsgCostRevise(controller *GCGController) *proto.GCGMessage 
 	}
 	// AttackCostList
 	for _, skillInfo := range selectedCharCard.skillList {
+		// 读取卡牌技能配置表
+		gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillInfo.skillId)]
+		if !ok {
+			logger.Error("gcg skill config error, skillId: %v", skillInfo.skillId)
+			return new(proto.GCGMessage)
+		}
 		gcgAttackCostInfo := &proto.GCGAttackCostInfo{
-			CostMap: make([]*proto.Uint32Pair, len(skillInfo.costMap)),
+			CostMap: make([]*proto.Uint32Pair, len(gcgSkillConfig.CostMap)),
 			SkillId: skillInfo.skillId,
 		}
 		// 技能消耗
-		for costType, costValue := range skillInfo.costMap {
+		for costType, costValue := range gcgSkillConfig.CostMap {
 			gcgAttackCostInfo.CostMap = append(gcgAttackCostInfo.CostMap, &proto.Uint32Pair{
 				Key:   costType,
 				Value: costValue,
@@ -829,7 +901,7 @@ func (g *GCGGame) GCGMsgCostRevise(controller *GCGController) *proto.GCGMessage 
 		gcgMsgCostRevise.CostRevise.AttackCostList = append(gcgMsgCostRevise.CostRevise.AttackCostList, gcgAttackCostInfo)
 	}
 	// SelectOnStageCostList
-	for _, cardInfo := range controller.charCardList {
+	for _, cardInfo := range controller.cardMap[CardInfoType_Char] {
 		// 排除当前已选中的角色卡
 		if cardInfo.guid == selectedCharCard.guid {
 			continue
@@ -886,16 +958,34 @@ func (g *GCGGame) GCGMsgTokenChange(cardGuid uint32, reason proto.GCGReason, tok
 }
 
 // GCGMsgSkillResult GCG消息技能结果
-func (g *GCGGame) GCGMsgSkillResult(targetCardGuid uint32, skillId uint32, damage uint32) *proto.GCGMessage {
+func (g *GCGGame) GCGMsgSkillResult(selectedCharCardGuid uint32, skillId uint32) *proto.GCGMessage {
+	// 读取卡牌技能配置表
+	gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillId)]
+	if !ok {
+		logger.Error("gcg skill config error, skillId: %v", skillId)
+		return new(proto.GCGMessage)
+	}
+	resultTargetCardGuid := uint32(0)
+	switch selectedCharCardGuid {
+	case 1:
+		resultTargetCardGuid = 174
+	case 2:
+		resultTargetCardGuid = 0 // 暂无数据
+	case 3:
+		resultTargetCardGuid = 166
+	case 4:
+		resultTargetCardGuid = 186
+	}
 	gcgMsgSkillResult := &proto.GCGMsgSkillResult{
-		Unk3300_NIGDCIGLAKE: 3, // Unk
-		TargetCardGuid:      targetCardGuid,
-		Unk3300_PDBAGJINFPF: 1, // Unk
+		// 攻击附带的元素特效
+		Unk3300_NIGDCIGLAKE: gcgSkillConfig.ElementType,
+		TargetCardGuid:      resultTargetCardGuid,
+		Unk3300_PDBAGJINFPF: 0, // Unk
 		DetailList:          []*proto.GCGDamageDetail{},
 		SkillId:             skillId,
-		Damage:              damage,
-		Unk3300_EPNDCIAJOJP: 155,
-		Unk3300_NNJAOEHNPPD: 1,
+		Damage:              gcgSkillConfig.Damage,
+		Unk3300_EPNDCIAJOJP: 0,
+		Unk3300_NNJAOEHNPPD: 0,
 		Unk3300_LPGLOCDDPCL: 0,
 	}
 	gcgMessage := &proto.GCGMessage{
@@ -904,6 +994,65 @@ func (g *GCGGame) GCGMsgSkillResult(targetCardGuid uint32, skillId uint32, damag
 		},
 	}
 	return gcgMessage
+}
+
+// GCGMsgNewCard GCG消息新卡牌
+func (g *GCGGame) GCGMsgNewCard() *proto.GCGMessage {
+	gcgMsgNewCard := &proto.GCGMsgNewCard{
+		Card: &proto.GCGCard{
+			TagList: nil,
+			Guid:    6,
+			IsShow:  true,
+			TokenList: []*proto.GCGToken{
+				{
+					Value: 3,
+					Key:   8,
+				},
+			},
+			FaceType: 0,
+			SkillIdList: []uint32{
+				63,
+			},
+			SkillLimitsList: nil,
+			Id:              133021,
+			ControllerId:    2,
+		},
+	}
+	gcgMessage := &proto.GCGMessage{
+		Message: &proto.GCGMessage_NewCard{
+			NewCard: gcgMsgNewCard,
+		},
+	}
+	return gcgMessage
+}
+
+// GCGMsgModifyAdd GCG消息修饰添加
+func (g *GCGGame) GCGMsgModifyAdd(controllerId uint32, reason proto.GCGReason, ownerCardGuid uint32, cardGuidList []uint32) *proto.GCGMessage {
+	gcgMsgModifyAdd := &proto.GCGMsgModifyAdd{
+		OwnerCardGuid: ownerCardGuid,
+		Pos:           0,
+		CardGuidList:  cardGuidList,
+		ControllerId:  controllerId,
+		Reason:        reason,
+	}
+	gcgMessage := &proto.GCGMessage{
+		Message: &proto.GCGMessage_ModifyAdd{
+			ModifyAdd: gcgMsgModifyAdd,
+		},
+	}
+	return gcgMessage
+}
+
+// GetOtherController 获取除了这个操控者之外的操控者
+// 游戏目前仅支持两个玩家对战 不用考虑三个人及以上的问题
+func (g *GCGGame) GetOtherController(controllerId uint32) *GCGController {
+	for _, controller := range g.controllerMap {
+		if controller.controllerId == controllerId {
+			continue
+		}
+		return controller
+	}
+	return nil
 }
 
 // GetControllerByUserId 通过玩家Id获取GCGController对象

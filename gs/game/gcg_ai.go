@@ -32,7 +32,7 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 					go func() {
 						time.Sleep(3 * 1000)
 						// 默认选第一张牌
-						cardInfo := gameController.charCardList[0]
+						cardInfo := gameController.cardMap[CardInfoType_Char][0]
 						// 操控者选择角色牌
 						g.game.ControllerSelectChar(gameController, cardInfo, []uint32{})
 					}()
@@ -42,7 +42,7 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 					}
 					go func() {
 						time.Sleep(3 * 1000)
-						g.game.ControllerUseSkill(gameController, 30012, []uint32{})
+						g.game.ControllerUseSkill(gameController, gameController.GetSelectedCharCard().skillList[0].skillId, []uint32{})
 					}()
 				}
 			case *proto.GCGMessage_DiceRoll:
@@ -54,12 +54,12 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 				logger.Error("敌方行动意图")
 				go func() {
 					time.Sleep(3 * 1000)
-					cardInfo1 := g.game.controllerMap[g.controllerId].charCardList[0]
-					cardInfo2 := g.game.controllerMap[g.controllerId].charCardList[1]
-					g.game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillList[0].skillId}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillList[0].skillId}}))
+					cardInfo1 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][0]
+					cardInfo2 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][1]
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillList[0].skillId}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillList[0].skillId}}))
 					g.game.SendAllMsgPack()
 					g.game.SetControllerAllow(g.game.controllerMap[g.controllerId], false, true)
-					g.game.AddMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
 				}()
 			}
 		}

@@ -20,7 +20,8 @@ type GCGSkillData struct {
 	CostValue2 int32  `csv:"CostValue2,omitempty"` // 消耗的元素骰子数量2
 
 	CostMap     map[uint32]uint32 // 技能骰子消耗列表
-	SkillDamage uint32            // 技能伤害
+	Damage      uint32            // 技能伤害
+	ElementType uint32            // 技能元素类型
 }
 
 type ConfigSkillEffect struct {
@@ -64,13 +65,41 @@ func (g *GameDataConfig) loadGCGSkillData() {
 			info := fmt.Sprintf("parse file error: %v, SkillId: %v", err, gcgSkillData.SkillId)
 			panic(info)
 		}
-		// 技能伤害
 		for key, value := range configSkillEffect.DeclaredValueMap {
-			if key != "__KEY__DAMAGE" {
-				continue
-			}
-			if value.Type == "Damage" {
-				gcgSkillData.SkillDamage = uint32(value.Value.(float64))
+			switch key {
+			case "__KEY__DAMAGE":
+				// 技能伤害
+				if value.Type == "Damage" {
+					gcgSkillData.Damage = uint32(value.Value.(float64))
+				}
+			case "__KEY__ELEMENT":
+				// 技能元素类型
+				switch value.Value.(string) {
+				case "GCG_ELEMENT_CRYO":
+					// 冰
+					gcgSkillData.ElementType = 1
+				case "GCG_ELEMENT_HYDRO":
+					// 水
+					gcgSkillData.ElementType = 2
+				case "GCG_ELEMENT_PYRO":
+					// 火
+					gcgSkillData.ElementType = 3
+				case "GCG_ELEMENT_ELECTRO":
+					// 雷
+					gcgSkillData.ElementType = 4
+				case "GCG_ELEMENT_GEO":
+					// 岩
+					gcgSkillData.ElementType = 5
+				case "GCG_ELEMENT_DENDRO":
+					// 草
+					gcgSkillData.ElementType = 6
+				case "GCG_ELEMENT_ANEMO":
+					// 风
+					gcgSkillData.ElementType = 7
+				case "GCG_ELEMENT_PHYSIC":
+					// 物理
+					gcgSkillData.ElementType = 8
+				}
 			}
 		}
 		// list -> map

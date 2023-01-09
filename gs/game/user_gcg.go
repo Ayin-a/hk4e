@@ -2,6 +2,7 @@ package game
 
 import (
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -79,11 +80,11 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	gameController.loadState = ControllerLoadState_AskDuel
 
 	// 计数器+1
-	game.serverSeqCounter++
+	gameController.serverSeqCounter++
 	// PacketGCGAskDuelRsp
 	gcgAskDuelRsp := &proto.GCGAskDuelRsp{
 		Duel: &proto.GCGDuel{
-			ServerSeq: game.serverSeqCounter,
+			ServerSeq: gameController.serverSeqCounter,
 			// ShowInfoList 游戏内显示双方头像名字
 			ShowInfoList:              make([]*proto.GCGControllerShowInfo, 0, len(game.controllerMap)),
 			ForbidFinishChallengeList: nil,
@@ -147,10 +148,10 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 					TotalProgress: 0,
 				},
 			},
-			HistoryCardList:     make([]*proto.GCGCard, 0, len(game.historyCardList)),
+			HistoryCardList:     make([]*proto.GCGCard, 0, len(gameController.historyCardList)),
 			Round:               game.roundInfo.roundNum,
 			ControllerId:        gameController.controllerId,
-			HistoryMsgPackList:  game.historyMsgPackList,
+			HistoryMsgPackList:  gameController.historyMsgPackList,
 			Unk3300_JHDDNKFPINA: 0,
 			// CardIdList 游戏内的所有卡牌Id
 			CardIdList:          make([]uint32, 0, 0),
@@ -158,7 +159,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			// 阶段数据
 			Phase: &proto.GCGPhase{
 				PhaseType:          game.roundInfo.phaseType,
-				AllowControllerMap: make(map[uint32]uint32),
+				AllowControllerMap: game.roundInfo.allowControllerMap,
 			},
 		},
 	}
@@ -181,7 +182,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		playerField := &proto.GCGPlayerField{
 			Unk3300_IKJMGAHCFPM: 0,
 			// 卡牌图片
-			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.charCardList)),
+			ModifyZoneMap:       make(map[uint32]*proto.GCGZone, len(controller.cardMap[CardInfoType_Char])),
 			Unk3300_GGHKFFADEAL: 0,
 			Unk3300_AOPJIOHMPOF: &proto.GCGZone{
 				CardList: []uint32{},
@@ -199,7 +200,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			ControllerId:        controller.controllerId,
 			// 卡牌位置
 			Unk3300_INDJNJJJNKL: &proto.GCGZone{
-				CardList: make([]uint32, 0, len(controller.charCardList)),
+				CardList: make([]uint32, 0, len(controller.cardMap[CardInfoType_Char])),
 			},
 			Unk3300_EFNAEFBECHD: &proto.GCGZone{
 				CardList: []uint32{},
@@ -210,7 +211,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			DeckCardNum:         0,
 			Unk3300_GLNIFLOKBPM: 0,
 		}
-		for _, info := range controller.charCardList {
+		for _, info := range controller.cardMap[CardInfoType_Char] {
 			playerField.ModifyZoneMap[info.guid] = &proto.GCGZone{CardList: []uint32{}}
 			playerField.Unk3300_INDJNJJJNKL.CardList = append(playerField.Unk3300_INDJNJJJNKL.CardList, info.guid)
 		}
@@ -218,25 +219,18 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		gcgAskDuelRsp.Duel.FieldList = append(gcgAskDuelRsp.Duel.FieldList, playerField)
 	}
 	// 历史卡牌信息
-	for _, cardInfo := range game.historyCardList {
+	for _, cardInfo := range gameController.historyCardList {
 		gcgAskDuelRsp.Duel.HistoryCardList = append(gcgAskDuelRsp.Duel.HistoryCardList, cardInfo.ToProto())
 	}
 	// 卡牌信息
 	for _, controller := range game.controllerMap {
 		// 角色牌以及手牌都要
-		for _, cardInfo := range controller.charCardList {
-			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
-			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+		for _, cardList := range controller.cardMap {
+			for _, cardInfo := range cardList {
+				gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
+				gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+			}
 		}
-		for _, cardInfo := range controller.handCardList {
-			gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
-			gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
-		}
-	}
-	// 阶段信息
-	for _, controller := range game.controllerMap {
-		// 操控者是否允许操作
-		gcgAskDuelRsp.Duel.Phase.AllowControllerMap[controller.controllerId] = controller.allow
 	}
 	// Unk3300_CDCMBOKBLAK 你问我这是啥? 我也不知道
 	for _, controller := range game.controllerMap {
@@ -349,10 +343,23 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 }
 
 // PacketGCGSkillPreviewNotify GCG游戏技能预览通知
-func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *proto.GCGSkillPreviewNotify {
+func (g *GameManager) PacketGCGSkillPreviewNotify(game *GCGGame, controller *GCGController) *proto.GCGSkillPreviewNotify {
 	selectedCharCard := controller.GetSelectedCharCard()
 	// 确保玩家选择了角色牌
 	if selectedCharCard == nil {
+		logger.Error("selected char card is nil, cardGuid: %v", controller.selectedCharCardGuid)
+		return new(proto.GCGSkillPreviewNotify)
+	}
+	// 获取对方的操控者对象
+	targetController := game.GetOtherController(controller.controllerId)
+	if targetController == nil {
+		logger.Error("target controller is nil, controllerId: %v", controller.controllerId)
+		return new(proto.GCGSkillPreviewNotify)
+	}
+	// 获取对方出战的角色牌
+	targetSelectedCharCard := targetController.GetSelectedCharCard()
+	// 确保玩家选择了角色牌
+	if targetController == nil {
 		logger.Error("selected char card is nil, cardGuid: %v", controller.selectedCharCardGuid)
 		return new(proto.GCGSkillPreviewNotify)
 	}
@@ -368,6 +375,12 @@ func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *pr
 	}
 	// SkillPreviewList
 	for _, skillInfo := range selectedCharCard.skillList {
+		// 读取卡牌技能配置表
+		gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillInfo.skillId)]
+		if !ok {
+			logger.Error("gcg skill config error, skillId: %v", skillInfo.skillId)
+			return new(proto.GCGSkillPreviewNotify)
+		}
 		gcgSkillPreviewInfo := &proto.GCGSkillPreviewInfo{
 			ChangeOnstageCharacterList: nil,
 			Unk3300_DAJFJEDNLKK:        nil,
@@ -381,14 +394,14 @@ func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *pr
 			CardTokenChangeMap: make(map[uint32]*proto.GCGSkillPreviewTokenChangeInfo, 1),
 		}
 		// HpInfoMap
-		// 暂时不知道3代表什么意思
-		gcgSkillPreviewInfo.HpInfoMap[3] = &proto.GCGSkillPreviewHpInfo{
+		// key -> 显示对哪个角色卡造成伤害
+		gcgSkillPreviewInfo.HpInfoMap[targetSelectedCharCard.guid] = &proto.GCGSkillPreviewHpInfo{
 			ChangeType:    proto.GCGSkillHpChangeType_GCG_SKILL_HP_CHANGE_TYPE_DAMAGE,
-			HpChangeValue: skillInfo.damage,
+			HpChangeValue: gcgSkillConfig.Damage,
 		}
 		// CardTokenChangeMap
-		// 暂时不知道1代表什么意思
-		gcgSkillPreviewInfo.CardTokenChangeMap[1] = &proto.GCGSkillPreviewTokenChangeInfo{
+		// key -> 显示对哪个角色卡修改token
+		gcgSkillPreviewInfo.CardTokenChangeMap[selectedCharCard.guid] = &proto.GCGSkillPreviewTokenChangeInfo{
 			TokenChangeList: []*proto.GCGSkillPreviewTokenInfo{
 				{
 					// Token类型
@@ -402,7 +415,7 @@ func (g *GameManager) PacketGCGSkillPreviewNotify(controller *GCGController) *pr
 		gcgSkillPreviewNotify.SkillPreviewList = append(gcgSkillPreviewNotify.SkillPreviewList, gcgSkillPreviewInfo)
 	}
 	// ChangeOnstagePreviewList
-	for _, cardInfo := range controller.charCardList {
+	for _, cardInfo := range controller.cardMap[CardInfoType_Char] {
 		// 排除当前已选中的角色卡
 		if cardInfo.guid == selectedCharCard.guid {
 			continue
@@ -456,7 +469,11 @@ func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, busines
 		gcgPlayerBriefData := &proto.GCGPlayerBriefData{
 			ControllerId:   controller.controllerId,
 			ProfilePicture: new(proto.ProfilePicture),
-			CardIdList:     make([]uint32, 0, len(controller.charCardList)), // 这里展示给玩家的是角色牌
+			CardIdList:     make([]uint32, 0, len(controller.cardMap[CardInfoType_Char])), // 这里展示给玩家的是角色牌
+		}
+		// 角色牌信息
+		for _, cardInfo := range controller.cardMap[CardInfoType_Char] {
+			gcgPlayerBriefData.CardIdList = append(gcgPlayerBriefData.CardIdList, cardInfo.cardId)
 		}
 		// 玩家信息
 		if controller.player != nil {

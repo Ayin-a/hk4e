@@ -15,6 +15,7 @@ const (
 	LoadLoginUserFromDbFinish       = iota // 玩家登录从数据库加载完成回调
 	CheckUserExistOnRegFromDbFinish        // 玩家注册从数据库查询是否已存在完成回调
 	RunUserCopyAndSave                     // 执行一次在线玩家内存数据复制到数据库写入协程
+	ExitRunUserCopyAndSave
 	UserOfflineSaveToDbFinish
 )
 
@@ -44,6 +45,8 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	case CheckUserExistOnRegFromDbFinish:
 		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)
 		GAME_MANAGER.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
+	case ExitRunUserCopyAndSave:
+		fallthrough
 	case RunUserCopyAndSave:
 		saveUserIdList := localEvent.Msg.([]uint32)
 		startTime := time.Now().UnixNano()
@@ -90,13 +93,22 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 				updatePlayerList = append(updatePlayerList, playerCopy)
 			}
 		}
-		USER_MANAGER.saveUserChan <- &SaveUserData{
+		saveUserData := &SaveUserData{
 			insertPlayerList: insertPlayerList,
 			updatePlayerList: updatePlayerList,
+			exitSave:         false,
 		}
+		if localEvent.EventId == ExitRunUserCopyAndSave {
+			saveUserData.exitSave = true
+		}
+		USER_MANAGER.saveUserChan <- saveUserData
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime
 		logger.Info("run save user copy cost time: %v ns", costTime)
+		if localEvent.EventId == ExitRunUserCopyAndSave {
+			// 在此阻塞掉主协程 不再进行任何消息和任务的处理
+			select {}
+		}
 	case UserOfflineSaveToDbFinish:
 		playerOfflineInfo := localEvent.Msg.(*PlayerOfflineInfo)
 		USER_MANAGER.DeleteUser(playerOfflineInfo.Player.PlayerID)

@@ -6,7 +6,6 @@ import (
 
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/protocol/proto"
 )
 
 // 命令管理器
@@ -36,7 +35,7 @@ type CommandMessage struct {
 
 // CommandManager 命令管理器
 type CommandManager struct {
-	system            *model.Player          // 机器人 目前负责收发消息 以及 大世界
+	system            *model.Player          // GM指令聊天消息机器人
 	commandFuncRouter map[string]CommandFunc // 记录命令处理函数
 	commandPermMap    map[string]CommandPerm // 记录命令对应的权限
 	commandTextInput  chan *CommandMessage   // 传输要处理的命令文本
@@ -45,20 +44,15 @@ type CommandManager struct {
 // NewCommandManager 新建命令管理器
 func NewCommandManager() *CommandManager {
 	r := new(CommandManager)
-
-	// 创建AI世界
-	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: "System"}, 1, 0, "")
-	GAME_MANAGER.ServerAppidBindNotify(1, "", 0)
-	r.system = USER_MANAGER.GetOnlineUser(1)
-	r.system.DbState = model.DbNormal
-	r.system.SceneLoadState = model.SceneEnterDone
-	WORLD_MANAGER.InitBigWorld(r.system)
-
 	// 初始化
 	r.commandTextInput = make(chan *CommandMessage, 1000)
 	r.InitRouter() // 初始化路由
-
 	return r
+}
+
+// SetSystem 设置GM指令聊天消息机器人
+func (c *CommandManager) SetSystem(system *model.Player) {
+	c.system = system
 }
 
 // InitRouter 初始化命令路由

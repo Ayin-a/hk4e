@@ -64,10 +64,11 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.localMsgOutput = make(chan *ProtoMsg, 1000)
 	r.createSessionChan = make(chan *Session, 1000)
 	r.destroySessionChan = make(chan *Session, 1000)
+	r.run()
 	return r
 }
 
-func (k *KcpConnectManager) Start() {
+func (k *KcpConnectManager) run() {
 	// 读取密钥相关文件
 	k.signRsaKey, k.encRsaKeyMap, _ = region.LoadRsaKey()
 	// key
@@ -97,7 +98,7 @@ func (k *KcpConnectManager) Start() {
 	go k.acceptHandle(listener)
 }
 
-func (k *KcpConnectManager) Stop() {
+func (k *KcpConnectManager) Close() {
 	k.closeAllKcpConn()
 	time.Sleep(time.Second * 3)
 }

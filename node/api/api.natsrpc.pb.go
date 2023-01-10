@@ -35,6 +35,8 @@ type DiscoveryNATSRPCServer interface {
 	GetGateServerAddr(ctx context.Context, req *GetGateServerAddrReq) (*GateServerAddr, error)
 	// 获取全部网关服务器信息列表
 	GetAllGateServerInfoList(ctx context.Context, req *NullMsg) (*GateServerInfoList, error)
+	// 获取主游戏服务器的appid
+	GetMainGameServerAppId(ctx context.Context, req *NullMsg) (*GetMainGameServerAppIdRsp, error)
 }
 
 // RegisterDiscoveryNATSRPCServer register Discovery service
@@ -58,6 +60,8 @@ type DiscoveryNATSRPCClient interface {
 	GetGateServerAddr(ctx context.Context, req *GetGateServerAddrReq, opt ...natsrpc.CallOption) (*GateServerAddr, error)
 	// 获取全部网关服务器信息列表
 	GetAllGateServerInfoList(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GateServerInfoList, error)
+	// 获取主游戏服务器的appid
+	GetMainGameServerAppId(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GetMainGameServerAppIdRsp, error)
 }
 
 type _DiscoveryNATSRPCClient struct {
@@ -108,5 +112,10 @@ func (c *_DiscoveryNATSRPCClient) GetGateServerAddr(ctx context.Context, req *Ge
 func (c *_DiscoveryNATSRPCClient) GetAllGateServerInfoList(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GateServerInfoList, error) {
 	rep := &GateServerInfoList{}
 	err := c.c.Request(ctx, "GetAllGateServerInfoList", req, rep, opt...)
+	return rep, err
+}
+func (c *_DiscoveryNATSRPCClient) GetMainGameServerAppId(ctx context.Context, req *NullMsg, opt ...natsrpc.CallOption) (*GetMainGameServerAppIdRsp, error) {
+	rep := &GetMainGameServerAppIdRsp{}
+	err := c.c.Request(ctx, "GetMainGameServerAppId", req, rep, opt...)
 	return rep, err
 }

@@ -353,6 +353,7 @@ func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 type SaveUserData struct {
 	insertPlayerList []*model.Player
 	updatePlayerList []*model.Player
+	exitSave         bool
 }
 
 func (u *UserManager) saveUserHandle() {
@@ -360,6 +361,10 @@ func (u *UserManager) saveUserHandle() {
 		saveUserData := <-u.saveUserChan
 		u.SaveUserListToDbSync(saveUserData)
 		u.SaveUserListToRedisSync(saveUserData)
+		if saveUserData.exitSave {
+			// 停服落地玩家数据完毕 通知APP主协程关闭程序
+			EXIT_SAVE_FIN_CHAN <- true
+		}
 	}
 }
 

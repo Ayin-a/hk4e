@@ -359,6 +359,9 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 }
 
 func (g *GameManager) UserWorldAddPlayer(world *World, player *model.Player) {
+	if !WORLD_MANAGER.IsBigWorld(world) && world.GetWorldPlayerNum() >= 4 {
+		return
+	}
 	_, exist := world.playerMap[player.PlayerID]
 	if exist {
 		return

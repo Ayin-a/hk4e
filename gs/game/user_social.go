@@ -380,10 +380,27 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 	logger.Debug("user get online player list, uid: %v", player.PlayerID)
 
 	count := 0
+	getOnlinePlayerListRsp := &proto.GetOnlinePlayerListRsp{
+		PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
+	}
+	getOnlinePlayerListRsp.PlayerInfoList = append(getOnlinePlayerListRsp.PlayerInfoList, &proto.OnlinePlayerInfo{
+		Uid:                 BigWorldAiUid,
+		Nickname:            BigWorldAiName,
+		PlayerLevel:         1,
+		MpSettingType:       proto.MpSettingType_MP_SETTING_TYPE_ENTER_AFTER_APPLY,
+		NameCardId:          210001,
+		Signature:           BigWorldAiSign,
+		ProfilePicture:      &proto.ProfilePicture{AvatarId: 10000007},
+		CurPlayerNumInWorld: 1,
+	})
+	count++
 	onlinePlayerList := make([]*model.Player, 0)
 	// 优先获取本地的在线玩家
 	for _, onlinePlayer := range USER_MANAGER.GetAllOnlineUserList() {
 		if onlinePlayer.PlayerID == player.PlayerID {
+			continue
+		}
+		if g.IsMainGs() && onlinePlayer.PlayerID == g.GetAi().PlayerID {
 			continue
 		}
 		onlinePlayerList = append(onlinePlayerList, onlinePlayer)
@@ -406,9 +423,6 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 		}
 	}
 
-	getOnlinePlayerListRsp := &proto.GetOnlinePlayerListRsp{
-		PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
-	}
 	for _, onlinePlayer := range onlinePlayerList {
 		onlinePlayerInfo := g.PacketOnlinePlayerInfo(onlinePlayer)
 		getOnlinePlayerListRsp.PlayerInfoList = append(getOnlinePlayerListRsp.PlayerInfoList, onlinePlayerInfo)

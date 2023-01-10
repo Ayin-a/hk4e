@@ -1,6 +1,7 @@
 package game
 
 import (
+	appConfig "hk4e/common/config"
 	"hk4e/common/constant"
 	"hk4e/common/utils"
 	"hk4e/gs/model"
@@ -103,14 +104,22 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
 			hitInfo := new(proto.EvtBeingHitInfo)
-			clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
-			if !ok {
-				continue
+			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(entry.CombatData, hitInfo)
+				if err != nil {
+					logger.Error("parse EvtBeingHitInfo error: %v", err)
+					continue
+				}
 			}
 			attackResult := hitInfo.AttackResult
 			if attackResult == nil {
@@ -149,14 +158,22 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
-			clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(entityMoveInfo, clientProtoObj, entry.CombatData)
-			if !ok {
-				continue
+			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(entityMoveInfo, clientProtoObj, entry.CombatData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
+				if err != nil {
+					logger.Error("parse EntityMoveInfo error: %v", err)
+					continue
+				}
 			}
 			motionInfo := entityMoveInfo.MotionInfo
 			if motionInfo.Pos == nil || motionInfo.Rot == nil {
@@ -202,14 +219,22 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
-			clientProtoObj := g.GetClientProtoObjByName("EvtAnimatorStateChangedInfo")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(evtAnimatorStateChangedInfo, clientProtoObj, entry.CombatData)
-			if !ok {
-				continue
+			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := g.GetClientProtoObjByName("EvtAnimatorStateChangedInfo")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(evtAnimatorStateChangedInfo, clientProtoObj, entry.CombatData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
+				if err != nil {
+					logger.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
+					continue
+				}
 			}
 			logger.Debug("EvtAnimatorStateChangedInfo: %v", entry, player.PlayerID)
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
@@ -295,14 +320,22 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 		switch abilityInvokeEntry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_ADD_NEW_ABILITY:
 			abilityMetaAddAbility := new(proto.AbilityMetaAddAbility)
-			clientProtoObj := g.GetClientProtoObjByName("AbilityMetaAddAbility")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(abilityMetaAddAbility, clientProtoObj, abilityInvokeEntry.AbilityData)
-			if !ok {
-				continue
+			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaAddAbility")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(abilityMetaAddAbility, clientProtoObj, abilityInvokeEntry.AbilityData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaAddAbility)
+				if err != nil {
+					logger.Error("parse AbilityMetaAddAbility error: %v", err)
+					continue
+				}
 			}
 			worldAvatar := world.GetWorldAvatarByEntityId(abilityInvokeEntry.EntityId)
 			if worldAvatar == nil {
@@ -314,14 +347,22 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			worldAvatar.abilityList = append(worldAvatar.abilityList, abilityMetaAddAbility.Ability)
 		case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)
-			clientProtoObj := g.GetClientProtoObjByName("AbilityMetaModifierChange")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(abilityMetaModifierChange, clientProtoObj, abilityInvokeEntry.AbilityData)
-			if !ok {
-				continue
+			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaModifierChange")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(abilityMetaModifierChange, clientProtoObj, abilityInvokeEntry.AbilityData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaModifierChange)
+				if err != nil {
+					logger.Error("parse AbilityMetaModifierChange error: %v", err)
+					continue
+				}
 			}
 			abilityAppliedModifier := &proto.AbilityAppliedModifier{
 				ModifierLocalId:           abilityMetaModifierChange.ModifierLocalId,

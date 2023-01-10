@@ -218,7 +218,7 @@ func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 	if err != nil {
 		return
 	}
-	world := WORLD_MANAGER.GetBigWorld()
+	world := WORLD_MANAGER.GetAiWorld()
 	scene := world.GetSceneById(3)
 	for _, v := range SCREEN_ENTITY_ID_LIST {
 		scene.DestroyEntity(v)

@@ -417,8 +417,8 @@ func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene 
 			continue
 		}
 		g.SendMsg(cmd.SceneEntityAppearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityAppearNotify)
-		logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
-			scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
+		// logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
+		// 	scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 	}
 }
 
@@ -428,8 +428,8 @@ func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visi
 		DisappearType: visionType,
 	}
 	g.SendMsg(cmd.SceneEntityDisappearNotify, player.PlayerID, player.ClientSeq, sceneEntityDisappearNotify)
-	logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
-		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
+	// logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
+	// 	player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
 func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
@@ -459,8 +459,8 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 		}
 		entityList := make([]*proto.SceneEntityInfo, 0)
 		for _, entityId := range entityIdList[begin:end] {
-			entity, ok := scene.entityMap[entityId]
-			if !ok {
+			entity, exist := scene.entityMap[entityId]
+			if !exist {
 				logger.Error("get entity is nil, entityId: %v", entityId)
 				continue
 			}

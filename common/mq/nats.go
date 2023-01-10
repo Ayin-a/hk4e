@@ -61,8 +61,6 @@ func NewMessageQueue(serverType string, appId string, rpcClient *rpc.Client) (r 
 	r.cmdProtoMap = cmd.NewCmdProtoMap()
 	r.serverType = serverType
 	r.appId = appId
-	go r.recvHandler()
-	go r.sendHandler()
 	r.gateTcpMqChan = make(chan []byte, 1000)
 	r.gateTcpMqEventChan = make(chan *GateTcpMqEvent, 1000)
 	r.rpcClient = rpcClient
@@ -71,6 +69,8 @@ func NewMessageQueue(serverType string, appId string, rpcClient *rpc.Client) (r 
 	} else {
 		r.initGateTcpMqClient()
 	}
+	go r.recvHandler()
+	go r.sendHandler()
 	return r
 }
 

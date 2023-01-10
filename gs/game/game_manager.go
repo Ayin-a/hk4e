@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"reflect"
 	"time"
 
@@ -8,15 +9,26 @@ import (
 	"hk4e/common/mq"
 	"hk4e/gate/client_proto"
 	"hk4e/gate/kcp"
+	"hk4e/gdconf"
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
 	pb "google.golang.org/protobuf/proto"
+)
+
+const (
+	AiBaseUid      = 10000
+	AiName         = "GM"
+	AiSign         = "快捷指令"
+	BigWorldAiUid  = 100
+	BigWorldAiName = "小可爱"
+	BigWorldAiSign = "UnKownOwO"
 )
 
 var GAME_MANAGER *GameManager = nil
@@ -36,10 +48,18 @@ type GameManager struct {
 	snowflake                 *alg.SnowflakeWorker
 	clientCmdProtoMap         *client_proto.ClientCmdProtoMap
 	clientCmdProtoMapRefValue reflect.Value
+	gsId                      uint32
+	gsAppid                   string
+	mainGsAppid               string
+	ai                        *model.Player // 本服的Ai玩家对象
 }
 
-func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r *GameManager) {
+func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string) (r *GameManager) {
 	r = new(GameManager)
+	if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+		// 反射调用的方法在启动时测试是否正常防止中途panic
+		r.GetClientProtoObjByName("PingReq")
+	}
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
@@ -47,6 +67,9 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 		r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
 	}
+	r.gsId = gsId
+	r.gsAppid = gsAppid
+	r.mainGsAppid = mainGsAppid
 	GAME_MANAGER = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()
@@ -55,8 +78,76 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32) (r
 	TICK_MANAGER = NewTickManager()
 	COMMAND_MANAGER = NewCommandManager()
 	GCG_MANAGER = NewGCGManager()
+	// 创建本服的Ai世界
+	uid := AiBaseUid + gsId
+	name := AiName
+	sign := AiSign
+	if r.IsMainGs() {
+		// 约定MainGameServer的Ai的AiWorld叫BigWorld
+		// 此世界会出现在全服的在线玩家列表中 所有的玩家都可以进入到此世界里来
+		uid = BigWorldAiUid
+		name = BigWorldAiName
+		sign = BigWorldAiSign
+	}
+	r.ai = r.CreateRobot(uid, name, sign)
+	WORLD_MANAGER.InitAiWorld(r.ai)
+	COMMAND_MANAGER.SetSystem(r.ai)
+	USER_MANAGER.SetRemoteUserOnlineState(BigWorldAiUid, true, mainGsAppid)
+	if r.IsMainGs() {
+		// TODO 测试
+		for i := 1; i < 8; i++ {
+			uid := 1000000 + uint32(i)
+			avatarId := uint32(0)
+			for _, avatarData := range gdconf.CONF.AvatarDataMap {
+				avatarId = uint32(avatarData.AvatarId)
+				break
+			}
+			robot := r.CreateRobot(uid, random.GetRandomStr(8), random.GetRandomStr(10))
+			r.AddUserAvatar(uid, avatarId)
+			r.SetUpAvatarTeamReq(robot, &proto.SetUpAvatarTeamReq{
+				TeamId:             1,
+				AvatarTeamGuidList: []uint64{robot.AvatarMap[avatarId].Guid},
+				CurAvatarGuid:      robot.AvatarMap[avatarId].Guid,
+			})
+			robot.Pos.X += random.GetRandomFloat64(0.0, 1.0)
+			robot.Pos.Z += random.GetRandomFloat64(0.0, 1.0)
+			r.UserWorldAddPlayer(WORLD_MANAGER.GetAiWorld(), robot)
+		}
+	}
 	r.run()
 	return r
+}
+
+func (g *GameManager) GetGsId() uint32 {
+	return g.gsId
+}
+
+func (g *GameManager) GetGsAppid() string {
+	return g.gsAppid
+}
+
+func (g *GameManager) GetMainGsAppid() string {
+	return g.mainGsAppid
+}
+
+func (g *GameManager) IsMainGs() bool {
+	// 目前的实现逻辑是当前GsId最小的Gs做MainGs
+	return g.gsAppid == g.mainGsAppid
+}
+
+// GetAi 获取本服的Ai玩家对象
+func (g *GameManager) GetAi() *model.Player {
+	return g.ai
+}
+
+func (g *GameManager) CreateRobot(uid uint32, name string, sign string) *model.Player {
+	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: name}, uid, 0, "")
+	GAME_MANAGER.ServerAppidBindNotify(uid, "", 0)
+	robot := USER_MANAGER.GetOnlineUser(uid)
+	robot.DbState = model.DbNormal
+	robot.SceneLoadState = model.SceneEnterDone
+	robot.Signature = sign
+	return robot
 }
 
 func (g *GameManager) run() {
@@ -72,12 +163,14 @@ func (g *GameManager) gameMainLoopD() {
 }
 
 func (g *GameManager) gameMainLoop() {
+	// panic捕获
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Error("!!! GAME MAIN LOOP PANIC !!!")
 			logger.Error("error: %v", err)
 			logger.Error("stack: %v", logger.Stack())
-			logger.Error("user: %v", SELF)
+			motherfuckerPlayerInfo, _ := json.Marshal(SELF)
+			logger.Error("the motherfucker player info: %v", motherfuckerPlayerInfo)
 			if SELF != nil {
 				GAME_MANAGER.DisconnectPlayer(SELF.PlayerID, kcp.EnetServerKick)
 			}
@@ -90,6 +183,7 @@ func (g *GameManager) gameMainLoop() {
 	localEventCost := int64(0)
 	commandCost := int64(0)
 	for {
+		// 消耗CPU时间性能统计
 		now := time.Now().UnixNano()
 		if now-lastTime > intervalTime {
 			routeCost /= 1e6
@@ -134,7 +228,7 @@ func (g *GameManager) gameMainLoop() {
 			end := time.Now().UnixNano()
 			localEventCost += end - start
 		case command := <-COMMAND_MANAGER.commandTextInput:
-			// 处理传入的命令 (普通玩家 GM命令)
+			// 处理传入的命令(普通玩家 GM命令)
 			start := time.Now().UnixNano()
 			COMMAND_MANAGER.HandleCommand(command)
 			end := time.Now().UnixNano()
@@ -143,24 +237,27 @@ func (g *GameManager) gameMainLoop() {
 	}
 }
 
-func (g *GameManager) Stop() {
-	// 下线玩家
-	userList := USER_MANAGER.GetAllOnlineUserList()
-	for _, player := range userList {
-		g.DisconnectPlayer(player.PlayerID, kcp.EnetServerShutdown)
-	}
-	time.Sleep(time.Second * 3)
+var EXIT_SAVE_FIN_CHAN chan bool
+
+func (g *GameManager) Close() {
 	// 保存玩家数据
 	onlinePlayerMap := USER_MANAGER.GetAllOnlineUserList()
 	saveUserIdList := make([]uint32, 0, len(onlinePlayerMap))
 	for userId := range onlinePlayerMap {
 		saveUserIdList = append(saveUserIdList, userId)
 	}
+	EXIT_SAVE_FIN_CHAN = make(chan bool)
 	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
-		EventId: RunUserCopyAndSave,
+		EventId: ExitRunUserCopyAndSave,
 		Msg:     saveUserIdList,
 	}
-	time.Sleep(time.Second * 3)
+	<-EXIT_SAVE_FIN_CHAN
+	// 单纯的告诉网关下线玩家
+	userList := USER_MANAGER.GetAllOnlineUserList()
+	for _, player := range userList {
+		g.DisconnectPlayer(player.PlayerID, kcp.EnetServerShutdown)
+	}
+	time.Sleep(time.Second)
 }
 
 // SendMsgToGate 发送消息给客户端 指定网关
@@ -169,7 +266,7 @@ func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint3
 		return
 	}
 	if payloadMsg == nil {
-		logger.Error("payload msg is nil")
+		logger.Error("payload msg is nil, stack: %v", logger.Stack())
 		return
 	}
 	gameMsg := &mq.GameMsg{
@@ -191,12 +288,12 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 		return
 	}
 	if payloadMsg == nil {
-		logger.Error("payload msg is nil")
+		logger.Error("payload msg is nil, stack: %v", logger.Stack())
 		return
 	}
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.Error("player not exist, uid: %v", userId)
+		logger.Error("player not exist, uid: %v, stack: %v", userId, logger.Stack())
 		return
 	}
 	gameMsg := new(mq.GameMsg)
@@ -206,7 +303,7 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 	// 在这里直接序列化成二进制数据 防止发送的消息内包含各种游戏数据指针 而造成并发读写的问题
 	payloadMessageData, err := pb.Marshal(payloadMsg)
 	if err != nil {
-		logger.Error("parse payload msg to bin error: %v", err)
+		logger.Error("parse payload msg to bin error: %v, stack: %v", err, logger.Stack())
 		return
 	}
 	gameMsg.PayloadMessageData = payloadMessageData
@@ -257,7 +354,7 @@ func (g *GameManager) SendToWorldA(world *World, cmdId uint16, seq uint32, msg p
 	}
 }
 
-// SendToWorldAEC 给世界内除自己以外的所有玩家发消息
+// SendToWorldAEC 给世界内除某玩家(一般是自己)以外的所有玩家发消息
 func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
 	for _, v := range world.GetAllPlayer() {
 		if uid == v.PlayerID {
@@ -293,10 +390,6 @@ func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
 }
 
 func (g *GameManager) GetClientProtoObjByName(protoObjName string) pb.Message {
-	if !appConfig.CONF.Hk4e.ClientProtoProxyEnable {
-		logger.Error("client proto proxy func not enable")
-		return nil
-	}
 	fn := g.clientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()

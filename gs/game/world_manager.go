@@ -18,7 +18,7 @@ import (
 type WorldManager struct {
 	worldMap  map[uint32]*World
 	snowflake *alg.SnowflakeWorker
-	bigWorld  *World
+	aiWorld   *World // 本服的Ai玩家世界
 }
 
 func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
@@ -60,13 +60,6 @@ func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 		multiplayerTeam:     CreateMultiplayerTeam(),
 		peerList:            make([]*model.Player, 0),
 	}
-	if world.IsBigWorld() {
-		// world.aoiManager = aoi.NewAoiManager(
-		// 	-8000, 4000, 800,
-		// 	-2000, 2000, 1,
-		// 	-5500, 6500, 800,
-		// )
-	}
 	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.EntityIdTypeConst.MPLEVEL)
 	w.worldMap[worldId] = world
 	return world
@@ -81,20 +74,28 @@ func (w *WorldManager) DestroyWorld(worldId uint32) {
 	delete(w.worldMap, worldId)
 }
 
-// GetBigWorld 获取本服务器的AI世界
-func (w *WorldManager) GetBigWorld() *World {
-	return w.bigWorld
+// GetAiWorld 获取本服务器的Ai世界
+func (w *WorldManager) GetAiWorld() *World {
+	return w.aiWorld
 }
 
-// InitBigWorld 初始化AI世界
-func (w *WorldManager) InitBigWorld(owner *model.Player) {
-	w.bigWorld = w.GetWorldByID(owner.WorldId)
-	w.bigWorld.ChangeToMultiplayer()
+// InitAiWorld 初始化Ai世界
+func (w *WorldManager) InitAiWorld(owner *model.Player) {
+	w.aiWorld = w.GetWorldByID(owner.WorldId)
+	w.aiWorld.ChangeToMultiplayer()
 	go RunPlayAudio()
 }
 
-func (w *World) IsBigWorld() bool {
-	return w.owner.PlayerID == 1
+func (w *WorldManager) IsAiWorld(world *World) bool {
+	return world.id == w.aiWorld.id
+}
+
+func (w *WorldManager) IsRobotWorld(world *World) bool {
+	return world.owner.PlayerID < 100000000
+}
+
+func (w *WorldManager) IsBigWorld(world *World) bool {
+	return (world.id == w.aiWorld.id) && (w.aiWorld.owner.PlayerID == BigWorldAiUid)
 }
 
 // 世界数据结构
@@ -152,7 +153,7 @@ func (w *World) GetPlayerPeerId(player *model.Player) uint32 {
 			peerId = uint32(peerIdIndex) + 1
 		}
 	}
-	logger.Debug("get player peer id is: %v, uid: %v", peerId, player.PlayerID)
+	// logger.Debug("get player peer id is: %v, uid: %v", peerId, player.PlayerID)
 	return peerId
 }
 
@@ -181,7 +182,15 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
 		w.SetPlayerLocalTeam(player, []uint32{activeAvatarId})
 	}
-	w.UpdateMultiplayerTeam()
+	playerNum := w.GetWorldPlayerNum()
+	if playerNum > 4 {
+		if !WORLD_MANAGER.IsBigWorld(w) {
+			return
+		}
+		w.AddMultiplayerTeam(player)
+	} else {
+		w.UpdateMultiplayerTeam()
+	}
 	for _, worldPlayer := range w.playerMap {
 		list := w.GetPlayerWorldAvatarList(worldPlayer)
 		maxIndex := len(list) - 1
@@ -207,7 +216,17 @@ func (w *World) RemovePlayer(player *model.Player) {
 	delete(w.multiplayerTeam.localTeamMap, player.PlayerID)
 	delete(w.multiplayerTeam.localAvatarIndexMap, player.PlayerID)
 	delete(w.multiplayerTeam.localTeamEntityMap, player.PlayerID)
-	w.UpdateMultiplayerTeam()
+	playerNum := w.GetWorldPlayerNum()
+	if playerNum > 4 {
+		if !WORLD_MANAGER.IsBigWorld(w) {
+			return
+		}
+		w.RemoveMultiplayerTeam(player)
+	} else {
+		if player.PlayerID != w.owner.PlayerID {
+			w.UpdateMultiplayerTeam()
+		}
+	}
 }
 
 // WorldAvatar 世界角色
@@ -432,14 +451,37 @@ func (w *World) copyLocalTeamToWorld(start int, end int, peerId uint32) {
 	}
 }
 
+// TODO 为了实现大世界无限人数写的
+// 现在看来把世界里所有人放进队伍里发给客户端超过8个客户端会崩溃
+// 看来还是不能简单的走通用逻辑 需要对大世界场景队伍做特殊处理 欺骗客户端其他玩家仅仅以场景角色实体的形式出现
+
+func (w *World) AddMultiplayerTeam(player *model.Player) {
+	if !WORLD_MANAGER.IsBigWorld(w) {
+		return
+	}
+	localTeam := w.GetPlayerLocalTeam(player)
+	w.multiplayerTeam.worldTeam = append(w.multiplayerTeam.worldTeam, localTeam...)
+}
+
+func (w *World) RemoveMultiplayerTeam(player *model.Player) {
+	worldTeam := make([]*WorldAvatar, 0)
+	for _, worldAvatar := range w.multiplayerTeam.worldTeam {
+		if worldAvatar.uid == player.PlayerID {
+			continue
+		}
+		worldTeam = append(worldTeam, worldAvatar)
+	}
+	w.multiplayerTeam.worldTeam = worldTeam
+}
+
 // UpdateMultiplayerTeam 整合所有玩家的本地队伍计算出世界队伍
 func (w *World) UpdateMultiplayerTeam() {
-	_, exist := w.playerMap[w.owner.PlayerID]
-	if !exist {
+	playerNum := w.GetWorldPlayerNum()
+	if playerNum > 4 {
 		return
 	}
 	w.multiplayerTeam.worldTeam = make([]*WorldAvatar, 4)
-	switch w.GetWorldPlayerNum() {
+	switch playerNum {
 	case 1:
 		// 1P*4
 		w.copyLocalTeamToWorld(0, 3, 1)
@@ -458,8 +500,6 @@ func (w *World) UpdateMultiplayerTeam() {
 		w.copyLocalTeamToWorld(1, 1, 2)
 		w.copyLocalTeamToWorld(2, 2, 3)
 		w.copyLocalTeamToWorld(3, 3, 4)
-	default:
-		break
 	}
 }
 

@@ -16,6 +16,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	MaxGsId = 1000
+)
+
 var _ api.DiscoveryNATSRPCServer = (*DiscoveryService)(nil)
 
 type ServerInstanceSortList []*ServerInstance
@@ -41,6 +45,7 @@ type ServerInstance struct {
 	gateServerMqPort  uint32
 	version           string
 	lastAliveTime     int64
+	gsId              uint32
 }
 
 type DiscoveryService struct {
@@ -100,7 +105,12 @@ func (s *DiscoveryService) RegisterServer(ctx context.Context, req *api.Register
 		AppId: appId,
 	}
 	if req.ServerType == api.GS {
-		rsp.GsId = atomic.AddUint32(&s.gsIdCounter, 1)
+		gsId := atomic.AddUint32(&s.gsIdCounter, 1)
+		if gsId > MaxGsId {
+			return nil, errors.New("above max gs count")
+		}
+		inst.gsId = gsId
+		rsp.GsId = gsId
 	}
 	return rsp, nil
 }
@@ -215,6 +225,34 @@ func (s *DiscoveryService) GetAllGateServerInfoList(ctx context.Context, req *ap
 	})
 	return &api.GateServerInfoList{
 		GateServerInfoList: gateServerInfoList,
+	}, nil
+}
+
+// GetMainGameServerAppId 获取主游戏服务器的appid
+func (s *DiscoveryService) GetMainGameServerAppId(ctx context.Context, req *api.NullMsg) (*api.GetMainGameServerAppIdRsp, error) {
+	logger.Debug("get main game server appid")
+	instMap, exist := s.serverInstanceMap[api.GS]
+	if !exist {
+		return nil, errors.New("game server not exist")
+	}
+	if s.getServerInstanceMapLen(instMap) == 0 {
+		return nil, errors.New("no game server found")
+	}
+	appid := ""
+	minGsId := uint32(MaxGsId)
+	instMap.Range(func(key, value any) bool {
+		serverInstance := value.(*ServerInstance)
+		if serverInstance.gsId < minGsId {
+			minGsId = serverInstance.gsId
+			appid = serverInstance.appId
+		}
+		return true
+	})
+	if appid == "" {
+		return nil, errors.New("main game server not found")
+	}
+	return &api.GetMainGameServerAppIdRsp{
+		AppId: appid,
 	}, nil
 }
 

@@ -237,7 +237,7 @@ func (t *TickManager) onTick10Second(now int64) {
 
 func (t *TickManager) onTick5Second(now int64) {
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
-		if world.IsBigWorld() {
+		if WORLD_MANAGER.IsAiWorld(world) {
 			for applyUid := range world.owner.CoopApplyMap {
 				GAME_MANAGER.UserDealEnterWorld(world.owner, applyUid, true)
 			}
@@ -349,7 +349,7 @@ func (t *TickManager) onTickSecond(now int64) {
 			}
 		}
 		// 刷怪
-		if !world.IsBigWorld() && world.owner.SceneLoadState == model.SceneEnterDone {
+		if !WORLD_MANAGER.IsRobotWorld(world) && world.owner.SceneLoadState == model.SceneEnterDone {
 			scene := world.GetSceneById(3)
 			monsterEntityCount := 0
 			for _, entity := range scene.entityMap {
@@ -386,10 +386,10 @@ func (t *TickManager) onTick100MilliSecond(now int64) {
 func (t *TickManager) onTick50MilliSecond(now int64) {
 	// 音乐播放器
 	for i := 0; i < len(AUDIO_CHAN); i++ {
-		bigWorld := WORLD_MANAGER.GetBigWorld()
-		GAME_MANAGER.SendToWorldA(bigWorld, cmd.SceneAudioNotify, 0, &proto.SceneAudioNotify{
+		world := WORLD_MANAGER.GetAiWorld()
+		GAME_MANAGER.SendToWorldA(world, cmd.SceneAudioNotify, 0, &proto.SceneAudioNotify{
 			Type:      5,
-			SourceUid: bigWorld.owner.PlayerID,
+			SourceUid: world.owner.PlayerID,
 			Param1:    []uint32{1, <-AUDIO_CHAN},
 			Param2:    nil,
 			Param3:    nil,

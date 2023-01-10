@@ -49,7 +49,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	// 初始化
 	player.InitAll()
-	// player.TeamConfig.UpdateTeam()
 
 	// 确保玩家位置安全
 	player.Pos.X = player.SafePos.X
@@ -65,18 +64,21 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
+	if userId < 100000000 {
+		return
+	}
+
 	g.LoginNotify(userId, player, clientSeq)
 
-	if userId >= 100000000 {
-		MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
-			MsgType: mq.MsgTypeServer,
-			EventId: mq.ServerUserOnlineStateChangeNotify,
-			ServerMsg: &mq.ServerMsg{
-				UserId:   userId,
-				IsOnline: true,
-			},
-		})
-	}
+	MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
+		MsgType: mq.MsgTypeServer,
+		EventId: mq.ServerUserOnlineStateChangeNotify,
+		ServerMsg: &mq.ServerMsg{
+			UserId:   userId,
+			IsOnline: true,
+		},
+	})
+
 	TICK_MANAGER.CreateUserGlobalTick(userId)
 	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100)
 }

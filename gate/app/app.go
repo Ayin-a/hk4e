@@ -66,10 +66,10 @@ func Run(ctx context.Context, configFile string) error {
 	logger.Warn("gate start, appid: %v", APPID)
 
 	messageQueue := mq.NewMessageQueue(api.GATE, APPID, client)
+	defer messageQueue.Close()
 
 	connectManager := net.NewKcpConnectManager(messageQueue, client.Discovery)
-	connectManager.Start()
-	defer connectManager.Stop()
+	defer connectManager.Close()
 
 	go func() {
 		outputChan := connectManager.GetKcpEventOutputChan()

@@ -63,6 +63,10 @@ func Run(ctx context.Context, configFile string) error {
 			AppId:      APPID,
 		})
 	}()
+	mainGsAppid, err := client.Discovery.GetMainGameServerAppId(context.TODO(), &api.NullMsg{})
+	if err != nil {
+		return err
+	}
 
 	logger.InitLogger("gs_" + APPID)
 	logger.Warn("gs start, appid: %v, gsid: %v", APPID, GSID)
@@ -74,15 +78,15 @@ func Run(ctx context.Context, configFile string) error {
 
 	db, err := dao.NewDao()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer db.CloseDao()
 
 	messageQueue := mq.NewMessageQueue(api.GS, APPID, client)
 	defer messageQueue.Close()
 
-	gameManager := game.NewGameManager(db, messageQueue, GSID)
-	defer gameManager.Stop()
+	gameManager := game.NewGameManager(db, messageQueue, GSID, APPID, mainGsAppid.AppId)
+	defer gameManager.Close()
 
 	// natsrpc server
 	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)

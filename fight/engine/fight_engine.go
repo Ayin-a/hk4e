@@ -228,14 +228,22 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 				continue
 			}
 			hitInfo := new(proto.EvtBeingHitInfo)
-			clientProtoObj := GetClientProtoObjByName("EvtBeingHitInfo")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
-			if !ok {
-				continue
+			if config.CONF.Hk4e.ClientProtoProxyEnable {
+				clientProtoObj := GetClientProtoObjByName("EvtBeingHitInfo")
+				if clientProtoObj == nil {
+					logger.Error("get client proto obj is nil")
+					continue
+				}
+				ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
+				if !ok {
+					continue
+				}
+			} else {
+				err := pb.Unmarshal(entry.CombatData, hitInfo)
+				if err != nil {
+					logger.Error("parse EvtBeingHitInfo error: %v", err)
+					continue
+				}
 			}
 			attackResult := hitInfo.AttackResult
 			if attackResult == nil {
@@ -303,10 +311,6 @@ func initClientCmdProtoMap() {
 }
 
 func GetClientProtoObjByName(protoObjName string) pb.Message {
-	if !config.CONF.Hk4e.ClientProtoProxyEnable {
-		logger.Error("client proto proxy func not enable")
-		return nil
-	}
 	fn := ClientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()

@@ -28,6 +28,7 @@ type GCGSkillInfo struct {
 // GCGCardInfo 游戏对局内卡牌
 type GCGCardInfo struct {
 	cardId         uint32            // 卡牌Id
+	cardType       CardInfoType      // 卡牌类型
 	guid           uint32            // 唯一Id
 	controllerId   uint32            // 拥有它的操控者
 	faceType       uint32            // 卡面类型
@@ -35,14 +36,18 @@ type GCGCardInfo struct {
 	tokenMap       map[uint32]uint32 // Token
 	skillList      []*GCGSkillInfo   // 技能列表
 	skillLimitList []uint32          // 技能限制列表
-	isShow         bool              // 是否展示
 }
 
-func (g *GCGCardInfo) ToProto() *proto.GCGCard {
+func (g *GCGCardInfo) ToProto(controller *GCGController) *proto.GCGCard {
+	// 如果这不是指定操控者的牌 或 该牌在牌堆内 则隐藏详细信息
+	// 角色牌不受此影响
+	if g.cardType != CardInfoType_Char && (controller.controllerId != g.controllerId || g.cardType == CardInfoType_Deck) {
+		return &proto.GCGCard{ControllerId: g.controllerId, Guid: g.guid}
+	}
 	gcgCard := &proto.GCGCard{
 		TagList:         g.tagList,
 		Guid:            g.guid,
-		IsShow:          g.isShow,
+		IsShow:          true,
 		TokenList:       make([]*proto.GCGToken, 0, len(g.tokenMap)),
 		FaceType:        g.faceType,
 		SkillIdList:     make([]uint32, 0, len(g.skillList)),
@@ -87,6 +92,7 @@ const (
 	CardInfoType_None CardInfoType = iota
 	CardInfoType_Char              // 角色牌
 	CardInfoType_Hand              // 手牌
+	CardInfoType_Deck              // 牌堆
 )
 
 // GCGController 操控者
@@ -110,7 +116,7 @@ func (g *GCGController) GetSelectedCharCard() *GCGCardInfo {
 	return g.GetCharCardByGuid(g.selectedCharCardGuid)
 }
 
-// GetCharCardByGuid 通过卡牌的Guid获取卡牌
+// GetCharCardByGuid 通过卡牌的Guid获取角色牌
 func (g *GCGController) GetCharCardByGuid(cardGuid uint32) *GCGCardInfo {
 	charCardList := g.cardMap[CardInfoType_Char]
 	for _, info := range charCardList {
@@ -121,10 +127,21 @@ func (g *GCGController) GetCharCardByGuid(cardGuid uint32) *GCGCardInfo {
 	return nil
 }
 
-// GetHandCardByGuid 通过卡牌的Guid获取卡牌
+// GetHandCardByGuid 通过卡牌的Guid获取手牌
 func (g *GCGController) GetHandCardByGuid(cardGuid uint32) *GCGCardInfo {
 	handCardList := g.cardMap[CardInfoType_Hand]
 	for _, info := range handCardList {
+		if info.guid == cardGuid {
+			return info
+		}
+	}
+	return nil
+}
+
+// GetDeckCardByGuid 通过卡牌的Guid获取牌堆里的牌
+func (g *GCGController) GetDeckCardByGuid(cardGuid uint32) *GCGCardInfo {
+	deckCardList := g.cardMap[CardInfoType_Deck]
+	for _, info := range deckCardList {
 		if info.guid == cardGuid {
 			return info
 		}
@@ -184,6 +201,10 @@ func (g *GCGManager) PhaseStart(game *GCGGame) {
 // PhaseDraw 阶段抽取手牌
 func (g *GCGManager) PhaseDraw(game *GCGGame) {
 	// TODO 新手教程关不抽手牌
+	// 每位操控者抽取手牌
+	for _, controller := range game.controllerMap {
+		game.ControllerDrawCard(controller, 5) // 默认5张
+	}
 	// 游戏选择角色卡牌阶段
 	game.ChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_ON_STAGE)
 }
@@ -276,6 +297,7 @@ func (g *GCGGame) CreateController() *GCGController {
 		cardMap: map[CardInfoType][]*GCGCardInfo{
 			CardInfoType_Char: make([]*GCGCardInfo, 0, 3),
 			CardInfoType_Hand: make([]*GCGCardInfo, 0, 30),
+			CardInfoType_Deck: make([]*GCGCardInfo, 0, 30),
 		},
 		allow:              1,
 		msgPackList:        make([]*proto.GCGMessagePack, 0, 10),
@@ -309,11 +331,26 @@ func (g *GCGGame) AddAI() {
 		game:         g,
 		controllerId: g.controllerIdCounter,
 	}
-	// AI默认加载完毕
-	controller.loadState = ControllerLoadState_InitFinish
 	// 生成卡牌信息
 	g.GiveCharCard(controller, 3001)
 	g.GiveCharCard(controller, 3302)
+	// AI加载完毕
+	controller.loadState = ControllerLoadState_InitFinish
+}
+
+// InitDeckCard 初始化操控者的卡组
+func (g *GCGGame) InitDeckCard(controller *GCGController, cardIdList ...uint32) {
+	for _, cardId := range cardIdList {
+		// 生成卡牌信息
+		g.cardGuidCounter++
+		cardInfo := &GCGCardInfo{
+			cardId:       cardId,
+			cardType:     CardInfoType_Deck,
+			guid:         g.cardGuidCounter,
+			controllerId: controller.controllerId,
+		}
+		controller.cardMap[CardInfoType_Deck] = append(controller.cardMap[CardInfoType_Deck], cardInfo)
+	}
 }
 
 // GiveCharCard 给予操控者角色卡牌
@@ -328,6 +365,7 @@ func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 	g.cardGuidCounter++
 	cardInfo := &GCGCardInfo{
 		cardId:       charId,
+		cardType:     CardInfoType_Char,
 		guid:         g.cardGuidCounter,
 		controllerId: controller.controllerId,
 		faceType:     0, // 1为金卡
@@ -340,7 +378,6 @@ func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 		},
 		skillList:      make([]*GCGSkillInfo, 0, len(gcgCharConfig.SkillList)),
 		skillLimitList: []uint32{},
-		isShow:         true,
 	}
 	// SkillMap
 	for _, skillId := range gcgCharConfig.SkillList {
@@ -536,16 +573,48 @@ func (g *GCGGame) ControllerUseSkill(controller *GCGController, skillId uint32, 
 
 	msgList = append(msgList, g.GCGMsgUseSkill(controller.selectedCharCardGuid, skillId))
 
-	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT, 11, 2806, 3041)) // 2808 2 2812 3
-	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCGTokenConst.TOKEN_CUR_HEALTH, 2806, 3041))
+	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT, 11, 1))
+	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCGTokenConst.TOKEN_CUR_HEALTH, 6))
 	msgList = append(msgList, g.GCGMsgSkillResult(targetSelectedCharCard.guid, skillId))
 
 	msgList = append(msgList, g.GCGMsgUseSkillEnd(controller.selectedCharCardGuid, skillId))
 
 	// 因为使用技能自身充能+1
-	msgList = append(msgList, g.GCGMsgTokenChange(controller.selectedCharCardGuid, proto.GCGReason_GCG_REASON_ATTACK, constant.GCGTokenConst.TOKEN_CUR_ELEM, 2806, 3041))
+	msgList = append(msgList, g.GCGMsgTokenChange(controller.selectedCharCardGuid, proto.GCGReason_GCG_REASON_ATTACK, constant.GCGTokenConst.TOKEN_CUR_ELEM, 3))
 	g.AddAllMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_ATTACK, msgList...)
 	g.ChangePhase(proto.GCGPhaseType_GCG_PHASE_TYPE_MAIN)
+}
+
+// ControllerDrawCard 操控者抽取手牌
+func (g *GCGGame) ControllerDrawCard(controller *GCGController, count int) {
+	msgList := make([]*proto.GCGMessage, 0, count)
+	// 隐藏卡牌信息的消息列表
+	otherMsgList := make([]*proto.GCGMessage, 0, count)
+	for i := 0; i < count; i++ {
+		deckCardList := controller.cardMap[CardInfoType_Deck]
+		// 没有卡了就别拿了再拿就报错了
+		if len(deckCardList) < 1 {
+			logger.Error("deck card len error, len: %v", len(deckCardList))
+			return
+		}
+		cardInfo := deckCardList[0]           // 拿最上面的一张
+		cardInfo.cardType = CardInfoType_Hand // 修改卡牌类型为手牌
+		// 添加到消息列表
+		msgList = append(msgList, g.GCGMsgCardUpdate(cardInfo.ToProto(controller)))
+		otherMsgList = append(otherMsgList, g.GCGMsgCardUpdate(&proto.GCGCard{ControllerId: controller.controllerId, Guid: cardInfo.guid}))
+		// 加入到手牌
+		controller.cardMap[CardInfoType_Hand] = append(controller.cardMap[CardInfoType_Hand], cardInfo)
+		// 删除已经被拿走的手牌
+		deckCardList = append(deckCardList[:0], deckCardList[1:]...)
+	}
+	// 发送给别人隐藏卡牌信息的消息包 为了安全
+	for _, c := range g.controllerMap {
+		if c == controller {
+			g.AddMsgPack(c, controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_DRAW, msgList...)
+		} else {
+			g.AddMsgPack(c, controller.controllerId, proto.GCGActionType_GCG_ACTION_TYPE_DRAW, otherMsgList...)
+		}
+	}
 }
 
 // onTick 游戏的Tick
@@ -579,6 +648,11 @@ func (g *GCGGame) InitGame(playerList []*model.Player) {
 	}
 	// 添加AI
 	g.AddAI()
+
+	// 每位操控者生成牌堆
+	for _, controller := range g.controllerMap {
+		g.InitDeckCard(controller, 311101, 311201, 311301, 311401, 311501)
+	}
 
 	// 游戏状态更改为等待玩家加载
 	g.gameState = GCGGameState_Waiting
@@ -941,12 +1015,39 @@ func (g *GCGGame) GCGMsgCostDice(controller *GCGController, gcgReason proto.GCGR
 }
 
 // GCGMsgTokenChange GCG消息卡牌Token修改
-func (g *GCGGame) GCGMsgTokenChange(cardGuid uint32, reason proto.GCGReason, tokenType uint32, Unk1 uint32, Unk2 uint32) *proto.GCGMessage {
+func (g *GCGGame) GCGMsgTokenChange(cardGuid uint32, reason proto.GCGReason, tokenType uint32, tokenValue uint32) *proto.GCGMessage {
+	tokenChangeValue := uint32(0)
+	switch tokenValue {
+	case 0:
+		tokenChangeValue = 2802
+	case 1:
+		tokenChangeValue = 2806
+	case 2:
+		tokenChangeValue = 2810
+	case 3:
+		tokenChangeValue = 2814 // 72
+	case 4:
+		tokenChangeValue = 2786
+	case 5:
+		tokenChangeValue = 2790
+	case 6:
+		tokenChangeValue = 2794
+	case 7:
+		tokenChangeValue = 2798 // 28
+	case 8:
+		tokenChangeValue = 2770
+	case 9:
+		tokenChangeValue = 2774
+	case 10:
+		// 暂无
+	}
 	gcgMsgTokenChange := &proto.GCGMsgTokenChange{
-		TokenType:           tokenType,
-		Unk3300_LLGHGEALDDI: Unk1, // Unk
+		TokenType: tokenType,
+		// token改变为的值
+		Unk3300_LLGHGEALDDI: tokenChangeValue,
 		Reason:              reason,
-		Unk3300_LCNKBFBJDFM: Unk2, // Unk
+		// 可能是改变之前的值 无所谓就算是0也能跑
+		Unk3300_LCNKBFBJDFM: 0, // Unk
 		CardGuid:            cardGuid,
 	}
 	gcgMessage := &proto.GCGMessage{
@@ -1021,6 +1122,19 @@ func (g *GCGGame) GCGMsgNewCard() *proto.GCGMessage {
 	gcgMessage := &proto.GCGMessage{
 		Message: &proto.GCGMessage_NewCard{
 			NewCard: gcgMsgNewCard,
+		},
+	}
+	return gcgMessage
+}
+
+// GCGMsgCardUpdate GCG消息卡牌更新
+func (g *GCGGame) GCGMsgCardUpdate(card *proto.GCGCard) *proto.GCGMessage {
+	gcgMsgCardUpdate := &proto.GCGMsgCardUpdate{
+		Card: card,
+	}
+	gcgMessage := &proto.GCGMessage{
+		Message: &proto.GCGMessage_CardUpdate{
+			CardUpdate: gcgMsgCardUpdate,
 		},
 	}
 	return gcgMessage

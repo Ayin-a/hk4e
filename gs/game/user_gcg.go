@@ -205,10 +205,11 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 			Unk3300_EFNAEFBECHD: &proto.GCGZone{
 				CardList: []uint32{},
 			},
-			IsPassed:            false,
-			IntentionList:       []*proto.GCGPVEIntention{},
-			DiceSideList:        []proto.GCGDiceSideType{},
-			DeckCardNum:         0,
+			IsPassed:      false,
+			IntentionList: []*proto.GCGPVEIntention{},
+			DiceSideList:  []proto.GCGDiceSideType{},
+			// 牌堆卡牌数量
+			DeckCardNum:         uint32(len(controller.cardMap[CardInfoType_Deck])),
 			Unk3300_GLNIFLOKBPM: 0,
 		}
 		for _, info := range controller.cardMap[CardInfoType_Char] {
@@ -220,15 +221,25 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	}
 	// 历史卡牌信息
 	for _, cardInfo := range gameController.historyCardList {
-		gcgAskDuelRsp.Duel.HistoryCardList = append(gcgAskDuelRsp.Duel.HistoryCardList, cardInfo.ToProto())
+		gcgAskDuelRsp.Duel.HistoryCardList = append(gcgAskDuelRsp.Duel.HistoryCardList, cardInfo.ToProto(gameController))
 	}
 	// 卡牌信息
 	for _, controller := range game.controllerMap {
 		// 角色牌以及手牌都要
 		for _, cardList := range controller.cardMap {
 			for _, cardInfo := range cardList {
-				gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto())
-				gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+				gcgAskDuelRsp.Duel.CardList = append(gcgAskDuelRsp.Duel.CardList, cardInfo.ToProto(gameController))
+				// CardIdList卡牌Id不能重复
+				isHasCardId := false
+				for _, cardId := range gcgAskDuelRsp.Duel.CardIdList {
+					if cardId == cardInfo.cardId {
+						isHasCardId = true
+					}
+				}
+				// 如果不存在该牌的CardId则添加
+				if !isHasCardId {
+					gcgAskDuelRsp.Duel.CardIdList = append(gcgAskDuelRsp.Duel.CardIdList, cardInfo.cardId)
+				}
 			}
 		}
 	}

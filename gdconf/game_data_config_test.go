@@ -1,6 +1,9 @@
 package gdconf
 
 import (
+	"image"
+	"image/color"
+	"image/jpeg"
 	"os"
 	"strings"
 	"testing"
@@ -94,5 +97,73 @@ func TestConvTxtToCsv(t *testing.T) {
 		}
 	}
 	logger.Info("conv finish")
+	time.Sleep(time.Second)
+}
+
+func TestSceneBlock(t *testing.T) {
+	config.InitConfig("./application.toml")
+	logger.InitLogger("test")
+	InitGameDataConfig()
+	scene, exist := CONF.SceneMap[3]
+	if !exist {
+		panic("scene 3 not exist")
+	}
+	logger.Info("scene info: %v", scene.SceneConfig)
+	for _, block := range scene.BlockMap {
+		block.BlockRange.Min.X *= -1.0
+		block.BlockRange.Max.X *= -1.0
+		block.BlockRange.Min.Z *= -1.0
+		block.BlockRange.Max.Z *= -1.0
+	}
+	minX := 0.0
+	maxX := 0.0
+	minZ := 0.0
+	maxZ := 0.0
+	for _, block := range scene.BlockMap {
+		if block.BlockRange.Min.X < minX {
+			minX = block.BlockRange.Min.X
+		}
+		if block.BlockRange.Max.X > maxX {
+			maxX = block.BlockRange.Max.X
+		}
+		if block.BlockRange.Min.Z < minZ {
+			minZ = block.BlockRange.Min.Z
+		}
+		if block.BlockRange.Max.Z > maxZ {
+			maxZ = block.BlockRange.Max.Z
+		}
+	}
+	logger.Info("minX: %v, maxX: %v, minZ: %v, maxZ: %v", minX, maxX, minZ, maxZ)
+	img := image.NewRGBA(image.Rect(0, 0, int(maxX-minX), int(maxZ-minZ)))
+	rectColor := uint8(0)
+	for _, block := range scene.BlockMap {
+		maxW := int(block.BlockRange.Min.X - minX)
+		maxH := int(block.BlockRange.Min.Z - minZ)
+		minW := int(block.BlockRange.Max.X - minX)
+		minH := int(block.BlockRange.Max.Z - minZ)
+		for w := minW; w <= maxW; w++ {
+			for h := minH; h <= maxH; h++ {
+				img.SetRGBA(w, h, color.RGBA{R: rectColor, G: rectColor, B: rectColor, A: 255})
+			}
+		}
+		rectColor += 5
+		if rectColor > 255 {
+			rectColor = 0
+		}
+	}
+	file, err := os.Create("./block.jpg")
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	err = jpeg.Encode(file, img, &jpeg.Options{
+		Quality: 100,
+	})
+	if err != nil {
+		return
+	}
+	logger.Info("test finish")
 	time.Sleep(time.Second)
 }

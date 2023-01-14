@@ -11,11 +11,13 @@ func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 	filePath := "./application.toml"
 	config.InitConfig(filePath)
 	logger.InitLogger("")
-	aoiManager := NewAoiManager(
-		-150, 150, 3,
-		-150, 150, 3,
-		-150, 150, 3,
+	aoiManager := NewAoiManager()
+	aoiManager.SetAoiRange(
+		-150, 150,
+		-150, 150,
+		-150, 150,
 	)
+	aoiManager.Init3DRectAoiManager(3, 3, 3)
 	for k := range aoiManager.gridMap {
 		// 得到当前格子周边的九宫格
 		gridList := aoiManager.GetSurrGridListByGid(k)

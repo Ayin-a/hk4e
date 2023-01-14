@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	gdc "hk4e/gs/config"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -225,9 +226,50 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	player.SceneLoadState = model.SceneInitFinish
 }
 
+func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityConfig any) uint32 {
+	switch entityConfig.(type) {
+	case *gdconf.Monster:
+		monster := entityConfig.(*gdconf.Monster)
+		return scene.CreateEntityMonster(&model.Vector{
+			X: monster.Pos.X,
+			Y: monster.Pos.Y,
+			Z: monster.Pos.Z,
+		}, &model.Vector{
+			X: monster.Rot.X,
+			Y: monster.Rot.Y,
+			Z: monster.Rot.Z,
+		}, uint32(monster.MonsterId), uint8(monster.Level), g.GetTempFightPropMap(), uint32(monster.ConfigId), objectId)
+	case *gdconf.Npc:
+		npc := entityConfig.(*gdconf.Npc)
+		return scene.CreateEntityNpc(&model.Vector{
+			X: npc.Pos.X,
+			Y: npc.Pos.Y,
+			Z: npc.Pos.Z,
+		}, &model.Vector{
+			X: npc.Rot.X,
+			Y: npc.Rot.Y,
+			Z: npc.Rot.Z,
+		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), objectId)
+	case *gdconf.Gadget:
+		gadget := entityConfig.(*gdconf.Gadget)
+		return scene.CreateEntityGadgetNormal(&model.Vector{
+			X: gadget.Pos.X,
+			Y: gadget.Pos.Y,
+			Z: gadget.Pos.Z,
+		}, &model.Vector{
+			X: gadget.Rot.X,
+			Y: gadget.Rot.Y,
+			Z: gadget.Rot.Z,
+		}, uint32(gadget.GadgetId), uint32(gadget.ConfigId), objectId)
+	default:
+		return 0
+	}
+}
+
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
 
 	if world.multiplayer && world.IsPlayerFirstEnter(player) {
 		guestPostEnterSceneNotify := &proto.GuestPostEnterSceneNotify{
@@ -248,14 +290,19 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	activeAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)
 	g.AddSceneEntityNotify(player, visionType, []uint32{activeAvatarEntityId}, true, false)
 
-	// 通过aoi获取场景中在自己周围格子里的全部实体id
-	// entityIdList := world.aoiManager.GetEntityIdListByPos(float32(player.Pos.X), float32(player.Pos.Y), float32(player.Pos.Z))
+	aoiManager, exist := WORLD_MANAGER.sceneBlockAoiMap[scene.id]
+	if exist {
+		objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
+		for objectId, entityConfig := range objectList {
+			g.CreateConfigEntity(scene, objectId, entityConfig)
+		}
+	}
 	if player.SceneJump {
 		visionType = proto.VisionType_VISION_TYPE_MEET
 	} else {
 		visionType = proto.VisionType_VISION_TYPE_TRANSPORT
 	}
-	entityIdList := world.GetSceneById(player.SceneId).GetEntityIdList()
+	entityIdList := scene.GetEntityIdList()
 	g.AddSceneEntityNotify(player, visionType, entityIdList, false, false)
 
 	sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
@@ -296,6 +343,8 @@ func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Mess
 func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user enter world area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EnterWorldAreaReq)
+
+	logger.Debug("EnterWorldAreaReq: %v", req)
 
 	enterWorldAreaRsp := &proto.EnterWorldAreaRsp{
 		AreaType: req.AreaType,
@@ -658,7 +707,7 @@ func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32
 		LifeState:        uint32(entity.lifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
 		Entity: &proto.SceneEntityInfo_Monster{
-			Monster: g.PacketSceneMonsterInfo(),
+			Monster: g.PacketSceneMonsterInfo(entity),
 		},
 		EntityClientData: new(proto.EntityClientData),
 		EntityAuthorityInfo: &proto.EntityAuthorityInfo{
@@ -767,11 +816,11 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 	switch entity.gadgetEntity.gadgetType {
 	case GADGET_TYPE_NORMAL:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoNormal(entity.gadgetEntity.gadgetId),
+			Gadget: g.PacketSceneGadgetInfoNormal(entity),
 		}
 	case GADGET_TYPE_GATHER:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoGather(entity.gadgetEntity.gadgetGatherEntity),
+			Gadget: g.PacketSceneGadgetInfoGather(entity),
 		}
 	case GADGET_TYPE_CLIENT:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
@@ -821,14 +870,14 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 	return sceneAvatarInfo
 }
 
-func (g *GameManager) PacketSceneMonsterInfo() *proto.SceneMonsterInfo {
+func (g *GameManager) PacketSceneMonsterInfo(entity *Entity) *proto.SceneMonsterInfo {
 	sceneMonsterInfo := &proto.SceneMonsterInfo{
-		MonsterId:       20011301,
+		MonsterId:       entity.monsterEntity.monsterId,
 		AuthorityPeerId: 1,
 		BornType:        proto.MonsterBornType_MONSTER_BORN_TYPE_DEFAULT,
-		BlockId:         3001,
-		TitleId:         3001,
-		SpecialNameId:   40,
+		// BlockId:         3001,
+		// TitleId:         3001,
+		// SpecialNameId:   40,
 	}
 	return sceneMonsterInfo
 }
@@ -843,30 +892,30 @@ func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo 
 	return sceneNpcInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoNormal(gadgetId uint32) *proto.SceneGadgetInfo {
+func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
-		GadgetId:         gadgetId,
-		GroupId:          133220271,
-		ConfigId:         271003,
-		GadgetState:      901,
+		GadgetId:         entity.gadgetEntity.gadgetId,
+		GroupId:          0,
+		ConfigId:         entity.configId,
+		GadgetState:      0,
 		IsEnableInteract: true,
 		AuthorityPeerId:  1,
 	}
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoGather(gadgetGatherEntity *GadgetGatherEntity) *proto.SceneGadgetInfo {
-	gather, ok := gdc.CONF.GatherDataMap[int32(gadgetGatherEntity.gatherId)]
+func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGadgetInfo {
+	gather, ok := gdc.CONF.GatherDataMap[int32(entity.gadgetEntity.gadgetGatherEntity.gatherId)]
 	if !ok {
-		logger.Error("gather data error, gatherId: %v", gadgetGatherEntity.gatherId)
+		logger.Error("gather data error, gatherId: %v", entity.gadgetEntity.gadgetGatherEntity.gatherId)
 		return new(proto.SceneGadgetInfo)
 	}
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
-		GadgetId: uint32(gather.GadgetId),
-		// GroupId:          133003011,
-		// ConfigId:         11001,
+		GadgetId:         entity.gadgetEntity.gadgetId,
+		GroupId:          0,
+		ConfigId:         entity.configId,
 		GadgetState:      0,
-		IsEnableInteract: false,
+		IsEnableInteract: true,
 		AuthorityPeerId:  1,
 		Content: &proto.SceneGadgetInfo_GatherGadget{
 			GatherGadget: &proto.GatherGadgetInfo{
@@ -919,4 +968,25 @@ func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Play
 		DelEntityIdList: []uint32{scene.world.GetPlayerTeamEntityId(player)},
 	}
 	return delTeamEntityNotify
+}
+
+func (g *GameManager) GetTempFightPropMap() map[uint32]float32 {
+	fpm := map[uint32]float32{
+		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):            float32(72.91699),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_PHYSICAL_SUB_HURT): float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_DEFENSE):       float32(505.0),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK):        float32(45.679916),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_ICE_SUB_HURT):      float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_ATTACK):       float32(45.679916),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):            float32(72.91699),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_FIRE_SUB_HURT):     float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_ELEC_SUB_HURT):     float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_WIND_SUB_HURT):     float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_ROCK_SUB_HURT):     float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_GRASS_SUB_HURT):    float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_WATER_SUB_HURT):    float32(0.1),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP):           float32(72.91699),
+		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_DEFENSE):      float32(505.0),
+	}
+	return fpm
 }

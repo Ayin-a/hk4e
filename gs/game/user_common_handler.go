@@ -168,3 +168,9 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	player.SceneLoadState = model.SceneNone
 	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
 }
+
+func (g *GameManager) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user obstacle modify, uid: %v", player.PlayerID)
+	ntf := payloadMsg.(*proto.ObstacleModifyNotify)
+	logger.Debug("ObstacleModifyNotify: %v", ntf)
+}

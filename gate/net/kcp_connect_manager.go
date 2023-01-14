@@ -24,6 +24,8 @@ import (
 const (
 	PacketFreqLimit = 1000
 	PacketMaxLen    = 343 * 1024
+	ConnRecvTimeout = 30
+	ConnSendTimeout = 10
 )
 
 type KcpConnectManager struct {
@@ -246,7 +248,7 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 	recvBuf := make([]byte, PacketMaxLen)
 	dataBuf := make([]byte, 0, 1500)
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add(time.Second * 15))
+		_ = conn.SetReadDeadline(time.Now().Add(time.Second * ConnRecvTimeout))
 		recvLen, err := conn.Read(recvBuf)
 		if err != nil {
 			logger.Error("exit recv loop, conn read err: %v, convId: %v", err, convId)
@@ -296,7 +298,7 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			continue
 		}
 		bin := k.encodePayloadToBin(kcpMsg, session.xorKey)
-		_ = conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
+		_ = conn.SetWriteDeadline(time.Now().Add(time.Second * ConnSendTimeout))
 		_, err := conn.Write(bin)
 		if err != nil {
 			logger.Error("exit send loop, conn write err: %v, convId: %v", err, convId)

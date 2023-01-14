@@ -132,7 +132,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
 				continue
 			}
-			attackResult.Damage *= 100
+			attackResult.Damage *= 10
 			damage := attackResult.Damage
 			attackerId := attackResult.AttackerId
 			_ = attackerId
@@ -150,6 +150,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				EntityId:     target.id,
 			}
 			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
+			if currHp == 0 && target.avatarEntity == nil {
+				scene.SetEntityLifeState(target, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_TYPE_GM)
+			}
 			combatData, err := pb.Marshal(hitInfo)
 			if err != nil {
 				logger.Error("create combat invocations entity hit info error: %v", err)
@@ -185,6 +188,11 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			if sceneEntity.avatarEntity != nil {
 				// 玩家实体在移动
+				g.AoiPlayerMove(player, player.Pos, &model.Vector{
+					X: float64(motionInfo.Pos.X),
+					Y: float64(motionInfo.Pos.Y),
+					Z: float64(motionInfo.Pos.Z),
+				})
 				// 更新玩家的位置信息
 				player.Pos.X = float64(motionInfo.Pos.X)
 				player.Pos.Y = float64(motionInfo.Pos.Y)
@@ -240,6 +248,61 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
+		}
+	}
+}
+
+func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
+	aoiManager, exist := WORLD_MANAGER.sceneBlockAoiMap[player.SceneId]
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	if exist {
+		oldGid := aoiManager.GetGidByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
+		newGid := aoiManager.GetGidByPos(float32(newPos.X), 0.0, float32(newPos.Z))
+		if oldGid != newGid {
+			// 跨越了格子
+			oldGridList := aoiManager.GetSurrGridListByGid(oldGid)
+			oldObjectMap := make(map[int64]any)
+			for _, grid := range oldGridList {
+				tmp := grid.GetObjectList()
+				for k, v := range tmp {
+					oldObjectMap[k] = v
+				}
+			}
+			newGridList := aoiManager.GetSurrGridListByGid(newGid)
+			newObjectMap := make(map[int64]any)
+			for _, grid := range newGridList {
+				tmp := grid.GetObjectList()
+				for k, v := range tmp {
+					newObjectMap[k] = v
+				}
+			}
+			delEntityIdList := make([]uint32, 0)
+			for oldObjectId := range oldObjectMap {
+				_, exist := newObjectMap[oldObjectId]
+				if exist {
+					continue
+				}
+				entity := scene.GetEntityByObjectId(oldObjectId)
+				if entity == nil {
+					continue
+				}
+				scene.DestroyEntity(entity.id)
+				delEntityIdList = append(delEntityIdList, entity.id)
+			}
+			addEntityIdList := make([]uint32, 0)
+			for newObjectId, newObject := range newObjectMap {
+				_, exist := oldObjectMap[newObjectId]
+				if exist {
+					continue
+				}
+				entityId := g.CreateConfigEntity(scene, newObjectId, newObject)
+				addEntityIdList = append(addEntityIdList, entityId)
+			}
+			// 发送已消失格子里的实体消失通知
+			g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, delEntityIdList)
+			// 发送新出现格子里的实体出现通知
+			g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_MEET, addEntityIdList, false, false)
 		}
 	}
 }

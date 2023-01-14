@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -213,6 +214,8 @@ func LoadVideoPlayerFile() error {
 	return nil
 }
 
+var OBJECT_ID_COUNTER int64 = math.MaxUint32
+
 func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 	err := LoadVideoPlayerFile()
 	if err != nil {
@@ -233,12 +236,13 @@ func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 	for w := 0; w < SCREEN_WIDTH; w++ {
 		for h := 0; h < SCREEN_HEIGHT; h++ {
 			// 创建像素点
+			OBJECT_ID_COUNTER++
 			if rgb {
 				entityId := scene.CreateEntityGadgetNormal(&model.Vector{
 					X: leftTopPos.X - float64(w)*SCREEN_DPI,
 					Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 					Z: leftTopPos.Z,
-				}, uint32(FRAME_COLOR[w][h]))
+				}, new(model.Vector), uint32(FRAME_COLOR[w][h]), 271003, OBJECT_ID_COUNTER)
 				SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 			} else {
 				if !FRAME[w][h] {
@@ -246,7 +250,7 @@ func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 						X: leftTopPos.X - float64(w)*SCREEN_DPI,
 						Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 						Z: leftTopPos.Z,
-					}, uint32(GADGET_ID))
+					}, new(model.Vector), uint32(GADGET_ID), 271003, OBJECT_ID_COUNTER)
 					SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 				}
 			}

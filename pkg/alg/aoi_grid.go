@@ -8,13 +8,13 @@ import (
 type Grid struct {
 	gid uint32 // 格子id
 	// 格子边界坐标
-	minX        int16
-	maxX        int16
-	minY        int16
-	maxY        int16
-	minZ        int16
-	maxZ        int16
-	entityIdMap map[uint32]bool // k:entityId v:是否存在
+	minX      int16
+	maxX      int16
+	minY      int16
+	maxY      int16
+	minZ      int16
+	maxZ      int16
+	objectMap map[int64]any // k:objectId v:对象
 }
 
 // NewGrid 初始化格子
@@ -27,30 +27,26 @@ func NewGrid(gid uint32, minX, maxX, minY, maxY, minZ, maxZ int16) (r *Grid) {
 	r.maxY = maxY
 	r.minZ = minZ
 	r.maxZ = maxZ
-	r.entityIdMap = make(map[uint32]bool)
+	r.objectMap = make(map[int64]any)
 	return r
 }
 
-// AddEntityId 向格子中添加一个实体id
-func (g *Grid) AddEntityId(entityId uint32) {
-	g.entityIdMap[entityId] = true
+// AddObject 向格子中添加一个对象
+func (g *Grid) AddObject(objectId int64, object any) {
+	g.objectMap[objectId] = object
 }
 
-// RemoveEntityId 从格子中删除一个实体id
-func (g *Grid) RemoveEntityId(entityId uint32) {
-	_, exist := g.entityIdMap[entityId]
+// RemoveObject 从格子中删除一个对象
+func (g *Grid) RemoveObject(objectId int64) {
+	_, exist := g.objectMap[objectId]
 	if exist {
-		delete(g.entityIdMap, entityId)
+		delete(g.objectMap, objectId)
 	} else {
-		logger.Error("remove entity id but it not exist, entityId: %v", entityId)
+		logger.Error("remove object id but it not exist, objectId: %v", objectId)
 	}
 }
 
-// GetEntityIdList 获取格子中所有实体id
-func (g *Grid) GetEntityIdList() (entityIdList []uint32) {
-	entityIdList = make([]uint32, 0)
-	for k := range g.entityIdMap {
-		entityIdList = append(entityIdList, k)
-	}
-	return entityIdList
+// GetObjectList 获取格子中所有对象
+func (g *Grid) GetObjectList() map[int64]any {
+	return g.objectMap
 }

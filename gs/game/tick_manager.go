@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"hk4e/common/constant"
-	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
@@ -348,20 +347,6 @@ func (t *TickManager) onTickSecond(now int64) {
 				player.SafePos.Z = player.Pos.Z
 			}
 		}
-		// 刷怪
-		if !WORLD_MANAGER.IsRobotWorld(world) && world.owner.SceneLoadState == model.SceneEnterDone {
-			scene := world.GetSceneById(3)
-			monsterEntityCount := 0
-			for _, entity := range scene.entityMap {
-				if entity.entityType == uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER) {
-					monsterEntityCount++
-				}
-			}
-			if monsterEntityCount < 3 {
-				monsterEntityId := t.createMonster(scene)
-				GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_TYPE_BORN, []uint32{monsterEntityId}, true, false)
-			}
-		}
 	}
 	// GCG游戏Tick
 	for _, game := range GCG_MANAGER.gameMap {
@@ -395,31 +380,4 @@ func (t *TickManager) onTick50MilliSecond(now int64) {
 			Param3:    nil,
 		})
 	}
-}
-
-func (t *TickManager) createMonster(scene *Scene) uint32 {
-	pos := &model.Vector{
-		X: 2747,
-		Y: 194,
-		Z: -1719,
-	}
-	fpm := map[uint32]float32{
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):            float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_PHYSICAL_SUB_HURT): float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_DEFENSE):       float32(505.0),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK):        float32(45.679916),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ICE_SUB_HURT):      float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_ATTACK):       float32(45.679916),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):            float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_FIRE_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ELEC_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_WIND_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ROCK_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_GRASS_SUB_HURT):    float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_WATER_SUB_HURT):    float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP):           float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_DEFENSE):      float32(505.0),
-	}
-	entityId := scene.CreateEntityMonster(pos, 1, fpm)
-	return entityId
 }

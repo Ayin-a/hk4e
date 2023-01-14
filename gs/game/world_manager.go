@@ -6,6 +6,7 @@ import (
 
 	"hk4e/common/constant"
 	"hk4e/common/mq"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
@@ -16,15 +17,125 @@ import (
 // 世界管理器
 
 type WorldManager struct {
-	worldMap  map[uint32]*World
-	snowflake *alg.SnowflakeWorker
-	aiWorld   *World // 本服的Ai玩家世界
+	worldMap         map[uint32]*World
+	snowflake        *alg.SnowflakeWorker
+	aiWorld          *World                     // 本服的Ai玩家世界
+	sceneBlockAoiMap map[uint32]*alg.AoiManager // 全局各场景地图的aoi管理器
 }
 
 func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 	r = new(WorldManager)
 	r.worldMap = make(map[uint32]*World)
 	r.snowflake = snowflake
+	r.sceneBlockAoiMap = make(map[uint32]*alg.AoiManager)
+	for _, sceneConfig := range gdconf.CONF.SceneMap {
+		minX := int16(0)
+		maxX := int16(0)
+		minZ := int16(0)
+		maxZ := int16(0)
+		blockXLen := int16(0)
+		blockYLen := int16(0)
+		blockZLen := int16(0)
+		ok := true
+		for _, blockConfig := range sceneConfig.BlockMap {
+			if int16(blockConfig.BlockRange.Min.X) < minX {
+				minX = int16(blockConfig.BlockRange.Min.X)
+			}
+			if int16(blockConfig.BlockRange.Max.X) > maxX {
+				maxX = int16(blockConfig.BlockRange.Max.X)
+			}
+			if int16(blockConfig.BlockRange.Min.Z) < minZ {
+				minZ = int16(blockConfig.BlockRange.Min.Z)
+			}
+			if int16(blockConfig.BlockRange.Max.Z) > maxZ {
+				maxZ = int16(blockConfig.BlockRange.Max.Z)
+			}
+			xLen := int16(blockConfig.BlockRange.Max.X - blockConfig.BlockRange.Min.X)
+			yLen := int16(blockConfig.BlockRange.Max.Y - blockConfig.BlockRange.Min.Y)
+			zLen := int16(blockConfig.BlockRange.Max.Z - blockConfig.BlockRange.Min.Z)
+			if blockXLen == 0 {
+				blockXLen = xLen
+			} else {
+				if blockXLen != xLen {
+					ok = false
+					break
+				}
+			}
+			if blockYLen == 0 {
+				blockYLen = yLen
+			} else {
+				if blockYLen != yLen {
+					ok = false
+					break
+				}
+			}
+			if blockZLen == 0 {
+				blockZLen = zLen
+			} else {
+				if blockZLen != zLen {
+					ok = false
+					break
+				}
+			}
+		}
+		if !ok {
+			continue
+		}
+		numX := int16(0)
+		if blockXLen != 0 {
+			if blockXLen > 32 {
+				blockXLen = 32
+			}
+			numX = (maxX - minX) / blockXLen
+		} else {
+			numX = 1
+		}
+		if numX == 0 {
+			numX = 1
+		}
+		numZ := int16(0)
+		if blockZLen != 0 {
+			if blockZLen > 32 {
+				blockZLen = 32
+			}
+			numZ = (maxZ - minZ) / blockZLen
+		} else {
+			numZ = 1
+		}
+		if numZ == 0 {
+			numZ = 1
+		}
+		aoiManager := alg.NewAoiManager()
+		aoiManager.SetAoiRange(minX, maxX, -1.0, 1.0, minZ, maxZ)
+		aoiManager.Init3DRectAoiManager(numX, 1, numZ)
+		for _, blockConfig := range sceneConfig.BlockMap {
+			for _, groupConfig := range blockConfig.GroupMap {
+				for _, monsterConfig := range groupConfig.MonsterList {
+					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), monsterConfig,
+						float32(monsterConfig.Pos.X),
+						float32(0.0),
+						float32(monsterConfig.Pos.Z))
+				}
+				for _, npcConfig := range groupConfig.NpcList {
+					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), npcConfig,
+						float32(npcConfig.Pos.X),
+						float32(0.0),
+						float32(npcConfig.Pos.Z))
+				}
+				for _, gadgetConfig := range groupConfig.GadgetList {
+					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), gadgetConfig,
+						float32(gadgetConfig.Pos.X),
+						float32(0.0),
+						float32(gadgetConfig.Pos.Z))
+				}
+			}
+		}
+		if sceneConfig.Id == 3 {
+			logger.Info("init scene aoi mgr, scene: %v", sceneConfig.Id)
+			aoiManager.AoiInfoLog(false)
+		}
+		r.sceneBlockAoiMap[uint32(sceneConfig.Id)] = aoiManager
+	}
 	return r
 }
 
@@ -39,22 +150,15 @@ func (w *WorldManager) GetAllWorld() map[uint32]*World {
 func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 	worldId := uint32(w.snowflake.GenId())
 	world := &World{
-		id:              worldId,
-		owner:           owner,
-		playerMap:       make(map[uint32]*model.Player),
-		sceneMap:        make(map[uint32]*Scene),
-		entityIdCounter: 0,
-		worldLevel:      0,
-		multiplayer:     false,
-		mpLevelEntityId: 0,
-		chatMsgList:     make([]*proto.ChatInfo, 0),
-		// // aoi划分
-		// // TODO 为减少内存占用暂时去掉Y轴AOI格子划分 原来的Y轴格子数量为80
-		// aoiManager: aoi.NewAoiManager(
-		// 	-8000, 4000, 120,
-		// 	-2000, 2000, 1,
-		// 	-5500, 6500, 120,
-		// ),
+		id:                  worldId,
+		owner:               owner,
+		playerMap:           make(map[uint32]*model.Player),
+		sceneMap:            make(map[uint32]*Scene),
+		entityIdCounter:     0,
+		worldLevel:          0,
+		multiplayer:         false,
+		mpLevelEntityId:     0,
+		chatMsgList:         make([]*proto.ChatInfo, 0),
 		playerFirstEnterMap: make(map[uint32]int64),
 		waitEnterPlayerMap:  make(map[uint32]int64),
 		multiplayerTeam:     CreateMultiplayerTeam(),
@@ -101,18 +205,17 @@ func (w *WorldManager) IsBigWorld(world *World) bool {
 // 世界数据结构
 
 type World struct {
-	id              uint32
-	owner           *model.Player
-	playerMap       map[uint32]*model.Player
-	sceneMap        map[uint32]*Scene
-	entityIdCounter uint32 // 世界的实体id生成计数器
-	worldLevel      uint8  // 世界等级
-	multiplayer     bool   // 是否多人世界
-	mpLevelEntityId uint32
-	chatMsgList     []*proto.ChatInfo // 世界聊天消息列表
-	// aoiManager          *aoi.AoiManager   // 当前世界地图的aoi管理器
-	playerFirstEnterMap map[uint32]int64 // 玩家第一次进入世界的时间 key:uid value:进入时间
-	waitEnterPlayerMap  map[uint32]int64 // 进入世界的玩家等待列表 key:uid value:开始时间
+	id                  uint32
+	owner               *model.Player
+	playerMap           map[uint32]*model.Player
+	sceneMap            map[uint32]*Scene
+	entityIdCounter     uint32 // 世界的实体id生成计数器
+	worldLevel          uint8  // 世界等级
+	multiplayer         bool   // 是否多人世界
+	mpLevelEntityId     uint32
+	chatMsgList         []*proto.ChatInfo // 世界聊天消息列表
+	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
+	waitEnterPlayerMap  map[uint32]int64  // 进入世界的玩家等待列表 key:uid value:开始时间
 	multiplayerTeam     *MultiplayerTeam
 	peerList            []*model.Player // 玩家编号列表
 }
@@ -534,13 +637,14 @@ func (w *World) PlayerEnter(player *model.Player) {
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
 	scene := &Scene{
-		id:         sceneId,
-		world:      w,
-		playerMap:  make(map[uint32]*model.Player),
-		entityMap:  make(map[uint32]*Entity),
-		gameTime:   18 * 60,
-		createTime: time.Now().UnixMilli(),
-		meeoIndex:  0,
+		id:                sceneId,
+		world:             w,
+		playerMap:         make(map[uint32]*model.Player),
+		entityMap:         make(map[uint32]*Entity),
+		objectIdEntityMap: make(map[int64]*Entity),
+		gameTime:          18 * 60,
+		createTime:        time.Now().UnixMilli(),
+		meeoIndex:         0,
 	}
 	w.sceneMap[sceneId] = scene
 	return scene
@@ -557,13 +661,14 @@ func (w *World) GetSceneById(sceneId uint32) *Scene {
 // 场景数据结构
 
 type Scene struct {
-	id         uint32
-	world      *World
-	playerMap  map[uint32]*model.Player
-	entityMap  map[uint32]*Entity
-	gameTime   uint32 // 游戏内提瓦特大陆的时间
-	createTime int64
-	meeoIndex  uint32 // 客户端风元素染色同步协议的计数器
+	id                uint32
+	world             *World
+	playerMap         map[uint32]*model.Player
+	entityMap         map[uint32]*Entity
+	objectIdEntityMap map[int64]*Entity
+	gameTime          uint32 // 游戏内提瓦特大陆的时间
+	createTime        int64
+	meeoIndex         uint32 // 客户端风元素染色同步协议的计数器
 }
 
 func (s *Scene) GetAllPlayer() map[uint32]*model.Player {
@@ -580,6 +685,7 @@ type AvatarEntity struct {
 }
 
 type MonsterEntity struct {
+	monsterId uint32
 }
 
 type NpcEntity struct {
@@ -643,6 +749,8 @@ type Entity struct {
 	monsterEntity       *MonsterEntity
 	npcEntity           *NpcEntity
 	gadgetEntity        *GadgetEntity
+	configId            uint32
+	objectId            int64
 }
 
 type Attack struct {
@@ -761,9 +869,6 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		},
 	}
 	s.entityMap[entity.id] = entity
-	// if avatarId == s.world.GetPlayerActiveAvatarId(player) {
-	// 	s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	// }
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -797,24 +902,32 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 	return entity.id
 }
 
-func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp map[uint32]float32) uint32 {
+func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, level uint8, fightProp map[uint32]float32, configId uint32, objectId int64) uint32 {
+	_, exist := s.objectIdEntityMap[objectId]
+	if exist {
+		return 0
+	}
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.MONSTER)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
-		rot:                 new(model.Vector),
+		rot:                 rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           fightProp,
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER),
 		level:               level,
-		monsterEntity:       &MonsterEntity{},
+		monsterEntity: &MonsterEntity{
+			monsterId: monsterId,
+		},
+		configId: configId,
+		objectId: objectId,
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	s.objectIdEntityMap[objectId] = entity
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -827,7 +940,11 @@ func (s *Scene) CreateEntityMonster(pos *model.Vector, level uint8, fightProp ma
 	return entity.id
 }
 
-func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId uint32) uint32 {
+func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId, configId uint32, objectId int64) uint32 {
+	_, exist := s.objectIdEntityMap[objectId]
+	if exist {
+		return 0
+	}
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.NPC)
 	entity := &Entity{
 		id:                  entityId,
@@ -851,20 +968,26 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 			ParentQuestId: parentQuestId,
 			BlockId:       blockId,
 		},
+		configId: configId,
+		objectId: objectId,
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	s.objectIdEntityMap[objectId] = entity
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetNormal(pos *model.Vector, gadgetId uint32) uint32 {
+func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32, configId uint32, objectId int64) uint32 {
+	_, exist := s.objectIdEntityMap[objectId]
+	if exist {
+		return 0
+	}
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
-		rot:                 new(model.Vector),
+		rot:                 rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
@@ -879,20 +1002,26 @@ func (s *Scene) CreateEntityGadgetNormal(pos *model.Vector, gadgetId uint32) uin
 			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_NORMAL,
 		},
+		configId: configId,
+		objectId: objectId,
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	s.objectIdEntityMap[objectId] = entity
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetGather(pos *model.Vector, gatherId uint32) uint32 {
+func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32, gatherId uint32, configId uint32, objectId int64) uint32 {
+	_, exist := s.objectIdEntityMap[objectId]
+	if exist {
+		return 0
+	}
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.GADGET)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
-		rot:                 new(model.Vector),
+		rot:                 rot,
 		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
@@ -904,14 +1033,17 @@ func (s *Scene) CreateEntityGadgetGather(pos *model.Vector, gatherId uint32) uin
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
+			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_GATHER,
 			gadgetGatherEntity: &GadgetGatherEntity{
 				gatherId: gatherId,
 			},
 		},
+		configId: configId,
+		objectId: objectId,
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
+	s.objectIdEntityMap[objectId] = entity
 	return entity.id
 }
 
@@ -945,7 +1077,6 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 		},
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 }
 
 func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
@@ -984,7 +1115,6 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 		},
 	}
 	s.entityMap[entity.id] = entity
-	// s.world.aoiManager.AddEntityIdToGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
 	return entity.id
 }
 
@@ -993,8 +1123,8 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	if entity == nil {
 		return
 	}
-	// s.world.aoiManager.RemoveEntityIdFromGridByPos(entity.id, float32(entity.pos.X), float32(entity.pos.Y), float32(entity.pos.Z))
-	delete(s.entityMap, entityId)
+	delete(s.entityMap, entity.id)
+	delete(s.objectIdEntityMap, entity.objectId)
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineDelEntity,
@@ -1007,6 +1137,10 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 
 func (s *Scene) GetEntity(entityId uint32) *Entity {
 	return s.entityMap[entityId]
+}
+
+func (s *Scene) GetEntityByObjectId(objectId int64) *Entity {
+	return s.objectIdEntityMap[objectId]
 }
 
 func (s *Scene) GetEntityIdList() []uint32 {

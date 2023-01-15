@@ -56,16 +56,14 @@ type GameManager struct {
 
 func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string) (r *GameManager) {
 	r = new(GameManager)
-	if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
-		// 反射调用的方法在启动时测试是否正常防止中途panic
-		r.GetClientProtoObjByName("PingReq")
-	}
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
 	if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 		r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
+		// 反射调用的方法在启动时测试是否正常防止中途panic
+		r.GetClientProtoObjByName("PingReq")
 	}
 	r.gsId = gsId
 	r.gsAppid = gsAppid

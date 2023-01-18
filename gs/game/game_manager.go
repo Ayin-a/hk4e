@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"reflect"
+	"runtime"
 	"time"
 
 	appConfig "hk4e/common/config"
@@ -184,6 +185,7 @@ func (g *GameManager) gameMainLoop() {
 	tickCost := int64(0)
 	localEventCost := int64(0)
 	commandCost := int64(0)
+	runtime.LockOSThread()
 	for {
 		// 消耗CPU时间性能统计
 		now := time.Now().UnixNano()

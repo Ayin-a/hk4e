@@ -2,7 +2,8 @@ package model
 
 import (
 	"hk4e/common/constant"
-	gdc "hk4e/gs/config"
+	"hk4e/gdconf"
+	"hk4e/pkg/logger"
 )
 
 type Team struct {
@@ -55,16 +56,22 @@ func NewTeamInfo() (r *TeamInfo) {
 
 func (t *TeamInfo) UpdateTeam() {
 	activeTeam := t.GetActiveTeam()
-	// 队伍元素共鸣
+	// TODO 队伍元素共鸣
 	t.TeamResonances = make(map[uint16]bool)
 	t.TeamResonancesConfig = make(map[int32]bool)
 	teamElementTypeCountMap := make(map[uint16]uint8)
-	avatarSkillDepotDataMapConfig := gdc.CONF.AvatarSkillDepotDataMap
 	for _, avatarId := range activeTeam.GetAvatarIdList() {
-		skillData := avatarSkillDepotDataMapConfig[int32(avatarId)]
-		if skillData != nil {
-			teamElementTypeCountMap[skillData.ElementType.Value] += 1
+		avatarSkillDataConfig := gdconf.CONF.GetAvatarEnergySkillConfig(avatarId)
+		if avatarSkillDataConfig == nil {
+			logger.Error("get avatar energy skill is nil, avatarId: %v", avatarId)
+			continue
 		}
+		elementType := constant.ElementTypeConst.VALUE_MAP[uint16(avatarSkillDataConfig.CostElemType)]
+		if elementType == nil {
+			logger.Error("get element type const is nil, value: %v", avatarSkillDataConfig.CostElemType)
+			continue
+		}
+		teamElementTypeCountMap[elementType.Value] += 1
 	}
 	for k, v := range teamElementTypeCountMap {
 		if v >= 2 {

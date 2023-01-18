@@ -1,6 +1,7 @@
 package gdconf
 
 import (
+	"encoding/json"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -15,9 +16,10 @@ import (
 	"github.com/hjson/hjson-go/v4"
 )
 
+// 测试初始化加载配置表
 func TestInitGameDataConfig(t *testing.T) {
 	config.InitConfig("./application.toml")
-	logger.InitLogger("test")
+	logger.InitLogger("InitGameDataConfig")
 	logger.Info("start load conf")
 	InitGameDataConfig()
 	logger.Info("load conf finish, conf: %v", CONF)
@@ -52,9 +54,10 @@ func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount 
 	}
 }
 
+// 测试加载json配置
 func TestCheckJsonValid(t *testing.T) {
 	config.InitConfig("./application.toml")
-	logger.InitLogger("test")
+	logger.InitLogger("CheckJsonValid")
 	errorJsonFileList := make([]string, 0)
 	totalJsonFileCount := 0
 	CheckJsonLoop("../game_data_config/json", &errorJsonFileList, &totalJsonFileCount)
@@ -65,44 +68,87 @@ func TestCheckJsonValid(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-func TestConvTxtToCsv(t *testing.T) {
+type TableField struct {
+	FieldName  string `json:"field_name"`
+	FieldType  string `json:"field_type"`
+	OriginName string `json:"origin_name"`
+}
+
+type TableStructMapping struct {
+	TableName string        `json:"table_name"`
+	FieldList []*TableField `json:"field_list"`
+}
+
+// 生成最终服务器读取的配置表
+func TestGenGdCsv(t *testing.T) {
 	config.InitConfig("./application.toml")
-	logger.InitLogger("test")
-	fileList, err := os.ReadDir("../game_data_config/txt")
+	logger.InitLogger("GenGdCsv")
+	tableStructMappingList := make([]*TableStructMapping, 0)
+	configFileData, err := os.ReadFile("../table_struct_mapping.json")
 	if err != nil {
-		logger.Error("open dir error: %v", err)
+		logger.Error("open config file error: %v", err)
 		return
 	}
-	for _, file := range fileList {
-		fileName := file.Name()
-		if file.IsDir() {
-			continue
-		}
-		if split := strings.Split(fileName, "."); split[len(split)-1] != "txt" {
-			continue
-		}
-		fileData, err := os.ReadFile("../game_data_config/txt/" + fileName)
+	err = json.Unmarshal(configFileData, &tableStructMappingList)
+	if err != nil {
+		logger.Error("parse config file error: %v", err)
+		return
+	}
+	for _, tableStructMapping := range tableStructMappingList {
+		txtFileData, err := os.ReadFile("../game_data_config/txt/" + tableStructMapping.TableName + ".txt")
 		if err != nil {
-			logger.Error("open file error: %v", err)
+			logger.Error("read txt file error: %v", err)
 			continue
 		}
-		fileDataStr := string(fileData)
-		fileDataStr = strings.ReplaceAll(fileDataStr, ",", "#")
-		fileDataStr = strings.ReplaceAll(fileDataStr, ";", "#")
-		fileDataStr = strings.ReplaceAll(fileDataStr, "\t", ",")
-		err = os.WriteFile("../game_data_config/txt/"+strings.ReplaceAll(fileName, ".txt", "")+".csv", []byte(fileDataStr), 0644)
+		// 转换txt配置表格式为csv
+		originCsv := string(txtFileData)
+		originCsv = strings.ReplaceAll(originCsv, "\r\n", "\n")
+		originCsv = strings.ReplaceAll(originCsv, "\r", "\n")
+		originCsv = strings.ReplaceAll(originCsv, ",", "#")
+		originCsv = strings.ReplaceAll(originCsv, ";", "#")
+		originCsv = strings.ReplaceAll(originCsv, "\t", ",")
+		originCsvLineList := strings.Split(originCsv, "\n")
+		if len(originCsvLineList) == 0 {
+			logger.Error("origin csv file is empty")
+			continue
+		}
+		originCsvHeadList := strings.Split(originCsvLineList[0], ",")
+		if len(originCsvHeadList) == 0 {
+			logger.Error("origin csv file head is empty")
+			continue
+		}
+		fieldNameHead := ""
+		fieldTypeHead := ""
+		for index, originCsvHead := range originCsvHeadList {
+			for _, tableField := range tableStructMapping.FieldList {
+				if originCsvHead == tableField.OriginName {
+					// 字段名匹配成功
+					fieldNameHead += tableField.FieldName
+					fieldTypeHead += tableField.FieldType
+				}
+			}
+			if index < len(originCsvHeadList)-1 {
+				fieldNameHead += ","
+				fieldTypeHead += ","
+			}
+		}
+		fieldNameHead += "\n"
+		fieldTypeHead += "\n"
+		gdCsvFile := fieldNameHead + fieldTypeHead + originCsv
+		err = os.WriteFile("../game_data_config/csv/"+tableStructMapping.TableName+".csv", []byte(gdCsvFile), 0644)
 		if err != nil {
-			logger.Error("save file error: %v", err)
+			logger.Error("write gd csv file error: %v", err)
 			continue
 		}
 	}
-	logger.Info("conv finish")
+	logger.Info("gen gd csv finish")
 	time.Sleep(time.Second)
 }
 
+// 场景lua区块配置坐标范围可视化
 func TestSceneBlock(t *testing.T) {
 	config.InitConfig("./application.toml")
-	logger.InitLogger("test")
+	logger.InitLogger("SceneBlock")
 	InitGameDataConfig()
 	scene, exist := CONF.SceneMap[3]
 	if !exist {

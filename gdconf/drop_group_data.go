@@ -43,5 +43,5 @@ func (g *GameDataConfig) loadDropGroupData() {
 			dropGroupData.DropConfig = append(dropGroupData.DropConfig, drop)
 		}
 	}
-	logger.Info("load %v DropGroupData", len(g.DropGroupDataMap))
+	logger.Info("DropGroupData count: %v", len(g.DropGroupDataMap))
 }

@@ -30,7 +30,8 @@ type AvatarData struct {
 }
 
 type ConfigAvatar struct {
-	Abilities []*ConfigAvatarAbility `json:"abilities"`
+	Abilities       []*ConfigAvatarAbility `json:"abilities"`
+	TargetAbilities []*ConfigAvatarAbility `json:"targetAbilities"`
 }
 
 type ConfigAvatarAbility struct {
@@ -70,4 +71,18 @@ func (g *GameDataConfig) loadAvatarData() {
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData
 	}
 	logger.Info("AvatarData count: %v", len(g.AvatarDataMap))
+}
+
+// TODO 成长属性要读表
+
+func (a *AvatarData) GetBaseHpByLevel(level uint8) float64 {
+	return a.HpBase * float64(level)
+}
+
+func (a *AvatarData) GetBaseAttackByLevel(level uint8) float64 {
+	return a.AttackBase * float64(level)
+}
+
+func (a *AvatarData) GetBaseDefenseByLevel(level uint8) float64 {
+	return a.DefenseBase * float64(level)
 }

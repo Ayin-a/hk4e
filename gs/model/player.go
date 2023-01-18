@@ -1,6 +1,7 @@
 package model
 
 import (
+	"hk4e/pkg/logger"
 	"hk4e/protocol/proto"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -96,14 +97,69 @@ func (p *Player) InitAll() {
 	p.InitAllReliquary()
 }
 
-func (p *Player) InitAllReliquary() {
-	for reliquaryId, reliquary := range p.ReliquaryMap {
-		reliquary.Guid = p.GetNextGameObjectGuid()
-		p.ReliquaryMap[reliquaryId] = reliquary
-		if reliquary.AvatarId != 0 {
-			avatar := p.AvatarMap[reliquary.AvatarId]
-			avatar.EquipGuidList[reliquary.Guid] = reliquary.Guid
-			avatar.EquipReliquaryList = append(avatar.EquipReliquaryList, reliquary)
-		}
+// 多人世界网络同步包转发器
+
+type InvokeEntryType interface {
+	proto.CombatInvokeEntry | proto.AbilityInvokeEntry
+}
+
+type InvokeHandler[T InvokeEntryType] struct {
+	EntryListForwardAll          []*T
+	EntryListForwardAllExceptCur []*T
+	EntryListForwardHost         []*T
+	EntryListForwardServer       []*T
+}
+
+func NewInvokeHandler[T InvokeEntryType]() (r *InvokeHandler[T]) {
+	r = new(InvokeHandler[T])
+	r.InitInvokeHandler()
+	return r
+}
+
+func (i *InvokeHandler[T]) InitInvokeHandler() {
+	i.EntryListForwardAll = make([]*T, 0)
+	i.EntryListForwardAllExceptCur = make([]*T, 0)
+	i.EntryListForwardHost = make([]*T, 0)
+	i.EntryListForwardServer = make([]*T, 0)
+}
+
+func (i *InvokeHandler[T]) AddEntry(forward proto.ForwardType, entry *T) {
+	switch forward {
+	case proto.ForwardType_FORWARD_TYPE_TO_ALL:
+		i.EntryListForwardAll = append(i.EntryListForwardAll, entry)
+	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXCEPT_CUR:
+		fallthrough
+	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXIST_EXCEPT_CUR:
+		i.EntryListForwardAllExceptCur = append(i.EntryListForwardAllExceptCur, entry)
+	case proto.ForwardType_FORWARD_TYPE_TO_HOST:
+		i.EntryListForwardHost = append(i.EntryListForwardHost, entry)
+	case proto.ForwardType_FORWARD_TYPE_ONLY_SERVER:
+		i.EntryListForwardServer = append(i.EntryListForwardServer, entry)
+		// logger.Error("forward server entry: %v", entry)
+	default:
+		logger.Error("forward type: %v, entry: %v", forward, entry)
 	}
+}
+
+func (i *InvokeHandler[T]) AllLen() int {
+	return len(i.EntryListForwardAll)
+}
+
+func (i *InvokeHandler[T]) AllExceptCurLen() int {
+	return len(i.EntryListForwardAllExceptCur)
+}
+
+func (i *InvokeHandler[T]) HostLen() int {
+	return len(i.EntryListForwardHost)
+}
+
+func (i *InvokeHandler[T]) ServerLen() int {
+	return len(i.EntryListForwardServer)
+}
+
+func (i *InvokeHandler[T]) Clear() {
+	i.EntryListForwardAll = make([]*T, 0)
+	i.EntryListForwardAllExceptCur = make([]*T, 0)
+	i.EntryListForwardHost = make([]*T, 0)
+	i.EntryListForwardServer = make([]*T, 0)
 }

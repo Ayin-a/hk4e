@@ -190,7 +190,7 @@ func (t *TickManager) onTickMinute(now int64) {
 					return
 				}
 				// TODO 3.0.0REL版本中 发送某些无效家具 可能会导致客户端背包家具界面卡死
-				if itemDataConfig.ItemEnumType == constant.ItemTypeConst.ITEM_FURNITURE {
+				if uint16(itemDataConfig.Type) == constant.ItemTypeConst.ITEM_FURNITURE {
 					continue
 				}
 				num := random.GetRandomInt32(1, 9)

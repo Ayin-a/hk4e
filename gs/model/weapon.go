@@ -1,7 +1,7 @@
 package model
 
 import (
-	gdc "hk4e/gs/config"
+	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 )
 
@@ -10,12 +10,10 @@ type Weapon struct {
 	ItemId      uint32   `bson:"itemId"`      // 武器的道具id
 	Level       uint8    `bson:"level"`       // 等级
 	Exp         uint32   `bson:"exp"`         // 当前经验值
-	TotalExp    uint32   `bson:"totalExp"`    // 升级所需总经验值
 	Promote     uint8    `bson:"promote"`     // 突破等阶
 	Lock        bool     `bson:"lock"`        // 锁定状态
 	AffixIdList []uint32 `bson:"affixIdList"` // 词缀
 	Refinement  uint8    `bson:"refinement"`  // 精炼等阶
-	MainPropId  uint32   `bson:"mainPropId"`  // 主词条id
 	AvatarId    uint32   `bson:"avatarId"`    // 装备角色id
 	Guid        uint64   `bson:"-"`
 }
@@ -29,7 +27,6 @@ func (p *Player) InitWeapon(weapon *Weapon) {
 		avatar.EquipGuidList[weapon.Guid] = weapon.Guid
 		avatar.EquipWeapon = weapon
 	}
-	return
 }
 
 func (p *Player) InitAllWeapon() {
@@ -56,25 +53,19 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 		ItemId:      itemId,
 		Level:       1,
 		Exp:         0,
-		TotalExp:    0,
 		Promote:     0,
 		Lock:        false,
 		AffixIdList: make([]uint32, 0),
 		Refinement:  0,
-		MainPropId:  0,
 		Guid:        0,
 	}
-	itemDataConfig, ok := gdc.CONF.ItemDataMap[int32(itemId)]
-	if !ok {
-		logger.Error("config is nil, itemId: %v", itemId)
+	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(itemId)]
+	if !exist {
+		logger.Error("weapon config is nil, itemId: %v", itemId)
 		return
 	}
-	if itemDataConfig.SkillAffix != nil {
-		for _, skillAffix := range itemDataConfig.SkillAffix {
-			if skillAffix > 0 {
-				weapon.AffixIdList = append(weapon.AffixIdList, uint32(skillAffix))
-			}
-		}
+	for _, skillAffix := range itemDataConfig.SkillAffix {
+		weapon.AffixIdList = append(weapon.AffixIdList, uint32(skillAffix))
 	}
 	p.InitWeapon(weapon)
 	p.WeaponMap[weaponId] = weapon

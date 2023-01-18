@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"hk4e/common/constant"
-	gdc "hk4e/gs/config"
+	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 )
 
@@ -19,20 +19,13 @@ type Avatar struct {
 	CurrHP              float64            `bson:"currHP"`           // 当前生命值
 	CurrEnergy          float64            `bson:"currEnergy"`       // 当前元素能量值
 	FetterList          []uint32           `bson:"fetterList"`       // 资料解锁条目
-	SkillLevelMap       map[uint32]uint32  `bson:"skillLevelMap"`    // 技能等级
-	SkillExtraChargeMap map[uint32]uint32  `bson:"skillExtraChargeMap"`
-	ProudSkillBonusMap  map[uint32]uint32  `bson:"proudSkillBonusMap"`
-	SkillDepotId        uint32             `bson:"skillDepotId"`
-	CoreProudSkillLevel uint8              `bson:"coreProudSkillLevel"` // 已解锁命之座层数
-	TalentIdList        []uint32           `bson:"talentIdList"`        // 已解锁命之座技能列表
-	ProudSkillList      []uint32           `bson:"proudSkillList"`      // 被动技能列表
-	FlyCloak            uint32             `bson:"flyCloak"`            // 当前风之翼
-	Costume             uint32             `bson:"costume"`             // 当前衣装
-	BornTime            int64              `bson:"bornTime"`            // 获得时间
-	FetterLevel         uint8              `bson:"fetterLevel"`         // 好感度等级
-	FetterExp           uint32             `bson:"fetterExp"`           // 好感度经验
-	NameCardRewardId    uint32             `bson:"nameCardRewardId"`
-	NameCardId          uint32             `bson:"nameCardId"`
+	SkillLevelMap       map[uint32]uint32  `bson:"skillLevelMap"`    // 技能等级数据
+	SkillDepotId        uint32             `bson:"skillDepotId"`     // 技能库id
+	FlyCloak            uint32             `bson:"flyCloak"`         // 当前风之翼
+	Costume             uint32             `bson:"costume"`          // 当前衣装
+	BornTime            int64              `bson:"bornTime"`         // 获得时间
+	FetterLevel         uint8              `bson:"fetterLevel"`      // 好感度等级
+	FetterExp           uint32             `bson:"fetterExp"`        // 好感度经验
 	Guid                uint64             `bson:"-"`
 	EquipGuidList       map[uint64]uint64  `bson:"-"`
 	EquipWeapon         *Weapon            `bson:"-"`
@@ -48,7 +41,7 @@ func (p *Player) InitAllAvatar() {
 }
 
 func (p *Player) InitAvatar(avatar *Avatar) {
-	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatar.AvatarId)]
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
 		return
@@ -90,13 +83,13 @@ func (p *Player) GetAvatarIdByGuid(guid uint64) uint32 {
 }
 
 func (p *Player) AddAvatar(avatarId uint32) {
-	avatarDataConfig, ok := gdc.CONF.AvatarDataMap[int32(avatarId)]
-	if !ok {
-		logger.Error("avatarDataConfig error, avatarId: %v", avatarId)
+	avatarDataConfig, exist := gdconf.CONF.AvatarDataMap[int32(avatarId)]
+	if !exist {
+		logger.Error("avatar data config is nil, avatarId: %v", avatarId)
 		return
 	}
 	skillDepotId := int32(0)
-	// 主角要单独设置
+	// 主角可以切换属性 技能库要单独设置 这里默认给风元素的技能库
 	if avatarId == 10000005 {
 		skillDepotId = 504
 	} else if avatarId == 10000007 {
@@ -104,9 +97,9 @@ func (p *Player) AddAvatar(avatarId uint32) {
 	} else {
 		skillDepotId = avatarDataConfig.SkillDepotId
 	}
-	avatarSkillDepotDataConfig, ok := gdc.CONF.AvatarSkillDepotDataMap[skillDepotId]
-	if !ok {
-		logger.Error("avatarSkillDepotDataConfig error, skillDepotId: %v", skillDepotId)
+	avatarSkillDepotDataConfig, exist := gdconf.CONF.AvatarSkillDepotDataMap[skillDepotId]
+	if !exist {
+		logger.Error("avatar skill depot data config is nil, skillDepotId: %v", skillDepotId)
 		return
 	}
 	avatar := &Avatar{
@@ -119,46 +112,27 @@ func (p *Player) AddAvatar(avatarId uint32) {
 		SatiationPenalty:    0,
 		CurrHP:              0,
 		CurrEnergy:          0,
-		FetterList:          nil,
+		FetterList:          make([]uint32, 0),
 		SkillLevelMap:       make(map[uint32]uint32),
-		SkillExtraChargeMap: make(map[uint32]uint32),
-		ProudSkillBonusMap:  nil,
-		SkillDepotId:        uint32(avatarSkillDepotDataConfig.Id),
-		CoreProudSkillLevel: 0,
-		TalentIdList:        make([]uint32, 0),
-		ProudSkillList:      make([]uint32, 0),
+		SkillDepotId:        uint32(skillDepotId),
 		FlyCloak:            140001,
 		Costume:             0,
 		BornTime:            time.Now().Unix(),
 		FetterLevel:         1,
 		FetterExp:           0,
-		NameCardRewardId:    0,
-		NameCardId:          0,
 		Guid:                0,
 		EquipGuidList:       nil,
 		EquipWeapon:         nil,
 		EquipReliquaryList:  nil,
 		FightPropMap:        nil,
-		ExtraAbilityEmbryos: nil,
+		ExtraAbilityEmbryos: make(map[string]bool),
 	}
 
-	if avatarSkillDepotDataConfig.EnergySkill > 0 {
-		avatar.SkillLevelMap[uint32(avatarSkillDepotDataConfig.EnergySkill)] = 1
-	}
+	// 元素爆发1级
+	avatar.SkillLevelMap[uint32(avatarSkillDepotDataConfig.EnergySkill)] = 1
 	for _, skillId := range avatarSkillDepotDataConfig.Skills {
-		if skillId > 0 {
-			avatar.SkillLevelMap[uint32(skillId)] = 1
-		}
-	}
-	for _, openData := range avatarSkillDepotDataConfig.InherentProudSkillOpens {
-		if openData.ProudSkillGroupId == 0 {
-			continue
-		}
-		if openData.NeedAvatarPromoteLevel <= int32(avatar.Promote) {
-			proudSkillId := (openData.ProudSkillGroupId * 100) + 1
-			// TODO if GameData.getProudSkillDataMap().containsKey(proudSkillId) java
-			avatar.ProudSkillList = append(avatar.ProudSkillList, uint32(proudSkillId))
-		}
+		// 小技能1级
+		avatar.SkillLevelMap[uint32(skillId)] = 1
 	}
 	avatar.CurrHP = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
 
@@ -167,17 +141,33 @@ func (p *Player) AddAvatar(avatarId uint32) {
 }
 
 func (p *Player) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
-	avatarDataConfig := gdc.CONF.AvatarDataMap[int32(avatar.AvatarId)]
-	avatarSkillDepotDataConfig := gdc.CONF.AvatarSkillDepotDataMap[avatarDataConfig.SkillDepotId]
-	if avatarSkillDepotDataConfig == nil || avatarSkillDepotDataConfig.EnergySkillData == nil {
+	var avatarSkillDataConfig *gdconf.AvatarSkillData = nil
+	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
+		avatarSkillDepotDataConfig, exist := gdconf.CONF.AvatarSkillDepotDataMap[int32(avatar.SkillDepotId)]
+		if !exist {
+			return
+		}
+		avatarSkillDataConfig, exist = gdconf.CONF.AvatarSkillDataMap[avatarSkillDepotDataConfig.EnergySkill]
+		if !exist {
+			return
+		}
+	} else {
+		avatarSkillDataConfig = gdconf.CONF.GetAvatarEnergySkillConfig(avatar.AvatarId)
+	}
+	if avatarSkillDataConfig == nil {
+		logger.Error("get avatar energy skill is nil, avatarId: %v", avatar.AvatarId)
 		return
 	}
-	element := avatarSkillDepotDataConfig.ElementType
-	avatar.FightPropMap[uint32(element.MaxEnergyProp)] = float32(avatarSkillDepotDataConfig.EnergySkillData.CostElemVal)
+	elementType := constant.ElementTypeConst.VALUE_MAP[uint16(avatarSkillDataConfig.CostElemType)]
+	if elementType == nil {
+		logger.Error("get element type const is nil, value: %v", avatarSkillDataConfig.CostElemType)
+		return
+	}
+	avatar.FightPropMap[uint32(elementType.MaxEnergyProp)] = float32(avatarSkillDataConfig.CostElemVal)
 	if max {
-		avatar.FightPropMap[uint32(element.CurrEnergyProp)] = float32(avatarSkillDepotDataConfig.EnergySkillData.CostElemVal)
+		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(avatarSkillDataConfig.CostElemVal)
 	} else {
-		avatar.FightPropMap[uint32(element.CurrEnergyProp)] = float32(value)
+		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(value)
 	}
 }
 

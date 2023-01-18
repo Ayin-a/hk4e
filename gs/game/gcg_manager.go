@@ -1,14 +1,15 @@
 package game
 
 import (
+	"math/rand"
+	"time"
+
 	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"math/rand"
-	"time"
 )
 
 // ControllerType 操控者类型

@@ -55,11 +55,11 @@ type Logger struct {
 type LogInfo struct {
 	Level       int
 	Msg         string
-	Param       []any
 	FileName    string
 	FuncName    string
 	Line        int
 	GoroutineId string
+	ThreadId    string
 }
 
 func InitLogger(appName string) {
@@ -91,15 +91,16 @@ func (l *Logger) doLog() {
 			logStr += RED + "[" + l.getLevelStr(logInfo.Level) + "]" + RESET
 		}
 		if logInfo.Level == ERROR {
-			logStr += " " + RED + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + RESET + " "
+			logStr += " " + RED + logInfo.Msg + RESET + " "
 		} else {
-			logStr += " " + fmt.Sprintf(logInfo.Msg, logInfo.Param...) + " "
+			logStr += " " + logInfo.Msg + " "
 		}
 		if l.Track {
 			logStr += MAGENTA + "[" +
 				logInfo.FileName + ":" + strconv.Itoa(logInfo.Line) + " " +
 				logInfo.FuncName + "()" + " " +
-				"goroutine:" + logInfo.GoroutineId +
+				"goroutine:" + logInfo.GoroutineId + " " +
+				"thread:" + logInfo.ThreadId +
 				"]" + RESET
 		}
 		logStr += "\n"
@@ -164,11 +165,11 @@ func Debug(msg string, param ...any) {
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = DEBUG
-	logInfo.Msg = msg
-	logInfo.Param = param
+	logInfo.Msg = fmt.Sprintf(msg, param...)
 	if LOG.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
 		logInfo.GoroutineId = LOG.getGoroutineId()
+		logInfo.ThreadId = LOG.getThreadId()
 	}
 	LOG.LogInfoChan <- logInfo
 }
@@ -179,11 +180,11 @@ func Info(msg string, param ...any) {
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = INFO
-	logInfo.Msg = msg
-	logInfo.Param = param
+	logInfo.Msg = fmt.Sprintf(msg, param...)
 	if LOG.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
 		logInfo.GoroutineId = LOG.getGoroutineId()
+		logInfo.ThreadId = LOG.getThreadId()
 	}
 	LOG.LogInfoChan <- logInfo
 }
@@ -194,11 +195,11 @@ func Warn(msg string, param ...any) {
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = WARN
-	logInfo.Msg = msg
-	logInfo.Param = param
+	logInfo.Msg = fmt.Sprintf(msg, param...)
 	if LOG.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
 		logInfo.GoroutineId = LOG.getGoroutineId()
+		logInfo.ThreadId = LOG.getThreadId()
 	}
 	LOG.LogInfoChan <- logInfo
 }
@@ -209,11 +210,11 @@ func Error(msg string, param ...any) {
 	}
 	logInfo := new(LogInfo)
 	logInfo.Level = ERROR
-	logInfo.Msg = msg
-	logInfo.Param = param
+	logInfo.Msg = fmt.Sprintf(msg, param...)
 	if LOG.Track {
 		logInfo.FileName, logInfo.Line, logInfo.FuncName = LOG.getLineFunc()
 		logInfo.GoroutineId = LOG.getGoroutineId()
+		logInfo.ThreadId = LOG.getThreadId()
 	}
 	LOG.LogInfoChan <- logInfo
 }

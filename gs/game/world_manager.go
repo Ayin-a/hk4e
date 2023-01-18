@@ -1142,11 +1142,3 @@ func (s *Scene) GetEntity(entityId uint32) *Entity {
 func (s *Scene) GetEntityByObjectId(objectId int64) *Entity {
 	return s.objectIdEntityMap[objectId]
 }
-
-func (s *Scene) GetEntityIdList() []uint32 {
-	entityIdList := make([]uint32, 0)
-	for k := range s.entityMap {
-		entityIdList = append(entityIdList, k)
-	}
-	return entityIdList
-}

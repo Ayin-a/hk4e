@@ -2,9 +2,12 @@ package gdconf
 
 import (
 	"fmt"
+	"os"
 
+	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 
+	"github.com/hjson/hjson-go/v4"
 	"github.com/jszwec/csvutil"
 )
 
@@ -31,6 +34,7 @@ type AvatarSkillDepotData struct {
 
 	Skills                  []int32
 	InherentProudSkillOpens []*InherentProudSkillOpens
+	AbilityHashCodeList     []int32
 }
 
 type InherentProudSkillOpens struct {
@@ -47,6 +51,21 @@ func (g *GameDataConfig) loadAvatarSkillDepotData() {
 		info := fmt.Sprintf("parse file error: %v", err)
 		panic(info)
 	}
+
+	playerElementsFilePath := g.jsonPrefix + "ability_group/AbilityGroup_Other_PlayerElementAbility.json"
+	playerElementsFile, err := os.ReadFile(playerElementsFilePath)
+	if err != nil {
+		info := fmt.Sprintf("open file error: %v", err)
+		panic(info)
+	}
+	playerAbilities := make(map[string]*ConfigAvatar)
+	err = hjson.Unmarshal(playerElementsFile, &playerAbilities)
+	if err != nil {
+		info := fmt.Sprintf("parse file error: %v", err)
+		panic(info)
+	}
+	logger.Info("load %v PlayerAbilities", len(playerAbilities))
+
 	for _, avatarSkillDepotData := range avatarSkillDepotDataList {
 		// 把全部技能数据放进一个列表里 以后要是没用到或者不需要的话就可以删了
 		avatarSkillDepotData.Skills = make([]int32, 0)
@@ -93,8 +112,39 @@ func (g *GameDataConfig) loadAvatarSkillDepotData() {
 				NeedAvatarPromoteLevel: avatarSkillDepotData.ProudSkill5NeedAvatarPromoteLevel,
 			})
 		}
+		avatarSkillDepotData.AbilityHashCodeList = make([]int32, 0)
+		if avatarSkillDepotData.SkillDepotAbilityGroup != "" {
+			config := playerAbilities[avatarSkillDepotData.SkillDepotAbilityGroup]
+			if config != nil {
+				for _, targetAbility := range config.TargetAbilities {
+					avatarSkillDepotData.AbilityHashCodeList = append(avatarSkillDepotData.AbilityHashCodeList, endec.Hk4eAbilityHashCode(targetAbility.AbilityName))
+				}
+			}
+		}
 		// list -> map
 		g.AvatarSkillDepotDataMap[avatarSkillDepotData.AvatarSkillDepotId] = avatarSkillDepotData
 	}
 	logger.Info("AvatarSkillDepotData count: %v", len(g.AvatarSkillDepotDataMap))
+}
+
+func (g *GameDataConfig) GetAvatarEnergySkillConfig(avatarId uint32) *AvatarSkillData {
+	if avatarId == 10000005 || avatarId == 10000007 {
+		return nil
+	}
+	// 角色配置
+	avatarDataConfig, exist := CONF.AvatarDataMap[int32(avatarId)]
+	if !exist {
+		return nil
+	}
+	// 角色技能库配置
+	avatarSkillDepotDataConfig, exist := CONF.AvatarSkillDepotDataMap[avatarDataConfig.SkillDepotId]
+	if !exist {
+		return nil
+	}
+	// 角色充能技配置
+	avatarSkillDataConfig, exist := CONF.AvatarSkillDataMap[avatarSkillDepotDataConfig.EnergySkill]
+	if !exist {
+		return nil
+	}
+	return avatarSkillDataConfig
 }

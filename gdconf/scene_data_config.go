@@ -3,8 +3,13 @@ package gdconf
 import (
 	"os"
 	"strconv"
+	"sync"
 
 	"hk4e/pkg/logger"
+)
+
+const (
+	SceneGroupLoaderLimit = 4 // 加载文件的并发数 此操作很耗内存 调大之前请确保你的机器内存足够
 )
 
 type Scene struct {
@@ -29,9 +34,10 @@ type SceneConfig struct {
 }
 
 type Block struct {
-	Id         int32
-	BlockRange *BlockRange      // 区块范围坐标
-	GroupMap   map[int32]*Group // 所有的group
+	Id               int32
+	BlockRange       *BlockRange      // 区块范围坐标
+	GroupMap         map[int32]*Group // 所有的group
+	groupMapLoadLock sync.Mutex
 }
 
 type BlockRange struct {
@@ -74,12 +80,53 @@ type Npc struct {
 }
 
 type Gadget struct {
-	ConfigId int32   `json:"config_id"`
-	GadgetId int32   `json:"gadget_id"`
-	Pos      *Vector `json:"pos"`
-	Rot      *Vector `json:"rot"`
-	Level    int32   `json:"level"`
-	AreaId   int32   `json:"area_id"`
+	ConfigId  int32   `json:"config_id"`
+	GadgetId  int32   `json:"gadget_id"`
+	Pos       *Vector `json:"pos"`
+	Rot       *Vector `json:"rot"`
+	Level     int32   `json:"level"`
+	AreaId    int32   `json:"area_id"`
+	PointType int32   `json:"point_type"` // 关联GatherData表
+}
+
+func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, blockId int32) {
+	sceneLuaPrefix := g.luaPrefix + "scene/"
+	sceneIdStr := strconv.Itoa(int(sceneId))
+	groupId := group.Id
+	groupIdStr := strconv.Itoa(int(groupId))
+	groupLuaData, err := os.ReadFile(sceneLuaPrefix + sceneIdStr + "/scene" + sceneIdStr + "_group" + groupIdStr + ".lua")
+	if err != nil {
+		logger.Error("open file error: %v, sceneId: %v, blockId: %v, groupId: %v", err, sceneId, blockId, groupId)
+		return
+	}
+	luaState := fixLuaState(string(groupLuaData))
+	// monsters
+	group.MonsterList = make([]*Monster, 0)
+	ok := parseLuaTableToObject[*[]*Monster](luaState, "monsters", &group.MonsterList)
+	if !ok {
+		logger.Error("get monsters object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		luaState.Close()
+		return
+	}
+	// npcs
+	group.NpcList = make([]*Npc, 0)
+	ok = parseLuaTableToObject[*[]*Npc](luaState, "npcs", &group.NpcList)
+	if !ok {
+		logger.Error("get npcs object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		luaState.Close()
+		return
+	}
+	// gadgets
+	group.GadgetList = make([]*Gadget, 0)
+	ok = parseLuaTableToObject[*[]*Gadget](luaState, "gadgets", &group.GadgetList)
+	luaState.Close()
+	if !ok {
+		logger.Error("get gadgets object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		return
+	}
+	block.groupMapLoadLock.Lock()
+	block.GroupMap[group.Id] = group
+	block.groupMapLoadLock.Unlock()
 }
 
 func (g *GameDataConfig) loadScene() {
@@ -90,7 +137,7 @@ func (g *GameDataConfig) loadScene() {
 		sceneIdStr := strconv.Itoa(int(sceneId))
 		mainLuaData, err := os.ReadFile(sceneLuaPrefix + sceneIdStr + "/scene" + sceneIdStr + ".lua")
 		if err != nil {
-			logger.Error("open file error: %v, sceneId: %v", err, sceneId)
+			logger.Info("open file error: %v, sceneId: %v", err, sceneId)
 			continue
 		}
 		luaState := fixLuaState(string(mainLuaData))
@@ -144,64 +191,20 @@ func (g *GameDataConfig) loadScene() {
 				logger.Error("get groups object error, sceneId: %v, blockId: %v", sceneId, blockId)
 				continue
 			}
-			for _, group := range groupList {
-				groupId := group.Id
-				groupIdStr := strconv.Itoa(int(groupId))
-				groupLuaData, err := os.ReadFile(sceneLuaPrefix + sceneIdStr + "/scene" + sceneIdStr + "_group" + groupIdStr + ".lua")
-				if err != nil {
-					logger.Error("open file error: %v, sceneId: %v, blockId: %v, groupId: %v", err, sceneId, blockId, groupId)
-					continue
-				}
-				luaState = fixLuaState(string(groupLuaData))
-				// monsters
-				group.MonsterList = make([]*Monster, 0)
-				ok = parseLuaTableToObject[*[]*Monster](luaState, "monsters", &group.MonsterList)
-				if !ok {
-					logger.Error("get monsters object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-					luaState.Close()
-					continue
-				}
-				// npcs
-				group.NpcList = make([]*Npc, 0)
-				ok = parseLuaTableToObject[*[]*Npc](luaState, "npcs", &group.NpcList)
-				if !ok {
-					logger.Error("get npcs object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-					luaState.Close()
-					continue
-				}
-				// gadgets
-				group.GadgetList = make([]*Gadget, 0)
-				ok = parseLuaTableToObject[*[]*Gadget](luaState, "gadgets", &group.GadgetList)
-				luaState.Close()
-				if !ok {
-					logger.Error("get gadgets object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-					continue
-				}
-				ok = true
-				for _, monster := range group.MonsterList {
-					if monster == nil {
-						ok = false
-						break
-					}
-				}
-				for _, npc := range group.NpcList {
-					if npc == nil {
-						ok = false
-						break
-					}
-				}
-				for _, gadget := range group.GadgetList {
-					if gadget == nil {
-						ok = false
-						break
-					}
-				}
-				if !ok {
-					logger.Error("entry is nil, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-					continue
-				}
-				block.GroupMap[group.Id] = group
+			// 因为group文件实在是太多了 有好几万个 所以这里并发同时加载
+			wc := make(chan bool, SceneGroupLoaderLimit)
+			wg := sync.WaitGroup{}
+			for i := 0; i < len(groupList); i++ {
+				group := groupList[i]
+				wc <- true
+				wg.Add(1)
+				go func() {
+					g.loadGroup(group, block, sceneId, blockId)
+					<-wc
+					wg.Done()
+				}()
 			}
+			wg.Wait()
 			scene.BlockMap[block.Id] = block
 		}
 		g.SceneMap[sceneId] = scene

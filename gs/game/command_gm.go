@@ -17,7 +17,7 @@ func (c *CommandManager) GMTeleportPlayer(userId, sceneId uint32, posX, posY, po
 		X: posX,
 		Y: posY,
 		Z: posZ,
-	}, 0)
+	}, new(model.Vector), 0)
 }
 
 // GMAddUserItem 给予玩家物品

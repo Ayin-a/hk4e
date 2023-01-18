@@ -13,7 +13,6 @@ import (
 	"hk4e/common/mq"
 	"hk4e/common/rpc"
 	"hk4e/gdconf"
-	gdc "hk4e/gs/config"
 	"hk4e/gs/dao"
 	"hk4e/gs/game"
 	"hk4e/gs/service"
@@ -72,8 +71,6 @@ func Run(ctx context.Context, configFile string) error {
 	logger.Warn("gs start, appid: %v, gsid: %v", APPID, GSID)
 
 	constant.InitConstant()
-
-	gdc.InitGameDataConfig()
 	gdconf.InitGameDataConfig()
 
 	db, err := dao.NewDao()

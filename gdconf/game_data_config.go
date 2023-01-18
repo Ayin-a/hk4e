@@ -29,7 +29,15 @@ type GameDataConfig struct {
 	GCGCharDataMap          map[int32]*GCGCharData          // 角色卡牌
 	GCGSkillDataMap         map[int32]*GCGSkillData         // 卡牌技能
 	SceneDataMap            map[int32]*SceneData            // 场景
+	ScenePointMap           map[int32]*ScenePoint           // 场景传送点
+	SceneTagDataMap         map[int32]*SceneTagData         // 场景地图图标
 	SceneMap                map[int32]*Scene                // 场景详情
+	WorldAreaDataMap        map[int32]*WorldAreaData        // 世界区域
+	GatherDataMap           map[int32]*GatherData           // 采集物
+	GatherDataPointTypeMap  map[int32]*GatherData           // 采集物场景节点索引
+	FetterDataMap           map[int32]*FetterData           // 角色资料解锁
+	FetterDataAvatarIdMap   map[int32][]int32               // 角色资料解锁角色id索引
+	ItemDataMap             map[int32]*ItemData             // 统一道具
 }
 
 func InitGameDataConfig() {
@@ -82,7 +90,13 @@ func (g *GameDataConfig) load() {
 	g.loadGCGCharData()          // 角色卡牌
 	g.loadGCGSkillData()         // 卡牌技能
 	g.loadSceneData()            // 场景
+	g.loadScenePoint()           // 场景传送点
+	g.loadSceneTagData()         // 场景地图图标
 	g.loadScene()                // 场景详情
+	g.loadWorldAreaData()        // 世界区域
+	g.loadGatherData()           // 采集物
+	g.loadFetterData()           // 角色资料解锁
+	g.loadItemData()             // 统一道具
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
@@ -103,25 +117,25 @@ func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
 
 func fixLuaState(luaStr string) *lua.LState {
 	fixLua := ""
-	fixLua += "GadgetState = {}"
-	fixLua += "EventType = {}"
-	fixLua += "RegionShape = {}"
-	fixLua += "VisionLevelType = {}"
-	luaLineList := strings.Split(luaStr, "\n")
-	luaStr = ""
-	for _, luaLine := range luaLineList {
-		line := strings.TrimSpace(luaLine)
-		if len(line) != 0 && line[0] == '[' && strings.Contains(line, "]") && strings.Contains(line, "=") {
-			luaStr += luaLine[strings.Index(luaLine, "=")+1:] + "\n"
-		} else {
-			luaStr += luaLine + "\n"
-		}
-	}
+	fixLua += "GadgetState = {}\n"
+	fixLua += "EventType = {}\n"
+	fixLua += "RegionShape = {}\n"
+	fixLua += "VisionLevelType = {}\n"
 	luaStr = fixLua + luaStr
 	luaState := lua.NewState()
 	err := luaState.DoString(luaStr)
 	if err != nil {
-		if !strings.Contains(err.Error(), "module") {
+		if strings.Contains(err.Error(), "module") && strings.Contains(err.Error(), "not found") {
+			luaLineList := strings.Split(luaStr, "\n")
+			luaStr = ""
+			for _, luaLine := range luaLineList {
+				if !strings.Contains(luaLine, "require") {
+					luaStr += luaLine + "\n"
+				}
+			}
+			err = luaState.DoString(luaStr)
+		}
+		if err != nil {
 			logger.Error("lua parse error: %v", err)
 		}
 	}
@@ -133,9 +147,26 @@ func parseLuaTableToObject[T any](luaState *lua.LState, tableName string, object
 	table, ok := luaValue.(*lua.LTable)
 	if !ok {
 		logger.Info("get lua table error, table name: %v, lua type: %v", tableName, luaValue.Type().String())
-		return false
+		return true
 	}
 	tableObject := convLuaValueToGo(table)
+	switch tableObject.(type) {
+	case map[string]any:
+	case []any:
+		// 去除数组开头的空元素
+		rawObjectList := tableObject.([]any)
+		objectList := make([]any, 0)
+		for i := len(rawObjectList) - 1; i >= 0; i-- {
+			if rawObjectList[i] == nil {
+				break
+			}
+			objectList = append(objectList, rawObjectList[i])
+		}
+		tableObject = objectList
+	default:
+		logger.Error("not support type")
+		return false
+	}
 	jsonData, err := json.Marshal(tableObject)
 	if err != nil {
 		logger.Error("build json error: %v", err)

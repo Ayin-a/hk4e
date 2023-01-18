@@ -1,9 +1,10 @@
 package game
 
 import (
+	"time"
+
 	"hk4e/pkg/logger"
 	"hk4e/protocol/proto"
-	"time"
 )
 
 type GCGAi struct {

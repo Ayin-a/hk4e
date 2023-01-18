@@ -14,8 +14,8 @@ type PlayerProperty struct {
 	PROP_IS_SPRING_AUTO_USE              uint16 // 是否开启靠近自动回血 0 1
 	PROP_SPRING_AUTO_USE_PERCENT         uint16 // 自动回血百分比 0-100
 	PROP_IS_FLYABLE                      uint16 // 禁止使用风之翼 0 1
-	PROP_IS_WEATHER_LOCKED               uint16 // 游戏内天气锁定 暂不确定
-	PROP_IS_GAME_TIME_LOCKED             uint16 // 游戏内时间锁定 暂不确定
+	PROP_IS_WEATHER_LOCKED               uint16 // 游戏内天气锁定
+	PROP_IS_GAME_TIME_LOCKED             uint16 // 游戏内时间锁定
 	PROP_IS_TRANSFERABLE                 uint16 // 是否禁止传送 0 1
 	PROP_MAX_STAMINA                     uint16 // 最大体力 0-24000
 	PROP_CUR_PERSIST_STAMINA             uint16 // 当前体力 0-PROP_MAX_STAMINA

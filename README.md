@@ -34,3 +34,5 @@ hk4e game server
 ```shell
 GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 ```
+
+* 运行gdconf/game_data_config_test.go文件中的TestGenGdCsv方法 生成服务器配置表

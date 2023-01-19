@@ -38,14 +38,15 @@ type Redis struct {
 
 // Hk4e 原神相关
 type Hk4e struct {
-	KcpPort                int32  `toml:"kcp_port"` // 该地址只用来注册到节点服务器 并非网关本地监听地址 本地监听为0.0.0.0
-	KcpAddr                string `toml:"kcp_addr"`
+	KcpAddr                string `toml:"kcp_addr"` // 该地址只用来注册到节点服务器 填网关的外网地址 网关本地监听为0.0.0.0
+	KcpPort                int32  `toml:"kcp_port"`
 	GameDataConfigPath     string `toml:"game_data_config_path"`
 	GachaHistoryServer     string `toml:"gacha_history_server"`
 	ClientProtoProxyEnable bool   `toml:"client_proto_proxy_enable"`
 	Version                string `toml:"version"`
-	GateTcpMqAddr          string `toml:"gate_tcp_mq_addr"`
+	GateTcpMqAddr          string `toml:"gate_tcp_mq_addr"` // 访问网关tcp直连消息队列的地址 填网关的内网地址
 	GateTcpMqPort          int32  `toml:"gate_tcp_mq_port"`
+	LoginSdkUrl            string `toml:"login_sdk_url"`
 }
 
 // MQ 消息队列

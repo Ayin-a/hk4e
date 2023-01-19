@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"hk4e/common/config"
 	"hk4e/common/mq"
 	"hk4e/dispatch/controller"
 	"hk4e/gate/kcp"
@@ -278,7 +279,7 @@ func (k *KcpConnectManager) getHeadMsg(clientSeq uint32) (headMsg *proto.PacketH
 }
 
 func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session *Session) (rsp *proto.GetPlayerTokenRsp) {
-	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp]("http://127.0.0.1:8080/gate/token/verify", &controller.TokenVerifyReq{
+	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp](config.CONF.Hk4e.LoginSdkUrl, &controller.TokenVerifyReq{
 		AccountId:    req.AccountUid,
 		AccountToken: req.AccountToken,
 	}, "")

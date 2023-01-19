@@ -6,10 +6,8 @@
 
 ## 使用方法
 
-> 1. 在此目录下建立bin目录和proto目录
+> 1. 在此目录下建立proto目录
 > 2. 将对应版本的proto协议文件复制到proto目录下并编译成pb.go
-> 3. 将client_proto_gen_test.go的TestClientProtoGen方法添加运行配置
-> 4. 将运行配置输出目录和工作目录都设置为bin目录
-> 5. 运行并生成client_proto_gen.go
-> 6. 将client_cmd.csv放入gate和gs和fight服务器的运行目录下
-> 7. 将gate和gs和fight服务器的配置文件中开启client_proto_proxy_enable客户端协议代理功能
+> 3. make gen_client_proto
+> 4. 将client_cmd.csv放入gate和gs和fight服务器的运行目录下
+> 5. 将gate和gs和fight服务器的配置文件中开启client_proto_proxy_enable客户端协议代理功能

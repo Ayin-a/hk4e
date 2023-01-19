@@ -40,7 +40,6 @@ type Redis struct {
 type Hk4e struct {
 	KcpPort                int32  `toml:"kcp_port"` // 该地址只用来注册到节点服务器 并非网关本地监听地址 本地监听为0.0.0.0
 	KcpAddr                string `toml:"kcp_addr"`
-	ResourcePath           string `toml:"resource_path"`
 	GameDataConfigPath     string `toml:"game_data_config_path"`
 	GachaHistoryServer     string `toml:"gacha_history_server"`
 	ClientProtoProxyEnable bool   `toml:"client_proto_proxy_enable"`

@@ -1,13 +1,16 @@
 # hk4e
 
-hk4e game server
+#### hk4e game server
 
-## 开发快速上手
+## 编译和运行环境
 
 * Go >= 1.18
+* Protoc >= 3.21
+* Protoc Gen Go >= 1.28
 
 > 1. 首次需要安装工具 `make dev_tool`
 > 2. 生成协议 `make gen_natsrpc && make gen_proto`
+> 3. 生成配置表 `make gen_csv`
 
 ## 快速运行
 
@@ -17,15 +20,15 @@ hk4e game server
 * nats-server
 * redis
 
-#### 启动顺序
+#### 服务器组件
 
-> 1. 启动节点服务器(仅单节点 有状态) `cd cmd/node && go run .`
-> 2. 启动http登录服务器(可多节点 无状态) `cd cmd/dispatch && go run .`
-> 3. 启动网关服务器(可多节点 有状态) `cd cmd/gate && go run .`
-> 4. 启动战斗服务器(可多节点 有状态 非必要) `cd cmd/fight && go run .`
-> 5. 启动寻路服务器(可多节点 无状态 非必要) `cd cmd/pathfinding && go run .`
-> 6. 启动游戏服务器(可多节点 有状态) `cd cmd/gs && go run .`
-> 7. 启动游戏管理服务器(仅单节点 无状态) `cd cmd/gm && go run .`
+* node 节点服务器 (仅单节点 有状态)
+* dispatch 登录服务器 (可多节点 无状态)
+* gate 网关服务器 (可多节点 有状态)
+* fight 战斗服务器 (可多节点 有状态 非必要)
+* pathfinding 寻路服务器 (可多节点 无状态 非必要)
+* gs 游戏服务器 (可多节点 有状态)
+* gm 游戏管理服务器 (仅单节点 无状态)
 
 #### 其它
 
@@ -34,5 +37,3 @@ hk4e game server
 ```shell
 GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 ```
-
-* 运行gdconf/game_data_config_test.go文件中的TestGenGdCsv方法 生成服务器配置表

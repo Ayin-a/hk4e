@@ -7,7 +7,7 @@ import (
 )
 
 func TestClientProtoGen(t *testing.T) {
-	dir, err := os.ReadDir("../proto")
+	dir, err := os.ReadDir("./proto")
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +39,7 @@ func TestClientProtoGen(t *testing.T) {
 	fileData += "\t}\n"
 	fileData += "}\n"
 
-	err = os.WriteFile("../client_proto_gen.go", []byte(fileData), 0644)
+	err = os.WriteFile("./client_proto_gen.go", []byte(fileData), 0644)
 	if err != nil {
 		panic(err)
 	}

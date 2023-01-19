@@ -7,8 +7,6 @@ VERSION=1.0.0
 clean:
 	rm -rf ./bin
 	rm -rf ./protocol/proto
-	rm -rf ./gate/client_proto/client_proto_gen.go
-	rm -rf ./gdconf/game_data_config/csv/*.csv
 
 # 构建服务器二进制文件
 .PHONY: build

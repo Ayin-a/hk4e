@@ -7,7 +7,7 @@ hk4e game server
 * Go >= 1.18
 
 > 1. 首次需要安装工具 `make dev_tool`
-> 2. 生成协议 `make gen`
+> 2. 生成协议 `make gen_natsrpc && make gen_proto`
 
 ## 快速运行
 

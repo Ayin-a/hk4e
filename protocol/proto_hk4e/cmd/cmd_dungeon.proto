@@ -1,0 +1,1024 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./;proto";
+
+import "define.proto";
+import "cmd/cmd_tower.proto";
+import "cmd/cmd_activity.proto";
+
+enum WindFieldDungeonFailReason {
+  WIND_FIELD_DUNGEON_FAIL_NONE           = 0;
+  WIND_FIELD_DUNGEON_FAIL_CANCEL         = 1;
+  WIND_FIELD_DUNGEON_FAIL_TIMEOUT        = 2;
+  WIND_FIELD_DUNGEON_FAIL_ALL_AVATAR_DIE = 3;
+  WIND_FIELD_DUNGEON_FAIL_LUA_INTERRUPT  = 4;
+}
+
+enum DungeonDataType {
+  DUNGEON_DATA_NONE                          = 0;
+  DUNGEON_DATA_END_TIME                      = 1;
+  DUNGEON_DATA_MONSTER_DIE_COUNT             = 2;
+  DUNGEON_DATA_LEVEL_CONFIG_ID               = 3;
+  DUNGEON_DATA_TOWER_MONTHLY_LEVEL_CONFIG_ID = 4;
+  DUNGEON_DATA_TOWER_FLOOR_LEVEL_CONFIG_ID   = 5;
+}
+
+enum ChallengeFinishType {
+  CHALLENGE_FINISH_TYPE_NONE  = 0;
+  CHALLENGE_FINISH_TYPE_FAIL  = 1;
+  CHALLENGE_FINISH_TYPE_SUCC  = 2;
+  CHALLENGE_FINISH_TYPE_PAUSE = 3;
+}
+
+enum CustomDungeonFinishType {
+  CUSTOM_DUNGEON_FINISH_PLAY_NORMAL      = 0;
+  CUSTOM_DUNGEON_FINISH_PLAY_TRY         = 1;
+  CUSTOM_DUNGEON_FINISH_EDIT_TRY         = 2;
+  CUSTOM_DUNGEON_FINISH_SELF_PLAY_NORMAL = 3;
+}
+
+enum DungeonCandidateTeamPlayerLeaveReason {
+  DUNGEON_CANDIDATE_TPLR_NORMAL  = 0;
+  DUNGEON_CANDIDATE_TPLR_DIE     = 1;
+  DUNGEON_CANDIDATE_TPLR_BE_KICK = 2;
+  DUNGEON_CANDIDATE_DISCONNECT   = 3;
+}
+
+enum DungeonCandidateTeamDismissReason {
+  DUNGEON_CANDIDATE_TPDR_NORMAL     = 0;
+  DUNGEON_CANDIDATE_TPDR_DIE        = 1;
+  DUNGEON_CANDIDATE_TPDR_DISCONNECT = 2;
+}
+
+enum DungeonRestartReason {
+  DUNGEON_RESTART_REASON_NONE          = 0;
+  DUNGEON_RESTART_REASON_DAILY_RESTART = 1;
+  DUNGEON_RESTART_REASON_DIE_RETRY     = 2;
+}
+
+message DungeonEntryInfoReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 972;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32              point_id            = 2;
+  uint32              scene_id            = 9;
+  repeated Uint32Pair scene_point_id_list = 4;
+}
+
+message DungeonEntryInfo {
+  uint32                      end_time                        = 6;
+  uint32                      dungeon_id                      = 5;
+  uint32                      boss_chest_num                  = 12;
+  uint32                      max_boss_chest_num              = 13;
+  uint32                      next_refresh_time               = 11;
+  WeeklyBossResinDiscountInfo weekly_boss_resin_discount_info = 9;
+  uint32                      start_time                      = 15;
+  bool                        is_passed                       = 4;
+  uint32                      left_times                      = 7;
+}
+
+message DungeonEntryPointInfo {
+  uint32                    scene_id             = 12;
+  uint32                    point_id             = 6;
+  repeated DungeonEntryInfo dungeon_entry_list   = 1;
+  uint32                    recommend_dungeon_id = 8;
+}
+
+message DungeonEntryInfoRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 998;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  repeated DungeonEntryInfo      dungeon_entry_list       = 12;
+  uint32                         point_id                 = 15;
+  repeated DungeonEntryPointInfo dungeon_entry_point_list = 4;
+  uint32                         recommend_dungeon_id     = 14;
+  int32                          retcode                  = 11;
+}
+
+message DungeonEnterPosInfo {
+  uint32 quest_id = 13;
+  uint32 point_id = 6;
+}
+
+message PlayerEnterDungeonReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 912;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  DungeonEnterPosInfo enter_pos_info = 2;
+  uint32              point_id       = 13;
+  uint32              dungeon_id     = 7;
+}
+
+message PlayerEnterDungeonRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 935;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 dungeon_id = 2;
+  uint32 point_id   = 6;
+  int32  retcode    = 5;
+}
+
+message PlayerQuitDungeonReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 907;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool   is_quit_immediately = 10;
+  uint32 point_id            = 7;
+}
+
+message PlayerQuitDungeonRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 921;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 point_id = 11;
+  int32  retcode  = 7;
+}
+
+message DungeonWayPointNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 903;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  bool            is_add                = 9;
+  repeated uint32 active_way_point_list = 4;
+}
+
+message DungeonWayPointActivateReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 990;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 way_point_id = 3;
+}
+
+message DungeonWayPointActivateRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 973;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32  retcode      = 6;
+  uint32 way_point_id = 7;
+}
+
+message StrengthenPointData {
+  uint32 base_point = 10;
+  uint32 cur_point  = 11;
+}
+
+message DungeonSettleExhibitionInfo {
+  OnlinePlayerInfo               player_info = 3;
+  repeated ExhibitionDisplayInfo card_list   = 13;
+}
+
+message CrystalLinkDungeonSettleInfo {
+  uint32 kill_elite_monster_num  = 2;
+  uint32 final_score             = 6;
+  uint32 level_id                = 12;
+  bool   is_new_record           = 13;
+  uint32 difficulty_id           = 9;
+  uint32 kill_normal_mosnter_num = 3;
+}
+
+message SummerTimeV2DungeonSettleInfo {
+  bool   is_success               = 5;
+  uint32 taken_reward_count       = 2;
+  uint32 cur_dungeon_reward_limit = 11;
+}
+
+message InstableSprayDungeonSettleInfo {
+  uint32          stage_id      = 1;
+  repeated uint32 score_list    = 4;
+  bool            is_new_record = 13;
+  uint32          difficulty    = 5;
+}
+
+message WindFieldDungeonSettleInfo {
+  repeated uint32            after_watcher_id_list  = 11;
+  repeated uint32            before_watcher_id_list = 7;
+  WindFieldDungeonFailReason fail_reason            = 2;
+}
+
+message EffigyChallengeV2SettleInfo {
+  bool   is_challenge_highest_difficulty = 7;
+  uint32 create_dungeon_player_uid       = 4;
+  uint32 challenge_mode_difficulty       = 6;
+  bool   is_new_record_time              = 1;
+  uint32 record_time                     = 12;
+  uint32 first_time_finish_difficulty    = 5;
+}
+
+message TeamChainSettleInfo {
+  repeated uint32 score_list    = 9;
+  uint32          total_score   = 1;
+  uint32          difficulty    = 15;
+  uint32          stage_id      = 12;
+  bool            is_new_record = 4;
+}
+
+message DungeonSettleNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 999;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32                               result                    = 10;
+  uint32                               dungeon_id                = 13;
+  map<uint32, StrengthenPointData>     strengthen_point_data_map = 14;
+  repeated DungeonSettleExhibitionInfo exhibition_info_list      = 8;
+  uint32                               create_player_uid         = 12;
+  repeated uint32                      fail_cond_list            = 11;
+  uint32                               use_time                  = 1;
+  uint32                               close_time                = 4;
+  bool                                 is_success                = 7;
+  map<uint32, ParamList>               settle_show               = 5;
+  oneof detail {
+    TowerLevelEndNotify                 tower_level_end_notify                   = 351;
+    TrialAvatarFirstPassDungeonNotify   trial_avatar_first_pass_dungeon_notify   = 635;
+    ChannellerSlabLoopDungeonResultInfo channeller_slab_loop_dungeon_result_info = 686;
+    EffigyChallengeDungeonResultInfo    effigy_challenge_dungeon_result_info     = 328;
+    RoguelikeDungeonSettleInfo          roguelike_dungeon_settle_info            = 1482;
+    CrystalLinkDungeonSettleInfo        crystal_link_settle_info                 = 112;
+    SummerTimeV2DungeonSettleInfo       summer_time_v2_dungeon_settle_info       = 1882;
+    InstableSprayDungeonSettleInfo      instable_spray_settle_info               = 193;
+    WindFieldDungeonSettleInfo          wind_field_dungeon_settle_info           = 1825;
+    EffigyChallengeV2SettleInfo         effigy_challenge_v2_settle_info          = 1802;
+    TeamChainSettleInfo                 team_chain_settle_info                   = 324;
+  }
+}
+
+message DungeonPlayerDieNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 931;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  map<uint32, StrengthenPointData> strengthen_point_data_map = 15;
+  uint32                           wait_time                 = 1;
+  uint32                           dungeon_id                = 9;
+  uint32                           murderer_entity_id        = 13;
+  PlayerDieType                    die_type                  = 3;
+  uint32                           revive_count              = 6;
+  oneof entity {
+    uint32 monster_id = 4;
+    uint32 gadget_id  = 8;
+  }
+}
+
+message DungeonDieOptionReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 975;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  PlayerDieOption die_option          = 11;
+  bool            is_quit_immediately = 14;
+}
+
+message DungeonDieOptionRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 948;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32           retcode      = 5;
+  uint32          revive_count = 10;
+  PlayerDieOption die_option   = 6;
+}
+
+message DungeonShowReminderNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 997;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 reminder_id = 9;
+}
+
+message DungeonPlayerDieReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 981;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  PlayerDieType die_type   = 6;
+  uint32        dungeon_id = 8;
+}
+
+message DungeonPlayerDieRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 905;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 5;
+}
+
+message DungeonDataNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 982;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  map<uint32, uint32> dungeon_data_map = 1;
+}
+
+message DungeonChallengeBeginNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 947;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32          father_index    = 5;
+  repeated uint32 param_list      = 14;
+  uint32          challenge_index = 6;
+  uint32          challenge_id    = 1;
+  uint32          group_id        = 4;
+  repeated uint32 uid_list        = 12;
+}
+
+message ChallengeBrief {
+  uint32 cur_progress    = 9;
+  uint32 challenge_index = 10;
+  bool   is_success      = 4;
+  uint32 challenge_id    = 8;
+}
+
+message CustomDungeonResultInfo {
+  bool                    is_liked             = 12;
+  uint32                  got_coin_num         = 9;
+  repeated ChallengeBrief child_challenge_list = 6;
+  uint64                  dungeon_guid         = 3;
+  CustomDungeonFinishType finish_type          = 7;
+  uint32                  time_cost            = 11;
+  bool                    is_arrive_finish     = 2;
+  bool                    is_stored            = 14;
+}
+
+message DungeonChallengeFinishNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 939;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  map<uint32, StrengthenPointData> strengthen_point_data_map = 13;
+  ChallengeFinishType              finish_type               = 9;
+  bool                             is_new_record             = 10;
+  uint32                           challenge_record_type     = 7;
+  uint32                           time_cost                 = 4;
+  uint32                           current_value             = 15;
+  bool                             is_success                = 3;
+  uint32                           challenge_index           = 5;
+  oneof detail {
+    ChannellerSlabLoopDungeonResultInfo channeller_slab_loop_dungeon_result_info = 1521;
+    EffigyChallengeDungeonResultInfo    effigy_challenge_dungeon_result_info     = 1627;
+    PotionDungeonResultInfo             potion_dungeon_result_info               = 1824;
+    CustomDungeonResultInfo             custom_dungeon_result_info               = 1664;
+  }
+}
+
+message ChallengeDataNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 953;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 value           = 8;
+  uint32 challenge_index = 2;
+  uint32 param_index     = 9;
+}
+
+message DungeonFollowNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 922;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 target_uid = 8;
+}
+
+message DungeonGetStatueDropReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 965;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+}
+
+message DungeonGetStatueDropRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 904;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 12;
+}
+
+message ChallengeRecord {
+  uint32 challenge_record_type = 14;
+  uint32 challenge_index       = 15;
+  uint32 challenge_id          = 1;
+  uint32 best_value            = 8;
+}
+
+message ChallengeRecordNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 993;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32                   group_id              = 2;
+  repeated ChallengeRecord challenge_record_list = 5;
+}
+
+message DungeonCandidateTeamAvatar {
+  uint32     player_uid  = 2;
+  AvatarInfo avatar_info = 6;
+}
+
+message DungeonCandidateTeamInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 927;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  map<uint32, DungeonCandidateTeamPlayerState> player_state_map = 10;
+  uint32                                       dungeon_id       = 9;
+  repeated uint32                              ready_player_uid = 13;
+  uint32                                       match_type       = 2;
+  repeated DungeonCandidateTeamAvatar          avatar_list      = 4;
+}
+
+message DungeonCandidateTeamInviteNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 994;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 player_uid              = 5;
+  uint32 vaild_deadline_time_sec = 9;
+  uint32 dungeon_id              = 6;
+}
+
+message DungeonCandidateTeamRefuseNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 988;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 player_uid = 3;
+}
+
+message DungeonCandidateTeamPlayerLeaveNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 926;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  DungeonCandidateTeamPlayerLeaveReason reason     = 3;
+  uint32                                player_uid = 13;
+}
+
+message DungeonCandidateTeamDismissNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 963;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  DungeonCandidateTeamDismissReason reason     = 9;
+  uint32                            player_uid = 12;
+}
+
+message DungeonCandidateTeamCreateReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 995;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 point_id   = 7;
+  uint32 dungeon_id = 6;
+}
+
+message DungeonCandidateTeamCreateRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 906;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 1;
+}
+
+message DungeonCandidateTeamInviteReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 934;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  repeated uint32 player_uids = 5;
+}
+
+message DungeonCandidateTeamInviteRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 950;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32           retcode             = 12;
+  repeated uint32 invalid_player_uids = 7;
+}
+
+message DungeonCandidateTeamKickReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 943;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 player_uid = 9;
+}
+
+message DungeonCandidateTeamKickRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 974;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 1;
+}
+
+message DungeonCandidateTeamLeaveReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 976;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+}
+
+message DungeonCandidateTeamLeaveRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 946;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 14;
+}
+
+message DungeonCandidateTeamReplyInviteReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 941;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool is_accept = 5;
+}
+
+message DungeonCandidateTeamReplyInviteRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 949;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  bool  is_trans_point = 4;
+  int32 retcode        = 2;
+}
+
+message DungeonCandidateTeamSetReadyReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 991;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool is_ready = 15;
+}
+
+message DungeonCandidateTeamSetReadyRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 924;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 12;
+}
+
+message DungeonCandidateTeamChangeAvatarReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 956;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  repeated uint64 avatar_guid_list = 5;
+}
+
+message DungeonCandidateTeamChangeAvatarRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 942;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 4;
+}
+
+message DailyDungeonEntryInfo {
+  uint32           dungeon_entry_config_id      = 12;
+  uint32           dungeon_entry_id             = 15;
+  DungeonEntryInfo recommend_dungeon_entry_info = 1;
+  uint32           recommend_dungeon_id         = 4;
+}
+
+message GetDailyDungeonEntryInfoReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 930;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 scene_id = 15;
+}
+
+message GetDailyDungeonEntryInfoRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 967;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  repeated DailyDungeonEntryInfo daily_dungeon_info_list = 2;
+  int32                          retcode                 = 14;
+}
+
+message DungeonSlipRevivePointActivateReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 958;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 slip_revive_point_id = 9;
+}
+
+message DungeonSlipRevivePointActivateRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 970;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 slip_revive_point_id = 14;
+  int32  retcode              = 4;
+}
+
+message DungeonInterruptChallengeReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 917;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 challenge_index = 14;
+  uint32 group_id        = 13;
+  uint32 challenge_id    = 11;
+}
+
+message DungeonInterruptChallengeRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 902;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32  retcode         = 1;
+  uint32 challenge_index = 2;
+  uint32 group_id        = 15;
+  uint32 challenge_id    = 11;
+}
+
+message InteractDailyDungeonInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 919;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+}
+
+message DungeonRestartReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 961;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+}
+
+message DungeonRestartRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 929;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 dungeon_id = 15;
+  int32  retcode    = 9;
+  uint32 point_id   = 14;
+}
+
+message DungeonRestartInviteNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 957;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 player_uid = 3;
+  uint32 cd         = 15;
+  uint32 point_id   = 13;
+  uint32 dungeon_id = 10;
+}
+
+message DungeonRestartInviteReplyReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 1000;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool is_accept = 11;
+}
+
+message DungeonRestartInviteReplyRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 916;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  bool  is_accept      = 10;
+  bool  is_trans_point = 1;
+  int32 retcode        = 9;
+}
+
+message DungeonRestartInviteReplyNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 987;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool   is_accept  = 6;
+  uint32 player_uid = 9;
+}
+
+message DungeonRestartResultNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 940;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool is_add_accpet = 9;
+}
+
+message DungeonCandidateTeamSetChangingAvatarReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 918;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  bool is_changing_avatar = 12;
+}
+
+message DungeonCandidateTeamSetChangingAvatarRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 966;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  int32 retcode = 2;
+}
+
+message MistTrialFloorLevelNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 968;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 floor_level      = 7;
+  uint32 dungeon_scene_id = 14;
+}
+
+message DungeonReviseLevelNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 933;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 scene_level  = 5;
+  uint32 revise_level = 10;
+  uint32 dungeon_id   = 3;
+}

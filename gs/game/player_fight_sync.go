@@ -102,7 +102,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {
-		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT:
+		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
 			hitInfo := new(proto.EvtBeingHitInfo)
 			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
@@ -151,7 +151,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
 			if currHp == 0 && target.avatarEntity == nil {
-				scene.SetEntityLifeState(target, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_TYPE_GM)
+				scene.SetEntityLifeState(target, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(hitInfo)
 			if err != nil {
@@ -159,7 +159,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			entry.CombatData = combatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ENTITY_MOVE:
+		case proto.CombatTypeArgument_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")
@@ -225,7 +225,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
 
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-		case proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_ANIMATOR_STATE_CHANGED:
+		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
 			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EvtAnimatorStateChangedInfo")
@@ -303,9 +303,9 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 				addEntityIdList = append(addEntityIdList, entityId)
 			}
 			// 发送已消失格子里的实体消失通知
-			g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, delEntityIdList)
+			g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
 			// 发送新出现格子里的实体出现通知
-			g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_MEET, addEntityIdList, false, false)
+			g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
 		}
 	}
 }
@@ -384,7 +384,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	}
 	for _, abilityInvokeEntry := range req.Invokes {
 		switch abilityInvokeEntry.ArgumentType {
-		case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_ADD_NEW_ABILITY:
+		case proto.AbilityInvokeArgument_ABILITY_META_ADD_NEW_ABILITY:
 			abilityMetaAddAbility := new(proto.AbilityMetaAddAbility)
 			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaAddAbility")
@@ -411,7 +411,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 				continue
 			}
 			worldAvatar.abilityList = append(worldAvatar.abilityList, abilityMetaAddAbility.Ability)
-		case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
+		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)
 			if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaModifierChange")
@@ -529,7 +529,7 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 		Y: float64(req.InitEulerAngles.Y),
 		Z: float64(req.InitEulerAngles.Z),
 	}, req.EntityId, req.ConfigId, req.CampId, req.CampType, req.OwnerEntityId, req.TargetEntityId, req.PropOwnerEntityId)
-	g.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{req.EntityId}, true, true)
+	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{req.EntityId}, true, true)
 }
 
 func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Message) {
@@ -542,5 +542,5 @@ func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	scene.DestroyEntity(req.EntityId)
-	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_MISS, []uint32{req.EntityId})
+	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_MISS, []uint32{req.EntityId})
 }

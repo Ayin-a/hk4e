@@ -28,7 +28,7 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 				// 阶段改变
 				msg := message.GetPhaseChange()
 				switch msg.AfterPhase {
-				case proto.GCGPhaseType_GCG_PHASE_TYPE_ON_STAGE:
+				case proto.GCGPhaseType_GCG_PHASE_ON_STAGE:
 					logger.Error("请选择你的英雄 hhh")
 					go func() {
 						time.Sleep(3 * 1000)
@@ -37,7 +37,7 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 						// 操控者选择角色牌
 						g.game.ControllerSelectChar(gameController, cardInfo, []uint32{})
 					}()
-				case proto.GCGPhaseType_GCG_PHASE_TYPE_MAIN:
+				case proto.GCGPhaseType_GCG_PHASE_MAIN:
 					if gameController.allow == 0 {
 						return
 					}
@@ -57,10 +57,10 @@ func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) 
 					time.Sleep(3 * 1000)
 					cardInfo1 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][0]
 					cardInfo2 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][1]
-					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillList[0].skillId}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillList[0].skillId}}))
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillList[0].skillId}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillList[0].skillId}}))
 					g.game.SendAllMsgPack()
 					g.game.SetControllerAllow(g.game.controllerMap[g.controllerId], false, true)
-					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_TYPE_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
 				}()
 			}
 		}

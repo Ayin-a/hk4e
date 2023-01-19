@@ -216,9 +216,9 @@ func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon
 		Level:       uint32(weapon.Level),
 		AbilityInfo: new(proto.AbilitySyncStateInfo),
 	}
-	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if ok {
-		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.EquipType)
+	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
+	if exist {
+		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.Type)
 	}
 	return avatarEquipChangeNotify
 }
@@ -227,9 +227,9 @@ func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapo
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
 		AvatarGuid: avatar.Guid,
 	}
-	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if ok {
-		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.EquipType)
+	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
+	if exist {
+		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.Type)
 	}
 	return avatarEquipChangeNotify
 }

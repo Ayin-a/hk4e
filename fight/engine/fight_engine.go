@@ -221,10 +221,10 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 	case cmd.CombatInvocationsNotify:
 		req := payloadMsg.(*proto.CombatInvocationsNotify)
 		for _, entry := range req.InvokeList {
-			if entry.ForwardType != proto.ForwardType_FORWARD_TYPE_TO_ALL {
+			if entry.ForwardType != proto.ForwardType_FORWARD_TO_ALL {
 				continue
 			}
-			if entry.ArgumentType != proto.CombatTypeArgument_COMBAT_TYPE_ARGUMENT_EVT_BEING_HIT {
+			if entry.ArgumentType != proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT {
 				continue
 			}
 			hitInfo := new(proto.EvtBeingHitInfo)

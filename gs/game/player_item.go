@@ -59,7 +59,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 	}
 
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
-		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		StoreType: proto.StoreType_STORE_PACK,
 		ItemList:  make([]*proto.Item, 0),
 	}
 	for _, userItem := range itemList {
@@ -126,7 +126,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	}
 
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
-		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		StoreType: proto.StoreType_STORE_PACK,
 		ItemList:  make([]*proto.Item, 0),
 	}
 	for _, userItem := range itemList {
@@ -150,7 +150,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	}
 
 	storeItemDelNotify := &proto.StoreItemDelNotify{
-		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		StoreType: proto.StoreType_STORE_PACK,
 		GuidList:  make([]uint64, 0),
 	}
 	for _, userItem := range itemList {

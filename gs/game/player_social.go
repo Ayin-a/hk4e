@@ -167,9 +167,9 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 		}
 		var onlineState proto.FriendOnlineState = 0
 		if online {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE
+			onlineState = proto.FriendOnlineState_FRIEND_ONLINE
 		} else {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_DISCONNECT
+			onlineState = proto.FriendOnlineState_FREIEND_DISCONNECT
 		}
 		friendBrief := &proto.FriendBrief{
 			Uid:               friendPlayer.PlayerID,
@@ -184,7 +184,7 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 			NameCardId:        friendPlayer.NameCard,
 			Param:             (uint32(time.Now().Unix()) - player.OfflineTime) / 3600 / 24,
 			IsGameSource:      true,
-			PlatformType:      proto.PlatformType_PLATFORM_TYPE_PC,
+			PlatformType:      proto.PlatformType_PC,
 		}
 		getPlayerFriendListRsp.FriendList = append(getPlayerFriendListRsp.FriendList, friendBrief)
 	}
@@ -205,9 +205,9 @@ func (g *GameManager) GetPlayerAskFriendListReq(player *model.Player, payloadMsg
 		}
 		var onlineState proto.FriendOnlineState
 		if online {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE
+			onlineState = proto.FriendOnlineState_FRIEND_ONLINE
 		} else {
-			onlineState = proto.FriendOnlineState_FRIEND_ONLINE_STATE_DISCONNECT
+			onlineState = proto.FriendOnlineState_FREIEND_DISCONNECT
 		}
 		friendBrief := &proto.FriendBrief{
 			Uid:               friendPlayer.PlayerID,
@@ -222,7 +222,7 @@ func (g *GameManager) GetPlayerAskFriendListReq(player *model.Player, payloadMsg
 			NameCardId:        friendPlayer.NameCard,
 			Param:             (uint32(time.Now().Unix()) - player.OfflineTime) / 3600 / 24,
 			IsGameSource:      true,
-			PlatformType:      proto.PlatformType_PLATFORM_TYPE_PC,
+			PlatformType:      proto.PlatformType_PC,
 		}
 		getPlayerAskFriendListRsp.AskFriendList = append(getPlayerAskFriendListRsp.AskFriendList, friendBrief)
 	}
@@ -305,13 +305,13 @@ func (g *GameManager) AskAddFriendReq(player *model.Player, payloadMsg pb.Messag
 		ProfilePicture:    &proto.ProfilePicture{AvatarId: player.HeadImage},
 		WorldLevel:        player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
 		Signature:         player.Signature,
-		OnlineState:       proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE,
+		OnlineState:       proto.FriendOnlineState_FRIEND_ONLINE,
 		IsMpModeAvailable: true,
 		LastActiveTime:    player.OfflineTime,
 		NameCardId:        player.NameCard,
 		Param:             (uint32(time.Now().Unix()) - player.OfflineTime) / 3600 / 24,
 		IsGameSource:      true,
-		PlatformType:      proto.PlatformType_PLATFORM_TYPE_PC,
+		PlatformType:      proto.PlatformType_PC,
 	}
 	g.SendMsg(cmd.AskAddFriendNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, askAddFriendNotify)
 }
@@ -323,7 +323,7 @@ func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Messa
 	result := req.DealAddFriendResult
 
 	agree := false
-	if result == proto.DealAddFriendResultType_DEAL_ADD_FRIEND_RESULT_TYPE_ACCEPT {
+	if result == proto.DealAddFriendResultType_DEAL_ADD_FRIEND_ACCEPT {
 		agree = true
 	}
 	if agree {
@@ -387,7 +387,7 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 		Uid:                 BigWorldAiUid,
 		Nickname:            BigWorldAiName,
 		PlayerLevel:         1,
-		MpSettingType:       proto.MpSettingType_MP_SETTING_TYPE_ENTER_AFTER_APPLY,
+		MpSettingType:       proto.MpSettingType_MP_SETTING_ENTER_AFTER_APPLY,
 		NameCardId:          210001,
 		Signature:           BigWorldAiSign,
 		ProfilePicture:      &proto.ProfilePicture{AvatarId: 10000007},
@@ -499,13 +499,13 @@ func (g *GameManager) ServerAddFriendNotify(addFriendInfo *mq.AddFriendInfo) {
 			ProfilePicture:    &proto.ProfilePicture{AvatarId: addFriendInfo.ApplyPlayerOnlineInfo.HeadImageId},
 			WorldLevel:        addFriendInfo.ApplyPlayerOnlineInfo.WorldLevel,
 			Signature:         addFriendInfo.ApplyPlayerOnlineInfo.Signature,
-			OnlineState:       proto.FriendOnlineState_FRIEND_ONLINE_STATE_ONLINE,
+			OnlineState:       proto.FriendOnlineState_FRIEND_ONLINE,
 			IsMpModeAvailable: true,
 			LastActiveTime:    0,
 			NameCardId:        addFriendInfo.ApplyPlayerOnlineInfo.NameCardId,
 			Param:             0,
 			IsGameSource:      true,
-			PlatformType:      proto.PlatformType_PLATFORM_TYPE_PC,
+			PlatformType:      proto.PlatformType_PC,
 		}
 		g.SendMsg(cmd.AskAddFriendNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, askAddFriendNotify)
 	case "DealAddFriendReq":

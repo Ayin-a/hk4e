@@ -23,39 +23,39 @@ func (s *StaminaInfo) SetStaminaCost(state proto.MotionState) {
 	// TODO 角色天赋 食物 会影响耐力消耗
 	switch state {
 	// 消耗耐力
-	case proto.MotionState_MOTION_STATE_DASH:
+	case proto.MotionState_MOTION_DASH:
 		// 快速跑步
 		s.CostStamina = constant.StaminaCostConst.DASH
-	case proto.MotionState_MOTION_STATE_FLY, proto.MotionState_MOTION_STATE_FLY_FAST, proto.MotionState_MOTION_STATE_FLY_SLOW:
+	case proto.MotionState_MOTION_FLY, proto.MotionState_MOTION_FLY_FAST, proto.MotionState_MOTION_FLY_SLOW:
 		// 滑翔
 		s.CostStamina = constant.StaminaCostConst.FLY
-	case proto.MotionState_MOTION_STATE_SWIM_DASH:
+	case proto.MotionState_MOTION_SWIM_DASH:
 		// 快速游泳
 		s.CostStamina = constant.StaminaCostConst.SWIM_DASH
-	case proto.MotionState_MOTION_STATE_SKIFF_DASH:
+	case proto.MotionState_MOTION_SKIFF_DASH:
 		// 浪船加速
 		s.CostStamina = constant.StaminaCostConst.SKIFF_DASH
 	// 恢复耐力
-	case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN:
+	case proto.MotionState_MOTION_DANGER_RUN, proto.MotionState_MOTION_RUN:
 		// 正常跑步
 		s.CostStamina = constant.StaminaCostConst.RUN
-	case proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY:
+	case proto.MotionState_MOTION_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_DANGER_STANDBY, proto.MotionState_MOTION_LADDER_TO_STANDBY, proto.MotionState_MOTION_STANDBY_MOVE, proto.MotionState_MOTION_STANDBY:
 		// 站立
 		s.CostStamina = constant.StaminaCostConst.STANDBY
-	case proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK:
+	case proto.MotionState_MOTION_DANGER_WALK, proto.MotionState_MOTION_WALK:
 		// 走路
 		s.CostStamina = constant.StaminaCostConst.WALK
-	case proto.MotionState_MOTION_STATE_SKIFF_BOARDING, proto.MotionState_MOTION_STATE_SKIFF_NORMAL:
+	case proto.MotionState_MOTION_SKIFF_BOARDING, proto.MotionState_MOTION_SKIFF_NORMAL:
 		// 浪船正常移动或停下
 		s.CostStamina = constant.StaminaCostConst.SKIFF_NORMAL
-	case proto.MotionState_MOTION_STATE_POWERED_FLY:
+	case proto.MotionState_MOTION_POWERED_FLY:
 		// 滑翔加速 (风圈等)
 		s.CostStamina = constant.StaminaCostConst.POWERED_FLY
-	case proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH:
+	case proto.MotionState_MOTION_SKIFF_POWERED_DASH:
 		// 浪船加速 (风圈等)
 		s.CostStamina = constant.StaminaCostConst.POWERED_SKIFF
 	// 缓慢动作将在客户端发送消息后消耗
-	case proto.MotionState_MOTION_STATE_CLIMB, proto.MotionState_MOTION_STATE_SWIM_MOVE:
+	case proto.MotionState_MOTION_CLIMB, proto.MotionState_MOTION_SWIM_MOVE:
 		// 缓慢攀爬 或 缓慢游泳
 		s.CostStamina = 0
 	}

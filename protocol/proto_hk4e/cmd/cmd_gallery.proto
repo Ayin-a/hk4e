@@ -1,0 +1,960 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./;proto";
+
+import "define.proto";
+
+enum GalleryStageType {
+  GALLERY_NONE     = 0;
+  GALLERY_PRESTART = 1;
+  GALLERY_START    = 2;
+}
+
+enum GalleryStopReason {
+  GALLERY_STOP_NONE                  = 0;
+  GALLERY_STOP_TIMEUP                = 1;
+  GALLERY_STOP_CLIENT_INTERRUPT      = 2;
+  GALLERY_STOP_LUA_INTERRUPT_SUCCESS = 3;
+  GALLERY_STOP_LUA_INTERRUPT_FAIL    = 4;
+  GALLERY_STOP_OWNER_LEAVE_SCENE     = 5;
+  GALLERY_STOP_PLAY_INIT_FAILED      = 6;
+  GALLERY_STOP_OTHER_PLAYER_ENTER    = 7;
+  GALLERY_STOP_AVATAR_DIE            = 8;
+  GALLERY_STOP_FINISHED              = 9;
+  GALLERY_STOP_FUNGUS_ALL_DIE        = 10;
+  GALLERY_STOP_LIFE_COUNT_ZERO       = 11;
+}
+
+enum GalleryStartSource {
+  GALLERY_START_BY_NONE  = 0;
+  GALLERY_START_BY_MATCH = 1;
+  GALLERY_START_BY_DRAFT = 2;
+}
+
+enum SalvagePreventStopReason {
+  SALVAGE_PREVENT_STOP_NONE      = 0;
+  SALVAGE_PREVENT_STOP_SUCCESS   = 1;
+  SALVAGE_PREVENT_STOP_ARRIVAL   = 2;
+  SALVAGE_PREVENT_STOP_INTERRUPT = 3;
+  SALVAGE_PREVENT_STOP_LEAVE     = 4;
+  SALVAGE_PREVENT_STOP_FULL      = 5;
+  SALVAGE_PREVENT_STOP_AWAY      = 6;
+}
+
+enum SalvageEscortStopReason {
+  SALVAGE_ESCORT_STOP_NONE      = 0;
+  SALVAGE_ESCORT_STOP_SUCCESS   = 1;
+  SALVAGE_ESCORT_STOP_DUMP      = 2;
+  SALVAGE_ESCORT_STOP_TIME      = 3;
+  SALVAGE_ESCORT_STOP_INTERRUPT = 4;
+  SALVAGE_ESCORT_STOP_LEAVE     = 5;
+  SALVAGE_ESCORT_STOP_FULL      = 6;
+}
+
+enum IslandPartySailStage {
+  ISLAND_PARTY_SAIL_STAGE_NONE   = 0;
+  ISLAND_PARTY_SAIL_STAGE_SAIL   = 1;
+  ISLAND_PARTY_SAIL_STAGE_BATTLE = 2;
+}
+
+message GalleryFlowerStartParam {
+  uint32 target_score = 5;
+}
+
+message GalleryStartNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5572;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 end_time     = 6;
+  uint32 player_count = 11;
+  uint32 owner_uid    = 9;
+  uint32 gallery_id   = 13;
+  uint32 start_time   = 5;
+  oneof detail {
+    GalleryFlowerStartParam flower_start_param = 15;
+  }
+}
+
+message GalleryBalloonShootNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5598;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 trigger_entity_id  = 12;
+  uint32 gallery_id         = 5;
+  uint32 combo              = 14;
+  uint64 combo_disable_time = 6;
+  int32  add_score          = 11;
+  uint32 cur_score          = 13;
+}
+
+message GalleryBalloonScoreNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5512;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32              gallery_id    = 9;
+  map<uint32, uint32> uid_score_map = 7;
+}
+
+message BalloonSettleInfo {
+  uint32           uid         = 3;
+  uint32           shoot_count = 12;
+  uint32           max_combo   = 9;
+  uint32           final_score = 7;
+  OnlinePlayerInfo player_info = 2;
+}
+
+message GalleryStopNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5535;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id = 8;
+}
+
+message FallSettleInfo {
+  uint32              catch_count                 = 15;
+  OnlinePlayerInfo    player_info                 = 13;
+  uint32              uid                         = 14;
+  map<uint32, uint32> flower_ring_catch_count_map = 3;
+  uint32              remain_time                 = 10;
+  uint32              final_score                 = 1;
+}
+
+message GalleryFallCatchNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5507;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32              cur_score            = 6;
+  uint32              time_cost            = 11;
+  map<uint32, uint32> ball_catch_count_map = 15;
+  uint32              add_score            = 1;
+  bool                is_ground            = 12;
+  uint32              gallery_id           = 10;
+}
+
+message FallPlayerBrief {
+  uint32 uid       = 13;
+  bool   is_ground = 5;
+  uint32 score     = 10;
+}
+
+message GalleryFallScoreNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5521;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32                       gallery_id    = 7;
+  map<uint32, FallPlayerBrief> uid_brief_map = 1;
+}
+
+message BalloonPlayerInfo {
+  uint32 uid                = 15;
+  uint32 cur_score          = 2;
+  uint32 combo_disable_time = 14;
+  uint32 combo              = 11;
+}
+
+message FallPlayerInfo {
+  uint32              time_cost            = 11;
+  uint32              uid                  = 9;
+  map<uint32, uint32> ball_catch_count_map = 6;
+  uint32              cur_score            = 7;
+  bool                is_ground            = 15;
+}
+
+message SceneGalleryBalloonInfo {
+  map<uint32, BalloonPlayerInfo> scene_player_balloon_info_map = 14;
+  uint32                         end_time                      = 5;
+}
+
+message SceneGalleryFallInfo {
+  map<uint32, FallPlayerInfo> scene_player_fall_info_map = 12;
+  uint32                      end_time                   = 2;
+}
+
+message SceneGalleryFlowerInfo {
+  uint32 end_time     = 7;
+  uint32 target_score = 13;
+  uint32 cur_score    = 9;
+}
+
+message SceneGalleryBulletInfo {
+  uint32              end_time      = 1;
+  map<uint32, uint32> hit_count_map = 10;
+}
+
+message SceneGalleryBrokenFloorInfo {
+  map<uint32, uint32> fall_count_map = 3;
+  uint32              end_time       = 9;
+}
+
+message SceneGalleryHideAndSeekInfo {
+  repeated uint32 visible_uid_list = 13;
+  repeated uint32 caught_uid_list  = 4;
+}
+
+message SceneGalleryBuoyantCombatInfo {
+  uint32 score                      = 6;
+  uint32 kill_special_monster_count = 1;
+  uint32 kill_monster_count         = 14;
+}
+
+message SceneGalleryProgressInfo {
+  repeated uint32 progress_stage_list = 8;
+  string          key                 = 11;
+  uint32          progress            = 5;
+  uint32          ui_form             = 12;
+}
+
+message SceneGalleryBounceConjuringInfo {
+  uint32 total_destroyed_machine_count = 4;
+  uint32 total_score                   = 6;
+}
+
+message SceneGalleryHandballInfo {
+  PlaceInfo ball_place_info = 9;
+  bool      is_have_ball    = 15;
+}
+
+message SceneGallerySumoInfo {
+  uint32 score                   = 2;
+  uint32 kill_normal_mosnter_num = 15;
+  uint32 kill_elite_monster_num  = 14;
+}
+
+message SceneGallerySalvagePreventInfo {
+  uint32 monster_count = 7;
+}
+
+message SceneGallerySalvageEscortInfo {
+  uint32 max_box_count     = 14;
+  uint32 max_monster_count = 3;
+  uint32 box_count         = 7;
+  uint32 monster_count     = 11;
+}
+
+message SceneGalleryCrystalLinkInfo {
+  uint32 score = 10;
+}
+
+message SceneGalleryIrodoriMasterInfo {
+  uint32 level_id     = 8;
+  uint32 difficulty   = 1;
+  bool   is_cg_viewed = 5;
+}
+
+message SceneGalleryHomeBalloonInfo {
+  uint32 score = 7;
+}
+
+message SceneGalleryLuminanceStoneChallengeInfo {
+  uint32 kill_monster_count         = 5;
+  uint32 score                      = 3;
+  uint32 clean_mud_count            = 2;
+  uint32 kill_special_monster_count = 6;
+}
+
+message SceneGalleryHomeSeekFurnitureInfo {
+  uint32              cur_tide_left_num      = 6;
+  map<uint32, uint32> player_score_map       = 8;
+  uint32              cur_tide_duration_time = 12;
+  uint32              cur_tide_total_num     = 9;
+}
+
+message SceneGalleryIslandPartyDownHillInfo {
+  uint32             total_kill_monster_count = 14;
+  GalleryStartSource start_source             = 15;
+  uint32             max_kill_monster_count   = 5;
+  uint32             coin                     = 13;
+}
+
+message SceneGallerySummerTimeV2BoatInfo {
+  uint32 param1    = 15;
+  uint32 param3    = 3;
+  uint32 used_time = 11;
+  uint32 param2    = 7;
+}
+
+message SceneGalleryIslandPartyRaftInfo {
+  uint32             coin           = 6;
+  GalleryStartSource start_source   = 7;
+  uint32             component      = 1;
+  uint32             fuel           = 15;
+  uint32             point_id       = 12;
+  uint32             raft_entity_id = 4;
+}
+
+message SceneGalleryIslandPartySailInfo {
+  uint32               max_clean_progress = 14;
+  uint32               clean_progress     = 10;
+  GalleryStartSource   start_source       = 1;
+  uint32               kill_progress      = 11;
+  uint32               coin               = 15;
+  IslandPartySailStage stage              = 12;
+  uint32               max_kill_progress  = 8;
+}
+
+message SceneGalleryInstableSprayBuffInfo {
+  uint32 buff_id       = 6;
+  uint64 buff_end_time = 9;
+  uint64 buff_max_time = 4;
+}
+
+message SceneGalleryInstaleSprayInfo {
+  uint32                                     score          = 5;
+  repeated SceneGalleryInstableSprayBuffInfo buff_info_list = 12;
+}
+
+message SceneGalleryTreasureSeelieInfo {
+  uint32 progress = 15;
+  uint32 goal     = 14;
+}
+
+message SceneGalleryWindFieldInfo {
+  uint32 killed_monster_num       = 5;
+  uint32 challenge_ball_max_count = 12;
+  uint32 show_id                  = 15;
+  uint32 challenge_total_time     = 4;
+  uint32 challenge_ball_cur_count = 9;
+  uint32 coin_num                 = 1;
+  uint32 challenge_timestamp      = 13;
+  uint32 element_ball_num         = 10;
+}
+
+message SceneGalleryFungusFighterTrainingInfo {
+  uint32 max_monster_count    = 4;
+  uint32 killed_monster_count = 9;
+  uint32 buff_start_time      = 13;
+  uint32 buff_id              = 1;
+  uint32 max_skill_count      = 10;
+  uint32 buff_last_time       = 14;
+  uint32 rest_skill_count     = 5;
+}
+
+message SceneGalleryFungusFighterCaptureInfo {
+  bool is_hide_progress = 13;
+}
+
+message SceneGalleryEffigyChallengeV2Info {
+  uint32 killed_monster_cnt    = 10;
+  uint32 total_target_kill_cnt = 15;
+  uint32 scene_start_time      = 14;
+  uint32 t_remain_use_time     = 6;
+  uint32 boss_violent_level    = 9;
+}
+
+message SceneGalleryCharAmusementInfo {
+  bool   is_last_level = 2;
+  uint32 max_score     = 9;
+  uint32 cur_score     = 14;
+  bool   is_finish     = 10;
+  bool   is_success    = 1;
+}
+
+message SceneGalleryBrickBreakerInfo {
+  uint32 score      = 10;
+  uint32 life_count = 4;
+  uint32 fever      = 2;
+  uint32 combo      = 1;
+}
+
+message SceneGalleryCoinCollectInfo {
+  uint32 coin_total_num   = 4;
+  uint32 coin_collect_num = 2;
+}
+
+message SceneGalleryTeamChainInfo {
+  uint32 gallery_score_end_time = 14;
+  uint32 cur_total_score        = 7;
+  uint32 cur_gallery_idx        = 3;
+  uint32 total_target_kill_cnt  = 10;
+  uint32 killed_monster_cnt     = 12;
+}
+
+message SceneGalleryInfo {
+  GalleryStageType                  stage              = 5;
+  repeated SceneGalleryProgressInfo progress_info_list = 4;
+  uint32                            gallery_id         = 2;
+  uint32                            start_time         = 3;
+  uint32                            end_time           = 11;
+  uint32                            owner_uid          = 9;
+  uint32                            player_count       = 1;
+  uint32                            pre_start_end_time = 15;
+  oneof info {
+    SceneGalleryBalloonInfo                 balloon_info                   = 14;
+    SceneGalleryFallInfo                    fall_info                      = 7;
+    SceneGalleryFlowerInfo                  flower_info                    = 8;
+    SceneGalleryBulletInfo                  bullet_info                    = 13;
+    SceneGalleryBrokenFloorInfo             broken_floor_info              = 10;
+    SceneGalleryHideAndSeekInfo             hide_and_seek_info             = 6;
+    SceneGalleryBuoyantCombatInfo           buoyant_combat_info            = 1384;
+    SceneGalleryBounceConjuringInfo         bounce_conjuring_info          = 708;
+    SceneGalleryHandballInfo                handball_info                  = 1997;
+    SceneGallerySumoInfo                    sumo_info                      = 811;
+    SceneGallerySalvagePreventInfo          salvage_prevent_info           = 1700;
+    SceneGallerySalvageEscortInfo           salvage_escort_info            = 759;
+    SceneGalleryHomeBalloonInfo             home_balloon_info              = 1034;
+    SceneGalleryCrystalLinkInfo             crystal_link_info              = 2004;
+    SceneGalleryIrodoriMasterInfo           irodori_master_info            = 1953;
+    SceneGalleryLuminanceStoneChallengeInfo luminance_stone_challenge_info = 106;
+    SceneGalleryHomeSeekFurnitureInfo       home_seek_furniture_info       = 1456;
+    SceneGalleryIslandPartyDownHillInfo     island_party_down_hill_info    = 462;
+    SceneGallerySummerTimeV2BoatInfo        summer_time_v2_boat_info       = 296;
+    SceneGalleryIslandPartyRaftInfo         island_party_raft_info         = 1805;
+    SceneGalleryIslandPartySailInfo         island_party_sail_info         = 1133;
+    SceneGalleryInstaleSprayInfo            instable_spray_info            = 1196;
+    SceneGalleryMuqadasPotionInfo           muqadas_potion_info            = 865;
+    SceneGalleryTreasureSeelieInfo          treasure_seelie_info           = 1525;
+    SceneGalleryVintageHuntingInfo          vintage_hunting_info           = 254;
+    SceneGalleryWindFieldInfo               wind_field_info                = 1080;
+    SceneGalleryFungusFighterTrainingInfo   fungus_fighter_training_info   = 1328;
+    SceneGalleryEffigyChallengeV2Info       effigy_challenge_info          = 882;
+    SceneGalleryFungusFighterCaptureInfo    fungus_fighter_capture_info    = 422;
+    SceneGalleryCharAmusementInfo           char_amusement_info            = 1086;
+    SceneGalleryBrickBreakerInfo            brick_breaker_info             = 1425;
+    SceneGalleryCoinCollectInfo             coin_collect_info              = 1574;
+    SceneGalleryTeamChainInfo               team_chain_info                = 1495;
+  }
+}
+
+message GetAllSceneGalleryInfoReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5503;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+}
+
+message GetAllSceneGalleryInfoRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5590;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  repeated SceneGalleryInfo gallery_info_list = 12;
+  int32                     retcode           = 2;
+}
+
+message GalleryFlowerCatchNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5573;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 cur_score  = 12;
+  uint32 add_score  = 14;
+  uint32 gallery_id = 5;
+}
+
+message GalleryPreStartNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5599;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id         = 10;
+  uint32 pre_start_end_time = 9;
+}
+
+message GalleryBulletHitNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5531;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 hit_count  = 14;
+  uint32 gallery_id = 12;
+}
+
+message GalleryBrokenFloorFallNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5575;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 fall_count = 3;
+  uint32 gallery_id = 5;
+}
+
+message InterruptGalleryReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5548;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 gallery_id = 13;
+}
+
+message InterruptGalleryRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5597;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  int32  retcode    = 12;
+  uint32 gallery_id = 9;
+}
+
+message SceneGalleryInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5581;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  SceneGalleryInfo gallery_info = 4;
+}
+
+message BuoyantCombatGallerySettleInfo {
+  uint32 gallery_level              = 12;
+  uint32 final_score                = 15;
+  uint32 kill_monster_count         = 9;
+  uint32 kill_target_count          = 1;
+  uint32 kill_special_monster_count = 4;
+  uint32 gallery_id                 = 2;
+  uint32 gallery_multiple           = 11;
+}
+
+message BounceConjuringGallerySettleInfo {
+  OnlinePlayerInfo               player_info             = 14;
+  uint32                         destroyed_machine_count = 5;
+  uint32                         fever_count             = 6;
+  uint32                         normal_hit_count        = 4;
+  float                          damage                  = 11;
+  map<uint32, uint32>            gadget_count_map        = 15;
+  uint32                         score                   = 12;
+  uint32                         perfect_hit_count       = 8;
+  repeated ExhibitionDisplayInfo card_list               = 7;
+}
+
+message GalleryBounceConjuringHitNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5505;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 add_score  = 8;
+  bool   is_perfect = 5;
+  uint32 gallery_id = 10;
+}
+
+message GallerySumoKillMonsterNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5582;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 kill_normal_mosnter_num = 4;
+  uint32 score                   = 7;
+  uint32 kill_elite_monster_num  = 14;
+  uint32 gallery_id              = 11;
+}
+
+message GalleryCrystalLinkKillMonsterNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5547;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 score      = 7;
+  uint32 gallery_id = 9;
+}
+
+message GalleryCrystalLinkBuffInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5539;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id    = 13;
+  bool   is_buff_valid = 11;
+  uint32 buff_id       = 14;
+}
+
+message FishInfo {
+  uint32 free_count     = 11;
+  uint32 into_bag_count = 12;
+}
+
+message FishingScore {
+  uint32 fishing_score = 2;
+  bool   is_new_record = 4;
+}
+
+message FishingGallerySettleInfo {
+  map<uint32, FishInfo> fish_map           = 11;
+  repeated FishingScore fishing_score_list = 15;
+}
+
+message RacingGallerySettleInfo {
+  uint32            winner_uid = 6;
+  GalleryStopReason reason     = 4;
+  uint32            use_time   = 1;
+}
+
+message SalvagePreventGallerySettleInfo {
+  uint32                   time_remain   = 8;
+  SalvagePreventStopReason reason        = 7;
+  uint32                   final_score   = 13;
+  uint32                   monster_count = 15;
+}
+
+message SalvageEscortGallerySettleInfo {
+  uint32                  time_remain = 14;
+  SalvageEscortStopReason reason      = 7;
+}
+
+message BalloonGallerySettleInfo {
+  uint32            score     = 8;
+  GalleryStopReason reason    = 14;
+  uint32            hit_count = 10;
+  uint32            owner_uid = 6;
+}
+
+message IrodoriMasterGallerySettleInfo {
+  GalleryStopReason reason      = 15;
+  bool              is_finish   = 11;
+  uint32            finish_time = 14;
+  uint32            difficult   = 6;
+  uint32            level_id    = 4;
+}
+
+message PhotoGallerySettleInfo {
+  GalleryStopReason reason = 7;
+}
+
+message LuminanceStoneChallengeGallerySettleInfo {
+  uint32            kill_monster_count         = 12;
+  uint32            kill_special_monster_count = 8;
+  uint32            clean_mud_count            = 10;
+  uint32            gallery_id                 = 2;
+  GalleryStopReason reason                     = 11;
+  uint32            final_score                = 13;
+}
+
+message HomeGalleryInPlayingNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5553;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id = 13;
+}
+
+message SummerTimeV2BoatGallerySettleInfo {
+  uint32            param1     = 7;
+  uint32            param2     = 2;
+  GalleryStopReason reason     = 3;
+  uint32            param3     = 6;
+  uint32            used_time  = 12;
+  uint32            gallery_id = 1;
+}
+
+message GalleryIslandPartyDownHillInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5522;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id               = 2;
+  uint32 coin                     = 9;
+  uint32 total_kill_monster_count = 11;
+}
+
+message IslandPartyRaftInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5565;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 point_id  = 7;
+  uint32 coin      = 15;
+  uint32 fuel      = 3;
+  uint32 component = 13;
+}
+
+message IslandPartySailInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5504;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32               coin               = 10;
+  IslandPartySailStage stage              = 8;
+  uint32               kill_monster_count = 4;
+  uint32               progress           = 15;
+}
+
+message IslandPartyGallerySettleInfo {
+  OnlinePlayerInfo               player_info = 13;
+  repeated ExhibitionDisplayInfo card_list   = 11;
+}
+
+message BackRebornGalleryReq {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5593;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+    IS_ALLOW_CLIENT    = 1;
+  }
+
+  uint32 gallery_id = 15;
+}
+
+message BackRebornGalleryRsp {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5527;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 gallery_id = 9;
+  int32  retcode    = 5;
+}
+
+message GalleryWillStartCountdownNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5594;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  GalleryStartSource start_source = 11;
+  uint32             end_time     = 12;
+  bool               is_end       = 7;
+  uint32             gallery_id   = 14;
+}
+
+message InstableSprayGalleryInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5588;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 score = 3;
+}
+
+message SceneGalleryMuqadasPotionInfo {
+  uint32 score                  = 6;
+  uint32 capture_weakness_count = 4;
+  uint32 skill_energy           = 10;
+  uint32 skill_use_limit        = 9;
+}
+
+message VintageHuntingFirstStageInfo {
+  uint32 timid_cnt  = 15;
+  uint32 brutal_cnt = 7;
+  uint32 score      = 14;
+  uint32 elite_cnt  = 11;
+}
+
+message VintageHuntingSecondStageInfo {
+  uint32 total_num          = 11;
+  uint32 capture_animal_num = 13;
+  uint32 left_num           = 3;
+}
+
+message VintageHuntingThirdStageInfo {
+}
+
+message SceneGalleryVintageHuntingInfo {
+  uint32 stage_id = 7;
+  oneof info {
+    VintageHuntingFirstStageInfo  first_stage_info  = 2;
+    VintageHuntingSecondStageInfo second_stage_info = 15;
+    VintageHuntingThirdStageInfo  third_stage_info  = 12;
+  }
+}
+
+message WindFieldGalleryInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5526;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 show_id                  = 3;
+  uint32 killed_monster_num       = 7;
+  uint32 coin_num                 = 9;
+  uint32 challenge_ball_max_count = 1;
+  uint32 challenge_total_time     = 5;
+  uint32 challenge_ball_cur_count = 10;
+  uint32 challenge_timestamp      = 4;
+  uint32 element_ball_num         = 14;
+}
+
+message WindFieldGalleryChallengeInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5563;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 challenge_timestamp      = 6;
+  bool   is_start                 = 8;
+  uint32 show_id                  = 12;
+  bool   is_success               = 7;
+  uint32 challenge_total_time     = 13;
+  uint32 challenge_ball_max_count = 11;
+  uint32 challenge_ball_cur_count = 1;
+}
+
+message FungusFighterTrainingInfoNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5595;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 buff_start_time      = 3;
+  uint32 max_skill_count      = 7;
+  uint32 max_monster_count    = 8;
+  uint32 buff_id              = 14;
+  uint32 buff_last_time       = 4;
+  uint32 rest_skill_count     = 6;
+  uint32 killed_monster_count = 15;
+}
+
+message FungusFighterTrainingSettleInfo {
+  uint32            used_time   = 15;
+  GalleryStopReason reason      = 3;
+  string            transaction = 1;
+}
+
+message FungusCaptureSettleNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5506;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  bool is_success = 2;
+}
+
+message HideAndSeekPlayerCapturedNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5534;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 ghost_skill_id = 12;
+}
+
+message CoinCollectGallerySettleNotify {
+  enum CmdId {
+    option allow_alias = true;
+    NONE               = 0;
+    CMD_ID             = 5550;
+    ENET_CHANNEL_ID    = 0;
+    ENET_IS_RELIABLE   = 1;
+  }
+
+  uint32 coin_collect_num      = 11;
+  uint32 coin_total_num        = 7;
+  uint32 level_id              = 9;
+  uint32 coin_collect_time     = 4;
+  uint32 multistage_play_index = 6;
+  bool   is_new_record         = 10;
+}

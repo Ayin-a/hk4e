@@ -245,13 +245,13 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 		g.SendMsg(cmd.GuestPostEnterSceneNotify, world.owner.PlayerID, world.owner.ClientSeq, guestPostEnterSceneNotify)
 	}
 
-	var visionType = proto.VisionType_VISION_TYPE_NONE
+	var visionType = proto.VisionType_VISION_NONE
 
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	if player.SceneJump {
-		visionType = proto.VisionType_VISION_TYPE_BORN
+		visionType = proto.VisionType_VISION_BORN
 	} else {
-		visionType = proto.VisionType_VISION_TYPE_TRANSPORT
+		visionType = proto.VisionType_VISION_TRANSPORT
 	}
 	activeAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)
 	g.AddSceneEntityNotify(player, visionType, []uint32{activeAvatarEntityId}, true, false)
@@ -264,9 +264,9 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 		}
 	}
 	if player.SceneJump {
-		visionType = proto.VisionType_VISION_TYPE_MEET
+		visionType = proto.VisionType_VISION_MEET
 	} else {
-		visionType = proto.VisionType_VISION_TYPE_TRANSPORT
+		visionType = proto.VisionType_VISION_TRANSPORT
 	}
 	entityMap := scene.GetAllEntity()
 	entityIdList := make([]uint32, 0)
@@ -552,8 +552,8 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				continue
 			}
 			switch entity.entityType {
-			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR):
-				if visionType == proto.VisionType_VISION_TYPE_MEET && entity.avatarEntity.uid == player.PlayerID {
+			case uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR):
+				if visionType == proto.VisionType_VISION_MEET && entity.avatarEntity.uid == player.PlayerID {
 					continue
 				}
 				scenePlayer := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
@@ -566,14 +566,14 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				}
 				sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, world.GetPlayerActiveAvatarId(scenePlayer))
 				entityList = append(entityList, sceneEntityInfoAvatar)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_WEAPON):
-			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER):
+			case uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON):
+			case uint32(proto.ProtEntityType_PROT_ENTITY_MONSTER):
 				sceneEntityInfoMonster := g.PacketSceneEntityInfoMonster(scene, entity.id)
 				entityList = append(entityList, sceneEntityInfoMonster)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_NPC):
+			case uint32(proto.ProtEntityType_PROT_ENTITY_NPC):
 				sceneEntityInfoNpc := g.PacketSceneEntityInfoNpc(scene, entity.id)
 				entityList = append(entityList, sceneEntityInfoNpc)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET):
+			case uint32(proto.ProtEntityType_PROT_ENTITY_GADGET):
 				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.id)
 				entityList = append(entityList, sceneEntityInfoGadget)
 			}
@@ -655,7 +655,7 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 	}
 	worldAvatar := scene.world.GetWorldAvatarByEntityId(entity.id)
 	sceneEntityInfo := &proto.SceneEntityInfo{
-		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR,
+		EntityType: proto.ProtEntityType_PROT_ENTITY_AVATAR,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
 			Pos: pos,
@@ -712,7 +712,7 @@ func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32
 		Z: float32(entity.pos.Z),
 	}
 	sceneEntityInfo := &proto.SceneEntityInfo{
-		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER,
+		EntityType: proto.ProtEntityType_PROT_ENTITY_MONSTER,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
 			Pos: pos,
@@ -760,7 +760,7 @@ func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *p
 		Z: float32(entity.pos.Z),
 	}
 	sceneEntityInfo := &proto.SceneEntityInfo{
-		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_NPC,
+		EntityType: proto.ProtEntityType_PROT_ENTITY_NPC,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
 			Pos: pos,
@@ -808,7 +808,7 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 		Z: float32(entity.pos.Z),
 	}
 	sceneEntityInfo := &proto.SceneEntityInfo{
-		EntityType: proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET,
+		EntityType: proto.ProtEntityType_PROT_ENTITY_GADGET,
 		EntityId:   entity.id,
 		MotionInfo: &proto.MotionInfo{
 			Pos: pos,
@@ -900,7 +900,7 @@ func (g *GameManager) PacketSceneMonsterInfo(entity *Entity) *proto.SceneMonster
 	sceneMonsterInfo := &proto.SceneMonsterInfo{
 		MonsterId:       entity.monsterEntity.monsterId,
 		AuthorityPeerId: 1,
-		BornType:        proto.MonsterBornType_MONSTER_BORN_TYPE_DEFAULT,
+		BornType:        proto.MonsterBornType_MONSTER_BORN_DEFAULT,
 		// BlockId:         3001,
 		// TitleId:         3001,
 		// SpecialNameId:   40,

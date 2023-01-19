@@ -177,7 +177,7 @@ func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.Player
 
 func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNotify {
 	storeWeightLimitNotify := &proto.StoreWeightLimitNotify{
-		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		StoreType: proto.StoreType_STORE_PACK,
 		// 背包容量限制
 		WeightLimit:         30000,
 		WeaponCountLimit:    2000,
@@ -190,7 +190,7 @@ func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNoti
 
 func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
 	playerStoreNotify := &proto.PlayerStoreNotify{
-		StoreType:   proto.StoreType_STORE_TYPE_PACK,
+		StoreType:   proto.StoreType_STORE_PACK,
 		WeightLimit: 30000,
 	}
 	itemDataMapConfig := gdconf.CONF.ItemDataMap

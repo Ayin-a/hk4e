@@ -39,10 +39,10 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 		logger.Error("can not find old avatar entity, entity id: %v", oldAvatarEntityId)
 		return
 	}
-	oldAvatarEntity.moveState = uint16(proto.MotionState_MOTION_STATE_STANDBY)
+	oldAvatarEntity.moveState = uint16(proto.MotionState_MOTION_STANDBY)
 
 	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
-		DisappearType: proto.VisionType_VISION_TYPE_REPLACE,
+		DisappearType: proto.VisionType_VISION_REPLACE,
 		EntityList:    []uint32{oldAvatarEntity.id},
 	}
 	for _, scenePlayer := range scene.playerMap {
@@ -52,7 +52,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	newAvatarId := world.GetPlayerActiveAvatarId(player)
 	newAvatarEntity := g.PacketSceneEntityInfoAvatar(scene, player, newAvatarId)
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
-		AppearType: proto.VisionType_VISION_TYPE_REPLACE,
+		AppearType: proto.VisionType_VISION_REPLACE,
 		Param:      oldAvatarEntity.id,
 		EntityList: []*proto.SceneEntityInfo{newAvatarEntity},
 	}

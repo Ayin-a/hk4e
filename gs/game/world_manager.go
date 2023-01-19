@@ -845,7 +845,7 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 
 		// 删除实体
 		s.DestroyEntity(entity.id)
-		GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(s, proto.VisionType_VISION_TYPE_DIE, []uint32{entity.id})
+		GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(s, proto.VisionType_VISION_DIE, []uint32{entity.id})
 	}
 }
 
@@ -857,11 +857,11 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 player.Pos,
 		rot:                 player.Rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           player.AvatarMap[avatarId].FightPropMap,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_AVATAR),
+		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
 		level:               player.AvatarMap[avatarId].Level,
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
@@ -891,11 +891,11 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 new(model.Vector),
 		rot:                 new(model.Vector),
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           nil,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_WEAPON),
+		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON),
 		level:               0,
 	}
 	s.entityMap[entity.id] = entity
@@ -914,11 +914,11 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           fightProp,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_MONSTER),
+		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_MONSTER),
 		level:               level,
 		monsterEntity: &MonsterEntity{
 			monsterId: monsterId,
@@ -952,7 +952,7 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
@@ -960,7 +960,7 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_NPC),
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_NPC),
 		level:      0,
 		npcEntity: &NpcEntity{
 			NpcId:         npcId,
@@ -988,7 +988,7 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
@@ -996,7 +996,7 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
@@ -1022,7 +1022,7 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
@@ -1030,7 +1030,7 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
@@ -1054,7 +1054,7 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
@@ -1062,7 +1062,7 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_CLIENT,
@@ -1092,7 +1092,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
 		pos:                 pos,
 		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_STATE_NONE),
+		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
@@ -1101,7 +1101,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 			uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):  114514,
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_TYPE_GADGET),
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
 		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_VEHICLE,

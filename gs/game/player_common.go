@@ -46,7 +46,7 @@ func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) 
 
 	queryPathRsp := &proto.QueryPathRsp{
 		QueryId:     req.QueryId,
-		QueryStatus: proto.QueryPathRsp_PATH_STATUS_TYPE_SUCC,
+		QueryStatus: proto.QueryPathRsp_STATUS_SUCC,
 		Corners:     []*proto.Vector{req.DestinationPos[0]},
 	}
 	g.SendMsg(cmd.QueryPathRsp, player.PlayerID, player.ClientSeq, queryPathRsp)
@@ -166,7 +166,7 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 	// 进入场景
 	player.SceneJump = true
 	player.SceneLoadState = model.SceneNone
-	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_SELF))
+	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
 }
 
 func (g *GameManager) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message) {

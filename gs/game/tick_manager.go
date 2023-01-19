@@ -337,10 +337,10 @@ func (t *TickManager) onTickSecond(now int64) {
 			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
 			// 玩家安全位置更新
 			switch player.StaminaInfo.State {
-			case proto.MotionState_MOTION_STATE_DANGER_RUN, proto.MotionState_MOTION_STATE_RUN,
-				proto.MotionState_MOTION_STATE_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_STATE_DANGER_STANDBY, proto.MotionState_MOTION_STATE_LADDER_TO_STANDBY, proto.MotionState_MOTION_STATE_STANDBY_MOVE, proto.MotionState_MOTION_STATE_STANDBY,
-				proto.MotionState_MOTION_STATE_DANGER_WALK, proto.MotionState_MOTION_STATE_WALK,
-				proto.MotionState_MOTION_STATE_DASH:
+			case proto.MotionState_MOTION_DANGER_RUN, proto.MotionState_MOTION_RUN,
+				proto.MotionState_MOTION_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_DANGER_STANDBY, proto.MotionState_MOTION_LADDER_TO_STANDBY, proto.MotionState_MOTION_STANDBY_MOVE, proto.MotionState_MOTION_STANDBY,
+				proto.MotionState_MOTION_DANGER_WALK, proto.MotionState_MOTION_WALK,
+				proto.MotionState_MOTION_DASH:
 				// 仅在陆地时更新玩家安全位置
 				player.SafePos.X = player.Pos.X
 				player.SafePos.Y = player.Pos.Y

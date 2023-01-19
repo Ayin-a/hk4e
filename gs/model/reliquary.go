@@ -20,6 +20,7 @@ type Reliquary struct {
 
 func (p *Player) InitReliquary(reliquary *Reliquary) {
 	reliquary.Guid = p.GetNextGameObjectGuid()
+	p.GameObjectGuidMap[reliquary.Guid] = GameObject(reliquary)
 	p.ReliquaryMap[reliquary.ReliquaryId] = reliquary
 	if reliquary.AvatarId != 0 {
 		avatar := p.AvatarMap[reliquary.AvatarId]

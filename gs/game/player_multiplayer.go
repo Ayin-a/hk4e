@@ -90,7 +90,7 @@ func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Pla
 		player.Rot.Z = hostPlayer.Rot.Z
 		g.UserWorldAddPlayer(hostWorld, player)
 
-		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_TYPE_OTHER)
+		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_OTHER)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 	} else {
 		hostWorld.waitEnterPlayerMap[player.PlayerID] = time.Now().UnixMilli()
@@ -180,7 +180,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 			TargetUid:      targetUid,
 			TargetNickname: "",
 			IsAgreed:       false,
-			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
 		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 	}
@@ -286,7 +286,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 			TargetUid:      hostPlayer.PlayerID,
 			TargetNickname: hostPlayer.NickName,
 			IsAgreed:       false,
-			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
 		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 		return
@@ -296,7 +296,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 		TargetUid:      hostPlayer.PlayerID,
 		TargetNickname: hostPlayer.NickName,
 		IsAgreed:       agree,
-		Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE,
+		Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_JUDGE,
 	}
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 }
@@ -325,7 +325,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 	hostPlayerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
 		hostPlayer,
 		hostPlayer,
-		proto.EnterType_ENTER_TYPE_GOTO,
+		proto.EnterType_ENTER_GOTO,
 		uint32(constant.EnterReasonConst.HostFromSingleToMp),
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
@@ -341,7 +341,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 
 	// 仅仅把当前的场上角色的实体消失掉
 	activeAvatarId := world.GetPlayerActiveAvatarId(hostPlayer)
-	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_TYPE_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(hostPlayer, activeAvatarId)})
+	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(hostPlayer, activeAvatarId)})
 }
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
@@ -389,19 +389,19 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	// 仅仅把当前的场上角色的实体消失掉
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
-	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_TYPE_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
+	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
 	g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
 
 	if world.multiplayer {
 		playerQuitFromMpNotify := &proto.PlayerQuitFromMpNotify{
-			Reason: proto.PlayerQuitFromMpNotify_QUIT_REASON_BACK_TO_MY_WORLD,
+			Reason: proto.PlayerQuitFromMpNotify_BACK_TO_MY_WORLD,
 		}
 		g.SendMsg(cmd.PlayerQuitFromMpNotify, player.PlayerID, player.ClientSeq, playerQuitFromMpNotify)
 
 		activeAvatarId := world.GetPlayerActiveAvatarId(player)
-		g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_REMOVE, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
+		g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_REMOVE, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 	}
 
 	world.RemovePlayer(player)
@@ -430,7 +430,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		}
 
 		playerPreEnterMpNotify := &proto.PlayerPreEnterMpNotify{
-			State:    proto.PlayerPreEnterMpNotify_STATE_START,
+			State:    proto.PlayerPreEnterMpNotify_START,
 			Uid:      excludePlayer.PlayerID,
 			Nickname: excludePlayer.NickName,
 		}
@@ -588,7 +588,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 				TargetUid:      userMpInfo.HostUserId,
 				TargetNickname: userMpInfo.HostNickname,
 				IsAgreed:       false,
-				Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+				Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
 			}
 			g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, applyPlayer.PlayerID, applyPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 			return
@@ -598,7 +598,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 			TargetUid:      userMpInfo.HostUserId,
 			TargetNickname: userMpInfo.HostNickname,
 			IsAgreed:       userMpInfo.Agreed,
-			Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_JUDGE,
+			Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_JUDGE,
 		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, applyPlayer.PlayerID, applyPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 	}
@@ -617,7 +617,7 @@ func (g *GameManager) ServerUserMpRsp(userMpInfo *mq.UserMpInfo) {
 				TargetUid:      userMpInfo.HostUserId,
 				TargetNickname: "",
 				IsAgreed:       false,
-				Reason:         proto.PlayerApplyEnterMpResultNotify_REASON_PLAYER_CANNOT_ENTER_MP,
+				Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
 			}
 			g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 		}

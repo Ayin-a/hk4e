@@ -11,7 +11,7 @@ import (
 func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 	allWeaponDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.CONF.ItemDataMap {
-		if uint16(itemData.EquipType) != constant.EquipTypeConst.EQUIP_WEAPON {
+		if uint16(itemData.Type) != constant.ItemTypeConst.ITEM_WEAPON {
 			continue
 		}
 		if (itemId >= 10000 && itemId <= 10008) ||
@@ -52,7 +52,7 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	}
 
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
-		StoreType: proto.StoreType_STORE_TYPE_PACK,
+		StoreType: proto.StoreType_STORE_PACK,
 		ItemList:  make([]*proto.Item, 0),
 	}
 	affixMap := make(map[uint32]uint32)

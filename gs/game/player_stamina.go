@@ -20,7 +20,7 @@ import (
 // HandleAbilityStamina 处理来自ability的耐力消耗
 func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
 	switch entry.ArgumentType {
-	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_MIXIN_COST_STAMINA:
+	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
 		// 大剑重击 或 持续技能 耐力消耗
 		costStamina := new(proto.AbilityMixinCostStamina)
 		if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
@@ -42,7 +42,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		}
 		// 处理持续耐力消耗
 		g.SkillSustainStamina(player, costStamina.IsSwim)
-	case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
+	case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 		// 普通角色重击耐力消耗
 		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 		// 获取世界中的角色实体
@@ -91,7 +91,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 
 	// 根据动作状态消耗耐力
 	switch player.StaminaInfo.State {
-	case proto.MotionState_MOTION_STATE_CLIMB:
+	case proto.MotionState_MOTION_CLIMB:
 		// 缓慢攀爬
 		var angleRevise int32 // 角度修正值 归一化为-90到+90范围内的角
 		// rotX ∈ [0,90) angle = rotX
@@ -118,7 +118,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 		}
 		logger.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
-	case proto.MotionState_MOTION_STATE_SWIM_MOVE:
+	case proto.MotionState_MOTION_SWIM_MOVE:
 		// 缓慢游泳
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SWIMMING)
 	}
@@ -152,16 +152,16 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 
 	// 根据玩家的状态立刻消耗耐力
 	switch motionState {
-	case proto.MotionState_MOTION_STATE_CLIMB:
+	case proto.MotionState_MOTION_CLIMB:
 		// 攀爬开始
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMB_START)
-	case proto.MotionState_MOTION_STATE_DASH_BEFORE_SHAKE:
+	case proto.MotionState_MOTION_DASH_BEFORE_SHAKE:
 		// 冲刺
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SPRINT)
-	case proto.MotionState_MOTION_STATE_CLIMB_JUMP:
+	case proto.MotionState_MOTION_CLIMB_JUMP:
 		// 攀爬跳跃
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMB_JUMP)
-	case proto.MotionState_MOTION_STATE_SWIM_DASH:
+	case proto.MotionState_MOTION_SWIM_DASH:
 		// 快速游泳开始
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SWIM_DASH_START)
 	}
@@ -358,7 +358,7 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {
 		// 耐力延迟2s(10 ticks)恢复 动作状态为加速将立刻恢复耐力
-		if staminaInfo.VehicleRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_STATE_SKIFF_POWERED_DASH {
+		if staminaInfo.VehicleRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_SKIFF_POWERED_DASH {
 			// logger.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.VehicleRestoreDelay++
 			return // 不恢复耐力
@@ -399,7 +399,7 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {
 		// 耐力延迟2s(10 ticks)恢复 动作状态为加速将立刻恢复耐力
-		if staminaInfo.PlayerRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_STATE_POWERED_FLY {
+		if staminaInfo.PlayerRestoreDelay < 10 && staminaInfo.State != proto.MotionState_MOTION_POWERED_FLY {
 			// logger.Debug("stamina delay add, restoreDelay: %v", staminaInfo.RestoreDelay)
 			staminaInfo.PlayerRestoreDelay++
 			return // 不恢复耐力
@@ -460,7 +460,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
 	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {
 		// 设置角色存活
-		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_TYPE_NONE)
+		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_NONE)
 		// 重置溺水返回时间
 		player.StaminaInfo.DrownBackDelay = 0
 	} else if player.StaminaInfo.DrownBackDelay == 20 {
@@ -516,10 +516,10 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 	}
 
 	// 确保玩家正在游泳
-	if player.StaminaInfo.State == proto.MotionState_MOTION_STATE_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_STATE_SWIM_DASH {
+	if player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_DASH {
 		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
 		// 设置角色为死亡
-		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_TYPE_DRAWN)
+		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_DRAWN)
 		// 溺水返回安全点 计时开始
 		player.StaminaInfo.DrownBackDelay = 1
 	}

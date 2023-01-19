@@ -125,15 +125,15 @@ func (i *InvokeHandler[T]) InitInvokeHandler() {
 
 func (i *InvokeHandler[T]) AddEntry(forward proto.ForwardType, entry *T) {
 	switch forward {
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL:
+	case proto.ForwardType_FORWARD_TO_ALL:
 		i.EntryListForwardAll = append(i.EntryListForwardAll, entry)
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXCEPT_CUR:
+	case proto.ForwardType_FORWARD_TO_ALL_EXCEPT_CUR:
 		fallthrough
-	case proto.ForwardType_FORWARD_TYPE_TO_ALL_EXIST_EXCEPT_CUR:
+	case proto.ForwardType_FORWARD_TO_ALL_EXIST_EXCEPT_CUR:
 		i.EntryListForwardAllExceptCur = append(i.EntryListForwardAllExceptCur, entry)
-	case proto.ForwardType_FORWARD_TYPE_TO_HOST:
+	case proto.ForwardType_FORWARD_TO_HOST:
 		i.EntryListForwardHost = append(i.EntryListForwardHost, entry)
-	case proto.ForwardType_FORWARD_TYPE_ONLY_SERVER:
+	case proto.ForwardType_FORWARD_ONLY_SERVER:
 		i.EntryListForwardServer = append(i.EntryListForwardServer, entry)
 		// logger.Error("forward server entry: %v", entry)
 	default:

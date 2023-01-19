@@ -17,7 +17,7 @@ func (g *GameManager) VehicleDestroyMotion(player *model.Player, entity *Entity,
 	scene := world.GetSceneById(player.SceneId)
 
 	// 状态等于 MOTION_STATE_DESTROY_VEHICLE 代表请求销毁
-	if state == proto.MotionState_MOTION_STATE_DESTROY_VEHICLE {
+	if state == proto.MotionState_MOTION_DESTROY_VEHICLE {
 		g.DestroyVehicleEntity(player, scene, entity.gadgetEntity.gadgetVehicleEntity.vehicleId, entity.id)
 	}
 }
@@ -55,7 +55,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 		g.CommonRetError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
 		return
 	}
-	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_TYPE_BORN, []uint32{entityId}, true, false)
+	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
 	// 记录创建的载具信息
 	player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId] = entityId
 	player.VehicleInfo.LastCreateTime = time.Now().UnixMilli()
@@ -107,7 +107,7 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 	}
 	// 删除已创建的载具
 	scene.DestroyEntity(entity.id)
-	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_TYPE_MISS, []uint32{entity.id})
+	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_MISS, []uint32{entity.id})
 }
 
 // EnterVehicle 进入载具
@@ -136,7 +136,7 @@ func (g *GameManager) EnterVehicle(player *model.Player, entity *Entity, avatarG
 
 	// PacketVehicleInteractRsp
 	vehicleInteractRsp := &proto.VehicleInteractRsp{
-		InteractType: proto.VehicleInteractType_VEHICLE_INTERACT_TYPE_IN,
+		InteractType: proto.VehicleInteractType_VEHICLE_INTERACT_IN,
 		Member: &proto.VehicleMember{
 			Uid:        player.PlayerID,
 			AvatarGuid: avatarGuid,
@@ -168,7 +168,7 @@ func (g *GameManager) ExitVehicle(player *model.Player, entity *Entity, avatarGu
 
 	// PacketVehicleInteractRsp
 	vehicleInteractRsp := &proto.VehicleInteractRsp{
-		InteractType: proto.VehicleInteractType_VEHICLE_INTERACT_TYPE_OUT,
+		InteractType: proto.VehicleInteractType_VEHICLE_INTERACT_OUT,
 		Member: &proto.VehicleMember{
 			Uid:        player.PlayerID,
 			AvatarGuid: avatarGuid,
@@ -203,10 +203,10 @@ func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Mes
 	avatarGuid := player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid
 
 	switch req.InteractType {
-	case proto.VehicleInteractType_VEHICLE_INTERACT_TYPE_IN:
+	case proto.VehicleInteractType_VEHICLE_INTERACT_IN:
 		// 进入载具
 		g.EnterVehicle(player, entity, avatarGuid)
-	case proto.VehicleInteractType_VEHICLE_INTERACT_TYPE_OUT:
+	case proto.VehicleInteractType_VEHICLE_INTERACT_OUT:
 		// 离开载具
 		g.ExitVehicle(player, entity, avatarGuid)
 	}

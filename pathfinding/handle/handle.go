@@ -25,7 +25,7 @@ func NewHandle(messageQueue *mq.MessageQueue) (r *Handle) {
 }
 
 func (h *Handle) run() {
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1; i++ {
 		go func() {
 			for {
 				netMsg := <-h.messageQueue.GetNetMsg()

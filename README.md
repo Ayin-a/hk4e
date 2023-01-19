@@ -7,12 +7,39 @@
 * Go >= 1.18
 * Protoc >= 3.21
 * Protoc Gen Go >= 1.28
+* Docker >= 20.10
+* Docker Compose >= 1.29
 
-> 1. 首次需要安装工具 `make dev_tool`
-> 2. 生成协议 `make gen_natsrpc && make gen_proto`
-> 3. 生成配置表 `make gen_csv`
+## 快速启动
 
-## 快速运行
+* 首次需要安装工具
+
+```shell
+make dev_tool
+```
+
+* 生成协议
+
+```shell
+make gen_natsrpc      # 生成natsrpc协议
+make gen_proto        # 生成客户端协议
+make gen_client_proto # 生成客户端协议代理(非必要)
+```
+
+* 构建
+
+```shell
+make build        # 构建服务器二进制文件
+make docker_build # 构建镜像
+```
+
+* 启动
+
+```shell
+make gen_csv # 生成配置表
+# 启动前请先确保各服务器的配置文件正确
+docker-compose up -d # 启动服务器
+```
 
 #### 第三方组件
 

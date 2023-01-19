@@ -1,0 +1,147 @@
+version: '3'
+services:
+  node_services:
+    restart: always
+    image: flswld/node:1.0.0
+    container_name: node
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/node/bin/application.toml:/node/application.toml
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 128M
+  dispatch_services:
+    restart: always
+    image: flswld/dispatch:1.0.0
+    container_name: dispatch
+    ports:
+      - "8080:8080/tcp"
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/dispatch/bin/application.toml:/dispatch/application.toml
+      - ./docker/dispatch/bin/key:/dispatch/key
+      - ./docker/dispatch/bin/static:/dispatch/static
+    depends_on:
+      - node_services
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 128M
+  gate_services:
+    restart: always
+    image: flswld/gate:1.0.0
+    container_name: gate
+    ports:
+      - "22222:22222/udp"
+      - "33333:33333/tcp"
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/gate/bin/application.toml:/gate/application.toml
+      - ./docker/gate/bin/key:/gate/key
+      - ./gate/client_proto/proto/client_cmd.csv:/gate/client_cmd.csv
+    depends_on:
+      - dispatch_services
+    deploy:
+      resources:
+        limits:
+          cpus: '4.00'
+          memory: 1024M
+  fight_services:
+    restart: always
+    image: flswld/fight:1.0.0
+    container_name: fight
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/fight/bin/application.toml:/fight/application.toml
+      - ./gate/client_proto/proto/client_cmd.csv:/fight/client_cmd.csv
+    depends_on:
+      - gate_services
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 128M
+  pathfinding_services:
+    restart: always
+    image: flswld/pathfinding:1.0.0
+    container_name: pathfinding
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/pathfinding/bin/application.toml:/pathfinding/application.toml
+    depends_on:
+      - fight_services
+    deploy:
+      resources:
+        limits:
+          cpus: '4.00'
+          memory: 1024M
+  gs_services:
+    restart: always
+    image: flswld/gs:1.0.0
+    container_name: gs
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/gs/bin/application.toml:/gs/application.toml
+      - ./gdconf/game_data_config:/gs/game_data_config
+      - ./gate/client_proto/proto/client_cmd.csv:/gs/client_cmd.csv
+    depends_on:
+      - pathfinding_services
+    deploy:
+      resources:
+        limits:
+          cpus: '4.00'
+          memory: 4096M
+  gm_services:
+    restart: always
+    image: flswld/gm:1.0.0
+    container_name: gm
+    ports:
+      - "9001:9001/tcp"
+    environment:
+      TZ: Asia/Shanghai
+      GOLANG_PROTOBUF_REGISTRATION_CONFLICT: ignore
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - ./docker/gm/bin/application.toml:/gm/application.toml
+    depends_on:
+      - gs_services
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 128M

@@ -358,7 +358,8 @@ func (m *MessageQueue) gateTcpMqRecvHandleLoop(data []byte, dataBuf *[]byte) {
 	}
 	// 长度太短
 	if len(data) < 4 {
-		logger.Debug("packet len less 4 byte")
+		logger.Debug("packet len less 4 byte, data: %v", data)
+		*dataBuf = append(*dataBuf, data...)
 		return
 	}
 	// 消息的载荷部分长度

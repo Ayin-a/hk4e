@@ -39,7 +39,7 @@ func FastDeepCopy(dst, src any) error {
 }
 
 func CopyProtoBufSameField(dst, src pb.Message) ([]string, error) {
-	date, err := protojson.Marshal(src)
+	data, err := protojson.Marshal(src)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func CopyProtoBufSameField(dst, src pb.Message) ([]string, error) {
 		if loopCount > 1000 {
 			return nil, errors.New("loop count limit")
 		}
-		err = protojson.Unmarshal(date, dst)
+		err = protojson.Unmarshal(data, dst)
 		if err != nil {
 			if !strings.Contains(err.Error(), "unknown field") {
 				return nil, err
@@ -61,13 +61,13 @@ func CopyProtoBufSameField(dst, src pb.Message) ([]string, error) {
 			}
 			fieldName := split[1]
 			jsonObj := make(map[string]any)
-			err = json.Unmarshal(date, &jsonObj)
+			err = json.Unmarshal(data, &jsonObj)
 			if err != nil {
 				return nil, err
 			}
 			DeleteAllKeyNameFromStringAnyMap(jsonObj, fieldName)
 			delList = append(delList, fieldName)
-			date, err = json.Marshal(jsonObj)
+			data, err = json.Marshal(jsonObj)
 			if err != nil {
 				return nil, err
 			}

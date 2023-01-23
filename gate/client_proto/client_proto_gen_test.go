@@ -57,7 +57,7 @@ func TestClientProtoGen(t *testing.T) {
 			if !strings.Contains(line, "enum") {
 				continue
 			}
-			split := strings.Split(line, " ")
+			split := strings.Split(strings.TrimSpace(line), " ")
 			if len(split) != 3 || split[0] != "enum" || split[2] != "{" {
 				continue
 			}
@@ -66,16 +66,16 @@ func TestClientProtoGen(t *testing.T) {
 			if refEnum == nil {
 				continue
 			}
+			for _, ref := range refEnum {
+				newFileStr += ref + "\n"
+			}
 			i++
-			x := 0
 			for {
 				nextLine := rawFileLine[i]
-				if !strings.Contains(nextLine, "}") && x < len(refEnum) {
-					newFileStr += refEnum[x] + "\n"
+				if !strings.Contains(nextLine, "}") {
 					i++
-					x++
 				} else {
-					newFileStr += line + "\n"
+					newFileStr += nextLine + "\n"
 					break
 				}
 			}
@@ -111,7 +111,7 @@ func FindEnumInDirFile(path string, name string) (lineList []string) {
 			if !strings.Contains(line, "enum") {
 				continue
 			}
-			split := strings.Split(line, " ")
+			split := strings.Split(strings.TrimSpace(line), " ")
 			if len(split) != 3 || split[0] != "enum" || split[2] != "{" {
 				continue
 			}

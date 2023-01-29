@@ -136,16 +136,16 @@ function action_EVENT_ANY_MONSTER_LIVE_12(context, evt)
 	  return -1
 	end
 	
-	-- 创生gadget 7012
+	-- 创建id为7012的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7012 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
-	-- 创生gadget 7013
+	-- 创建id为7013的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7013 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -227,10 +227,10 @@ end
 
 -- 触发操作
 function action_EVENT_TIMER_EVENT_19(context, evt)
-	-- 创生gadget 7012
+	-- 创建id为7012的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7012 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -238,10 +238,10 @@ end
 
 -- 触发操作
 function action_EVENT_TIMER_EVENT_20(context, evt)
-	-- 创生gadget 7013
+	-- 创建id为7013的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7013 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

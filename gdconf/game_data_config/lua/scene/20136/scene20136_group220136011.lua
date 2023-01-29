@@ -507,9 +507,11 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_11012(context, evt)
 	if ScriptLib.GetHostQuestState(context,4007506) == 2 then
-		ScriptLib.RefreshGroup(context, {    suite=1})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+		
 		ScriptLib.SetGroupVariableValue(context, "questFinishPart2a", 0)
 	end
+	
 	return 0
 end
 

@@ -104,8 +104,10 @@ function action_EVENT_LEVEL_TAG_CHANGE_10002(context, evt)
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142010, 3)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220142010, config_id=10006, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -115,13 +117,16 @@ function action_EVENT_GROUP_LOAD_10003(context, evt)
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142010, 3)
+		
 		ScriptLib.RemoveExtraGroupSuite(context, 220142010, 2)
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 20142,1051 ) and ScriptLib.GetGroupVariableValue(context, "letter") == 0 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142010, 2)
 	end
+	
 	return 0
 end
 

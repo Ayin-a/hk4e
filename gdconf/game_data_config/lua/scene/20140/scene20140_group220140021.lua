@@ -321,13 +321,16 @@ end
 function action_EVENT_GROUP_LOAD_21012(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 or ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		if ScriptLib.GetGroupVariableValue(context, "fire") == 1 and ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 			ScriptLib.CreateGadget(context, {config_id=21007})
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 			ScriptLib.SetGadgetStateByConfigId(context,21014, GadgetState.Default)
 		end
 	end
+	
 	return 0
 end
 
@@ -386,6 +389,7 @@ function action_EVENT_GROUP_LOAD_21022(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140021, config_id=21005, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -414,10 +418,14 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_21024(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 21013) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 21017) == 201 and ScriptLib.GetGroupVariableValue(context, "monster") == 2 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "plat", 14, 220140004)
+		
 		ScriptLib.SetGroupVariableValue(context, "monster", 3)
+		
 		ScriptLib.AddQuestProgress(context, "4006717")
+		
 		ScriptLib.CreateGadget(context, {config_id=21025})
 	end
+	
 	return 0
 end
 
@@ -426,6 +434,7 @@ function action_EVENT_GROUP_LOAD_21026(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140021, config_id=21006, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -434,6 +443,7 @@ function action_EVENT_GROUP_LOAD_21027(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140021, config_id=21015, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -488,13 +498,15 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_21030(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 2 then
-		if ScriptLib.GetGadgetStateByConfigId(context, 0, 21013) ~= 201 then
+		if ScriptLib.GetGadgetStateByConfigId(context, 0, 21013) == 201 then
 			ScriptLib.SetGadgetStateByConfigId(context,21013, GadgetState.Default)
 		end
-		if ScriptLib.GetGadgetStateByConfigId(context, 0, 21017) ~= 201 then
+		
+		if ScriptLib.GetGadgetStateByConfigId(context, 0, 21017) == 201 then
 			ScriptLib.SetGadgetStateByConfigId(context,21017, GadgetState.Default)
 		end
 	end
+	
 	return 0
 end
 
@@ -503,6 +515,7 @@ function action_EVENT_GROUP_LOAD_21031(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 2 then
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140021, config_id=21019, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -511,6 +524,7 @@ function action_EVENT_GROUP_LOAD_21032(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 2 then
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140021, config_id=21020, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -558,6 +572,7 @@ function action_EVENT_GROUP_LOAD_21034(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 3 then
 		ScriptLib.SetGadgetStateByConfigId(context,21013, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -566,6 +581,7 @@ function action_EVENT_GROUP_LOAD_21035(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 3 then
 		ScriptLib.SetGadgetStateByConfigId(context,21017, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -574,6 +590,7 @@ function action_EVENT_GROUP_LOAD_21036(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "monster") == 3 then
 		ScriptLib.CreateGadget(context, {config_id=21025})
 	end
+	
 	return 0
 end
 

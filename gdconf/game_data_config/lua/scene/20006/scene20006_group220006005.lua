@@ -103,10 +103,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_9(context, evt)
-	-- 创生gadget 54
+	-- 创建id为54的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 54 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

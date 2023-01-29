@@ -98,5 +98,6 @@ end
 -- 触发操作
 function action_EVENT_SELECT_OPTION_9003(context, evt)
 	ScriptLib.EnterPersistentDungeon(context,evt.param2,0,{pos={x=0,y=0,z=0},rot={x=0,y=0,z=0}})
+	
 	return 0
 end

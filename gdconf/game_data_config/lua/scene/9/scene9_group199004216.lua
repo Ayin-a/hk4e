@@ -272,10 +272,14 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_216014(context, evt)
 	if evt.param2 == 216003 and evt.param1 == 201 then
 		ScriptLib.ActiveChallenge(context, 666, 2030, defs.duration, 2, 218, 8)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.MarkPlayerAction(context, 3002, 1, 1)
-		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, is_abs_follow_pos=false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
+		
+		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
 	end
+	
 	return 0
 end
 
@@ -423,10 +427,14 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_216022(context, evt)
 	if evt.param2 == 216017 and evt.param1 == 201 then
 		ScriptLib.ActiveChallenge(context, 666, 2030, defs.duration, 2, 218, 8)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.MarkPlayerAction(context, 3002, 1, 1)
-		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, is_abs_follow_pos=false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
+		
+		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
 	end
+	
 	return 0
 end
 
@@ -437,19 +445,19 @@ function action_EVENT_LEVEL_TAG_CHANGE_216024(context, evt)
 	else
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			if evt.param1 == 9 or evt.param1 == 11 then
-	
 			else
 				ScriptLib.AddExtraGroupSuite(context, 0, 5)
 			end
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1023 ) then
 			if evt.param1 == 7 or evt.param1 == 13 then
-	
 			else
 				ScriptLib.AddExtraGroupSuite(context, 0, 4)
 			end
 		end
 	end
+	
 	return 0
 end
 
@@ -592,33 +600,46 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_216030(context, evt)
 	if evt.param2 == 216049 and evt.param1 == 201 and ScriptLib.GetGroupVariableValue(context, "temp") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,216052, GadgetState.GearStart)
+		
 		ScriptLib.ActiveChallenge(context, 666, 2030, defs.duration, 2, 218, 8)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.MarkPlayerAction(context, 3002, 1, 1)
-		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, is_abs_follow_pos=false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
+		
+		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
 	end
+	
 	if evt.param2 == 216052 and evt.param1 == 201 and ScriptLib.GetGroupVariableValue(context, "temp") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,216049, GadgetState.GearStart)
+		
 		ScriptLib.ActiveChallenge(context, 666, 2030, defs.duration, 2, 218, 8)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.MarkPlayerAction(context, 3002, 1, 1)
-		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, is_abs_follow_pos=false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
+		
+		ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = -323.5,y = 131.4594,z = -611.4}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216032(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 5)
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1023 ) then
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 5)
 	end
+	
 	return 0
 end
 
@@ -750,10 +771,12 @@ function action_EVENT_LEVEL_TAG_CHANGE_216039(context, evt)
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 8)
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1023 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 7)
 		end
 	end
+	
 	return 0
 end
 
@@ -765,10 +788,12 @@ function action_EVENT_GROUP_LOAD_216040(context, evt)
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 8)
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1023 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 7)
 		end
 	end
+	
 	return 0
 end
 
@@ -777,93 +802,109 @@ function action_EVENT_GADGET_CREATE_216041(context, evt)
 	if evt.param1 == 216001 then
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1023 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 9)
+			
 			ScriptLib.RemoveExtraGroupSuite(context, 199004216, 4)
+			
 			ScriptLib.RemoveExtraGroupSuite(context, 199004216, 5)
+			
 			ScriptLib.RemoveExtraGroupSuite(context, 199004216, 6)
 		else
 			if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 				ScriptLib.AddExtraGroupSuite(context, 0, 8)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 6)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 5)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 4)
 			end
+			
 			if ScriptLib.CheckSceneTag(context, 9,1023 ) then
 				ScriptLib.AddExtraGroupSuite(context, 0, 7)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 6)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 5)
+				
 				ScriptLib.RemoveExtraGroupSuite(context, 199004216, 4)
 			end
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216043(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1023 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 6)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_216044(context, evt)
 	ScriptLib.SetGroupVariableValue(context, "temp", 0)
+	
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1023 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 6)
 	else
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 5)
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1023 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 4)
 		end
 	end
+	
 	ScriptLib.RemoveExtraGroupSuite(context, 199004216, 2)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216045(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1023 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 4)
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 9,1023 ) and ScriptLib.CheckSceneTag(context, 9,1022 ) then
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 4)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216046(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1023 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 9)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216047(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 8)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_216048(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1023 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004216, 7)
 	end
+	
 	return 0
 end

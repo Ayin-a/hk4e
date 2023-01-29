@@ -356,6 +356,7 @@ function action_EVENT_GADGET_STATE_CHANGE_17008(context, evt)
 	if evt.param2 == 17009 then
 		ScriptLib.ShowReminder(context, 201290201)
 	end
+	
 	return 0
 end
 

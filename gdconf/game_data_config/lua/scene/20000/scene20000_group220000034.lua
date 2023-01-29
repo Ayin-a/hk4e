@@ -145,10 +145,10 @@ end
 
 -- 触发操作
 function action_EVENT_PLATFORM_REACH_POINT_55(context, evt)
-	-- 创生gadget 90
+	-- 创建id为90的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 90 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

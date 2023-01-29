@@ -79,9 +79,12 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_11003(context, evt)
 	if 11001 == evt.param1 and 605 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,11002, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "eyefinish2", 1, 220137021)
-		ScriptLib.SetGadgetStateByConfigId(context,11001, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,11001, GadgetState.ChestOpened)
 	end
+	
 	return 0
 end
 

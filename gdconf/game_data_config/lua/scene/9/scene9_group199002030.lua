@@ -217,14 +217,15 @@ end
 
 -- 触发操作
 function action_EVENT_ENTER_REGION_30015(context, evt)
-	if 30015 ~= evt.param1 then
-	
+	if 30015 == evt.param1 then
 	else
 		if 0 == ScriptLib.TryRecordActivityPushTips(context, 2014017) then
 			ScriptLib.TryRecordActivityPushTips(context, 2014017)
+			
 			ScriptLib.ShowClientTutorial(context, 1187, {})
 		end
 	end
+	
 	return 0
 end
 

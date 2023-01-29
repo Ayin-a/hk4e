@@ -159,25 +159,38 @@ suites = {
 function action_EVENT_SELECT_OPTION_7003(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "turn") == 0 and evt.param2 == 7 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "room4", 1, 220135003)
-		ScriptLib.SetPlatformPointArray(context, 7001, 4, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+		
+		ScriptLib.SetPlatformPointArray(context, 7001, 4, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+		
 		ScriptLib.SetGroupVariableValue(context, "turn", 1)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135007, config_id=7014, entity_type=EntityType.GADGET})
+		
 		if ScriptLib.GetGroupVariableValue(context, "wind") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,7010, GadgetState.GearStart)
+			
 			ScriptLib.InitTimeAxis(context, "createwind1", {3}, false)
 		end
+		
 		ScriptLib.SetGadgetStateByConfigId(context,7002, GadgetState.Default)
 	else
 		if ScriptLib.GetGroupVariableValue(context, "turn") == 1 and evt.param2 == 7 then
 			ScriptLib.SetGroupVariableValueByGroup(context, "room4", 0, 220135003)
+			
 			ScriptLib.SetGroupVariableValue(context, "turn", 0)
-			ScriptLib.SetPlatformPointArray(context, 7001, 4, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+			
+			ScriptLib.SetPlatformPointArray(context, 7001, 4, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+			
 			ScriptLib.SetGadgetStateByConfigId(context,7010, GadgetState.Default)
+			
 			ScriptLib.InitTimeAxis(context, "createwind2", {3}, false)
+			
 			ScriptLib.KillEntityByConfigId(context, {group_id=220135007, config_id=7005, entity_type=EntityType.GADGET})
+			
 			ScriptLib.SetGadgetStateByConfigId(context,7002, GadgetState.GearStart)
 		end
 	end
+	
 	return 0
 end
 
@@ -290,14 +303,19 @@ function action_EVENT_GADGET_STATE_CHANGE_7024(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 7006) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 7007) == 201 then
 		if evt.param2 == 7006 or evt.param2 == 7007 then
 			ScriptLib.SetGroupVariableValue(context, "wind", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "door", 1)
+			
 			if ScriptLib.GetGroupVariableValue(context, "turn") == 1 then
 				ScriptLib.CreateGadget(context, {config_id=7005})
+				
 				ScriptLib.SetGadgetStateByConfigId(context,7010, GadgetState.GearStart)
 			end
+			
 			ScriptLib.AddQuestProgress(context, "4006609")
 		end
 	end
+	
 	return 0
 end
 
@@ -306,10 +324,13 @@ function action_EVENT_GROUP_LOAD_7027(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "turn") == 1 and ScriptLib.GetGroupVariableValue(context, "wind") == 1 then
 		ScriptLib.CreateGadget(context, {config_id=7005})
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "turn") == 0 then
 		ScriptLib.CreateGadget(context, {config_id=7014})
-		ScriptLib.SetPlatformPointArray(context, 7001, 5, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach})
+		
+		ScriptLib.SetPlatformPointArray(context, 7001, 5, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach, speed_level=0, arrive_range=0})
 	end
+	
 	return 0
 end
 
@@ -444,6 +465,7 @@ function action_EVENT_GROUP_LOAD_7034(context, evt)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,7002, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 

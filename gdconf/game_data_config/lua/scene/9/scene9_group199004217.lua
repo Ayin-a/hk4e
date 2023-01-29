@@ -183,8 +183,9 @@ end
 -- 触发操作
 function action_EVENT_TIME_AXIS_PASS_217011(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "chest") == 0 and evt.source_name == "temp" and evt.param1 == 1 then
-		ScriptLib.RefreshGroup(context, {group_id=199004217,    suite=1})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
 	end
+	
 	return 0
 end
 
@@ -192,7 +193,9 @@ end
 function action_EVENT_GROUP_LOAD_217012(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "chest") == 0 then
 		ScriptLib.RemoveExtraGroupSuite(context, 199004217, 2)
+		
 		ScriptLib.CreateGadget(context, {config_id=217002})
 	end
+	
 	return 0
 end

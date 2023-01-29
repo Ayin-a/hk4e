@@ -169,8 +169,10 @@ function action_EVENT_LEVEL_TAG_CHANGE_12003(context, evt)
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142012, 2)
+		
 		ScriptLib.RemoveExtraGroupSuite(context, 220142012, 3)
 	end
+	
 	return 0
 end
 
@@ -178,9 +180,12 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_12006(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 12002) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 12005) == 201 then
 		ScriptLib.AddQuestProgress(context, "4006512")
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12001, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
 	end
+	
 	return 0
 end
 
@@ -302,6 +307,7 @@ function action_EVENT_ENTER_REGION_12014(context, evt)
 	if evt.param1 == 12014 and ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 and ScriptLib.TryRecordActivityPushTips(context, 2014009) == 0 then
 		ScriptLib.ShowClientTutorial(context, 1179, {})
 	end
+	
 	return 0
 end
 
@@ -406,6 +412,7 @@ function action_EVENT_GROUP_LOAD_12034(context, evt)
 	if ScriptLib.CheckSceneTag(context, 20142,1055 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	return 0
 end
 

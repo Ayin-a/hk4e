@@ -283,10 +283,11 @@ end
 -- 触发操作
 function action_EVENT_GADGET_STATE_CHANGE_450030(context, evt)
 	if evt.param2 == 450026 or evt.param2 == 450027 or evt.param2 == 450028 then
-		if evt.param1 == GadgetState.ChestOpened then
+		if evt.param1 == 102 then
 			ScriptLib.AddQuestProgress(context, "71078got_tresure")
 		end
 	end
+	
 	return 0
 end
 

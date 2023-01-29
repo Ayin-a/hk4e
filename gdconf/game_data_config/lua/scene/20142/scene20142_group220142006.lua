@@ -246,9 +246,12 @@ end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_6014(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "stone") == 1 and ScriptLib.CheckSceneTag(context, 20142,1053 ) then
 		ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.Default)
 	end
+	
 	return 0
 end
 
@@ -256,29 +259,36 @@ end
 function action_EVENT_LEVEL_TAG_CHANGE_6015(context, evt)
 	if ScriptLib.CheckSceneTag(context, 20142,1053 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.ChestLocked)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.Default)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 2 then
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.GearStop)
 		end
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142006, 3)
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 20142,1054 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		if ScriptLib.GetGroupVariableValue(context, "chest") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,6003, GadgetState.ChestLocked)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "chest") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,6003, GadgetState.Default)
 		end
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142006, 2)
 	end
+	
 	return 0
 end
 
@@ -286,26 +296,34 @@ end
 function action_EVENT_GROUP_LOAD_6016(context, evt)
 	if ScriptLib.CheckSceneTag(context, 20142,1053 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.ChestLocked)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.Default)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "stone") == 2 then
 			ScriptLib.SetGroupVariableValue(context, "stone", 1)
+			
 			ScriptLib.SetGadgetStateByConfigId(context,6011, GadgetState.Default)
 		end
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 20142,1054 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		if ScriptLib.GetGroupVariableValue(context, "chest") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,6003, GadgetState.ChestLocked)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "chest") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,6003, GadgetState.Default)
 		end
 	end
+	
 	return 0
 end
 

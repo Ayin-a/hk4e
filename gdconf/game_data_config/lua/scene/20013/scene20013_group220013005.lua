@@ -468,10 +468,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_29(context, evt)
-	-- 创生gadget 5055
+	-- 创建id为5055的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5055 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -489,10 +489,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_30(context, evt)
-	-- 创生gadget 5056
+	-- 创建id为5056的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5056 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -510,10 +510,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_31(context, evt)
-	-- 创生gadget 5057
+	-- 创建id为5057的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5057 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -531,10 +531,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_32(context, evt)
-	-- 创生gadget 5058
+	-- 创建id为5058的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5058 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -552,10 +552,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_33(context, evt)
-	-- 创生gadget 5059
+	-- 创建id为5059的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5059 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -573,10 +573,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_34(context, evt)
-	-- 创生gadget 5060
+	-- 创建id为5060的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5060 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -594,10 +594,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_35(context, evt)
-	-- 创生gadget 5061
+	-- 创建id为5061的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5061 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -615,10 +615,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_36(context, evt)
-	-- 创生gadget 5062
+	-- 创建id为5062的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5062 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -636,10 +636,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_37(context, evt)
-	-- 创生gadget 5063
+	-- 创建id为5063的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 5063 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

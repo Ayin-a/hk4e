@@ -82,11 +82,16 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_10003(context, evt)
 	if 10001 == evt.param1 and 204 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,10002, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4007215")
-		ScriptLib.SetGadgetStateByConfigId(context,10001, 204)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,10001, GadgetState.GearAction2)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220138010, config_id=10006, entity_type=EntityType.GADGET})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220138010, config_id=10007, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -94,10 +99,14 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_10004(context, evt)
 	if 10001 == evt.param1 and 0 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,10002, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,10001, GadgetState.Default)
+		
 		ScriptLib.CreateGadget(context, {config_id=10006})
+		
 		ScriptLib.CreateGadget(context, {config_id=10007})
 	end
+	
 	return 0
 end
 

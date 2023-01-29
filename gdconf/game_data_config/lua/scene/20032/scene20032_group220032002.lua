@@ -201,10 +201,10 @@ function action_EVENT_QUEST_FINISH_2027(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 2006
+	-- 创建id为2006的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2006 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

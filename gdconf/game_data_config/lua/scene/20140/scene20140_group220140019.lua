@@ -223,11 +223,14 @@ end
 function action_EVENT_GROUP_LOAD_19019(context, evt)
 	if ScriptLib.CheckSceneTag(context, 20140,1070 ) then
 		if ScriptLib.GetGroupVariableValue(context, "monster") == 1 or ScriptLib.GetGroupVariableValue(context, "monster") == 2 then
-			ScriptLib.RefreshGroup(context, {    suite=1})
+			ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+			
 			ScriptLib.SetGroupVariableValue(context, "monster", 1)
+			
 			ScriptLib.AddExtraGroupSuite(context, 0, 2)
 		end
 	end
+	
 	return 0
 end
 

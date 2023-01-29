@@ -5766,7 +5766,7 @@
 	////////////////////////////////////////////////////////////////
 	//
 	//  14511 草神法器 Equip_Catalyst_Ayus
-	//  技能未定，有常驻特效挂接在prefab上。
+	// 有常驻特效挂接在prefab上。
 	//
 	////////////////////////////////////////////////////////////////
 	{
@@ -6748,7 +6748,217 @@
 		},
 	},	
 
+	////////////////////////////////////////////////////////////////
+	//
+	//  14512 3.3法器 Equip_Catalyst_Alaya
+	// 	战技后获得buff，每秒提升普攻伤害，普攻命中时会提升2层，最多10层。
+	//
+	////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Weapon_Catalyst_Alaya",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Catalyst_Alaya_AtkSpeedUp",
+				},
+			],
+			"abilityMixins": [
+				{
+					"$type": "OnAvatarUseSkillMixin",
+					"clearSkillIdDelay": 0.2,
+					"onTriggerSkill": [ //战技时重置buff
+						{
+							"$type": "RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Catalyst_Alaya_Buff",
+						},
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_Catalyst_Alaya_Buff",
+						},
+					],
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Catalyst_Alaya_Buff":{
+					"isUnique": true,
+					"duration": "%Dura",
+					"state": "AttackUp",
+					"onAdded": [
+						{
+							"$type":"SetGlobalValue",
+							"key": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"value": 0,
+							"doOffStage": true,
+						},
+					],
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+								// "ExtraAttack",//看情况加不加重击
+							],
+							"damagePercentageRatio": "%Ratio_Per_Stack*%Stack",
+						},
+						{
+							"$type": "AttachModifierToSelfGlobalValueMixin", //主要是监视满层，用于配置特效。不然就得每次addGV时检测触发。
+							"globalValueKey": "_ABILITY_Weapon_Catalyst_Alaya_Stack", 
+							"valueSteps": [
+								"%MaxStack-0.5",
+								30,
+							],
+							"removeAppliedModifier": false,
+							"modifierNameSteps": [
+								"UNIQUE_Catalyst_Alaya_Eff2",
+							],
+						},
+					],
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"NormalAttack_01",
+										"NormalAttack_02",
+										"NormalAttack_03",
+										"NormalAttack_04",
+										"NormalAttack_05",
+										"NormalAttack_06",
+										// "ExtraAttack",//看情况加不加重击
+									]
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster",
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+							],
+							"successActions": [
+								{
+									"$type": "ApplyModifier",
+									"modifierName": "UNIQUE_Catalyst_Alaya_GV_Adder",
+								},
+							],
+						},
+					],
+					"thinkInterval": "%Interval",
+					"onThinkInterval": [
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"value": 1,
+							"useLimitRange": true,
+							"maxValue": "%MaxStack",
+						},
+						{
+							"$type": "SetGlobalValueToOverrideMap",//mixin实时增伤的，更新override就行
+							"globalValueKey": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"overrideMapKey": "Stack",
+						},
+					],
+					"onAvatarOut": [
+						{
+							"$type":"RemoveUniqueModifier",
+							"modifierName": "UNIQUE_Catalyst_Alaya_Buff",
+							"doOffStage": true,
+						},
+					],
+					"onRemoved": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"value": 0,
+							"doOffStage": true,
+						},
+					]
+				},
+				"UNIQUE_Catalyst_Alaya_GV_Adder":{
+					"isUnique": true,
+					"duration": "%Trigger_CD",
+					"stacking": "Unique",
+					"onAdded": [
+						{
+							"$type":"AddGlobalValue",
+							"key": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"value": "%AttackStack",
+							"useLimitRange": true,
+							"maxValue": "%MaxStack",
+						},
+						{
+							"$type":"SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_Weapon_Catalyst_Alaya_Stack",
+							"overrideMapKey": "Stack",
+						},
+					],
+				},
+				"UNIQUE_Catalyst_Alaya_Eff2":{
+					"isUnique": true,
+					"onAdded": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Weapon_Alaya_StackFull",
+						},
+						{
+							"$type":"AttachEffect",
+							"otherTargets": {
+								"$type": "SelectTargetsByEquipParts",
+								"equipPartNames": [
+									"equip01",
+									"equip02",
+									"sheathPoint"
+								],
+							},
+							"effectPattern": "Eff_Weapon_Alaya_WeaponBuff",
+						},
+						// {
+						// 	"$type": "AttachEffect", //武器上看不清。。角色上绑一个吧。
+						// 	"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_FallingAttack_MapleWind", 
+						// },
+						// {
+						// 	"$type": "AttachEffect", 
+						// 	"effectPattern": "Eff_Avatar_Boy_Sword_Kazuha_ElementalArt_Maple", 
+						// },
+					],
+				},
+				"UNIQUE_Catalyst_Alaya_AtkSpeedUp": {
+					"isUnique": true,
+					"isLimitedProperties": true,
+					"properties": {
+						"Animator_AttackSpeedRatio": "%Speed_Rate",
+					},
+				},
+			},
+			"abilitySpecials": {
+				"Speed_Rate":0,
+				"Ratio_Per_Stack":0,
+				"Dura": 0,
+				"Interval": 0,
+				"AttackStack": 0,
+				"Trigger_CD":0,
+				"MaxStack":0,
 
+				"Stack":0,  //运算用参数，代表当前层数
+			},
+		},
+	},
 
 
 

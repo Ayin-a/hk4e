@@ -1831,4 +1831,2380 @@
       },   
   }
 },
+//触发扩散反应时，队伍中所有角色获得X%风元素伤害加成，持续X秒。
+{
+  "Default": 
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "LevelEntity_LoopDungeon_MasteryUp_WindDamageUp_V3.3",
+    "isDynamicAbility": true,
+    "abilitySpecials": 
+    {
+      "WindDamageUpTime":0,
+      "WindDamageUpRatio":0,
+    },
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_LoopDungeon_MasteryUp_WindDamageUp",
+        "target": "Self",
+        "doOffStage": true,
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_LoopDungeon_MasteryUp_WindDamageUp":
+      {
+        "isUnique": true,
+        "modifierMixins": 
+        [
+            {
+                "$type": "DoActionByElementReactionMixin",
+                "range": 20,
+                "entityTypes": ["Monster"],
+                "reactionTypes": 
+                [
+                    "SwirlFire",
+                    "SwirlElectric",
+                    "SwirlWater",
+                    "SwirlIce"
+                ],
+                "actions": 
+                [
+                    {
+                        "$type": "AttachModifier",
+                        "target": "CurTeamAvatars",
+                        "modifierName": "WindDamageUp_BuffEffect",
+                        "doOffStage": true
+                    },
+                ],
+            },
+        ],
+      },//判断是否发生了扩散反应
+      "WindDamageUp_BuffEffect":
+      {
+        "isLimitedProperties": true,
+        "stacking": "Refresh",
+        "duration": "%WindDamageUpTime",
+        "properties":
+        {
+          "Actor_WindAddHurtDelta": "%WindDamageUpRatio",
+        },          
+      }
+    },
+  },
+}, 
+
+//////////////////////////////////////////////////////////
+//
+//     3.3 深境螺旋
+//
+//////////////////////////////////////////////////////////
+
+//1.前台角色每次通过普通攻击、重击、下落攻击对怪物造成伤害后（包括元素和物理），可根据该次伤害的类型获得一层对应类型伤害提升①的效果，
+//每层持续②秒（非独立，叠层时刷新时间），最多叠③层，叠层cd④，
+//当前角色只能同时有一种伤害类型的加成，如果对怪物造成其他类型伤害，则会清掉此前所有加成效果并重新叠层，切换角色后也会将此前已有的加成效果清零。
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "LevelBuff_TowerBuff_CurAvatar_ElemDamageUp",
+      "isDynamicAbility": true,
+      "abilitySpecials": 
+      {
+        "BuffMaxLevel": 0,
+        "Duration": 0,
+        "AddHurtDelta": 0,
+        "CdTime": 0,
+      },
+      "onAdded": 
+      [
+        {
+          "$type": "AttachModifier",
+          "target":"Team",
+          "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Handler"
+        },
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Handler":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Avatar", //只有前场角色能叠
+            }
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Avatar":
+        {
+            "isUnique": true,
+            "onAdded":
+            [
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_ElemDamageUp_MuiltipleCD", //换人上来叠层CD重新开始计算 
+                "value": 0,
+              },
+            ],
+            "onAttackLanded": 
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Fire",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }
+                    ],
+                    "successActions": 
+                    [
+                      //把其他元素的加成卸载掉
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_FireHandler",
+                      },
+                      //进CD
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Water",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_WaterHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Ice",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }          
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_IceHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Electric",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }                          
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_ElectricHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Rock",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }                         
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_RockHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Wind",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }                        
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_WindHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type" : "ByAttackTags",
+                        "attackTags" : 
+                        [ 
+                          "NormalAttack_01", 
+                          "NormalAttack_02", 
+                          "NormalAttack_03", 
+                          "NormalAttack_04", 
+                          "NormalAttack_05", 
+                          "NormalAttack_06", 
+                          "ExtraAttack",
+                          "FallingAttack"
+                        ],
+                      },
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Grass",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }                         
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_GrassHandler",
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "AttachModifier",
+                        "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+                      },
+                    ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                      },//判断伤害
+                      {
+                          "$type": "ByHitElement",
+                          "element": "None",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }                         
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_NoneHandler",
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "AttachModifier",
+                      "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+                    },
+                  ]
+                },
+
+            ],
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_CD_Handler":
+        {
+          "duration":"%CdTime",
+          "onAdded": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                "value": -1
+            }
+          ],
+          "onRemoved": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_ElemDamageUp_MuiltipleCD",
+                "value": 0
+            }
+          ] 
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_FireHandler": //火加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },             
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_WaterHandler": //水加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },            
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_IceHandler": //冰加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },            
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_ElectricHandler": //雷加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },             
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_RockHandler": //岩加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            },  
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },             
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_WindHandler": //风加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },             
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_GrassHandler": //草加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            },  
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None",
+            },             
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_ElemDamageUp_Remove_NoneHandler": //物理加成
+        {
+          "isUnique":true,
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice",
+            },
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind",
+            }, 
+            {
+              "$type": "RemoveModifier",
+              "modifierName": "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass",
+            },             
+          ]
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Fire":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_FireAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Water":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_WaterAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Ice":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_IceAddHurtDelta": "%AddHurtDelta",
+          },            
+        }, 
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Electric":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_ElecAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Rock":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_RockAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Wind":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_WindAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_Grass":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_GrassAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+        "TowerBuff_CurAvatar_ElemDamageUp_Avatar_None":
+        {
+          "duration":"%Duration",
+          "stacking":"MultipleAllRefresh",
+          "state":"AttackUp",
+          "stackingOption":
+          {
+              "maxModifierNumForMultipleType": "%BuffMaxLevel",
+          }, 
+          "properties": 
+          {
+            "Actor_PhysicalAddHurtDelta": "%AddHurtDelta",
+          },            
+        },
+      },
+  }
+},
+
+//2.前台角色对怪物触发扩散反应后，全队角色获得一层暴击伤害加成，持续X秒（独立计时），最多叠X层，叠层CD X秒
+{
+  "Default": 
+  {
+    "$type": "ConfigAbility",
+    "abilityName": "LevelEntity_TowerBuff_Swirl_CriticalHurtUp",
+    "isDynamicAbility": true,
+    "abilitySpecials": 
+    {
+      "CriticalHurt": 0,
+      "BuffTime": 0,
+      "BuffMaxLevel": 0,
+      "LevelEntity_TowerBuff_CD": 0,
+    },
+    "onAdded": 
+    [
+      {
+        "$type": "AttachModifier",
+        "modifierName": "UNIQUE_LevelEntity_TowerBuff_Swirl_CriticalHurtUp_Handler",
+        "target":"Team",
+      },
+    ],
+    "modifiers": 
+    {
+      "UNIQUE_LevelEntity_TowerBuff_Swirl_CriticalHurtUp_Handler":
+      {
+        "isUnique":true,
+        "modifierMixins":
+        [
+          {
+            "$type": "CurLocalAvatarMixinV2",
+            "modifierName": "UNIQUE_LevelEntity_TowerBuff_Swirl_CriticalHurtUp", 
+          }
+        ]
+      },
+      "UNIQUE_LevelEntity_TowerBuff_Swirl_CriticalHurtUp": 
+      {
+        "stacking": "Unique",
+        "isUnique": true,
+        "modifierMixins": 
+        [
+          {
+            "$type": "DoActionByElementReactionMixin",
+            "range": 20, //这个就是默认值
+            "entityTypes": [ "Monster" ],
+            "reactionTypes": 
+            [
+              "SwirlFire",
+              "SwirlElectric",
+              "SwirlWater",
+              "SwirlIce",
+            ],
+            "actions": 
+            [
+              {
+                "$type": "Predicated",
+                "target":"Target",
+                "targetPredicates": 
+                [
+                  {
+                    "$type": "ByTargetGlobalValue",
+                    "key": "_LevelEntity_TowerBuff_Swirl_CriticalHurtUp_CD",
+                    "target":"Team",
+                    "value": 0,
+                    "compareType": "NoneOrEqual",
+                  },
+                ],
+                "successActions": 
+                [
+                  {
+                    "$type": "DebugLog", 
+                    "content": "##扩散触发成功",
+                  },
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_LevelEntity_TowerBuff_SwirlDefenseDown_BuffEffect",
+                    "target"  : "AllPlayerAvatars",
+                  },
+                  {
+                    "$type": "ApplyModifier",
+                    "modifierName": "UNIQUE_LevelEntity_TowerBuff_SwirlDefenseDown_CD",
+                    "target"  : "Team",
+                    "doOffStage": true,
+                  },
+                ],
+              },             
+            ],
+          }, 
+        ],
+      },
+      "UNIQUE_LevelEntity_TowerBuff_SwirlDefenseDown_BuffEffect": 
+      {
+        "isUnique":true,
+        "duration": "%BuffTime",
+        "state": "AttackUp",
+        "stacking": "MultipleRefreshNoRemove",
+        "properties": 
+        {
+          "Actor_CriticalHurtDelta": "%CriticalHurt",
+        },  
+        "stackingOption":
+        {
+            "maxModifierNumForMultipleType": "%BuffMaxLevel",
+            "enableMixedUnique":true,
+        },
+      },
+      "UNIQUE_LevelEntity_TowerBuff_SwirlDefenseDown_CD":
+      {
+        "stacking": "Unique",
+        "isUnique": true,
+        "duration": "%LevelEntity_TowerBuff_CD",
+        "onAdded": 
+        [
+          {
+            "$type": "SetGlobalValue",
+            "key": "_LevelEntity_TowerBuff_Swirl_CriticalHurtUp_CD",
+            "value": -1,
+            "doOffStage": true,
+          },
+        ],
+        "onRemoved": 
+        [
+          {
+            "$type": "SetGlobalValue",
+            "key": "_LevelEntity_TowerBuff_Swirl_CriticalHurtUp_CD",
+            "value": 0,
+            "doOffStage": true,
+          },
+        ],
+      }
+    },
+  },
+},
+
+//前台角色对怪物连续造成①次同类型元素伤害后（如果连击未完成前对怪物造成了其他类型伤害，则中断计数并清零重算，中途造成物理伤害不打断计数，加计数的保护cd0.1秒），
+//在角色自身位置触发一次冲击波，半径②米，伤害系数③，CD④秒。
+{
+  "Default":
+  {
+      "$type": "ConfigAbility",
+      "abilityName": "LevelBuff_TowerBuff_CurAvatar_KeepTtkTriggerCJB",
+      "isDynamicAbility": true,
+      "abilitySpecials": 
+      {
+        "MaxCount": 0,
+        "CdTime": 0,
+        "CJB_Interval": 0,
+        "DamageSystemValue": 0,  //大世界等级因子  不导表
+        "CJB_DamageRatio": 0,  //冲击波伤害
+      },
+      "onAdded": 
+      [
+        {
+          "$type": "ApplyModifier",
+          "target":"Team",
+          "modifierName": "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_Handler"
+        },
+        {
+          "$type": "SetSystemValueToOverrideMap",
+          "key": "DamageSystemValue",
+          "type": "ElementLevelCo",
+          "doOffStage": true,
+        }, 
+      ],
+      "modifiers": 
+      {
+        "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_Handler":
+        {
+          "isUnique":true,
+          "modifierMixins":
+          [
+            {
+              "$type": "CurLocalAvatarMixinV2",
+              "modifierName": "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_Avatar", //只有前场角色能叠
+            },           
+          ]
+        },
+        "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect":
+        {
+          "isUnique": true,
+          "stacking": "Unique",
+          "duration": 0.1,
+          "onAdded":
+          [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_EnergyDisk_ElementalBurst_Wave_R40",
+              "doOffStage": true,
+            },
+            {
+              "$type": "TriggerAttackEvent",
+              "doOffStage": true,
+              "target": "CurLocalAvatar",
+              "targetType": "Enemy",
+              "attackEvent":
+              {
+                "attackPattern":
+                {
+                  "$type": "ConfigAttackSphere", 
+                  "triggerType": "TriggerNoRepeat",
+                  "radius": 5.0, 
+                  "born":
+                  {
+                    "$type": "ConfigBornBySelf",
+                  },
+                },
+                "attackInfo":
+                {
+                  "attackProperty":
+                  {
+                    "damageExtra": "%CJB_DamageRatio*%DamageSystemValue",
+                    "ignoreAttackerProperty": true,
+                    "ignoreModifyDamage": true,
+                    "trueDamage": true,
+                    "attackType": "Melee",
+                    "elementType": "None", 
+                    "elementDurability": 0,
+                    "enBreak": 25, 
+                  },
+                  "hitPattern":
+                  {
+                    "onHitEffectName": "default",
+                    "hitImpulseType": "LV2",
+                    "reboundRatio": 0,
+                    "canBeDefenceHalt": false,
+                    "hitHaltTime": 0,
+                    "hitHaltTimeScale": 0.02,
+                    "muteHitText": false,
+                  },
+                },
+              },
+            },
+            //重置计数
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Fire", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Water", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Ice", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Electric", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Rock", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Wind", 
+              "value": 0,
+              "doOffStage": true,
+            },
+            {
+              "$type": "SetGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Grass", 
+              "value": 0,
+              "doOffStage": true,
+            },
+          ],
+        },
+        "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_Avatar":
+        {
+            "isUnique": true,
+            "modifierMixins":
+            [
+              //CJB触发的handler
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Fire",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Fire",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      //进入CJB的CD，数值设计调整，叠层CD增长，CJB没必要CD了
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Water",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Water",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Ice",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Ice",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Electric",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Electric",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Rock",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Rock",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Wind",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Wind",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+              {
+                "$type": "DoActionOnGlobalValueChangeMixin",
+                "globalValueKey": "_TowerBuff_KeepTtkTriggerCJB_Count_Grass",
+                "actions":
+                [
+                  {
+                    "$type" : "Predicated",
+                    "targetPredicates" :
+                    [
+                      {
+                        "$type" : "ByTargetGlobalValue",
+                        "target": "Self",
+                        "key"  : "_TowerBuff_KeepTtkTriggerCJB_Count_Grass",
+                        "value"  : "%MaxCount",
+                        "compareType"  : "MoreThanAndEqual",
+                      },
+                      // {
+                      //   "$type" : "ByTargetGlobalValue",
+                      //   "target": "Team",
+                      //   "key"  : "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                      //   "value"  : 0,
+                      //   "compareType"  : "NoneOrEqual",
+                      // },
+                    ],
+                    "successActions" :
+                    [
+                      //以自身位置触发一个CJB
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName" : "UNIQUE_TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJBEffect",
+                        "doOffStage": true,
+                      },
+                      // {
+                      //   "$type": "ApplyModifier",
+                      //   "modifierName" : "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler",
+                      //   "doOffStage": true,
+                      //   "target":"Team",
+                      // },
+                    ],
+                  },
+                ],
+              }, 
+            ],
+            "onAdded":
+            [
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Fire", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Water", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Ice", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Electric", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Rock", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Wind", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Grass", 
+                "value": 0,
+              },
+              {
+                "$type": "SetGlobalValue",
+                "key": "_TowerBuff_KeepTtkTriggerCJB_CD", //换人上来计数重新开始计算 
+                "value": 0,
+              },
+            ],
+            "onAttackLanded": 
+            [
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Fire",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Fire",
+                      },
+                    ]
+                },
+                {
+                    "$type": "Predicated",
+                    "target": "Other",
+                    "doOffStage": true,
+                    "targetPredicates": 
+                    [
+                      {
+                        "$type": "ByEntityTypes",
+                        "entityTypes": 
+                        [
+                          "Monster"
+                        ],
+                      },
+                      {
+                          "$type": "ByHitDamage",
+                          "damage": 0,
+                          "logic":"Greater",
+                      },
+                      {
+                          "$type": "ByHitElement",
+                          "element": "Water",
+                      },
+                      {
+                        "$type": "ByTargetGlobalValue",
+                        "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                        "target":"Self",
+                        "value": 0,
+                        "compareType": "NoneOrEqual"
+                      }
+                    ],
+                    "successActions": 
+                    [
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                        "doOffStage": true,                      
+                      },
+                      {
+                        "$type": "ApplyModifier",
+                        "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Water",
+                      },
+                    ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                    {
+                      "$type": "ByEntityTypes",
+                      "entityTypes": 
+                      [
+                        "Monster"
+                      ],
+                    },
+                    {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                    },
+                    {
+                        "$type": "ByHitElement",
+                        "element": "Ice",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                      "target":"Self",
+                      "value": 0,
+                      "compareType": "NoneOrEqual"
+                    }
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Ice",
+                    },
+                  ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                    {
+                      "$type": "ByEntityTypes",
+                      "entityTypes": 
+                      [
+                        "Monster"
+                      ],
+                    },
+                    {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                    },
+                    {
+                        "$type": "ByHitElement",
+                        "element": "Electric",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                      "target":"Self",
+                      "value": 0,
+                      "compareType": "NoneOrEqual"
+                    }
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Electric",
+                    },
+                  ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                    {
+                      "$type": "ByEntityTypes",
+                      "entityTypes": 
+                      [
+                        "Monster"
+                      ],
+                    },
+                    {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                    },
+                    {
+                        "$type": "ByHitElement",
+                        "element": "Rock",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                      "target":"Self",
+                      "value": 0,
+                      "compareType": "NoneOrEqual"
+                    }
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Rock",
+                    },
+                  ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                    {
+                      "$type": "ByEntityTypes",
+                      "entityTypes": 
+                      [
+                        "Monster"
+                      ],
+                    },
+                    {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                    },
+                    {
+                        "$type": "ByHitElement",
+                        "element": "Wind",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                      "target":"Self",
+                      "value": 0,
+                      "compareType": "NoneOrEqual"
+                    }
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Wind",
+                    },
+                  ]
+                },
+                {
+                  "$type": "Predicated",
+                  "target": "Other",
+                  "doOffStage": true,
+                  "targetPredicates": 
+                  [
+                    {
+                      "$type": "ByEntityTypes",
+                      "entityTypes": 
+                      [
+                        "Monster"
+                      ],
+                    },
+                    {
+                        "$type": "ByHitDamage",
+                        "damage": 0,
+                        "logic":"Greater",
+                    },
+                    {
+                        "$type": "ByHitElement",
+                        "element": "Grass",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                      "target":"Self",
+                      "value": 0,
+                      "compareType": "NoneOrEqual"
+                    }
+                  ],
+                  "successActions": 
+                  [
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler", 
+                      "doOffStage": true,                      
+                    },
+                    {
+                      "$type": "ApplyModifier",
+                      "modifierName": "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Grass",
+                    },
+                  ]
+                },
+            ],
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_CD_Handler":
+        {
+          "duration":"%CdTime",
+          "onAdded": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                "value": -1
+            }
+          ],
+          "onRemoved": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_KeepTtkTriggerCJB_AddGV_CD",
+                "value": 0
+            }
+          ] 
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_CJB_CD_Handler":
+        {
+          "duration":"%CJB_Interval",
+          "onAdded": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                "value": -1
+            }
+          ],
+          "onRemoved": 
+          [
+            {
+                "$type": "SetGlobalValue",
+                "doOffStage": true,
+                "key": "_TowerBuff_KeepTtkTriggerCJB_CJB_CD",
+                "value": 0
+            }
+          ] 
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Fire":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Fire",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Water":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Water",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Ice":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Ice",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Electric":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Electric",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Rock":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Rock",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Wind":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Wind",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+        "TowerBuff_CurAvatar_KeepTtkTriggerCJB_AddGV_Grass":
+        {
+          "duration":0.1,
+          "onAdded":
+          [
+            {
+              "$type": "AddGlobalValue",
+              "key": "_TowerBuff_KeepTtkTriggerCJB_Count_Grass",
+              "value": 1,
+              "target": "Self",
+            },
+          ]           
+        },
+      },
+  }
+},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  3.4 连线地城_连线 场地buff点名物件
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+{
+  "Default":{
+      "$type": "ConfigAbility",
+      "abilityName": "LevelEntity_ActivityTeamChainChooseMonster_V3.4",
+      "isDynamicAbility": true,
+      "abilitySpecials": {
+        "ThinkInterval":0,
+        "MonsterBuffDuration":0,
+      },
+      "onAdded": [
+          {
+              "$type": "ApplyModifier",
+              "modifierName": "ActivityTeamChainChooseMonster_Handler"
+          }
+      ],
+      "modifiers": {
+          "ActivityTeamChainChooseMonster_Handler":{
+              "thinkInterval": "%ThinkInterval",
+              "onThinkInterval": [
+                  {
+                      "$type": "Predicated",
+                      "otherTargets":{
+                        "$type": "SelectTargetsByShape",
+                        "campBasedOn": "Self",
+                        "campTargetType": "AllExceptSelf",
+                        "centerBasedOn": "Self",
+                        "shapeName": "CircleR50",
+                        "sortType": "Random",
+                        "topLimit": 1
+                      },
+                      "targetPredicates": [
+                        {
+                          "$type": "ByEntityTypes",
+                          "entityTypes": ["Monster"]
+                        }
+                      ],
+                      "successActions": [
+                        {
+                          "$type": "ApplyModifier",
+                          "target": "Target",
+                          "modifierName": "ActivityTeamChainChooseMonster_ChooseBuff"
+                        }
+                      ],
+                      "predicates": [
+                        {
+                          "$type": "ByEntityTypes",
+                          "entityTypes": ["Monster"]
+                        }
+                      ]
+                  }
+              ]
+          },
+          "ActivityTeamChainChooseMonster_ChooseBuff":{
+            "duration": "%MonsterBuffDuration",
+            "onAdded": [
+              {
+                "$type": "AttachEffect",
+                "effectPattern": "Eff_Monster_Common_MarkPowerful"
+              }
+            ],
+            "onKill": [
+              {
+                "$type": "SetGlobalValue",
+                "target": "Team",
+                "key": "_GO_CJB_TRIGGER",
+                "value": 1
+              }
+            ]
+          }
+      }
+  }
+},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  3.4 连线地城_连线 关卡3 爆炸范围选择器
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+{
+  "Default":{
+    "$type": "ConfigAbility",
+    "abilityName": "LevelEntity_ActivityTeamChainExplodeCreator_V3.4",
+    "isDynamicAbility": true,
+    "abilitySpecials": {
+      "Thinkinterval":0,
+      "DamageRatio":0,
+      "DefenseDownRatio":0,
+      "DefenseDownTime":0
+    },
+    "onAdded": [
+      {
+        "$type": "ApplyModifier",
+        "modifierName": "Bomb_Creator_Handler"
+      },
+      {
+        "$type": "SetSystemValueToOverrideMap",
+        "key": "DamageSystemValue",
+        "type": "ElementLevelCo",
+      }
+    ],
+    "modifiers": {
+      "Bomb_Creator_Handler":{
+        "thinkInterval": "%Thinkinterval",
+        "onThinkInterval": [
+          {
+            "$type": "ApplyModifier",
+            "modifierName": "Bomb_ExplodeDelay"
+          }
+        ],
+        "onHittingOther": [
+          {
+            "$type": "Predicated",
+            "target": "Other",
+            "targetPredicates": [
+              {
+                "$type": "ByEntityTypes",
+                "entityTypes": ["Monster"]
+              }
+            ],
+            "successActions": [
+              {
+                "$type": "ApplyModifier",
+                "target": "Target",
+                "modifierName": "Bomb_DefenseDown_Duration"
+              }
+            ]
+          }
+        ]
+      },
+      "Bomb_DefenseDown_Duration":{
+        "duration": "%DefenseDownTime",
+        "state": "DefenseDown",
+        "properties": {
+          "Actor_DefenceRatio":"%DefenseDownRatio"
+        }
+      },
+      "Bomb_ExplodeDelay":{
+        "duration": 6,
+        "onAdded": [
+          {
+            "$type": "SetGlobalPos",
+            "key": "_BOMB_POS",
+            "born":{
+              "$type": "ConfigBornBySelf",
+              "bornRandom":{
+                "$type": "BornRandomFromCenter",
+                "minRandomRange": 0,
+                "maxRandomRange": 10
+              }
+            }
+          },
+          {
+            "$type": "FireEffect",
+            "effectPattern": "Eff_Monster_Common_CJB_CircleR8_Warning",
+            "born":{
+              "$type": "ConfigBornByGlobalValue",
+              "positionKey": "_BOMB_POS"
+            }
+          }
+        ],
+        "onRemoved": [
+          {
+            "$type": "FireEffect",
+            "effectPattern": "Eff_Stages_SwirlDoField_DoAttack_02",
+            "born":{
+              "$type": "ConfigBornByGlobalValue",
+              "positionKey": "_BOMB_POS"
+            }
+          },
+          {
+            "$type": "TriggerAttackEvent",
+            "doOffStage": true,
+            "targetType": "Enemy",
+            "attackEvent":
+            {
+              "attackPattern":
+              {
+                "$type": "ConfigAttackSphere", 
+                "triggerType": "TriggerNoRepeat",
+                "radius": 8, 
+                "born":{
+                  "$type": "ConfigBornByGlobalValue",
+                  "positionKey": "_BOMB_POS"
+                }
+              },
+              "attackInfo":
+              {
+                "attackProperty":
+                {
+                  "damageExtra": "%DamageRatio*%DamageSystemValue",
+                  "ignoreAttackerProperty": true,
+                  "ignoreModifyDamage": true,
+                  "trueDamage": true,
+                  "attackType": "Melee",
+                  "elementType": "None", 
+                  "elementDurability": 0,
+                  "enBreak": 25, 
+                },
+                "hitPattern":
+                {
+                  "onHitEffectName": "default",
+                  "hitImpulseType": "LV2",
+                  "canBeDefenceHalt": false,
+                  "hitHaltTime": 0,
+                  "hitHaltTimeScale": 0.02,
+                  "muteHitText": false,
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+},
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  3.4 连线挑战 关卡4 全场冲击波生成器
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+{
+  "Default":{
+    "$type": "ConfigAbility",
+    "abilityName": "LevelEntity_ActivityTeamChainMasterDieExplode_V3.4",
+    "isDynamicAbility": true,
+    "abilitySpecials": {
+      "DamageRatio":0
+    },
+    "onAdded": [
+      {
+        "$type": "SetSystemValueToOverrideMap",
+        "key": "DamageSystemValue",
+        "type": "ElementLevelCo",
+      },
+      {
+        "$type": "FireEffect",
+        "effectPattern": "Eff_Monster_Common_ImpactWaveR40"
+      },
+      {
+        "$type": "TriggerAttackEvent",
+        "doOffStage": true,
+        "targetType": "Enemy",
+        "attackEvent":
+        {
+          "attackPattern":
+          {
+            "$type": "ConfigAttackSphere", 
+            "triggerType": "TriggerNoRepeat",
+            "radius": 40, 
+            "born":{
+              "$type": "ConfigBornBySelf",
+            }
+          },
+          "attackInfo":
+          {
+            "attackProperty":
+            {
+              "damageExtra": "%DamageRatio*%DamageSystemValue",
+              "ignoreAttackerProperty": true,
+              "ignoreModifyDamage": true,
+              "trueDamage": true,
+              "attackType": "Melee",
+              "elementType": "None", 
+              "elementDurability": 0,
+              "enBreak": 25, 
+            },
+            "hitPattern":
+            {
+              "onHitEffectName": "default",
+              "hitImpulseType": "LV2",
+              "canBeDefenceHalt": false,
+              "hitHaltTime": 0,
+              "hitHaltTimeScale": 0.02,
+              "muteHitText": false,
+            }
+          }
+        }
+      }
+    ]
+  }
+}
 ]

@@ -1,0 +1,534 @@
+[
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 旋转设定
+			"abilityName": "Darkwraith_Fat_Rock_Steer",
+			"abilityMixins": [
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["NormalAttack_02", "NormalAttack_03"],
+					"angularSpeed": 240,
+					"startNormalizedTime": 0.368,
+					"endNormalizedTime": 0.485
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["ShieldAttack_BS"],
+					"angularSpeed": 420,
+					"startNormalizedTime": 0.876,
+					"endNormalizedTime": 1
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["WhirlAttack"],
+					"angularSpeed": 600,
+					"startNormalizedTime": 0.174,
+					"endNormalizedTime": 0.224
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["WhirlAttack"],
+					"angularSpeed": 210,
+					"startNormalizedTime": 0.376,
+					"endNormalizedTime": 0.481
+				},
+				// 狂暴部分
+				{
+					"$type": "SteerAttackTraceMixin",
+					"steerStateIDs": ["RageAttack01_BS"],
+					"angularSpeed": 300,
+					"startNormalizedTime": 0.838
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["RageAttack01_Loop"],
+					"angularSpeed": 300
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["RageAttack01_AS"],
+					"angularSpeed": 300,
+					"endNormalizedTime": 0.08
+				},
+				{
+					"$type": "SteerAttackMixin",
+					"steerStateIDs": ["RageAttack02"],
+					"angularSpeed": 135,
+					"startNormalizedTime": 0.05,
+					"endNormalizedTime": 0.269
+				}
+			]
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc  玩家距离判定，近距离时设定bool。用于三连击和大招状态下的连招决策
+			"abilityName": "Darkwraith_Fat_Rock_Distance_Calc",
+			"onAbilityStart": [
+				{
+					"$type": "Predicated",
+					"target": "SelfAttackTarget",
+					"targetPredicates": [
+						{
+							"$type": "ByTargetPositionToSelfPosition",
+							"target": "SelfAttackTarget",
+							"compareType": "XZ",
+							"logic": "Lesser",
+							"value": 7
+						}
+					],
+					"successActions": [
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "TargetClose",
+							"value": true
+						}
+					],
+					"failActions": [
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "TargetClose",
+							"value": false
+						}
+					]
+				}
+			]
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 狂暴状态下的临时实现。控制
+			"abilityName": "Darkwraith_Fat_Rock_Rampage_Controller",
+			"abilityMixins": [
+				{
+					// 播放到退出动画时，移除狂暴的表现状态
+					"$type": "DoActionByStateIDMixin",
+					"stateIDs": ["NormalIdle", "NormalMove", "RageAttack_Exit"],
+					"enterActions": [
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Rampage_State_Manager"
+						}
+					]
+				}
+			],
+			"onAbilityStart": [
+				{
+					"$type": "FireEffect",
+					"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_RageBS"
+				},
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Rampage_State_Timer"
+				},
+				// 黑蛇系列怪物通用的强化后扣血效果： 15%
+				{
+					"$type": "LoseHP",
+					"target": "Caster",
+					"amount": 0.0,
+					"amountByTargetCurrentHPRatio": 0.15,
+					"enableInvincible": true,
+					"enableLockHP": true,
+					"lethal": false,
+					"useMeta": false
+				}
+			],
+			"modifiers": {
+				"Rampage_State_Timer": {
+					// 一个简单的狂暴状态计时器，控制状态机逻辑
+					// 保底11秒，之后会随着动作退出而正常结束
+					"duration": 11,
+					"stacking": "Refresh",
+					"onAdded": [
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Rampage",
+							"value": true
+						},
+						// 添加具体的逻辑部分
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "Rampage_State_Manager"
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Rampage",
+							"value": false
+						}
+					],
+					// 避免死亡时，强化状态的特效还在播
+					"onKill": [
+						{
+							"$type": "RemoveModifier",
+							"modifierName": "Rampage_State_Manager"
+						}
+					]
+				},
+				// 狂暴状态下的具体逻辑
+				// 霸体
+				"Rampage_State_Manager": {
+					"onAdded": [
+						// 身上的Shader表现
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Rampage_Shader",
+							"value": true
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_RageState01"
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "Rampage_Shader",
+							"value": false
+						}
+					],
+					"properties": {
+						"Actor_EndureDelta": 0
+					}
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 打盾效果
+			"abilityName": "Darkwraith_Fat_Rock_HitShield",
+			"onAdded": [
+				{
+					"$type": "ApplyModifier",
+					"modifierName": "Darkwraith_Attack_Monitor"
+				}
+			],
+			"modifiers": {
+				"Darkwraith_Attack_Monitor": {
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByHasShieldV2",
+									"type": "All"
+								},
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": ["Avatar"],
+									"target": "Target"
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": ["Darkwraith_Rock_Normal"]
+								}
+							],
+							"successActions": [
+								// 卡帧用
+								{
+									"$type": "DamageByAttackValue",
+									"attackInfo": {
+										"hitPattern": {
+											"hitImpulseType": "LV0",
+											"hitHaltTimeScale": 0.03,
+											"hitHaltTime": 0.2
+										}
+									}
+								},
+								// 直接近一个弹刀动画
+								{
+									"$type": "SetAnimatorTrigger",
+									"triggerID": "HitShield"
+								},
+								// 特效表现: 在打击位置播特效
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_HitShield",
+									"born": {
+										"$type": "ConfigBornByHitPoint"
+									}
+								},
+								// 镜头抖动
+								{
+									"$type": "ActCameraShake",
+									"cameraShake": {
+										"shakeType": "CustomVector",
+										"shakeDir": {
+											"x": 0,
+											"y": 0,
+											"z": 1
+										},
+										"shakeRange": 2.2,
+										"shakeTime": 0.3,
+										"extension": {
+											"baseCycle": 0.24,
+											"cycleDamping": 0.24,
+											"rangeAttenuation": 0.66
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 切换到护盾状态，管理护盾状态下的逻辑。触发：切换Pose参数
+			"abilityName": "Darkwraith_Fat_Rock_SwitchToShield",
+			"onAbilityStart": [
+				// 用于切换Pose到确认架盾的状态
+				{
+					"$type": "SetPoseBool",
+					"boolID": "ShieldActivated",
+					"value": true
+				}
+			],
+			"abilityMixins": [
+				{
+					"$type": "AttachToPoseIDMixin",
+					"poseIDs": [201, 200], // 持盾状态与等待解除盾的状态
+					"modifierName": "EnergyShield_Handler"
+				},
+				{
+					"$type": "AttachToAnimatorStateIDMixin",
+					"stateIDs": ["ShieldAttack"],
+					"modifierName": "Block_Handler"
+				}
+			],
+			"modifiers": {
+				// 能量护盾展开相关逻辑
+				// 生成/移除 SkillObj
+				// 替换为持盾状态下的PushCollider
+				// 同时带有Block_Handler，处理HitBox判定/格挡相关的内容
+				// 之所以Push处理没有放在Block_Handler，是考虑到盾冲技能会因为Push的骤变导致玩家被击飞的表现会出现问题
+				"EnergyShield_Handler": {
+					"modifierMixins": [
+						{
+							"$type": "AttachActionToModifierMixin",
+							"onAdded": [
+								// 先清除可能存在的护盾Gadget (用添加GV的方式)
+								{
+									"$type": "ApplyModifier",
+									"otherTargets": {
+										"$type": "SelectTargetsByChildren",
+										"configID": 42208009
+									},
+									"modifierName": "Kill_Shield",
+									"canBeHandledOnRecover": true
+								},
+								// 再创建护盾
+								{
+									"$type": "CreateGadget",
+									"gadgetID": 42208009,
+									"canBeHandledOnRecover": true,
+									"lifeByOwnerV2": true,
+									"target": "Self"
+								},
+								// 替换为架盾状态的PushCollider
+								{
+									"$type": "EnablePushColliderName",
+									"pushColliderNames": ["ShieldPushCollider"],
+									"setEnable": true,
+									"canBeHandledOnRecover": true
+								},
+								{
+									"$type": "EnablePushColliderName",
+									"pushColliderNames": ["PushCollider"],
+									"setEnable": false,
+									"canBeHandledOnRecover": true
+								}
+							],
+							"onRemoved": [
+								// 清除护盾
+								{
+									"$type": "ApplyModifier",
+									"otherTargets": {
+										"$type": "SelectTargetsByChildren",
+										"configID": 42208009
+									},
+									"modifierName": "Kill_Shield",
+									"canBeHandledOnRecover": true
+								},
+								// 切换为双持状态下的PushCollider
+								{
+									"$type": "EnablePushColliderName",
+									"pushColliderNames": ["ShieldPushCollider"],
+									"setEnable": false,
+									"canBeHandledOnRecover": true
+								},
+								{
+									"$type": "EnablePushColliderName",
+									"pushColliderNames": ["PushCollider"],
+									"setEnable": true,
+									"canBeHandledOnRecover": true
+								}
+							]
+						}
+					],
+					// 并且绑定盾牌相关逻辑
+					"onAdded": [
+						{
+							"$type": "AttachModifier",
+							"modifierName": "Block_Handler"
+						}
+					],
+					// 开盾时霸体
+					"properties": {
+						"Actor_EndureDelta": 0.025
+					},
+					// 周期清空
+					"thinkInterval": 1.5,
+					"onThinkInterval": [
+						{
+							"$type": "ClearEndura"
+						}
+					]
+				},
+				"Block_Handler": {
+					"modifierMixins": [
+						// 格挡效果
+						{
+							"$type": "MonsterDefendMixin",
+							"canDefenceWhileEndureFull": true,
+							"defendProbability": 1,
+							"defendTimeInterval": 0,
+							"defendTriggerID": "ShieldHit",
+							"defendAngle": 30,
+							"stateIDs": ["NormalMove", "NormalIdle", "Turn", "ShieldAttack"],
+							"doNotTurnDirection": true,
+							"onDefendSucceded": [
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_Shield_BlockHit",
+									"born": {
+										"$type": "ConfigBornByAttachPoint",
+										"attachPointName": "ShieldPoint"
+									}
+								}
+							]
+						},
+						// 成对HitBox的开关操作
+						{
+							"$type": "AttachActionToModifierMixin",
+							"onAdded": [
+								// 启用盾牌部分的HitBox
+								{
+									"$type": "EnableHitBoxByName",
+									"hitBoxNames": ["ShieldHitBox"],
+									"setEnable": true,
+									"canBeHandledOnRecover": true
+								}
+							],
+							"onRemoved": [
+								// 关闭盾牌部分的HitBox
+								{
+									"$type": "EnableHitBoxByName",
+									"hitBoxNames": ["ShieldHitBox"],
+									"setEnable": false,
+									"canBeHandledOnRecover": true
+								}
+							]
+						}
+					]
+				},
+				"Kill_Shield": {
+					"onAdded": [
+						{
+							"$type": "SetGlobalValue",
+							"key": "_KILL_SELF_MARK_",
+							"value": 1
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 切换到双斧状态。触发：切换Pose参数
+			"abilityName": "Darkwraith_Fat_Rock_SwitchToDualWielding",
+			"onAbilityStart": [
+				{
+					"$type": "SetPoseBool",
+					"boolID": "ShieldActivated",
+					"value": false
+				}
+			]
+		}
+	},
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			/// @desc 能量盾逻辑控制
+			"abilityName": "Darkwraith_Fat_Rock_EnergyShield",
+			"abilityMixins": [
+				{
+					"$type": "AttachModifierToSelfGlobalValueMixin",
+					"defaultGlobalValueOnCreate": 0,
+					"globalValueKey": "_KILL_SELF_MARK_",
+					// 0: 护盾生成时的默认状态，常规护盾逻辑
+					// 1: 被本体设置了1之后，走销毁流程。
+					// (分两步是考虑到Limbo状态下杀不掉)
+					"valueSteps": [-0.5, 0.5, 1.5],
+					"modifierNameSteps": ["Shield_State", "Shield_Destroy"]
+				}
+			],
+			"onAdded": [
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Shield_State"
+				},
+				{
+					"$type": "AttachEffect",
+					"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_EnergyShield"
+				}
+			],
+			"modifiers": {
+				"Shield_State": {
+					"onBeingHit": [
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_EnergyShield_Hit",
+							"born": {
+								"$type": "ConfigBornByHitPoint"
+							}
+						}
+					],
+					"state": "Limbo"
+				},
+				"Shield_Destroy": {
+					"duration": 1,
+					"onAdded": [
+						{
+							"$type": "SendEffectTrigger",
+							"effectPattern": "Eff_Monster_Darkwraith_Fat_Rock_EnergyShield",
+							"parameter": "ShieldEnd"
+						},
+						{
+							"$type": "EnableHitBoxByName",
+							"hitBoxNames": ["HitBox"],
+							"setEnable": false
+						}
+					],
+					"onRemoved": [
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	}
+]

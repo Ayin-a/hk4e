@@ -244,8 +244,10 @@ suites = {
 function action_EVENT_GADGET_STATE_CHANGE_148003(context, evt)
 	if evt.param2 == 148002 and ScriptLib.GetGadgetStateByConfigId(context, 0, 148002) == 201 then
 		ScriptLib.SetGroupVariableValue(context, "put", 1)
+		
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002148, 148001, 6800349)
 	end
+	
 	return 0
 end
 
@@ -253,8 +255,10 @@ end
 function action_EVENT_ENTER_REGION_148004(context, evt)
 	if ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 then
 		ScriptLib.SetGroupVariableValue(context, "reward", 1)
+		
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002148, 148001, 6800351)
 	end
+	
 	return 0
 end
 
@@ -418,9 +422,11 @@ function action_EVENT_GROUP_REFRESH_148143(context, evt)
 			ScriptLib.SetGadgetTalkByConfigId(context, 199002148, 148001, 6800349)
 		end
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "reward2") == 1 then
 		ScriptLib.CreateGadget(context, {config_id=148140})
 	end
+	
 	return 0
 end
 

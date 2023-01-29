@@ -86,11 +86,16 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_3004(context, evt)
 	if 3001 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,3003, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4007305")
-		ScriptLib.SetGadgetStateByConfigId(context,3001, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,3001, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,3005, GadgetState.GearStart)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,3002, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -165,7 +170,9 @@ end
 function action_EVENT_ENTER_REGION_3009(context, evt)
 	if ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 then
 		ScriptLib.TryRecordActivityPushTips(context, 2014015)
+		
 		ScriptLib.ShowClientTutorial(context, 1190, {})
 	end
+	
 	return 0
 end

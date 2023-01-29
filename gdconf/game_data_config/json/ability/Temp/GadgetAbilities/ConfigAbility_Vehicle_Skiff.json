@@ -2001,4 +2001,392 @@
 			},
 		},
 	},
+
+////////////////////////////////////////////////////////
+//
+//  3.4 海灯节船技能
+//
+/////////////////////////////////////////////////////
+
+//----------------------主控技能------------------------------
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Controller",
+			"isDynamicAbility": true,
+		}
+	},
+//----------------------没吃到技能时的空技能------------------------------
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Empty",
+			"isDynamicAbility": true,
+		}
+	},
+//----------------------发射泥潭------------------------------
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Mire_Shoot",
+			"isDynamicAbility": true,
+			"onAbilityStart": 
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 420000026,
+					"born":
+					{
+						"$type": "ConfigBornByAttachPoint",
+						"attachPointName": "CannonFire",
+						"direction":
+						{
+							"$type": "ConfigDirectionByAttachPoint",
+							"angleOffset": 
+							{
+								"x": 0,
+								"y": 0,
+								"z": 0,
+							}
+						}
+					},
+				},
+				{
+					"$type": "SetGlobalValue",//用完技能把技能状态重置
+					"key": "_ABILITY_BoatV3_SkillIndex_Team",
+					"target": "Team",
+					"value": 0,
+				}
+			]
+		}
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Mire_Bullet",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Life_Timer_And_Eff",
+				}
+			],
+			"onAbilityStart": 
+			[
+				{
+                    "$type": "CreateGadget",////创建泥潭
+                    "gadgetID": 420000027,
+                    "campID": 1001,
+                    "campTargetType": "AllExceptSelf",
+                    "born":
+                    {
+                        "$type": "ConfigBornBySelf",
+                        "offset": 
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "z": 0,
+                        },
+                        "onGround": true,"onGroundRaycastUpDist": 3,
+                    },                 
+                },        
+			],
+			"modifiers": 
+			{
+				"Life_Timer_And_Eff":
+				{
+					"duration": 2,
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Loli_Bow_Diona_ElementalArt_Bullet_Trail",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "KillSelf"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Mire",
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "Life_Timer_And_Eff",
+				}
+			],
+			"modifiers": 
+			{
+				"Life_Timer_And_Eff":
+				{
+					"duration": 15,
+					"onAdded": 
+					[
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Monster_Sylph_Water_Activated_Deathrattle_HealBullet_HealArea",
+						},
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "KillSelf"
+						}
+					],
+					"thinkInterval": 0.15,
+					"onThinkInterval": 
+					[
+						{
+							"$type": "ApplyModifier",
+							"modifierName": "UNIQUE_LanV3BoatGame_Mire_Speed_Down",
+							"otherTargets":
+							{
+								
+                                "$type": "SelectTargetsByShape",
+                                "shapeName": "CircleR8H5",
+                                "centerBasedOn": "Self",
+                                "campTargetType": "AllExceptSelf",
+                                "campBasedOn": "Self",
+                                "sortType": "Nearest",
+							},
+							"predicates": 
+							[
+								{
+									"$type": "ByTargetType",
+									"target": "Target",
+									"targetType": "Vehicle"
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"target": "Target",
+									"key": "_ABILITY_BoatV3_In_Shield_State",
+									"compareType": "NoneOrEqual",
+									"value": 0
+								}
+							]
+						}
+					]
+				},
+				"UNIQUE_LanV3BoatGame_Mire_Speed_Down":
+				{
+					"isUnique": true,
+					"stacking": "RefreshUniqueDurability",
+					"duration": 0.4,
+					"state": "SpeedDown",
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Animator_MoveSpeedRatio": -0.5,
+					}
+
+				}
+			}
+		}
+	},
+//----------------------吸收金币------------------------------
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Coin_Absorb",
+			"isDynamicAbility": true,
+			"onAbilityStart": 
+			[
+					{//遗落金币逻辑
+					"$type": "Predicated",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR4H6",//大金币范围
+						"centerBasedOn": "Vehicle",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Vehicle",
+					},
+					"targetPredicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Target",
+							"key": "ShipPVPCoin",
+							"value": 3,
+							"compareType": "Equal"
+						}
+					],
+					"successActions": 
+					[
+						{
+							"$type": "DebugLog",
+							"content": "SLC: Find Target SHipPVPCoin = 3",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_PlayerGetCoin",
+							"luaCallType": "FromGroup",
+							"target": "Other",
+							"isTarget": true,
+							"paramNum": 1,
+							"param1": 3,                                    
+						},
+					],
+				},
+				{//大金币逻辑
+					"$type": "Predicated",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR4H6",//大金币范围
+						"centerBasedOn": "Vehicle",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Vehicle",
+					},
+					"targetPredicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Target",
+							"key": "ShipPVPCoin",
+							"value": 2,
+							"compareType": "Equal"
+						}
+					],
+					"successActions": 
+					[
+						{
+							"$type": "DebugLog",
+							"content": "SLC: Find Target SHipPVPCoin = 2",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_PlayerGetCoin",
+							"luaCallType": "FromGroup",
+							"target": "Other",
+							"isTarget": true,
+							"paramNum": 1,
+							"param1": 2,                                    
+						},
+						/*
+						{
+							"$type": "ServerLuaCall",
+							//"luaCallType": "CurGalleryControlGroup",
+							"luaCallType": "FromGroup",
+							"funcName": "SLC_PlayerGetCoin",
+							"target": "Target",
+							"isTarget": true,
+							"param1": 2,
+							"paramNum": 1,
+						},
+						*/
+					],
+				},
+				{//普通金币逻辑
+					"$type": "Predicated",
+					"otherTargets":
+					{
+						"$type": "SelectTargetsByShape",
+						"shapeName": "CircleR3H4",//小金币范围
+						"centerBasedOn": "Vehicle",
+						"campTargetType": "Enemy",
+						"campBasedOn": "Vehicle",
+					},
+					"targetPredicates": 
+					[
+						{
+							"$type": "ByTargetGlobalValue",
+							"target": "Target",
+							"key": "ShipPVPCoin",
+							"value": 1,
+							"compareType": "Equal"
+						}
+					],
+					"successActions": 
+					[
+						{
+							"$type": "DebugLog",
+							"content": "SLC: Find Target SHipPVPCoin = 1",
+						},
+						{
+							"$type": "ServerLuaCall",
+							"funcName": "SLC_PlayerGetCoin",
+							"luaCallType": "FromGroup",
+							"target": "Other",
+							"isTarget": true,
+							"param1": 1,
+							"paramNum": 1,
+						},
+					],
+				},
+				{
+					"$type": "SetGlobalValue",//用完技能把技能状态重置
+					"key": "_ABILITY_BoatV3_SkillIndex_Team",
+					"target": "Team",
+					"value": 0,
+				}
+			]
+		}
+	},
+//----------------------开启护盾------------------------------
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Vehicle_Skiff_LanV3BoatGame_Shield",
+			"isDynamicAbility": true,
+			"onAbilityStart": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "LanV3BoatGame_Shield",
+				},
+				{
+					"$type": "SetGlobalValue",//用完技能把技能状态重置
+					"key": "_ABILITY_BoatV3_SkillIndex_Team",
+					"target": "Team",
+					"value": 0,
+				}
+			],
+			"modifiers": 
+			{
+				"LanV3BoatGame_Shield":
+				{
+					"duration": 10,
+					"onAdded": 
+					[
+						{
+							"$type": "SetGlobalValue",//用完技能把技能状态重置
+							"key": "_ABILITY_BoatV3_In_Shield_State",
+							"target": "Self",
+							"value": 1,
+						},
+						{
+							"$type": "AttachEffect",
+							"effectPattern": "Eff_Avatar_Properties_Shield"
+						}
+					],
+					"onRemoved": 
+					[
+						{
+							"$type": "SetGlobalValue",//用完技能把技能状态重置
+							"key": "_ABILITY_BoatV3_In_Shield_State",
+							"target": "Self",
+							"value": 0,
+						}
+					]
+				}
+			}
+		}
+	},
 ]

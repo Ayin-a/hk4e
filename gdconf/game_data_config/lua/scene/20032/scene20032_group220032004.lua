@@ -178,10 +178,10 @@ function action_EVENT_ENTER_REGION_4007(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 4008
+	-- 创建id为4008的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 4008 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

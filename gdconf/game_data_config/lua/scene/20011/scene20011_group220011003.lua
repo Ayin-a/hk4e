@@ -190,10 +190,10 @@ function action_EVENT_VARIABLE_CHANGE_12(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 3019
+	-- 创建id为3019的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3019 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -252,10 +252,10 @@ function action_EVENT_ENTER_REGION_26(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 3020
+	-- 创建id为3020的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3020 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

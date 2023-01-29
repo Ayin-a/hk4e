@@ -148,11 +148,15 @@ function action_EVENT_ENTER_REGION_23001(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "load") == 1 then
 		if ScriptLib.GetGroupVariableValue(context, "temp") == 0 or ScriptLib.GetGroupVariableValue(context, "temp") == 1 or ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 			ScriptLib.SetGroupVariableValue(context, "temp", 0)
+			
 			ScriptLib.SetGroupVariableValue(context, "load", 0)
+			
 			ScriptLib.AddExtraGroupSuite(context, 0, 2)
+			
 			ScriptLib.ShowReminder(context, 60010370)
 		end
 	end
+	
 	return 0
 end
 

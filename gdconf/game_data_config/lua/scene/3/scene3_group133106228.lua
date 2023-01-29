@@ -316,6 +316,7 @@ function action_EVENT_LEAVE_REGION_228019(context, evt)
 	if evt.param1 == 228019 then
 		ScriptLib.EndTimeAxis(context, "reminder")
 	end
+	
 	return 0
 end
 

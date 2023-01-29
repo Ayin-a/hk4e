@@ -146,8 +146,9 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_6003(context, evt)
 	if ScriptLib.GetHostQuestState(context,4007211) == 3 or ScriptLib.GetGroupVariableValue(context, "doorOpen") == 1 then
-		ScriptLib.RefreshGroup(context, {    suite=3})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=3})
 	end
+	
 	return 0
 end
 

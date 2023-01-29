@@ -335,34 +335,57 @@ function action_EVENT_GADGET_STATE_CHANGE_6027(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 220133006, 6001) == 201 or ScriptLib.GetGadgetStateByConfigId(context, 220133006, 6002) == 201 then
 		if ScriptLib.GetGroupVariableValue(context, "StoneReadyA") == 0 and ScriptLib.GetGroupVariableValue(context, "StoneReadyB") == 0 and ScriptLib.GetGroupVariableValue(context, "StoneReadyC") == 0 and ScriptLib.GetGroupVariableValue(context, "StoneReadyD") == 0 then
 			ScriptLib.SetGroupVariableValue(context, "StoneReadyA", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "StoneReadyB", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "StoneReadyC", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "StoneReadyD", 1)
+			
 			ScriptLib.SetPlatformRouteId(context, 6004, 16)
+			
 			ScriptLib.SetPlatformRouteId(context, 6003, 22)
+			
 			ScriptLib.SetPlatformRouteId(context, 6008, 23)
+			
 			ScriptLib.SetPlatformRouteId(context, 6022, 24)
+			
 			ScriptLib.StartPlatform(context, 6004)
+			
 			ScriptLib.StartPlatform(context, 6003)
+			
 			ScriptLib.StartPlatform(context, 6008)
+			
 			ScriptLib.StartPlatform(context, 6022)
 		else
 			if ScriptLib.GetGroupVariableValue(context, "StoneReadyA") == 2 and ScriptLib.GetGroupVariableValue(context, "StoneReadyB") == 2 and ScriptLib.GetGroupVariableValue(context, "StoneReadyC") == 2 and ScriptLib.GetGroupVariableValue(context, "StoneReadyD") == 2 then
 				ScriptLib.SetGroupVariableValue(context, "StoneReadyA", 1)
+				
 				ScriptLib.SetGroupVariableValue(context, "StoneReadyB", 1)
+				
 				ScriptLib.SetGroupVariableValue(context, "StoneReadyC", 1)
+				
 				ScriptLib.SetGroupVariableValue(context, "StoneReadyD", 1)
+				
 				ScriptLib.SetPlatformRouteId(context, 6004, 21)
+				
 				ScriptLib.SetPlatformRouteId(context, 6003, 25)
+				
 				ScriptLib.SetPlatformRouteId(context, 6008, 26)
+				
 				ScriptLib.SetPlatformRouteId(context, 6022, 27)
+				
 				ScriptLib.StartPlatform(context, 6004)
+				
 				ScriptLib.StartPlatform(context, 6003)
+				
 				ScriptLib.StartPlatform(context, 6008)
+				
 				ScriptLib.StartPlatform(context, 6022)
 			end
 		end
 	end
+	
 	return 0
 end
 

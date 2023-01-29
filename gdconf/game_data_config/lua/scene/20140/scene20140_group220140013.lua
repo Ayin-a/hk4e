@@ -219,23 +219,34 @@ function action_EVENT_GROUP_LOAD_13011(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 3 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 4 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 5)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 6 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 6)
 	end
+	
 	return 0
 end

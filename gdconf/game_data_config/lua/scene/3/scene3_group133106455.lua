@@ -107,6 +107,7 @@ function action_EVENT_ANY_GADGET_DIE_455004(context, evt)
 	if evt.param1 == 455002 or evt.param1 == 455003 or evt.param1 == 455007 then
 		ScriptLib.AddExtraGroupSuite(context, 133106455, 3)
 	end
+	
 	return 0
 end
 

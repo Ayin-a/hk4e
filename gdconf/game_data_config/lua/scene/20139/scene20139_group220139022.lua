@@ -745,8 +745,10 @@ end
 function action_EVENT_GROUP_REFRESH_22041(context, evt)
 	if ScriptLib.GetHostQuestState(context,4007320) == 2 then
 		ScriptLib.RemoveExtraGroupSuite(context, 220139022, 4)
+		
 		ScriptLib.AddExtraGroupSuite(context, 220139022, 6)
 	end
+	
 	return 0
 end
 
@@ -763,6 +765,7 @@ function action_EVENT_GROUP_LOAD_22043(context, evt)
 	if ScriptLib.GetHostQuestState(context,4007320) == 2 then
 		ScriptLib.AddExtraGroupSuite(context, 220139022, 6)
 	end
+	
 	return 0
 end
 

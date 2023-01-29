@@ -91,17 +91,22 @@ suites = {
 
 -- 触发操作
 function action_EVENT_ANY_GADGET_DIE_194006(context, evt)
-	if ScriptLib.CheckRemainGadgetCountByGroupId(context, {group_id=199002194 }) == 2 and ScriptLib.GetGroupVariableValue(context, "finish") == 0 then
+	if ScriptLib.CheckRemainGadgetCountByGroupId(context, {group_id=199002194 , gadget_id=0}) == 2 and ScriptLib.GetGroupVariableValue(context, "finish") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "finish", 1)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,194005, GadgetState.Default)
+		
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002194, 194001, 6800357)
+		
 		ScriptLib.GoToGroupSuite(context, 199002194, 2)
 	else
 		if ScriptLib.GetGroupVariableValue(context, "finish") == 0 and ScriptLib.GetGroupVariableValue(context, "time") == 0 then
 			ScriptLib.SetGroupVariableValue(context, "time", 1)
+			
 			ScriptLib.InitTimeAxis(context, "temp", {2}, false)
 		end
 	end
+	
 	return 0
 end
 
@@ -109,10 +114,12 @@ end
 function action_EVENT_GROUP_LOAD_194007(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "finish") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,194005, GadgetState.Default)
+		
 		ScriptLib.GoToGroupSuite(context, 199002194, 2)
 	else
-		ScriptLib.RefreshGroup(context, {    suite=1})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
 	end
+	
 	return 0
 end
 

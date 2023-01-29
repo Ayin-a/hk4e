@@ -221,10 +221,10 @@ function action_EVENT_ANY_MONSTER_DIE_1011(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 1017
+	-- 创建id为1017的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 1017 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 改变指定group组220032002中， configid为2009的gadget的state

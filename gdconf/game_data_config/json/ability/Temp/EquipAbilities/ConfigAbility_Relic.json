@@ -7084,4 +7084,220 @@
 			},
         },
 	},
+////////////////////////////////////////////////////////////////
+//
+//  215027
+//
+//  3.3  居尔套
+//
+//  ID：23
+//
+//  4件套效果：重击命中敌人后，攻速提高xx%，提供普攻重击下落攻击增伤buff，持续N秒。
+////////////////////////////////////////////////////////////////
+	{
+		"Default": {
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_ExtraAttackCauseSpeedAndDamage",
+			"isDynamicAbility": true,
+			"onAdded": [
+				{
+					"$type":"AttachModifier",
+					"modifierName": "UNIQUE_Relic_ExtraAttackCauseSpeedAndDamage_Handler"
+				},
+			],
+			"modifiers": {
+				"UNIQUE_Relic_ExtraAttackCauseSpeedAndDamage_Handler":
+				{
+					"isUnique": true,
+					"onAttackLanded": [
+						{
+							"$type": "Predicated",
+							"target": "Target",
+							"targetPredicates": [
+								{
+									"$type": "ByEntityTypes",
+									"entityTypes": [
+										"Monster"
+									],
+								},
+								{
+									"$type": "ByTargetGlobalValue",
+									"key": "_ANIMAL_ENTITY_TYPE",
+									"value": 0,
+									"compareType": "NoneOrEqual",
+								},
+								{
+									"$type": "ByAttackTags",
+									"attackTags": [
+										"ExtraAttack"
+									],
+								},
+							],
+							"successActions": [
+								{
+									"$type":"AttachModifier",
+									"modifierName": "UNIQUE_Relic_ExtraAttackCauseSpeedAndDamage_Buff",
+								},
+							],
+						},
+					]
+				},
+				"UNIQUE_Relic_ExtraAttackCauseSpeedAndDamage_Buff":
+				{
+					"isUnique": true,
+					"duration": "%Dura",
+					"state": "SpeedUp",
+					"modifierMixins": [
+						{
+							"$type": "ModifyDamageMixin",
+							"attackTags": [
+								"NormalAttack_01",
+								"NormalAttack_02",
+								"NormalAttack_03",
+								"NormalAttack_04",
+								"NormalAttack_05",
+								"NormalAttack_06",
+								"ExtraAttack",
+								"FallingAttack",
+							],
+							"damagePercentageRatio": "%Rate2",
+						},
+					],
+					"properties": {
+						"Animator_AttackSpeedRatio":"%Rate1",
+					}
+				},
+			},
+			"abilitySpecials": {
+				"Rate1":0,
+				"Rate2":0,
+				"Dura": 0,
+			}
+		},
+	},
+////////////////////////////////////////////////////////////////
+//
+//  215028
+//
+//  3.3  花神套
+//
+//  ID：23
+//
+//  4件套效果：绽放，烈绽放，超绽放造成的伤害提升XX%，
+//  每次触发绽放，烈绽放，超绽放时，会使该基础效果提升YY%，最多堆叠N层，有最小触发间隔，每层效果独立计时，最多堆叠N层。装备者在后台也生效
+//
+//
+////////////////////////////////////////////////////////////////
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Relic_OvergrowReactionEnhance",
+			"isDynamicAbility": true,
+			"onAdded": 
+			[
+				{
+					"$type": "AttachModifier",
+					"modifierName": "UNIQUE_Relic_OvergrowReactionEnhance_Handler",
+				}
+			],
+			"onAbilityStart": 
+			[
+				{//触发绽放反应叠buff
+					"$type": "AttachModifier",
+					"doOffStage": true,
+					"modifierName": "Relic_OvergrowReactionEnhance_Extra",
+				}
+			],
+			"modifiers": 
+			{
+				"UNIQUE_Relic_OvergrowReactionEnhance_Handler":
+				{
+					"isUnique": true,
+					"onAdded": 
+					[
+						{//挂接基础数值效果
+							"$type": "AttachModifier",
+							"modifierName": "Relic_OvergrowReactionEnhance_Base",
+							"doOffStage": true,
+						}
+					],
+					"modifierMixins": 
+					[
+						{//触发绽放相关反应叠加额外效果
+							"$type": "DoActionByElementReactionMixin",
+							"range": 20,
+							"entityTypes": ["Monster"],
+							"reactionTypes": 
+							[
+								"Overgrow",
+								"OvergrowMushroomFire",
+								"OvergrowMushroomElectric"
+							],
+							"actions": 
+							[
+								{
+									"$type": "AttachModifier",
+									"modifierName": "OvergrowReactionEnhance_CD",
+									"doOffStage": true,
+								}
+							]
+						}
+					]
+				},
+				"Relic_OvergrowReactionEnhance_Base":
+				{
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_ElemReactOvergrowDelta":"%Overgrow_Up_Percentage",
+						"Actor_ElemReactOvergrowFireDelta":"%OvergrowFire_Up_Percentage",
+						"Actor_ElemReactOvergrowElectricDelta":"%OvergrowElectric_Up_Percentage",
+						"Actor_ElemReactOvergrowDeltaVariation":"%Overgrow_Up_Percentage",
+					}
+				},
+				"Relic_OvergrowReactionEnhance_Extra":
+				{
+					"duration": "%Duration",
+					"stacking": "MultipleAllRefresh",
+					"stackingOption": 
+					{						
+						"maxModifierNumForMultipleType": "%Stack",
+					},
+					"isLimitedProperties": true,
+					"properties": 
+					{
+						"Actor_ElemReactOvergrowDelta":"%Overgrow_Up_Percentage*%TransRatio",
+						"Actor_ElemReactOvergrowFireDelta":"%OvergrowFire_Up_Percentage*%TransRatio",
+						"Actor_ElemReactOvergrowElectricDelta":"%OvergrowElectric_Up_Percentage*%TransRatio",
+						"Actor_ElemReactOvergrowDeltaVariation":"%Overgrow_Up_Percentage*%TransRatio",
+					}
+				},
+				"OvergrowReactionEnhance_CD":
+				{
+					"stacking": "Unique",
+					"duration": "%Trigger_CD",//控制CD
+					"onAdded": 
+					[
+						{//这样可以attach modifier
+							"$type": "TriggerAbility",
+							"abilityName": "Relic_OvergrowReactionEnhance",
+							"doOffStage": true,
+						}
+					]
+				}
+			},
+			"abilitySpecials": 
+			{
+				"Overgrow_Up_Percentage":0,
+				"OvergrowFire_Up_Percentage":0,
+				"OvergrowElectric_Up_Percentage":0,
+				"Duration":0,
+				"Stack":0,
+				"TransRatio":0,
+				"Trigger_CD":0,
+			}
+		}
+	},
 ]

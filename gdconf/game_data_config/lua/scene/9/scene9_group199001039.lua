@@ -596,23 +596,25 @@ end
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_39086(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1015 ) and ScriptLib.GetHostQuestState(context,4007001) == 3 then
-		ScriptLib.RefreshGroup(context, {group_id=199001039,    suite=2})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=2})
 	else
 		if ScriptLib.CheckSceneTag(context, 9,1016 ) and ScriptLib.GetHostQuestState(context,4007001) == 3 then
-			ScriptLib.RefreshGroup(context, {group_id=199001039,    suite=5})
+			ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=5})
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_39087(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1015 ) and ScriptLib.GetHostQuestState(context,4007001) == 3 then
-		ScriptLib.RefreshGroup(context, {group_id=199001039,    suite=2})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=2})
 	else
 		if ScriptLib.CheckSceneTag(context, 9,1016 ) and ScriptLib.GetHostQuestState(context,4007001) == 3 then
-			ScriptLib.RefreshGroup(context, {group_id=199001039,    suite=5})
+			ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=5})
 		end
 	end
+	
 	return 0
 end

@@ -102,6 +102,7 @@ function action_EVENT_LEVEL_TAG_CHANGE_27004(context, evt)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004027, 2)
 	end
+	
 	return 0
 end
 
@@ -110,5 +111,6 @@ function action_EVENT_GROUP_LOAD_27005(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1026 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	return 0
 end

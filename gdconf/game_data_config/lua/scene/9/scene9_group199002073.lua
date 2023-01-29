@@ -111,9 +111,11 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_73005(context, evt)
 	ScriptLib.GetHostQuestState(context,7902603)
+	
 	if 2 == ScriptLib.GetHostQuestState(context,7902603) or 3 == ScriptLib.GetHostQuestState(context,7902603) then
 		ScriptLib.CreateGadget(context, {config_id=73002})
 	end
+	
 	return 0
 end
 

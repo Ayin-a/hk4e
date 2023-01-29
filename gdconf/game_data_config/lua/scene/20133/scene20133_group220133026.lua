@@ -213,9 +213,12 @@ end
 function action_EVENT_CUTSCENE_END_26014(context, evt)
 	if evt.param1 == 201330104 and evt.param2 == 1 then
 		ScriptLib.ShowReminder(context, 1111288)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "GadgetADie", 1, 220133091)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220133091, config_id=91001, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 

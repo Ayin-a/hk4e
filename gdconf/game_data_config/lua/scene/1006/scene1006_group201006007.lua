@@ -115,10 +115,10 @@ function action_EVENT_ANY_MONSTER_DIE_33(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 78
+	-- 创建id为78的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 78 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 解锁目标3

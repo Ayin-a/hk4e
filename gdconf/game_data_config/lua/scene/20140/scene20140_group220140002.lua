@@ -160,5 +160,6 @@ function action_EVENT_ANY_GADGET_DIE_2008(context, evt)
 	if evt.param1 == 2009 then
 		ScriptLib.ChangeToTargetLevelTag(context, 32)
 	end
+	
 	return 0
 end

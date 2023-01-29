@@ -151,9 +151,13 @@ suites = {
 -- 触发操作
 function action_EVENT_GADGETTALK_DONE_106002(context, evt)
 	ScriptLib.SetGroupVariableValueByGroup(context, "state", 1, 199002143)
+	
 	ScriptLib.SetGroupVariableValueByGroup(context, "state", 1, 199002140)
+	
 	ScriptLib.SetGadgetTalkByConfigId(context, 199002140, 140001, 6800315)
+	
 	ScriptLib.SetGadgetTalkByConfigId(context, 199002143, 143001, 6800317)
+	
 	return 0
 end
 
@@ -161,8 +165,10 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_106005(context, evt)
 	if evt.param2 == 106004 and ScriptLib.GetGadgetStateByConfigId(context, 0, 106004) == 201 then
 		ScriptLib.SetGroupVariableValue(context, "put", 1)
+		
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002106, 106001, 6800325)
 	end
+	
 	return 0
 end
 
@@ -379,6 +385,7 @@ function action_EVENT_GROUP_REFRESH_106043(context, evt)
 			ScriptLib.SetGadgetTalkByConfigId(context, 199002106, 106001, 6800313)
 		end
 	end
+	
 	return 0
 end
 

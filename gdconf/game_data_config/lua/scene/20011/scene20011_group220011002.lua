@@ -126,10 +126,10 @@ function action_EVENT_ANY_MONSTER_DIE_9(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 2014
+	-- 创建id为2014的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2014 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 调用提示id为 1041042 的提示UI，会显示在屏幕中央偏下位置，id索引自 ReminderData表格

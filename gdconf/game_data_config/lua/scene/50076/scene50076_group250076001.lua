@@ -11,7 +11,8 @@ local base_info = {
 
 -- 怪物
 monsters = {
-	{ config_id = 1001, monster_id = 21010101, pos = { x = 39.226, y = -23.130, z = -13.907 }, rot = { x = 0.000, y = 189.442, z = 0.000 }, level = 1, pose_id = 9012 }
+	{ config_id = 1001, monster_id = 29080102, pos = { x = 39.400, y = 5.800, z = -14.040 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1 },
+	{ config_id = 1002, monster_id = 29080101, pos = { x = 40.880, y = -25.800, z = -12.265 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1 }
 }
 
 -- NPC
@@ -57,7 +58,7 @@ suites = {
 	{
 		-- suite_id = 1,
 		-- description = ,
-		monsters = { 1001 },
+		monsters = { 1001, 1002 },
 		gadgets = { },
 		regions = { },
 		triggers = { },

@@ -141,12 +141,16 @@ suites = {
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_3011(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 0 or ScriptLib.GetGroupVariableValue(context, "room3") == 1 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 1 or ScriptLib.GetGroupVariableValue(context, "room4") == 0 or ScriptLib.GetGroupVariableValue(context, "room5") == 0 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	return 0
 end
 
@@ -155,27 +159,37 @@ function action_EVENT_GROUP_LOAD_3012(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 0 or ScriptLib.GetGroupVariableValue(context, "room3") == 1 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 1 or ScriptLib.GetGroupVariableValue(context, "room4") == 0 or ScriptLib.GetGroupVariableValue(context, "room5") == 0 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	ScriptLib.SetGroupVariableValue(context, "reminder1", 0)
+	
 	ScriptLib.SetGroupVariableValue(context, "reminder2", 0)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_3013(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 1 and ScriptLib.GetGroupVariableValue(context, "room3") == 0 then
 		ScriptLib.RemoveExtraGroupSuite(context, 220135003, 2)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_3014(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "room1") == 0 and ScriptLib.GetGroupVariableValue(context, "room4") == 1 and ScriptLib.GetGroupVariableValue(context, "room5") == 1 then
 		ScriptLib.RemoveExtraGroupSuite(context, 220135003, 3)
 	end
+	
 	return 0
 end
 

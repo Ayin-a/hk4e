@@ -144,10 +144,14 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_12007(context, evt)
 	if 12004 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,12005, GadgetState.GearStart)
-		ScriptLib.SetGadgetStateByConfigId(context,12004, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,12004, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12009, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12006, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -156,6 +160,7 @@ function action_EVENT_OBSERVATION_POINT_NOTIFY_12008(context, evt)
 	if 12004 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220139012, 12001, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -163,10 +168,14 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_12012(context, evt)
 	if 12009 == evt.param1 and 305 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,12011, GadgetState.GearStart)
-		ScriptLib.SetGadgetStateByConfigId(context,12009, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,12009, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12014, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12010, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -175,6 +184,7 @@ function action_EVENT_OBSERVATION_POINT_NOTIFY_12013(context, evt)
 	if 12009 == evt.param1 and 305 == evt.param2 then
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220139012, 12001, GadgetState.GearStop)
 	end
+	
 	return 0
 end
 
@@ -182,9 +192,12 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_12017(context, evt)
 	if 12014 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,12016, GadgetState.GearStart)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12014, 405)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,12015, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 

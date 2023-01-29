@@ -1,5 +1,607 @@
 [
+////////////////////////////////////////////////////////////////
+//
+//  jumpatk combo
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster2_JumpAtkCombo",
+		"abilitySpecials": {
+			"JumpAtkTimes":2
+		},
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["JumpAttack_BS"],
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster2_JumpAtkCombo_ResetValue"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["JumpAttack_During"],
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster2_JumpAtkCombo_AddValue"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster2_SetJumpTimes"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BladeMaster2_SetJumpTimes":{
+				"onAdded": [
+					{
+						"$type": "SetOverrideMapValue",
+						"overrideMapKey": "JumpAtkTimes",
+						"value": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "NoneOrEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetOverrideMapValue",
+						"overrideMapKey": "JumpAtkTimes",
+						"value": 5,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetOverrideMapValue",
+						"overrideMapKey": "JumpAtkTimes",
+						"value": 7,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster2_JumpAtkCombo_ResetValue":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_JUMPATK_TIMES",
+						"value": 0
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "JumpAttackComOver",
+						"value": false
+					}
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster2_JumpAtkCombo_AddValue":{
+				"onAdded": [
+					{
+						"$type": "AddGlobalValue",
+						"key": "_JUMPATK_TIMES",
+						"value": 1
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_JUMPATK_TIMES",
+								"value": 3,
+								"compareType": "MoreThanAndEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorBool",
+								"boolID": "JumpAttackComOver",
+								"value": true
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  3.4剑道挑战 角色反馈
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster2_BlockDown",
+		"abilitySpecials": {
+			"hitAngryTimes":14,
+			"physicalSubHurt":-1.5
+		},
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster_Initial"
+			},
+			//判attacktag的做法
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_BladeMaster_BlockBreak_Check"
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_PARRY_HIT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Monster_Parry_None","Monster_Parry_Success"]
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Break_BS"],
+				"modifierName": "Animal_Inu_Shihandai_BladeMaster2_WeakDuring"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_BladeMaster2_WeakDuring":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Animal_Inu_Shihandai_BladeMaster2_WeakTimer"
+					}
+				]
+			},
+			"Monster_Give_Avatar_DamageUp":{
+				"duration": 7,
+				"properties": {
+					"Actor_AttackRatio":2.5
+				}
+			},
+			"Animal_Inu_Shihandai_BladeMaster2_WeakTimer":{
+				"duration": 7,
+				"state": "DefenseDown",
+				"modifierMixins": [
+					{
+						"$type": "RigidBodyFreezeMixin"
+					}
+				],
+				"onAdded": [
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Inu_Shihandai_BladeMaster_InWeak"
+					},
+					{
+						"$type": "ApplyModifier",
+						"target": "CurLocalAvatar" ,
+						"modifierName": "Monster_Give_Avatar_DamageUp"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "WeakOver"
+					}
+				]
+			},
+			"Inu_Shihandai_InDie":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_DIE",
+						"value": 1
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_TrickDog_TimerHandler":{
+				"duration": 15,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CAN_TRICK",
+						"value": 0
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_INU_BLADEMASTER_CAN_TRICK",
+						"value": 1
+					}
+				]
+			},
+			"Monster_BladeMaster_BlockBreak_Check":{
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["BladeMaster2_FullScreenAtk"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "GoBreak"
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Mosnter_GeneralSkill_BreakeDefendShield"
+							}
+						]
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Avatar_Blocking"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "BlockBreak"
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Mosnter_GeneralSkill_BreakeDefendShield"
+							}
+						]
+					},
+				]
+			},
+			"Animal_Inu_Shihandai_BladeMaster_Initial":{
+				"properties": {
+					"Actor_EndureDelta":0.001
+				},
+				"onAdded": [
+					{
+						"$type": "SetAISkillGCD",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAnimatorInt",
+						"intID": "Level",
+						"value": 3,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 3,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					}
+				]
+			},
+			"Inu_Shihandai_BladeMaster_InWeak":{
+				"state": "DefenseDown",
+				"properties": {
+					"Actor_PhysicalSubHurtDelta":"%physicalSubHurt"
+				},
+				"modifierMixins": [
+					{
+						"$type": "RigidBodyFreezeMixin"
+					}
+				],
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": true
+					},
+					{
+						"$type": "AttachEffect",
+						"effectPattern": "Eff_Mosnter_GeneralSkill_DefendDown"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Captured",
+						"value": false
+					}
+				]
+			},
+			"Monster_Parry_None":{
 
+			},
+			"Monster_Parry_Success":{
+				"onAdded": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Parry_Reset"
+					}
+				]
+			},
+			"Parry_Reset":{
+				"duration": 0.2,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_PARRY_HIT",
+						"value": 0
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+//  踩刀跳砸
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Animal_Inu_Shihandai_BladeMaster2_JumpAttack",
+		"onAdded": [
+
+		],
+		"onAbilityStart": [
+			{
+				"$type": "FireEffect",
+				"effectPattern": "Eff_Animal_Inu_Shihandai_JumpAttackBig",
+				"born":{
+					"$type": "ConfigBornBySelf"
+				}
+			},
+			{
+				"$type":"TriggerAttackEvent",
+				"targetType":"Enemy",
+				"attackEvent":
+				{
+					"attackPattern":
+					{
+						"$type": "ConfigAttackCircle",
+						"triggerType": "TriggerNoRepeat",
+						"radius": 6,
+						"height": 6,
+						"born":
+						{
+							"$type": "ConfigBornBySelf",
+							"offset":
+							{
+								"x": 0,
+								"y": -2,
+								"z": 0,
+							},
+						},
+					},
+					"attackInfo":
+					{
+						"attackTag": "Inu_JumpAttack",
+						"attackProperty":
+						{
+							"damagePercentage": 1,
+							"strikeType": "Blunt",
+							"enBreak":101,
+							"elementType":"Electric",
+							"elementDurability":50
+						},
+						"hitPattern":
+						{
+							"onHitEffectName": "default",
+							"hitImpulseType":"LV5"
+						}
+					}
+				}
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "JumpAttack_BS",
+				"normalizeStart": 0.9,
+				"normalizeEnd": 1,
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_Warning"
+			},
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "JumpAttack_ComboBS",
+				"normalizeStart": 0.9,
+				"normalizeEnd": 1,
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_Warning"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["JumpAttack_During"],
+				"modifierName": "Animal_Inu_Shihandai_JumpAttack_RushMove"
+			}
+		],
+		"modifiers": {
+			"Animal_Inu_Shihandai_JumpAttack_Warning":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalPos",
+						"target": "SelfAttackTarget",
+						"born":{
+							"$type": "ConfigBornByTarget",
+							"onGround": true
+						},
+						"key": "_INU_SHIHANDAI_JUMPATTACK_POS",
+						"setTarget": false
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_IS_INU_SHIHANDAI_BOSS",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "TryFindBlinkPointByBorn",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS",
+									"offset": {
+										"x": 0,
+										"y": 0,
+										"z": -1
+									}
+								},
+								"hitSceneTest":false
+							}
+						],
+						"failActions": [
+							{
+								"$type": "TryFindBlinkPointByBorn",
+								"born":{
+									"$type": "ConfigBornByGlobalValue",
+									"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS",
+									"offset": {
+										"x": 0,
+										"y": 0,
+										"z": -1
+									}
+								},
+								"hitSceneType":"BlinkHitSceneTestByThreeSegments",
+								"limitY": 0.7,
+								"ignoreWater": true
+							}
+						]
+					},
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Animal_Inu_Shihandai_JumpAttack_Warning",
+						"born":{
+							"$type": "ConfigBornByTeleportToPoint",
+						}
+					},		
+				]
+			},
+			"Animal_Inu_Shihandai_JumpAttack_RushMove":{
+				"onAdded": [
+					{
+						"$type": "HideUIBillBoard",
+						"hide": true
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": false
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": false
+					},
+					{
+						"$type": "DoBlink"
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "TurnDirectionToPos",
+						"toPos":{
+							"$type": "ConfigBornByGlobalValue",
+							"positionKey": "_INU_SHIHANDAI_JUMPATTACK_POS"
+						}
+					},
+					{
+						"$type": "HideUIBillBoard",
+						"hide": false
+					},
+					{
+						"$type": "EnablePushColliderName",
+						"pushColliderNames": ["PushCollider"],
+						"setEnable": true
+					},
+					{
+						"$type": "TriggerSetVisible",
+						"visible": true
+					}
+				]
+			}
+		}
+	}
+},
 ////////////////////////////////////////////////////////////////
 //
 //  巡逻点闪烁

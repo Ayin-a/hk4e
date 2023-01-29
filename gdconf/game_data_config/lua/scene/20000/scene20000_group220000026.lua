@@ -75,10 +75,10 @@ suites = {
 
 -- 触发操作
 function action_EVENT_GATHER_48(context, evt)
-	-- 创生gadget 67
+	-- 创建id为67的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 67 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

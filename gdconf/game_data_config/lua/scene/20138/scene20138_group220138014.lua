@@ -133,10 +133,15 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_14015(context, evt)
 	if 14001 == evt.param1 and 605 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,14004, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "eyefinish3", 1, 220138022)
-		ScriptLib.SetGadgetStateByConfigId(context,14001, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,14001, GadgetState.ChestOpened)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220138014, config_id=14008, entity_type=EntityType.GADGET})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220138014, config_id=14009, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end

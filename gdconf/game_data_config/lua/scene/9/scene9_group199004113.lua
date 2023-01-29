@@ -219,23 +219,35 @@ end
 function action_EVENT_GROUP_LOAD_113011(context, evt)
 	if ScriptLib.GetGroupVariableValueByGroup(context, "dq", 199004116) == 1 and ScriptLib.GetGroupVariableValueByGroup(context, "ly", 199004116) == 0 then
 		ScriptLib.SetGadgetStateByConfigId(context,113001, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113002, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113003, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113004, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113005, GadgetState.Default)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_113012(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "lock") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,113001, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113002, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113003, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113004, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,113005, GadgetState.Default)
 	end
+	
 	return 0
 end
 

@@ -78,5 +78,6 @@ function action_EVENT_ENTER_REGION_89002(context, evt)
 	if ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 and ScriptLib.TryRecordActivityPushTips(context, 2014008) == 0 then
 		ScriptLib.ShowClientTutorial(context, 1177, {})
 	end
+	
 	return 0
 end

@@ -102,44 +102,60 @@ suites = {
 function action_EVENT_ANY_MONSTER_DIE_9003(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 0 and ScriptLib.GetGroupMonsterCount(context) == 0 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.SetGroupVariableValue(context, "door", 1)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "option", 1, 220135002)
+		
 		ScriptLib.ChangeToTargetLevelTag(context, 35)
+		
 		ScriptLib.AddQuestProgress(context, "4006607")
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
+		
 		ScriptLib.SetWorktopOptionsByGroupId(context, 220135002, 2005, {7})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135002, config_id=2011, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_DUNGEON_ALL_AVATAR_DIE_9004(context, evt)
 	ScriptLib.SetGroupVariableValue(context, "test", 0)
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.Default)
 	end
+	
 	ScriptLib.RemoveExtraGroupSuite(context, 220135009, 2)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_DUNGEON_AVATAR_SLIP_DIE_9005(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.Default)
 	end
+	
 	return 0
 end
 
@@ -195,25 +211,35 @@ function action_EVENT_GROUP_LOAD_9008(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 and ScriptLib.GetGroupVariableValueByGroup(context, "temp", 220135010) == 0 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "option", 1, 220135002)
+		
 		ScriptLib.ChangeToTargetLevelTag(context, 35)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
+		
 		ScriptLib.SetWorktopOptionsByGroupId(context, 220135002, 2005, {7})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135002, config_id=2011, entity_type=EntityType.GADGET})
 	else
 		if ScriptLib.GetGroupVariableValueByGroup(context, "temp", 220135010) == 0 and ScriptLib.GetGroupVariableValueByGroup(context, "temp", 220135009) == 0 then
 			ScriptLib.RemoveExtraGroupSuite(context, 220135009, 2)
+			
 			ScriptLib.SetGroupVariableValue(context, "test", 0)
+			
 			ScriptLib.SetGroupVariableValue(context, "voice", 0)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
 		else
 			ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.Default)
 		end
 	end
+	
 	return 0
 end
 
@@ -224,10 +250,13 @@ function action_EVENT_QUEST_START_9009(context, evt)
 	else
 		if ScriptLib.GetGroupVariableValue(context, "start") == 0 then
 			ScriptLib.SetGroupVariableValue(context, "door", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "start", 1)
+			
 			ScriptLib.SetGadgetStateByConfigId(context,9006, GadgetState.GearStart)
 		end
 	end
+	
 	return 0
 end
 

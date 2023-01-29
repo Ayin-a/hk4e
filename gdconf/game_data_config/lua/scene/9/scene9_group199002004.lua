@@ -247,8 +247,10 @@ suites = {
 function action_EVENT_GADGET_STATE_CHANGE_4003(context, evt)
 	if evt.param2 == 4002 and ScriptLib.GetGadgetStateByConfigId(context, 0, 4002) == 201 then
 		ScriptLib.SetGroupVariableValue(context, "put", 1)
+		
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002004, 4001, 6800323)
 	end
+	
 	return 0
 end
 
@@ -477,7 +479,8 @@ end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_4125(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	return 0
 end
 
@@ -486,6 +489,7 @@ function action_EVENT_GROUP_REFRESH_4126(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "put") == 1 then
 		ScriptLib.SetGadgetTalkByConfigId(context, 199002004, 4001, 6800323)
 	end
+	
 	return 0
 end
 

@@ -124,10 +124,10 @@ end
 
 -- 触发操作
 function action_EVENT_ANY_MONSTER_DIE_9(context, evt)
-	-- 创生gadget 7012
+	-- 创建id为7012的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7012 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 杀死Group内所有monster
@@ -243,10 +243,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_15(context, evt)
-	-- 创生gadget 7012
+	-- 创建id为7012的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 7012 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

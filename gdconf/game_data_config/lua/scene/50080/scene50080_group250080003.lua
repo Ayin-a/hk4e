@@ -104,6 +104,7 @@ function action_EVENT_ANY_GADGET_DIE_3009(context, evt)
 	if evt.param1 == 3008 then
 		ScriptLib.SetGadgetStateByConfigId(context,3006, GadgetState.Default)
 	end
+	
 	return 0
 end
 

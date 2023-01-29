@@ -216,11 +216,16 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_4007(context, evt)
 	if 4001 == evt.param1 and 305 == evt.param2 then
 		ScriptLib.ChangeToTargetLevelTag(context, 41)
+		
 		ScriptLib.AddQuestProgress(context, "4007310")
-		ScriptLib.SetGadgetStateByConfigId(context,4001, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,4001, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGroupVariableValue(context, "finish", 1)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "castle", 1, 220139046)
 	end
+	
 	return 0
 end
 

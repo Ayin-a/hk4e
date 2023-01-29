@@ -29,7 +29,7 @@ npcs = {
 
 -- 装置
 gadgets = {
-	{ config_id = 4002, gadget_id = 70211022, pos = { x = -110.982, y = 231.508, z = 4048.854 }, rot = { x = 0.000, y = 191.205, z = 0.000 }, level = 1, drop_tag = "战斗高级须弥", state = GadgetState.ChestLocked, isOneoff = true, persistent = true, explore = { name = "chest", exp = 10 }, area_id = 22 },
+	{ config_id = 4002, gadget_id = 70211022, pos = { x = -110.982, y = 231.508, z = 4048.854 }, rot = { x = 0.000, y = 191.205, z = 0.000 }, level = 26, drop_tag = "战斗高级须弥", state = GadgetState.ChestLocked, isOneoff = true, persistent = true, explore = { name = "chest", exp = 10 }, area_id = 22 },
 	{ config_id = 4007, gadget_id = 70217020, pos = { x = -173.893, y = 225.454, z = 3950.106 }, rot = { x = 18.512, y = 82.496, z = 24.891 }, level = 26, drop_tag = "摩拉石箱须弥", isOneoff = true, persistent = true, explore = { name = "chest", exp = 4 }, area_id = 22 },
 	{ config_id = 4012, gadget_id = 70220050, pos = { x = -141.341, y = 230.576, z = 3991.315 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 27, area_id = 22 },
 	{ config_id = 4013, gadget_id = 70220051, pos = { x = -141.545, y = 230.566, z = 3990.529 }, rot = { x = 27.674, y = 327.578, z = 78.522 }, level = 27, area_id = 22 },

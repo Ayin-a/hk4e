@@ -125,5 +125,6 @@ function action_EVENT_CUTSCENE_END_50004(context, evt)
 	if evt.param1 == 790271301 and evt.param2 == 1 then
 		ScriptLib.AddQuestProgress(context, "7902713finished")
 	end
+	
 	return 0
 end

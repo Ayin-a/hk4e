@@ -179,10 +179,13 @@ function action_EVENT_GROUP_LOAD_17009(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 and ScriptLib.GetGroupVariableValueByGroup(context, "load", 220140003) == 0 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 17002) == 101 and ScriptLib.GetGroupVariableValue(context, "unlock") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,17002, GadgetState.Default)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140017, config_id=17012, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 

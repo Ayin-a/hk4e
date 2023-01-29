@@ -1,0 +1,2692 @@
+[
+  //
+  //    璃月-成男-草-法器 白术 技能配置
+  // 	by CHD
+  //
+  //    Index
+  //
+  //*************************  普通攻击  *********************************
+  //  普攻和重击 ： Avatar_Baizhuer_ExtraAttack
+  //  重击子弹： Avatar_Baizhuer_ExtraAttack_Bullet_Material
+  //  普通攻击： Avatar_Baizhuer_Attack01 ；Avatar_Baizhuer_Attack02 ；Avatar_Baizhuer_Attack03
+  //  下落攻击： Avatar_Baizhuer_FallingAnthem
+  //*************************  元素战技  *********************************
+  //  元素战技部分通用逻辑： 
+  //  元素战技地面施法： 
+  //  
+  //*************************  元素爆发  *********************************
+  //  元素爆发镜头及无敌： 
+  //  元素爆发计数逻辑： 
+  //*************************  技能升级  *********************************
+
+  //*************************  天赋命之座新增 ability  *******************
+  //  突破1： Avatar_Baizhuer_PermanentSkill_1
+  //  突破2： Avatar_Baizhuer_PermanentSkill_2
+  //
+////////////////////////////////////////////////////////////////
+//
+//  ExtraAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_ExtraAttack",
+			"abilityMixins":
+			[
+				{
+					"$type": "ButtonHoldChargeMixin",
+					"skillID": 10821,
+					"chargeTime": 0.1,
+					"secondChargeTime": 0.1,
+					"OnBeginUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+							"predicates":
+							[
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 0,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 99,
+							"predicates":
+							[
+								{
+									"$type" : "ByAnimatorInt",
+									"value" : 0,
+									"parameter" : "ComboCount",
+									"logic" : "Equal",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"OnReleaseUncharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": true,
+						},
+					],
+					"OnReleaseCharged":
+					[
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+						},
+					],
+					"OnBeginSecondCharged":
+					[
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "DoSkill",
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 6,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									//故意少判了一点点体力，为了顾及一部分网络延迟
+									"stamina": "%ExtraAttack_Catalyst_Stamina_Cost+%Flexible_Stamina",
+									"logic": "GreaterOrEqual",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorInt",
+							"intID": "SkillID",
+							"value": 1,
+							"predicates":
+							[
+								{
+									"$type": "ByLocalAvatarStamina",
+									"stamina": "%ExtraAttack_Catalyst_Stamina_Cost+%Flexible_Stamina",
+									"logic": "Lesser",
+								},
+							],
+						},
+						{
+							"$type": "SetAnimatorBool",
+							"boolID": "IsCharging",
+							"value": false,
+						},
+					],
+					"chargeStateIDs": ["Attack01","Attack02","Attack03","ExtraAttack_BS","ExtraAttack_Charge","ExtraAttack","ExtraAttack_AS"],
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ExtraAttack_Charge"],
+					"modifierName": "ExtraAttack_StaminaCost",
+				},
+			],
+			"modifiers":
+			{
+				"ExtraAttack_StaminaCost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AvatarSkillStart",
+							"skillID" : 10003,
+							"costStaminaRatio":"%ExtraAttack_Catalyst_Stamina_Cost",
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Catalyst_Stamina_Cost": 0,
+				"Flexible_Stamina":-2,
+			},
+		},
+	},
+// 重击发射子弹的ability。这么做狐狸出来后，即使角色中途打断也能触发重击效果
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_ExtraAttack_TriggerBullet",
+			"onAbilityStart":
+			[
+				{
+					"$type": "TriggerBullet",
+					"bulletID": 41058004,
+					"born":
+					{
+						"$type": "ConfigBornBySelf",//先放到固定点，等动作确认了在改位置
+						"offset":
+						{
+							"x": 0.0,
+							"y": 0.1,
+							"z": 0.0,
+						},
+						"direction":
+						{
+							"$type": "ConfigDirectionByEntity",
+						},
+					},
+				},
+			],
+		},
+	},
+
+//重击子弹表现及伤害逻辑
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_ExtraAttack_Bullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"Baizhuer_ExtraAttack_Bullet_DamageHandler_Timer",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"Baizhuer_ExtraAttack_Bullet_DamageHandler_Timer":
+				{
+					"duration":0.65,
+					"onAdded":
+					[
+						{
+							"$type": "FireEffect",
+							"effectPattern": "Eff_Avatar_Lady_Catalyst_Baizhuer_ExtraAttack_Group_2",
+							"born":
+							{
+								"$type": "ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":2,
+								},
+								// "onGround": true,
+								"offset":
+								{
+									"x":0,
+									"y":0,
+									"z":4.0,//在特效的 monoeffect 里向后退了4。因为想在角色前面一些的位置去判贴地的朝向
+								},
+							},
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type":"ApplyModifier",
+							"modifierName":"Baizhuer_ExtraAttack_Bullet_DamageHandler",
+						},
+					],
+				},
+				"Baizhuer_ExtraAttack_Bullet_DamageHandler":
+				{
+					"duration":0.95,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attackTag": "ExtraAttack",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "default",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+					"thinkInterval":0.15,
+					"onThinkIntervalIsFixedUpdate":true,//开启后可保证duration/onThinkInterval次数稳定，但性能消耗较高
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Baizhuer_ExtraAttack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 5,
+							"doOffStage": true,
+						},
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_ExtraAttack_Damage_1",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_ExtraAttack_Count",
+                                    "value":1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_ExtraAttack_Damage_2",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_ExtraAttack_Count",
+                                    "value":2,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },  
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_ExtraAttack_Damage_3",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_ExtraAttack_Count",
+                                    "value":3,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_ExtraAttack_Damage_4",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_ExtraAttack_Count",
+                                    "value":4,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        }, 
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_ExtraAttack_Damage_5",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_ExtraAttack_Count",
+                                    "value":5,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },                                       
+					],
+				},
+				"Avatar_Baizhuer_ExtraAttack_Damage_1":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackTag": "ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Baizhuer_ExtraAttack_Damage_2":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackTag": "ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Baizhuer_ExtraAttack_Damage_3":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackTag": "ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Baizhuer_ExtraAttack_Damage_4":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackTag": "ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+				"Avatar_Baizhuer_ExtraAttack_Damage_5":
+				{
+					"duration":0.1,
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent": 
+							{
+								"attackPattern": 
+								{
+									"$type": "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size":
+									{
+										"x": 2.0,
+										"y": 3.2,
+										"z": 2.0,
+									},
+									"born":
+									{
+										"$type": "ConfigBornBySelf",
+										"offset":
+										{
+											"x" : 0.0,
+											"y" : 1.6,
+											"z" : 0.0,
+										},
+									},
+								},
+								"attackInfo": 
+								{
+									"attenuationTag": "ExtraAttack",
+									// "canBeModifiedBy": "OriginOwner",
+									"attenuationGroup":"Baizhuer_ExtraAttack",
+									"attackTag": "ExtraAttack",
+									"attackProperty": 
+									{
+										"damagePercentage": "%ExtraAttack_Damage",
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 25,
+										"enBreak": 80,
+									},
+									"hitPattern": 
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+					          			"hitImpulseType":"LV2",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false,
+									},
+									"canHitHead": false,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"ExtraAttack_Damage":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  NormalAttack
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack01",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack01",
+					"modifierName": "Attack01_Gohei_Appear",
+					"normalizeStart":0,
+					"normalizeEnd":0.392,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41058001,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" :
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Attack01_Gohei_Appear":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_01",
+						},
+					],
+				},
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack02",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack02",
+					"modifierName": "Attack02_Gohei_Appear",
+					"normalizeStart":0,
+					"normalizeEnd":0.336,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41058002,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" :
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Attack02_Gohei_Appear":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_02",
+						},
+					],
+				},
+			},
+		},
+	},
+
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack03",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToNormalizedTimeMixin",
+					"stateID": "Attack03",
+					"modifierName": "Attack03_Gohei_Appear",
+					"normalizeStart":0,
+					"normalizeEnd":0.343,
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "CreateGadget",
+					"gadgetID": 41058003,
+					"campID": 1001,
+					"campTargetType": "Enemy",
+					"born":
+					{
+						"$type": "ConfigBornBySelf",
+						"offset" :
+						{
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0,
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Attack03_Gohei_Appear":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"AttachEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_03",
+						},
+					],
+				},
+			},
+		},
+	},
+
+//用 gadget 播特效跟制造攻击盒，这样角色打断动作时不会出现只有特效没有攻击的情况
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack01_Bullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Damage_Handler",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Bullet_Fx",
+				},
+			],
+			"onAbilityStart":
+			[
+
+			],
+			"modifiers":
+			{
+				"NormalAttack_Damage_Handler":
+				{
+					"duration":0.15,
+					"thinkInterval":0.1,
+					"onThinkIntervalIsFixedUpdate":true,//开启后可保证duration/onThinkInterval次数稳定，但性能消耗较高
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Baizhuer_NormalAttack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+							"doOffStage": true,
+						},
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_Attack01_Damage",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_NormalAttack_Count",
+                                    "value":1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+					],
+				},
+				"NormalAttack_Bullet_Fx":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_01_Bullet",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":4,
+								},
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"onGround": true,
+							},
+						}
+					],
+				},
+				"Avatar_Baizhuer_Attack01_Damage":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type" : "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size" : 
+									{
+										"x" : 2.0,
+										"y" : 4.0,
+										"z" : 8.0,
+									},
+									"born":
+									{
+										"$type":"ConfigBornBySelf",
+										"direction":
+										{
+											"$type":"ConfigDirectionByGroundNormalRange",
+											"range":4,
+										},
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "NormalAttack_01",
+									"attenuationTag": "NormalAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%Attack01_Damage",
+										"strikeType": "Default",
+										"elementType":"Grass",
+										"elementDurability":25,
+										"enBreak" : 7.436,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Attack01_Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack02_Bullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Damage_Handler",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Bullet_Fx",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"NormalAttack_Damage_Handler":
+				{
+					"duration":0.15,
+					"thinkInterval":0.1,
+					"onThinkIntervalIsFixedUpdate":true,//开启后可保证duration/onThinkInterval次数稳定，但性能消耗较高
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Baizhuer_NormalAttack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+							"doOffStage": true,
+						},
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_Attack02_Damage",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_NormalAttack_Count",
+                                    "value":1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+					],
+				},
+				"NormalAttack_Bullet_Fx":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_02_Bullet",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":4,
+								},
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"onGround": true,
+							},
+						}
+					],
+				},
+				"Avatar_Baizhuer_Attack02_Damage":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type" : "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size" : 
+									{
+										"x" : 2.0,
+										"y" : 4.0,
+										"z" : 8.0,
+									},
+									"born":
+									{
+										"$type":"ConfigBornBySelf",
+										"direction":
+										{
+											"$type":"ConfigDirectionByGroundNormalRange",
+											"range":4,
+										},
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "NormalAttack_02",
+									"attenuationTag": "NormalAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%Attack02_Damage",
+										"strikeType": "Default",
+										"elementType":"Grass",
+										"elementDurability":25,
+										"enBreak" : 7.222,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Attack02_Damage":0,
+			},
+		},
+	},
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_Attack03_Bullet_Material",
+			"onAdded":
+			[
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Damage_Handler",
+				},
+				{
+					"$type":"ApplyModifier",
+					"modifierName":"NormalAttack_Bullet_Fx",
+				},
+			],
+			"onAbilityStart":
+			[
+			],
+			"modifiers":
+			{
+				"NormalAttack_Damage_Handler":
+				{
+					"duration":0.15,
+					"thinkInterval":0.1,
+					"onThinkIntervalIsFixedUpdate":true,//开启后可保证duration/onThinkInterval次数稳定，但性能消耗较高
+					"onThinkInterval":
+					[
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_Baizhuer_NormalAttack_Count",
+							"value": 1,
+							"useLimitRange": true,
+							"minValue": 0,
+							"maxValue": 1,
+							"doOffStage": true,
+						},
+                        {
+                            "$type":"ApplyModifier",
+                            "modifierName":"Avatar_Baizhuer_Attack03_Damage",
+                            "predicates":
+                            [
+                                {
+                                    "$type":"ByTargetGlobalValue",
+                                    "key":"_ABILITY_Baizhuer_NormalAttack_Count",
+                                    "value":1,
+                                    "compareType": "Equal",
+                                },
+                            ],
+                        },
+					],
+				},
+				"NormalAttack_Bullet_Fx":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_Attack_03_Bullet",
+							"born":
+							{
+								"$type":"ConfigBornBySelf",
+								"direction":
+								{
+									"$type":"ConfigDirectionByGroundNormalRange",
+									"range":4,
+								},
+								"offset":
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+								"onGround": true,
+							},
+						}
+					],
+				},
+				"Avatar_Baizhuer_Attack03_Damage":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerAttackEvent",
+							"target":"OriginOwner",
+							"targetType": "Enemy",
+							"attackEvent":
+							{
+								"attackPattern":
+								{
+									"$type" : "ConfigAttackBox",
+									"triggerType": "TriggerNoRepeat",
+									"size" : 
+									{
+										"x" : 2.0,
+										"y" : 4.0,
+										"z" : 8.0,
+									},
+									"born":
+									{
+										"$type":"ConfigBornBySelf",
+										"direction":
+										{
+											"$type":"ConfigDirectionByGroundNormalRange",
+											"range":4,
+										},
+										"offset":
+										{
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0,
+										},
+										"onGround": true,
+									},
+								},
+								"attackInfo":
+								{
+									"attackTag": "NormalAttack_03",
+									"attenuationTag": "NormalAttack",
+									"attackProperty":
+									{
+										"damagePercentage": "%Attack03_Damage",
+										"strikeType": "Default",
+										"elementType":"Grass",
+										"elementDurability":25,
+										"enBreak" : 10.667,
+									},
+									"hitPattern" :
+									{
+										"onHitEffectName": "Eff_Avatar_Baizhuer_Attack_Hit",
+										"hitImpulseType":"LV1",
+										"reboundRatio": 0,
+										"hitHaltTime": 0.0,
+										"hitHaltTimeScale": 0.05,
+										"muteHitText": false,
+									},
+									"forceCameraShake": false,
+								},
+							},
+						},
+					],
+				},
+			},
+			"abilitySpecials":
+			{
+				"Attack03_Damage":0,
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素战技按键逻辑
+//
+////////////////////////////////////////////////////////////////
+
+//元素战技地面单点施法逻辑
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_ElementalArt",
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalArt"],
+					"modifierName": "Baizhuer_ElementalArt_SetVisible",
+				},
+			],
+			"onAbilityStart":
+			[
+				{
+					"$type": "AvatarSkillStart", 
+					"skillID": 10822,
+					"cdRatio": 1,
+				},
+				{
+					"$type": "TriggerAttackEvent",
+					"targetType": "Enemy",
+					"attackEvent": {
+						"attackPattern": {
+							"$type": "ConfigAttackBox",
+							"triggerType": "TriggerNoRepeat",
+							"size": {
+								"x": 3.0,
+								"y": 3.0,
+								"z": 5.0,
+							},
+							"born": {
+								"$type": "ConfigBornBySelf",
+								"offset": {
+									"x": 0.0,
+									"y": 1.0,
+									"z": -0.4,
+								},
+							},
+						},
+						"attackInfo": {
+							"attackTag": "Elemental_Art",
+							"attackProperty": {
+								"damagePercentage": 1,
+								"strikeType": "Default",
+								"elementType": "Grass",
+								"elementDurability": 50,
+								"enBreak": 150,
+								"attackType": "Range",
+							},
+							"hitPattern": {
+								"onHitEffectName": "default",
+								"hitImpulseType": "LV4",
+								"retreatType": "ByAttackerForward",
+								"canBeDefenceHalt": false,
+								"hitHaltTime": 0.09,
+								"hitHaltTimeScale": 0.01,
+								"muteHitText": false
+							},
+							"forceCameraShake": false,
+							"cameraShake": {
+								"shakeType": "CustomVector",
+								"shakeRange": 0.24,
+								"shakeTime": 0.21,
+								"shakeDistance": 30,
+								"shakeDir": {
+									"x": 1,
+									"y": -0.2,
+									"z": 0,
+								},
+							},
+						},
+					},
+				},
+			],
+			"modifiers":
+			{
+				"Baizhuer_ElementalArt_SetVisible":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_ElementalArt_Trail",
+						},
+						{
+							"$type":"FireEffect",
+							"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_ElementalArt_HideSpark",
+						},
+					],
+				},
+			},
+		},
+	},
+
+////////////////////////////////////////////////////////////////
+//
+//  元素爆发
+//
+////////////////////////////////////////////////////////////////
+	{
+		"Default":
+		{
+			"$type": "ConfigAbility",
+			"abilityName": "Avatar_Baizhuer_ElementalBurst",
+			"onAbilityStart":
+			[
+				{
+					"$type":"AvatarSkillStart",
+					"skillID": 10825,
+					"cdRatio": 1,
+				},
+				//改变角色身上的材质
+				{
+					"$type": "SetAnimatorTrigger",
+					"triggerID": "ElementalBurst_Skin",
+					"predicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":2.0,
+								"fanAngle": 360.0,
+								"radius": 1.4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 0.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"checkWaterLayer":true,
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 0.5,
+						},
+					],
+				},  
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_ElementalBurst_LeftEye",
+					"predicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":2.0,
+								"fanAngle": 360.0,
+								"radius": 1.4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 0.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"checkWaterLayer":true,
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 0.5,
+						},
+					],
+				},
+				{
+					"$type":"FireEffect",
+					"effectPattern":"Eff_Avatar_Lady_Catalyst_Baizhuer_ElementalBurst_RightEye",
+					"predicates":
+					[
+						{
+							"$type":"ByAttackNotHitScene",
+							"attackPattern":
+							{
+								"$type": "ConfigAttackCircle",
+								"triggerType": "TriggerNoRepeat",
+								"height":2.0,
+								"fanAngle": 360.0,
+								"radius": 1.4,
+								"born":
+								{
+									"$type": "ConfigBornBySelf",
+									"offset":
+									{
+										"x" : 0.0,
+										"y" : 0.5,
+										"z" : 0.0,
+									},
+								},
+							},
+							"checkWaterLayer":true,
+						},
+						{
+							"$type": "ByAvatarInWaterDepth",
+							"compareType": "LessAndEqual",
+							"depth": 0.5,
+						},
+					],
+				},
+			],
+			"abilityMixins":
+			[
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst","ElementalBurst_AS"],
+					"modifierName": "ElementalBurst_Camera_Protection_Ghost",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst",],
+					"modifierName": "ElementalBurst_Camera_Protection_Invincible",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst","ElementalBurst_AS"],
+					"modifierName": "ElementalBurst_Windzone_Handler",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst","ElementalBurst_AS"],
+					"modifierName": "ElementalBurst_Camera_Remover",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst","ElementalBurst_AS"],
+					"modifierName": "ElementalBurst_Camera_Weather",
+				},
+				{
+					"$type": "AttachToStateIDMixin",
+					"stateIDs": ["ElementalBurst","ElementalBurst_AS"],
+					"modifierName": "ElementalBurst_HideWeapon",
+				},
+				{
+					"$type":"AttachToNormalizedTimeMixin",
+					"stateID": "ElementalBurst",
+					"normalizeStart": 0.95,
+					"normalizeEnd": 1,
+					"modifierName": "Baizhuer_ElementalBurst_Attack" 
+				},
+			],
+			"modifiers":
+			{
+				"Baizhuer_ElementalBurst_Attack":{
+					"onAdded": [
+						{
+							"$type":"ApplyModifier",
+							"modifierName": "Baizhuer_ImPowered",
+						},
+						{
+							"$type": "TriggerAttackEvent",
+							"targetType": "Enemy",
+							"attackEvent": {
+								"attackPattern": {
+									"$type": "ConfigAttackCircle",
+									"triggerType": "TriggerNoRepeat",
+									"height": 3,
+									"radius": 5,
+								},
+								"attackInfo": {
+									"attackTag": "Elemental_Art",
+									"attackProperty": {
+										"damagePercentage": 1,
+										"strikeType": "Default",
+										"elementType": "Grass",
+										"elementDurability": 50,
+										"enBreak": 150,
+										"attackType": "Range",
+									},
+									"hitPattern": {
+										"onHitEffectName": "default",
+										"hitImpulseType": "LV4",
+										"retreatType": "ByAttackerForward",
+										"canBeDefenceHalt": false,
+										"hitHaltTime": 0.09,
+										"hitHaltTimeScale": 0.01,
+										"muteHitText": false
+									},
+									"forceCameraShake": false,
+									"cameraShake": {
+										"shakeType": "CustomVector",
+										"shakeRange": 0.24,
+										"shakeTime": 0.21,
+										"shakeDistance": 30,
+										"shakeDir": {
+											"x": 1,
+											"y": -0.2,
+											"z": 0,
+										},
+									},
+								},
+							},
+						},
+					],
+				},
+				"Baizhuer_ImPowered":{
+					"duration": 15,
+					"state": "AttackUp",
+					"properties": {
+						"Animator_OverallSpeedRatio":0.3,
+						"Actor_AttackRatio":2,
+					}
+				},
+				"ElementalBurst_Camera_Protection_Ghost":
+				{
+					"onAdded":
+					[
+						{
+							"$type" : "AttachAbilityStateResistance",
+							"resistanceListID": 11002,
+						},
+					],
+				},
+				"ElementalBurst_Camera_Protection_Invincible":	
+				{
+					"state": "Invincible",
+				},
+				"ElementalBurst_Windzone_Handler":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type": "WindZoneMixin",
+							"shapeName": "CircleR2",
+							"strength" : -3,
+							"attenuation" : 2,
+							"born":
+							{
+								"$type": "ConfigBornByTarget",
+								//"attachPointName" : "RootNode",
+								"offset" :
+								{
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0,
+								},
+							},
+							"targetType": "Enemy",
+							"predicates":
+							[
+								{
+									"$type" : "ByEntityTypes",
+									"entityTypes" : ["Monster","Grass"],
+									/*"reject" : true,*/
+								},
+								{
+									"$type" : "ByTargetWeight",	//WindZoneLevel = 2
+									"logic" : "LesserOrEqual",	//WindZoneLevel = 2
+									"weight" : 250.0,	//WindZoneLevel = 2
+								},
+							],
+						},
+					],
+				},
+				"ElementalBurst_Camera_Remover":
+				{
+					"onAdded":
+					[
+						{
+							"$type":"Predicated",
+							"targetPredicates":
+							[
+								{
+									"$type":"ByAttackNotHitScene",
+									"attackPattern":
+									{
+										"$type": "ConfigAttackCircle",
+										"triggerType": "TriggerNoRepeat",
+										"height":2.0,
+										"fanAngle": 360.0,
+										"radius": 1.4,
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"offset":
+											{
+												"x" : 0.0,
+												"y" : 0.5,
+												"z" : 0.0,
+											},
+										},
+									},
+									"checkWaterLayer":true,
+								},
+								{
+									"$type": "ByAvatarInWaterDepth",
+									"compareType": "LessAndEqual",
+									"depth": 0.5,
+								},
+							],
+							"successActions":
+							[
+								{// 进入大招镜头
+									"$type":"AvatarEnterCameraShot",
+									"cameraMoveCfgPath":"Camera_Baizhuer_ElementalBurst",
+									"target" : "Self",
+								},
+							],
+							"failActions":
+							[
+								{
+									"$type": "FireEffect",
+									"effectPattern": "Eff_Avatar_Lady_Catalyst_Yae_ElementalBurst_ThirdParty",	//无镜头时的特效
+								},
+							],
+						},
+						{
+							"$type" : "EnableHeadControl",
+							"enable" : false,
+							"blend" : false,
+						},
+						{
+							"$type" : "ControlEmotion",
+							"toggleBlink" : false,
+							"toggleEmoSync" : false,
+							"toggleEyeKey" : false,
+						},
+						//进入充能技时恢复元素战技里的角色发光
+						{
+							"$type": "SetAnimatorTrigger",
+							"triggerID": "StealthOff",
+						},  
+					],
+					"onRemoved":
+					[
+						{
+							"doOffStage" : true,
+							"$type" : "EnableHeadControl",
+							"enable" : true,
+						},
+						{
+							"$type":"AvatarExitCameraShot",
+							"doOffStage":true,
+						},
+						{
+							"doOffStage" : true,
+							"$type" : "AvatarCameraParam",
+							"cameraParam" :
+							{
+								"forceRadius" : 6.0,
+								"forceRadiusDuration":0,
+								"shouldKeepForceRadius" : true,
+							},
+						},
+						{
+							"$type" : "ControlEmotion",
+							"doOffStage": true,
+							"toggleBlink" : true,
+							"toggleEmoSync" : true,
+							"toggleEyeKey" : true,
+						},
+					],
+				},
+				"ElementalBurst_Camera_Weather":
+				{
+					"modifierMixins":
+					[
+						{
+							"$type":"TriggerWeatherMixin",
+							"type":"Skill",
+							"weatherPattern":"Weather_Yae_ElementalBurst",
+							"transDuration":0.5,//这个同时是渐入时长和渐出时长。
+							"duration":2.5,
+						},
+					]
+				},
+				"ElementalBurst_HideWeapon":
+				{
+					"onAdded":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"visible": false,
+							"partNames": ["equip01","sheathPoint"],
+							"modifyAnotherValue":true,
+						},
+					],
+					"onRemoved":
+					[
+						{
+							"$type": "TriggerHideWeapon",
+							"doOffStage": true,
+							"visible": true,
+							"partNames": ["equip01","sheathPoint"],
+							"modifyAnotherValue":true,
+						},
+					],
+				},
+			},
+		},
+	},
+
+	////////////////////////////////////////////////////////////////
+	//
+	//  空中攻击
+	//
+	////////////////////////////////////////////////////////////////
+
+    {
+        "Default":
+        {
+            "$type": "ConfigAbility",
+            "abilityName": "Avatar_Baizhuer_FallingAnthem",
+            "abilityMixins":
+            [
+                {
+                    "$type": "AvatarChangeSkillMixin",
+                    "priority":"AvatarCommon",
+                    "jumpSkillID": 5082010,
+                    "flySkillID": 5082010,
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_Material",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                    	"FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+                    ],
+                    "modifierName": "FallingAnthem_LoopDamage",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_BS_VelocityForce_Initialize",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_Height_Detect",
+				},
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_FallingDamageImmune_01",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop"
+                    ],
+                    "modifierName": "Inertia",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                        "FallingAnthem_AS_2"
+                    ],
+                    "modifierName": "FallingAnthem_OverHead_Camera",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS"
+                    ],
+                    "modifierName": "FallingAnthem_ClearVelocityForce",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_Loop_Low",
+                        "FallingAnthem_AS_1",
+                    ],
+                    "modifierName": "FallingAnthem_Attach_SelfEffect",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_AS_1",
+                    ],
+                    "modifierName": "FallingAnthem_Remove_SelfEffect",
+                },
+                {
+                    "$type": "AttachToAnimatorStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS_2",
+                        "FallingAnthem_Loop",
+                    ],
+                    "modifierName": "FallingAnthem_SetVisible",
+                },
+                {
+                    "$type": "AttachToStateIDMixin",
+                    "stateIDs":
+                    [
+                        "FallingAnthem_BS",
+                        "FallingAnthem_Loop",
+                        "FallingAnthem_AS_1",
+                    ],                  
+                    "modifierName": "HideWeapon",
+                },
+            ],
+            "onAbilityStart":
+            [
+                //普通状态第一段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.0,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                            	"damagePercentage": "%FallingAnthem_Normal_Rank_1_Damage",
+				  				"strikeType": "Default",
+				  				"elementType":"Grass",
+				  				"elementDurability":25,
+				  				"enBreak" : 50,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV3",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            /*				        	"cameraShake":
+				        	{
+				        		"shakeType": "CustomVector",
+								"shakeRange": 0.3,
+								"shakeTime": 0.12,
+								"shakeDistance": 30,
+								"shakeDir":
+								{
+									"x": 0,
+									"y": 1,
+									"z": 0,
+								},
+				        	},*/
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.24,
+                                "shakeTime": 0.12,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 0,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.24,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "TriggerAttackEvent",
+                    "targetType": "Enemy",
+                    "attackEvent":
+                    {
+                        "attackPattern":
+                        {
+                            "$type": "ConfigAttackCircle",
+                            "triggerType": "TriggerNoRepeat",
+                            "scale": 1.0,
+                            "height": 2.0,
+                            "centerYOffset": 0.0,
+                            "offsetZ": 0.0,
+                            "fanAngle": 360.0,
+                            "radius": 3.5,
+                            "followRootNodeY": false,
+                            "followTransformY": false,
+                            "offsetAngle": 0.0,
+                            "born":
+                            {
+                                "$type": "ConfigBornByTarget",
+                                "offset":
+                                {
+                                    "x": 0.0,
+                                    "y": -0.5,
+                                    "z": 0.0,
+                                },
+                            },
+                        },
+                        "attackInfo":
+                        {
+                            "attackTag": "FallingAttack",
+                            "attackProperty":
+                            {
+                                "damagePercentage": "%FallingAnthem_Normal_Rank_2_Damage",
+				  				"strikeType": "Default",
+				  				"elementType":"Grass",
+				  				"elementDurability":25,
+				  				"enBreak" : 100,
+                            },
+                            "hitPattern":
+                            {
+                                "onHitEffectName": "none",
+								"hitImpulseType":"LV4",
+                                "retreatType": "ByAttacker",
+                                "reboundRatio": 0,
+                                "canBeDefenceHalt": false,
+                                "hitHaltTime": 0,
+                                "hitHaltTimeScale": 0.1,
+                                "muteHitText": false
+                            },
+                            "forceCameraShake": true,
+                            "cameraShake":
+                            {
+                                "shakeType": "CustomVector",
+                                "shakeRange": 0.5,
+                                "shakeTime": 0.2,
+                                "shakeDistance": 30,
+                                "shakeDir":
+                                {
+                                    "x": 0,
+                                    "y": 1,
+                                    "z": 1,
+                                },
+                                "extension":
+                                {
+                                    "baseCycle": 0.4,
+                                    "cycleDamping": 0,
+                                    "rangeAttenuation": 0.3,
+                                },
+                            },
+                        },
+                    },
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+                //普通状态第一段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Strike_01_Grass",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 0,
+                            "compareType": "NoneOrEqual",
+                        },
+                    ],
+                },
+                //普通状态第二段
+                {
+                    "$type": "FireEffect",
+                    "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Strike_02_Grass",
+                    "predicates":
+                    [
+                        {
+                            "$type": "ByTargetGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "forceByCaster": true,
+                            "value": 1,
+                            "compareType": "Equal",
+                        },
+                    ],
+                },
+            ],
+            "modifiers":
+            {
+                "HideWeapon":
+                {
+                    "onAdded": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": false,
+                            "partNames": [ "equip01", "equip02", "sheathPoint" ],
+							"modifyAnotherValue":true,                      
+                        },
+                    ],
+                    "onRemoved": [
+                        {
+                            "$type": "TriggerHideWeapon",
+                            "visible": true,
+                            "partNames": [ "equip01", "equip02", "sheathPoint" ],
+							"modifyAnotherValue":true,                          
+                        },
+                    ],
+                },
+                "FallingAnthem_SetVisible":
+                {
+                    "onAdded":
+                    [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": false,
+							"doOffStage":true,
+						},
+					],
+                    "onRemoved":
+                    [
+						{
+							"$type": "TriggerSetVisible",
+							"visible": true,
+							"doOffStage":true,
+						},
+					],
+                },
+                "FallingAnthem_BS_Material":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "FireEffect",
+                            "effectPattern": "Eff_Avatar_Catalyst_FallAnthem_BS_Grass",
+                        },
+						{
+							"$type": "ApplyModifier",
+							"modifierName":"FallingAnthem_BSCameraRadialBlur",
+						},
+					],
+                },
+                "FallingAnthem_BS_VelocityForce_Initialize":
+                {
+                    "properties":
+                    {
+                        "Actor_AddGravityScale": -2,
+                    },
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType"
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_LoopDamage":
+                {
+                    "thinkInterval": 0.3,
+                    "onThinkInterval":
+                    [
+                        {
+                            "$type": "TriggerAttackEvent",
+                            "targetType": "Enemy",
+                            "attackEvent":
+                            {
+                                "attackPattern":
+                                {
+                                    "$type": "ConfigAttackSphere",
+                                    "triggerType": "TriggerNoRepeat",
+                                    "radius": 1.5,
+                                    "born":
+                                    {
+                                        "$type": "ConfigBornBySelf",
+                                        "offset":
+                                        {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0
+                                        }
+                                    }
+                                },
+                                "attackInfo":
+                                {
+                                    "attackTag": "FallingAttack",
+                                    "attackProperty":
+                                    {
+                                        "damagePercentage": "%FallingAnthem_Normal_Loop_Damage",
+						  				"strikeType": "Default",
+						  				"elementType":"Grass",
+						  				"elementDurability":0,
+						  				"enBreak" : 5,
+                                    },
+                                    "hitPattern":
+                                    {
+                                        "onHitEffectName": "default",
+										"hitImpulseType":"LV2",
+                                        "reboundRatio": 0,
+                                        "canBeDefenceHalt": false,
+                                        "hitHaltTime": 0,
+                                        "hitHaltTimeScale": 0.02,
+                                        "muteHitText": false
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+				"FallingAnthem_FallingDamageImmune_01":
+                {
+                	"onAdded":[
+    		        	{
+				          "$type": "ClearGlobalValue",
+				          "key": "_ABILITY_FallingAttack_Altitude",
+				        },
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv0",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv1",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv0",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv2",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv1",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv3",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "LesserOrEqual",
+                                },
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv2",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+						{
+							"$type": "AddGlobalValue",
+							"key": "_ABILITY_FallingAttack_Altitude",
+							"value": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"useLimitRange": true,
+							"maxValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+							"minValue": "%FallingAnthem_FallingDamageRatio_Lv4",
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": "%FallingAnthem_Altitude_Lv3",
+                                    "logic": "Greater",
+                                },
+                            ],
+						},//==================================================================================
+
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_02",
+						},
+                	],					
+                },
+                "FallingAnthem_FallingDamageImmune_02":
+                {
+                	"onAdded":[
+						{
+							"$type": "SetGlobalValueToOverrideMap",
+							"globalValueKey": "_ABILITY_FallingAttack_Altitude",
+							"overrideMapKey": "FallingAnthem_FallingDamageRatio",
+						},
+						{
+							"$type": "AttachModifier",
+							"modifierName": "FallingAnthem_FallingDamageImmune_03",
+						},
+                	],
+                },
+                "FallingAnthem_FallingDamageImmune_03":
+                {
+
+                    "properties":
+                    {
+                        "Actor_FallingDamageRatio": "%FallingAnthem_FallingDamageRatio",
+                    },
+                },
+                //水平惯性继承
+                "Inertia":
+                {
+                    "modifierMixins":
+                    [
+                        {
+                            "$type": "ApplyInertiaVelocityMixin",
+                            "damping": 0,
+                            "useXZ": false,
+                            "useY": false,
+                        },
+                    ],
+                },
+                "FallingAnthem_Height_Detect":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 5,
+                            "useLimitRange": true,
+                            "maxValue": 1,
+                            "minValue": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Set True!",
+							"predicates":
+							[
+								{
+									"$type": "ByTargetAltitude",
+									"value": 3.0,
+									"logic": "Greater",
+								},
+							],
+						},*/
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "LesserOrEqual",
+                                },
+                            ],
+                        },
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 1,
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByTargetAltitude",
+                                    "value": 2.4,
+                                    "logic": "Greater",
+                                },
+                            ],
+                        },
+                    ],
+                    "onRemoved":
+                    [
+                        {
+                            "$type": "SetAnimatorFloat",
+                            "floatID": "FallingAnthem_UseCamera",
+                            "value": 0,
+                        },
+                        {
+                            "$type": "AddGlobalValue",
+                            "key": "_ABILITY_FallingAnthem_UseCamera",
+                            "value": 0,
+                            "useLimitRange": true,
+                            "maxValue": 0,
+                            "minValue": 0,
+                        },
+                        /*						{
+							"$type": "DebugLog",
+							"content": "FallingAnthem Height Reset!",
+						},*/
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 4.5,
+                                "forceRadiusDuration": 0.2,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_OverHead_Camera_Remover":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "doOffStage": true,
+                            "$type": "AvatarExitCameraShot",
+                        },
+                    ],
+                },
+                "FallingAnthem_Landed_Camera":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "AvatarCameraParam",
+                            "lockParam": false,
+                            "cameraParam":
+                            {
+                                "forceRadius": 6.0,
+                                "forceRadiusDuration": 0.1,
+                                "shouldKeepForceRadius": true,
+                            },
+                            "predicates":
+                            [
+                                {
+                                    "$type": "ByAnimatorFloat",
+                                    "parameter": "FallingAnthem_UseCamera",
+                                    "value": 1,
+                                    "logic": "Equal",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                "FallingAnthem_ClearVelocityForce":
+                {
+                    "onAdded":
+                    [
+                        {
+                            "$type": "RemoveVelocityForce",
+                            "forces":
+                            [
+                                "RushMoveType",
+                                "InertiaType"
+                            ],
+                        },
+                    ],
+                    /*					"onRemoved":
+					[
+						{
+							"$type": "RemoveVelocityForce",
+							"forces": ["RushMoveType"],
+						},
+					],*/
+                },
+                "FallingAnthem_Attach_SelfEffect":
+                {
+                    "onAdded":
+                    [
+				        {
+				          	"$type": "AttachEffect",
+				          	"effectPattern": "Eff_Avatar_Catalyst_FallAnthem_Self_Grass",
+				        },
+					],
+                },
+                "FallingAnthem_Remove_SelfEffect":
+                {
+					"duration":0.1,
+                    "onRemoved":
+                    [
+				        {
+				          	"$type": "RemoveModifier",
+				          	"modifierName": "FallingAnthem_Attach_SelfEffect",
+				        },
+					],
+                },
+				"FallingAnthem_BSCameraRadialBlur":
+				{
+					"duration":0.3,
+					"modifierMixins":
+					[
+                        {
+                            "$type": "CameraBlurMixin",
+                            "cameraRadialBlur":
+							{
+								"power": 0.3,
+								"fadeTime": 0.15,
+							},
+                        },
+					],
+				},
+            },
+			"abilitySpecials":
+			{
+				"FallingAnthem_Normal_Loop_Damage": 0,
+				"FallingAnthem_Normal_Rank_1_Damage": 0,
+				"FallingAnthem_Normal_Rank_2_Damage": 0,
+
+				"FallingAnthem_Altitude_Lv0": 20,
+				"FallingAnthem_Altitude_Lv1": 40,
+				"FallingAnthem_Altitude_Lv2": 60,
+				"FallingAnthem_Altitude_Lv3": 100,
+				"FallingAnthem_Altitude_Lv4": 200,
+
+				"FallingAnthem_FallingDamageRatio_Lv0": -1,
+				"FallingAnthem_FallingDamageRatio_Lv1": -1,
+				"FallingAnthem_FallingDamageRatio_Lv2": -0.9,
+				"FallingAnthem_FallingDamageRatio_Lv3": -0.8,
+				"FallingAnthem_FallingDamageRatio_Lv4": -0.6,
+
+				"FallingAnthem_FallingDamageRatio": 0,
+			},
+        },
+    },
+
+]

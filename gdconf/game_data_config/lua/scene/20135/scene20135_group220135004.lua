@@ -172,11 +172,13 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_4005(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "turn") == 0 then
-		ScriptLib.SetPlatformPointArray(context, 4001, 5, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach})
+		ScriptLib.SetPlatformPointArray(context, 4001, 5, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach, speed_level=0, arrive_range=0})
+		
 		if ScriptLib.GetGroupVariableValue(context, "wind") == 1 then
 			ScriptLib.CreateGadget(context, {config_id=4012})
 		end
 	end
+	
 	return 0
 end
 
@@ -184,9 +186,12 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_4010(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 4002) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 4006) == 201 and ScriptLib.GetGroupVariableValue(context, "test") == 0 then
 		ScriptLib.AddQuestProgress(context, "4006604")
+		
 		ScriptLib.SetGadgetStateByConfigId(context,4009, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupVariableValue(context, "test", 1)
 	end
+	
 	return 0
 end
 
@@ -260,23 +265,32 @@ end
 function action_EVENT_SELECT_OPTION_4021(context, evt)
 	if evt.param1 == 4003 and evt.param2 == 7 and ScriptLib.GetGroupVariableValue(context, "turn") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "turn", 1)
-		ScriptLib.SetPlatformPointArray(context, 4001, 4, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+		
+		ScriptLib.SetPlatformPointArray(context, 4001, 4, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135004, config_id=4012, entity_type=EntityType.GADGET})
+		
 		if ScriptLib.GetGroupVariableValue(context, "test") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,4009, GadgetState.GearStart)
 		end
+		
 		ScriptLib.SetGadgetStateByConfigId(context,4003, GadgetState.Default)
 	else
 		if evt.param1 == 4003 and evt.param2 == 7 and ScriptLib.GetGroupVariableValue(context, "turn") == 1 then
 			ScriptLib.SetGroupVariableValue(context, "turn", 0)
-			ScriptLib.SetPlatformPointArray(context, 4001, 4, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+			
+			ScriptLib.SetPlatformPointArray(context, 4001, 4, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+			
 			ScriptLib.SetGadgetStateByConfigId(context,4009, GadgetState.Default)
+			
 			if ScriptLib.GetGroupVariableValue(context, "wind") == 1 then
 				ScriptLib.InitTimeAxis(context, "createwind", {3}, false)
 			end
+			
 			ScriptLib.SetGroupGadgetStateByConfigId(context, 0, 4003, GadgetState.GearStart)
 		end
 	end
+	
 	return 0
 end
 
@@ -325,6 +339,7 @@ function action_EVENT_GROUP_LOAD_4024(context, evt)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,4003, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 

@@ -78,5 +78,6 @@ function action_EVENT_ENTER_REGION_59002(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1018 ) and ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 and ScriptLib.GetPlayerVehicleType(context, context.uid) == 2 then
 		ScriptLib.ShowReminderRadius(context, 1111183, { x = 490, y = 120, z = -713}, 150)
 	end
+	
 	return 0
 end

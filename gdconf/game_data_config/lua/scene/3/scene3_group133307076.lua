@@ -56,13 +56,13 @@ variables = {
 garbages = {
 	gadgets = {
 		{ config_id = 76004, gadget_id = 70330395, pos = { x = -1890.660, y = 128.050, z = 5358.566 }, rot = { x = 0.000, y = 270.000, z = 0.000 }, level = 32, state = GadgetState.GearStart, area_id = 27 },
-		{ config_id = 76018, gadget_id = 70330395, pos = { x = -1650.306, y = 32.430, z = 5622.113 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart },
-		{ config_id = 76019, gadget_id = 70330395, pos = { x = -1647.720, y = 32.480, z = 5631.770 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart },
-		{ config_id = 76020, gadget_id = 70330395, pos = { x = -1633.584, y = 32.380, z = 5682.582 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart },
-		{ config_id = 76021, gadget_id = 70330395, pos = { x = -1631.134, y = 32.770, z = 5692.222 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart },
-		{ config_id = 76022, gadget_id = 70330395, pos = { x = -1677.724, y = 18.670, z = 5624.481 }, rot = { x = 0.000, y = 280.100, z = 0.000 }, level = 1, state = GadgetState.GearStart },
+		{ config_id = 76018, gadget_id = 70330395, pos = { x = -1650.306, y = 32.430, z = 5622.113 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
+		{ config_id = 76019, gadget_id = 70330395, pos = { x = -1647.720, y = 32.480, z = 5631.770 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
+		{ config_id = 76020, gadget_id = 70330395, pos = { x = -1633.584, y = 32.380, z = 5682.582 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
+		{ config_id = 76021, gadget_id = 70330395, pos = { x = -1631.134, y = 32.770, z = 5692.222 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
+		{ config_id = 76022, gadget_id = 70330395, pos = { x = -1677.724, y = 18.670, z = 5624.481 }, rot = { x = 0.000, y = 280.100, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
 		{ config_id = 76023, gadget_id = 70330395, pos = { x = -1762.840, y = 29.250, z = 5684.538 }, rot = { x = 0.000, y = 15.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 27 },
-		{ config_id = 76024, gadget_id = 70330395, pos = { x = -1662.784, y = 19.100, z = 5632.562 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart },
+		{ config_id = 76024, gadget_id = 70330395, pos = { x = -1662.784, y = 19.100, z = 5632.562 }, rot = { x = 0.000, y = 195.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 32 },
 		{ config_id = 76025, gadget_id = 70330395, pos = { x = -1759.750, y = 29.430, z = 5696.130 }, rot = { x = 0.000, y = 15.001, z = 0.000 }, level = 1, state = GadgetState.GearStart, area_id = 27 }
 	}
 }

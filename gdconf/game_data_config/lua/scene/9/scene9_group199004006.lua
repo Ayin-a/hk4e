@@ -96,11 +96,16 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_6004(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 6001) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 6007) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 6005) == 201 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "temp", 1, 199004050)
+		
 		ScriptLib.SetGroupVariableValue(context, "temp", 2)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,6005, GadgetState.GearAction2)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,6007, GadgetState.GearAction2)
+		
 		ScriptLib.AddQuestProgress(context, "Q7902529finish")
 	end
+	
 	return 0
 end
 

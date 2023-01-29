@@ -230,10 +230,10 @@ function action_EVENT_SELECT_OPTION_26(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 12007
+	-- 创建id为12007的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 12007 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 删除指定group： 220023012 ；指定config：36；物件身上指定option：1003；

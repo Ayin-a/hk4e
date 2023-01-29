@@ -79,10 +79,14 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_13003(context, evt)
 	if 13001 == evt.param1 and 205 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,13002, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4007116")
-		ScriptLib.SetGadgetStateByConfigId(context,13001, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,13001, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "towerPosition", 1, 220137005)
 	end
+	
 	return 0
 end
 

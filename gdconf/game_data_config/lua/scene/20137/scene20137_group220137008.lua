@@ -80,9 +80,12 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_8003(context, evt)
 	if 8001 == evt.param1 and 205 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,8002, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220137009, 9001, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,8001, 205)
 	end
+	
 	return 0
 end
 
@@ -90,9 +93,12 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_8004(context, evt)
 	if 8001 == evt.param1 and 0 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,8002, GadgetState.Default)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220137009, 9001, GadgetState.ChestLocked)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,8001, GadgetState.Default)
 	end
+	
 	return 0
 end
 

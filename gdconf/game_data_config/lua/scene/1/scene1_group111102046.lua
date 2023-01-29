@@ -3,38 +3,10 @@ local base_info = {
 	group_id = 111102046
 }
 
--- DEFS_MISCS
-local defs = 
-{
-    -- 对应数据表中的关卡id,暂时不用管，配了也没用
-    levelId = 1,
-
-    -- 本轮对应的gallery id
-    galleryId = 23099,
-
-    -- 开启挑战的场景物件id
-    startId = 46002,
-
-    -- todo: 临时,挑战区域，进了区域之后加载操作台
-    maxRegion = 46027,
-
-    -- 怪物资源包configs
-    monsterPoolConfig = {
-        pool_list = {35001},
-        point_array_id = 0, 
-        point_id_list = {}, 
-        affix_list = {}, 
-        param = {total_count = 99, min_count = 1, max_count = 3, tag = 0, fill_time = 0, fill_count = 0, is_ordered = false, is_tag_bit_match = false},
-    },
-
-    -- todo：临时,从1-6种选4个数字，一定是4个不同的数字，否则会报错
-    sgvIdxTable = {1, 2, 3, 4},
-
-    -- buff持续时间，通常不需要修改
-    buffDuration = 15,
-
-    -- 每轮中每阶段的最大时间（一共有3个阶段，总时长为3*30s = 90s），通常不用改
-    stageMaxDuration = 30,
+-- Trigger变量
+local defs = {
+	target_region_config_id = 46018,
+	related_big_region_config_id = 46027
 }
 
 --================================================================
@@ -45,19 +17,6 @@ local defs =
 
 -- 怪物
 monsters = {
-	[46001] = { config_id = 46001, monster_id = 21010101, pos = { x = 1431.202, y = 268.815, z = -1764.127 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "丘丘人" },
-	[46003] = { config_id = 46003, monster_id = 21010101, pos = { x = 1410.350, y = 269.574, z = -1760.761 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "丘丘人" },
-	[46004] = { config_id = 46004, monster_id = 20010501, pos = { x = 1422.626, y = 267.732, z = -1754.950 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" },
-	[46005] = { config_id = 46005, monster_id = 20010501, pos = { x = 1416.508, y = 270.035, z = -1772.519 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" },
-	[46006] = { config_id = 46006, monster_id = 21020201, pos = { x = 1421.087, y = 270.669, z = -1774.891 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "丘丘暴徒" },
-	[46007] = { config_id = 46007, monster_id = 20010901, pos = { x = 1440.760, y = 269.866, z = -1764.076 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "大史莱姆" },
-	[46008] = { config_id = 46008, monster_id = 20010301, pos = { x = 1421.562, y = 267.890, z = -1755.957 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" },
-	[46009] = { config_id = 46009, monster_id = 20010301, pos = { x = 1419.637, y = 267.998, z = -1755.624 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" },
-	[46010] = { config_id = 46010, monster_id = 20010901, pos = { x = 1440.609, y = 268.755, z = -1760.472 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "大史莱姆" },
-	[46011] = { config_id = 46011, monster_id = 21010401, pos = { x = 1413.459, y = 268.104, z = -1753.550 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "远程丘丘人" },
-	[46012] = { config_id = 46012, monster_id = 21010401, pos = { x = 1409.597, y = 271.581, z = -1772.809 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "远程丘丘人" },
-	[46013] = { config_id = 46013, monster_id = 20011201, pos = { x = 1409.529, y = 269.412, z = -1759.679 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" },
-	[46014] = { config_id = 46014, monster_id = 20011201, pos = { x = 1408.667, y = 269.995, z = -1760.932 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1, drop_tag = "史莱姆" }
 }
 
 -- NPC
@@ -66,23 +25,19 @@ npcs = {
 
 -- 装置
 gadgets = {
-	[46002] = { config_id = 46002, gadget_id = 70220006, pos = { x = 1419.876, y = 269.060, z = -1763.693 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1 }
+	[46002] = { config_id = 46002, gadget_id = 70220006, pos = { x = 1428.115, y = 269.589, z = -1768.745 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 1 }
 }
 
 -- 区域
 regions = {
-	[46027] = { config_id = 46027, shape = RegionShape.SPHERE, radius = 100, pos = { x = 1428.115, y = 269.589, z = -1768.745 } }
+	-- 小区域
+	[46018] = { config_id = 46018, shape = RegionShape.SPHERE, radius = 30, pos = { x = 1428.115, y = 269.589, z = -1768.745 } },
+	-- 大区域
+	[46027] = { config_id = 46027, shape = RegionShape.SPHERE, radius = 40, pos = { x = 1428.115, y = 269.589, z = -1768.745 } }
 }
 
 -- 触发器
 triggers = {
-}
-
--- 点位
-points = {
-	{ config_id = 46015, pos = { x = 1412.241, y = 271.198, z = -1775.886 }, rot = { x = 0.000, y = 0.000, z = 0.000 } },
-	{ config_id = 46016, pos = { x = 1432.167, y = 269.843, z = -1767.538 }, rot = { x = 0.000, y = 0.000, z = 0.000 } },
-	{ config_id = 46017, pos = { x = 1422.355, y = 267.377, z = -1750.683 }, rot = { x = 0.000, y = 0.000, z = 0.000 } }
 }
 
 -- 变量
@@ -114,7 +69,7 @@ suites = {
 		-- description = ,
 		monsters = { },
 		gadgets = { 46002 },
-		regions = { 46027 },
+		regions = { 46018, 46027 },
 		triggers = { },
 		rand_weight = 100
 	}
@@ -125,3 +80,5 @@ suites = {
 -- 触发器
 -- 
 --================================================================
+
+require "V3_3/TestEyepointLod"

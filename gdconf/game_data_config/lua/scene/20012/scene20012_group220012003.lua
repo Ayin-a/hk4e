@@ -167,10 +167,10 @@ function action_EVENT_ANY_MONSTER_DIE_10(context, evt)
 			return -1
 		end 
 	
-	-- 创生gadget 3020
+	-- 创建id为3020的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3020 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 触发镜头注目，注目位置为坐标（48，45，120），持续时间为3秒，并且为强制注目形式，不广播其他玩家

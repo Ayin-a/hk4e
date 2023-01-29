@@ -106,12 +106,18 @@ suites = {
 function action_EVENT_ANY_MONSTER_DIE_10002(context, evt)
 	if ScriptLib.GetGroupMonsterCount(context) == 0 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.SetGroupVariableValue(context, "door", 1)
+		
 		ScriptLib.ChangeToTargetLevelTag(context, 37)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220135010, 10006, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4006612")
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220135010, 10001, GadgetState.Default)
 	end
+	
 	return 0
 end
 
@@ -166,17 +172,22 @@ end
 function action_EVENT_GROUP_LOAD_10008(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.ChangeToTargetLevelTag(context, 37)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220135010, 10006, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4006612")
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220135010, 10001, GadgetState.Default)
 	else
-		ScriptLib.RefreshGroup(context, {    suite=1})
+		ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+		
 		if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.GearStart)
 		else
 			ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.Default)
 		end
 	end
+	
 	return 0
 end
 
@@ -187,25 +198,32 @@ function action_EVENT_QUEST_START_10011(context, evt)
 	else
 		if ScriptLib.GetGroupVariableValue(context, "start") == 0 then
 			ScriptLib.SetGroupVariableValue(context, "door", 1)
+			
 			ScriptLib.SetGroupVariableValue(context, "start", 1)
+			
 			ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.GearStart)
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_DUNGEON_ALL_AVATAR_DIE_10012(context, evt)
 	ScriptLib.SetGroupVariableValue(context, "test", 0)
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,10001, GadgetState.Default)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.GearStart)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.Default)
 	end
+	
 	ScriptLib.RemoveExtraGroupSuite(context, 220135010, 2)
+	
 	return 0
 end
 
@@ -255,15 +273,18 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_AVATAR_SLIP_DIE_10014(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,10001, GadgetState.Default)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.GearStart)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,10006, GadgetState.Default)
 	end
+	
 	return 0
 end
 

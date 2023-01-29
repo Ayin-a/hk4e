@@ -218,5 +218,6 @@ function action_EVENT_ENTER_REGION_71021(context, evt)
 	if ScriptLib.TryRecordActivityPushTips(context, 2014012) == 0 then
 		ScriptLib.ShowClientTutorial(context, 1185, {})
 	end
+	
 	return 0
 end

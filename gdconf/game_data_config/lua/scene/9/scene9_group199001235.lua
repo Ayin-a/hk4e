@@ -147,8 +147,10 @@ suites = {
 function action_EVENT_GADGET_STATE_CHANGE_235013(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 199001235, 235004) == 303 and ScriptLib.GetGroupVariableValue(context, "big_flower") == 1 then
 		ScriptLib.SetGroupVariableValue(context, "big_flower", 0)
+		
 		ScriptLib.RemoveExtraGroupSuite(context, 199001235, 2)
 	end
+	
 	return 0
 end
 
@@ -241,9 +243,12 @@ end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_235018(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "big_flower") == 1 and ScriptLib.GetGadgetStateByConfigId(context, 199001235, 235004) == 303 then
 		ScriptLib.InitTimeAxis(context, "WindTimeB", {1,45}, false)
 	end
+	
 	return 0
 end
 

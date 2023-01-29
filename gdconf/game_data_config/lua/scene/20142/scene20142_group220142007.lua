@@ -128,13 +128,16 @@ suites = {
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_7008(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	if evt.param2 == 24 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 220142007, 2)
+		
 		ScriptLib.RemoveExtraGroupSuite(context, 220142007, 3)
 	end
+	
 	return 0
 end
 
@@ -210,13 +213,16 @@ end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_7011(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	if ScriptLib.CheckSceneTag(context, 20142,1053 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 0)
 	end
+	
 	return 0
 end
 
@@ -254,24 +260,30 @@ function action_EVENT_DUNGEON_ALL_AVATAR_DIE_7017(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 0)
 	end
+	
 	ScriptLib.RemoveExtraGroupSuite(context, 220142007, 2)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_DUNGEON_AVATAR_SLIP_DIE_7019(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	if ScriptLib.CheckSceneTag(context, 20142,1053 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 0)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_DUNGEON_ALL_AVATAR_DIE_7021(context, evt)
 	ScriptLib.RemoveExtraGroupSuite(context, 220142007, 4)
+	
 	return 0
 end

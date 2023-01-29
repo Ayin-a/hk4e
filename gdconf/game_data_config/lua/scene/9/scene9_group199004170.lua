@@ -122,7 +122,8 @@ suites = {
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_170003(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	return 0
 end
 
@@ -286,15 +287,19 @@ function action_EVENT_LEVEL_TAG_CHANGE_170011(context, evt)
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004170, 4)
 	end
+	
 	ScriptLib.AddExtraGroupSuite(context, 0, 3)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_REFRESH_170012(context, evt)
 	ScriptLib.AddExtraGroupSuite(context, 0, 3)
+	
 	if ScriptLib.CheckSceneTag(context, 9,1024 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
 	end
+	
 	return 0
 end

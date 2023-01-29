@@ -76,6 +76,7 @@ suites = {
 -- 触发操作
 function action_EVENT_GROUP_LOAD_8002(context, evt)
 	ScriptLib.ActiveGadgetItemGiving(context, 10000104, 250079008, 8001)
+	
 	return 0
 end
 

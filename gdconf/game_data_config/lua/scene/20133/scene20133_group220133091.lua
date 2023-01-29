@@ -106,6 +106,7 @@ function action_EVENT_GROUP_LOAD_91002(context, evt)
 	if ScriptLib.GetHostQuestState(context,4006815) == 3 then
 		ScriptLib.AddExtraGroupSuite(context, 220133091, 2)
 	end
+	
 	return 0
 end
 

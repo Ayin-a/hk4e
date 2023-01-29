@@ -157,6 +157,7 @@ function action_EVENT_LEVEL_TAG_CHANGE_12002(context, evt)
 	if evt.param2 == 31 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	return 0
 end
 
@@ -240,11 +241,16 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_12015(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 12003) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 12021) == 201 and ScriptLib.GetGroupVariableValue(context, "temp") == 3 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "plat", 7, 220140004)
+		
 		ScriptLib.SetGroupVariableValue(context, "temp", 4)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "monster", 1, 220140019)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 6)
+		
 		ScriptLib.AddExtraGroupSuite(context, 220140019, 2)
 	end
+	
 	return 0
 end
 
@@ -252,8 +258,10 @@ end
 function action_EVENT_ENTER_REGION_12023(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "change") == 0 and ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 then
 		ScriptLib.SetGroupVariableValue(context, "change", 1)
+		
 		ScriptLib.ChangeToTargetLevelTag(context, 32)
 	end
+	
 	return 0
 end
 
@@ -261,29 +269,44 @@ end
 function action_EVENT_GROUP_LOAD_12024(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 1 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 2 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 3 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 5)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "temp") == 4 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 3)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 5)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 6)
 	end
+	
 	if ScriptLib.CheckSceneTag(context, 20140,1070 ) or ScriptLib.GetGroupVariableValue(context, "temp") == 0 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	return 0
 end
 

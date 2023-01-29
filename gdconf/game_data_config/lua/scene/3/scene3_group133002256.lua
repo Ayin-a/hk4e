@@ -168,22 +168,22 @@ function action_EVENT_PLATFORM_REACH_POINT_301(context, evt)
 	  return -1
 	end
 	
-	-- 创生gadget 2173
+	-- 创建id为2173的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2173 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
-	-- 创生gadget 2174
+	-- 创建id为2174的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2174 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
-	-- 创生gadget 2172
+	-- 创建id为2172的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2172 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -279,16 +279,16 @@ function action_EVENT_PLATFORM_REACH_POINT_304(context, evt)
 	  return -1
 	end
 	
-	-- 创生gadget 2202
+	-- 创建id为2202的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2202 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
-	-- 创生gadget 2203
+	-- 创建id为2203的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 2203 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

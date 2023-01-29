@@ -187,10 +187,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_43(context, evt)
-	-- 创生gadget 69
+	-- 创建id为69的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 69 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -307,10 +307,10 @@ function action_EVENT_ENTER_REGION_53(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 98
+	-- 创建id为98的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 98 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	-- 调用提示id为 1041026 的提示UI，会显示在屏幕中央偏下位置，id索引自 ReminderData表格

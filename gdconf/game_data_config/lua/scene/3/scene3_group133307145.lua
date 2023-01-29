@@ -19,10 +19,7 @@ npcs = {
 
 -- 装置
 gadgets = {
-	{ config_id = 145001, gadget_id = 70500000, pos = { x = -1815.621, y = 158.102, z = 5552.157 }, rot = { x = 0.000, y = 325.397, z = 350.298 }, level = 32, point_type = 1001, area_id = 27 },
-	{ config_id = 145002, gadget_id = 70500000, pos = { x = -1817.223, y = 158.495, z = 5554.516 }, rot = { x = 0.000, y = 44.557, z = 19.276 }, level = 32, point_type = 1001, area_id = 27 },
-	{ config_id = 145003, gadget_id = 70500000, pos = { x = -1817.202, y = 158.438, z = 5552.586 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 32, point_type = 1002, area_id = 27 },
-	{ config_id = 145004, gadget_id = 70500000, pos = { x = -1821.263, y = 158.701, z = 5557.777 }, rot = { x = 0.000, y = 96.534, z = 0.000 }, level = 32, point_type = 1002, area_id = 27 }
+	{ config_id = 145001, gadget_id = 70330404, pos = { x = -1315.991, y = 41.970, z = 5500.001 }, rot = { x = 0.000, y = 0.000, z = 0.000 }, level = 32, area_id = 32 }
 }
 
 -- 区域
@@ -61,7 +58,7 @@ suites = {
 		-- suite_id = 1,
 		-- description = ,
 		monsters = { },
-		gadgets = { 145001, 145002, 145003, 145004 },
+		gadgets = { 145001 },
 		regions = { },
 		triggers = { },
 		rand_weight = 100

@@ -328,9 +328,11 @@ function action_EVENT_GROUP_LOAD_18017(context, evt)
 	if ScriptLib.CheckSceneTag(context, 20140,1070 ) then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "message") == 1 then
 		ScriptLib.AddQuestProgress(context, "4006708")
 	end
+	
 	return 0
 end
 

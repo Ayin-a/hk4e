@@ -324,10 +324,12 @@ function action_EVENT_LEVEL_TAG_CHANGE_97013(context, evt)
 		if ScriptLib.CheckSceneTag(context, 9,1025 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 3)
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 4)
 		end
 	end
+	
 	return 0
 end
 
@@ -341,39 +343,41 @@ function action_EVENT_GROUP_LOAD_97014(context, evt)
 		if ScriptLib.CheckSceneTag(context, 9,1025 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 3)
 		end
+		
 		if ScriptLib.CheckSceneTag(context, 9,1022 ) then
 			ScriptLib.AddExtraGroupSuite(context, 0, 4)
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_97015(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1025 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004097, 3)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_97016(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004097, 4)
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_LEVEL_TAG_CHANGE_97017(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1022 ) and ScriptLib.CheckSceneTag(context, 9,1025 ) and ScriptLib.GetGroupVariableValue(context, "finish") == 1 then
-	
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004097, 2)
 	end
+	
 	return 0
 end

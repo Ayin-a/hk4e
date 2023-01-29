@@ -170,53 +170,75 @@ suites = {
 function action_EVENT_SELECT_OPTION_8003(context, evt)
 	if evt.param2 == 7 and ScriptLib.GetGroupVariableValue(context, "turn") == 0 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "room5", 1, 220135003)
+		
 		ScriptLib.SetGroupVariableValue(context, "turn", 1)
-		ScriptLib.SetPlatformPointArray(context, 8001, 8, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+		
+		ScriptLib.SetPlatformPointArray(context, 8001, 8, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135008, config_id=8010, entity_type=EntityType.GADGET})
+		
 		ScriptLib.InitTimeAxis(context, "temp1", {3}, false)
+		
 		if ScriptLib.GetGroupVariableValue(context, "room") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,8006, GadgetState.GearStart)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "open1") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,8011, GadgetState.Default)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "open2") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,8012, GadgetState.Default)
 		end
+		
 		ScriptLib.SetGadgetStateByConfigId(context,8002, GadgetState.Default)
 	else
 		if evt.param2 == 7 and ScriptLib.GetGroupVariableValue(context, "turn") == 1 then
 			ScriptLib.SetGroupVariableValueByGroup(context, "room5", 0, 220135003)
+			
 			ScriptLib.SetGroupVariableValue(context, "turn", 0)
-			ScriptLib.SetPlatformPointArray(context, 8001, 8, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach})
+			
+			ScriptLib.SetPlatformPointArray(context, 8001, 8, {2}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Prereach, speed_level=0, arrive_range=0})
+			
 			ScriptLib.SetGadgetStateByConfigId(context,8006, GadgetState.Default)
+			
 			ScriptLib.KillEntityByConfigId(context, {group_id=220135008, config_id=8005, entity_type=EntityType.GADGET})
+			
 			ScriptLib.InitTimeAxis(context, "temp2", {3}, false)
+			
 			if ScriptLib.GetGroupVariableValue(context, "open1") == 0 then
 				ScriptLib.SetGadgetStateByConfigId(context,8011, GadgetState.ChestLocked)
 			end
+			
 			if ScriptLib.GetGroupVariableValue(context, "open2") == 0 then
 				ScriptLib.SetGadgetStateByConfigId(context,8012, GadgetState.ChestLocked)
 			end
+			
 			ScriptLib.SetGadgetStateByConfigId(context,8002, GadgetState.GearStart)
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_8004(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "turn") == 0 then
-		ScriptLib.SetPlatformPointArray(context, 8001, 9, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach})
+		ScriptLib.SetPlatformPointArray(context, 8001, 9, {1}, {route_type=RouteType.OneWay, turn_mode=true, record_mode=RouteRecordMode.Reach, speed_level=0, arrive_range=0})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220135008, config_id=8005, entity_type=EntityType.GADGET})
+		
 		ScriptLib.CreateGadget(context, {config_id=8010})
+		
 		if ScriptLib.GetGroupVariableValue(context, "open1") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,8011, GadgetState.ChestLocked)
 		end
+		
 		if ScriptLib.GetGroupVariableValue(context, "open2") == 0 then
 			ScriptLib.SetGadgetStateByConfigId(context,8012, GadgetState.ChestLocked)
 		end
 	end
+	
 	return 0
 end
 
@@ -296,13 +318,18 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_8025(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 8012) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 8011) == 201 and ScriptLib.GetGroupVariableValue(context, "room") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "room", 1)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,8026, GadgetState.Default)
+		
 		ScriptLib.AddQuestProgress(context, "4006610")
+		
 		if ScriptLib.GetGroupVariableValue(context, "turn") == 1 then
 			ScriptLib.SetGadgetStateByConfigId(context,8006, GadgetState.GearStart)
-			ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = 139.5,y = 94.5,z = 21.5}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, is_abs_follow_pos=false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
+			
+			ScriptLib.BeginCameraSceneLook(context, { look_pos = {x = 139.5,y = 94.5,z = 21.5}, duration = 2, is_force = false, is_broadcast = false, is_recover_keep_current = true, delay = 0, is_set_follow_pos =false, follow_pos = {x=0,y=0,z=0}, is_force_walk =true, is_change_play_mode = true, screen_x = 0, screen_y = 0, is_set_screenXY = false, other_params ={}, keep_rot_type = KeepRotType.KEEP_ROT_X, custom_radius = 0})
 		end
 	end
+	
 	return 0
 end
 
@@ -506,6 +533,7 @@ function action_EVENT_GROUP_LOAD_8036(context, evt)
 	else
 		ScriptLib.SetGadgetStateByConfigId(context,8002, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 

@@ -327,10 +327,10 @@ end
 
 -- 触发操作
 function action_EVENT_ENTER_REGION_23(context, evt)
-	-- 创生gadget 140
+	-- 创建id为140的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 140 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 		-- 杀死Group内指定的monster和gadget
@@ -422,10 +422,10 @@ function action_EVENT_ENTER_REGION_31(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 139
+	-- 创建id为139的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 139 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -445,10 +445,10 @@ end
 
 -- 触发操作
 function action_EVENT_ENTER_REGION_32(context, evt)
-	-- 创生gadget 141
+	-- 创建id为141的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 141 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 		-- 杀死Group内指定的monster和gadget
@@ -471,10 +471,10 @@ end
 
 -- 触发操作
 function action_EVENT_ANY_GADGET_DIE_34(context, evt)
-	-- 创生gadget 142
+	-- 创建id为142的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 142 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -497,10 +497,10 @@ function action_EVENT_ANY_GADGET_DIE_36(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 180
+	-- 创建id为180的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 180 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -526,10 +526,10 @@ function action_EVENT_ENTER_REGION_37(context, evt)
 			return -1
 		end
 	
-	-- 创生gadget 179
+	-- 创建id为179的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 179 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

@@ -80,9 +80,12 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_9003(context, evt)
 	if 9001 == evt.param1 and 205 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.GearStart)
+		
 		ScriptLib.AddQuestProgress(context, "4007108")
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9001, 205)
 	end
+	
 	return 0
 end
 
@@ -90,8 +93,10 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_9004(context, evt)
 	if 9001 == evt.param1 and 0 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,9002, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,9001, GadgetState.Default)
 	end
+	
 	return 0
 end
 

@@ -257,8 +257,10 @@ end
 function action_EVENT_TIME_AXIS_PASS_4004(context, evt)
 	if evt.source_name == "test1" then
 		ScriptLib.SetGadgetStateByConfigId(context,4001, GadgetState.GearStart)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
 	end
+	
 	return 0
 end
 
@@ -401,9 +403,12 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_4025(context, evt)
 	if ScriptLib.GetGadgetStateByConfigId(context, 0, 4005) == 201 and ScriptLib.GetGadgetStateByConfigId(context, 0, 4006) == 201 and ScriptLib.GetGroupVariableValue(context, "door") == 0 then
 		ScriptLib.SetGroupVariableValue(context, "door", 1)
+		
 		ScriptLib.ChangeToTargetLevelTag(context, 31)
+		
 		ScriptLib.InitTimeAxis(context, "test1", {1,4}, false)
 	end
+	
 	return 0
 end
 
@@ -1161,50 +1166,74 @@ end
 function action_EVENT_GROUP_LOAD_4054(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 1 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 20)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 2 and ScriptLib.GetGroupVariableValue(context, "door") == 0 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 21)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 2 and ScriptLib.GetGroupVariableValue(context, "door") == 1 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 34)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 3 and ScriptLib.GetGroupVariableValue(context, "extra") == 1 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 22)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 3 and ScriptLib.GetGroupVariableValue(context, "extra") == 2 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 23)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 4 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 24)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 5 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 25)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 6 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 26)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 7 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 27)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 8 then
 		ScriptLib.SetPlatformRouteId(context, 4027, 28)
+		
 		ScriptLib.StartPlatform(context, 4027)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 9 and ScriptLib.GetGroupVariableValueByGroup(context, "temp", 220140020) == 0 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "temp", 1, 220140020)
+		
 		ScriptLib.AddExtraGroupSuite(context, 220140020, 2)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140004, config_id=4027, entity_type=EntityType.GADGET})
+		
 		ScriptLib.CreateGadget(context, {config_id=4050})
 	end
+	
 	return 0
 end
 
@@ -1249,34 +1278,48 @@ end
 function action_EVENT_GROUP_LOAD_4056(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 10 then
 		ScriptLib.SetPlatformRouteId(context, 4050, 29)
+		
 		ScriptLib.StartPlatform(context, 4050)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 11 and ScriptLib.GetGroupVariableValueByGroup(context, "fire", 220140021) == 0 then
 		if ScriptLib.GetGroupVariableValue(context, "test") == 0 then
 			ScriptLib.SetPlatformRouteId(context, 4050, 35)
+			
 			ScriptLib.StartPlatform(context, 4050)
 		else
 			ScriptLib.SetPlatformRouteId(context, 4050, 30)
+			
 			ScriptLib.StartPlatform(context, 4050)
+			
 			ScriptLib.SetGroupVariableValueByGroup(context, "fire", 1, 220140021)
 		end
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 11 and ScriptLib.GetGroupVariableValueByGroup(context, "fire", 220140021) == 1 then
 		ScriptLib.StartPlatform(context, 4050)
+		
 		ScriptLib.SetPlatformRouteId(context, 4050, 30)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 12 then
 		ScriptLib.SetPlatformRouteId(context, 4050, 31)
+		
 		ScriptLib.StartPlatform(context, 4050)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 13 then
 		ScriptLib.SetPlatformRouteId(context, 4050, 32)
+		
 		ScriptLib.StartPlatform(context, 4050)
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "plat") == 14 then
 		ScriptLib.SetPlatformRouteId(context, 4050, 33)
+		
 		ScriptLib.StartPlatform(context, 4050)
 	end
+	
 	return 0
 end
 

@@ -229,8 +229,10 @@ end
 function action_EVENT_TIME_AXIS_PASS_3005(context, evt)
 	if evt.source_name == "test" and evt.param1 == 1 then
 		ScriptLib.SetGadgetStateByConfigId(context,3001, GadgetState.Default)
-		ScriptLib.SetPlatformPointArray(context, 3001, 1, {2}, {route_type=RouteType.OneWay, record_mode=RouteRecordMode.Reach})
+		
+		ScriptLib.SetPlatformPointArray(context, 3001, 1, {2}, {route_type=RouteType.OneWay, turn_mode=false, record_mode=RouteRecordMode.Reach, speed_level=0, arrive_range=0})
 	end
+	
 	return 0
 end
 
@@ -365,11 +367,16 @@ end
 
 -- 触发操作
 function action_EVENT_VARIABLE_CHANGE_3023(context, evt)
+	if evt.param1 == evt.param2 then return -1 end
+	
 	if ScriptLib.GetGroupVariableValue(context, "load") == 0 and ScriptLib.GetGroupVariableValue(context, "option1") == 1 and ScriptLib.GetGroupVariableValue(context, "option2") == 1 then
 		ScriptLib.SetGroupVariableValue(context, "option1", 2)
+		
 		ScriptLib.SetWorktopOptionsByGroupId(context, 0, 3003, {7})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140003, config_id=3022, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 
@@ -417,13 +424,18 @@ end
 function action_EVENT_GROUP_LOAD_3036(context, evt)
 	if ScriptLib.GetGroupVariableValue(context, "load") == 1 then
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
-		ScriptLib.SetPlatformPointArray(context, 3001, 3, {1}, {route_type=RouteType.OneWay, record_mode=RouteRecordMode.Reach})
+		
+		ScriptLib.SetPlatformPointArray(context, 3001, 3, {1}, {route_type=RouteType.OneWay, turn_mode=false, record_mode=RouteRecordMode.Reach, speed_level=0, arrive_range=0})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140003, config_id=3038, entity_type=EntityType.GADGET})
 	end
+	
 	if ScriptLib.GetGroupVariableValue(context, "load") == 0 and ScriptLib.GetGroupVariableValue(context, "option1") == 2 then
 		ScriptLib.SetWorktopOptionsByGroupId(context, 0, 3003, {7})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140003, config_id=3022, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 

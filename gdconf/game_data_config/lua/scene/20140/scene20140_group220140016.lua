@@ -135,8 +135,10 @@ suites = {
 function action_EVENT_ANY_GADGET_DIE_16004(context, evt)
 	if evt.param1 == 16003 then
 		ScriptLib.SetGroupVariableValue(context, "isLock_1", 0)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,16002, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -167,15 +169,24 @@ end
 function action_EVENT_GADGET_STATE_CHANGE_16013(context, evt)
 	if evt.param2 == 16012 and ScriptLib.GetGadgetStateByConfigId(context, 0, 16012) == 201 then
 		ScriptLib.SetGroupVariableValueByGroup(context, "option1", 1, 220140003)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "unlock", 1, 220140017)
+		
 		ScriptLib.SetGroupVariableValueByGroup(context, "isLock_1", 0, 220140017)
+		
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 2)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220140017, 17002, GadgetState.Default)
+		
 		ScriptLib.SetGroupGadgetStateByConfigId(context, 220140017, 17003, GadgetState.GearStart)
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140017, config_id=17012, entity_type=EntityType.GADGET})
+		
 		ScriptLib.KillEntityByConfigId(context, {group_id=220140017, config_id=17013, entity_type=EntityType.GADGET})
 	end
+	
 	return 0
 end
 

@@ -1,6 +1,1161 @@
 [
 ////////////////////////////////////////////////////////////////
 //
+// 3.4剑道 愤怒
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Samurai_Ningyo_BladeMaster2_AngrySystem",
+		"abilitySpecials": {
+			"BarMaxNum":0,
+			"NormalAtkUpNum":0,
+			"ExtraAtkUpNum":0
+		},
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Initial"
+			}
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToNormalizedTimeMixin",
+				"stateID": "Alert",
+				"normalizeStart": 0.8,
+				"normalizeEnd": 1,
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Go_Battle"
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_BEGIN_FIGHT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Ningyo_NoBattle","Monster_Samurai_Ningyo_BladeMaster2_AngrySystem"],
+			},
+			//高难度下怒气自动降低
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_ChargeBarHighLevel_Down",
+			},
+			//当剑鬼释放大范围AOE时，额外增加重击提高的蓝条
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["BurstAttack"],
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_BurstAtk_SPAngryUp"
+			},
+			//判断受到蓝光攻击触发的弹反伤害时，移除自动格挡一段时间
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_BreakCheck",
+			},
+			//受到剑气必杀攻击时，进入跪地易伤状态
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_CheckGoWeak"
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_IN_WEAK",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["No_Weak","In_Weak"]
+			}
+		],
+		"modifiers": {
+			"Monster_Samurai_Ningyo_BladeMaster2_CheckGoWeak":{
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["BladeMaster2_BladeAirAtk"]
+							},
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_IN_WEAK",
+								"value": 0,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "GoWeak"
+							},
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_WeakDuration"
+							}
+						]
+					}
+				]	
+			},
+			"No_Weak":{
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Weak",
+						"value": false
+					}
+				]
+			},
+			"In_Weak":{
+				"onAdded": [
+					{
+						"$type": "SetPoseBool",
+						"boolID": "Weak",
+						"value": true
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_WeakDuration":{
+				"duration": 15,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_IN_WEAK",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_IN_WEAK",
+						"value": 0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_BreakCheck":{
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Avatar_Blocking"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+								"triggerID": "BlockBreak"
+							},
+							{
+								"$type": "FireEffect",
+								"effectPattern": "Eff_Mosnter_GeneralSkill_BreakeDefendShield"
+							},
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Samurai_Ningyo_RemoveDefendMixin_Duration"
+							}
+						]
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_RemoveDefendMixin_Duration":{
+				"duration": 15,
+				"onAdded": [
+					{
+						"$type":"TriggerSetRenderersEnable",
+						"renderNames":["Mask_L","Mask_R"],
+						"setEnable":false
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThan"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_HighLevel"
+							}
+						],
+						"failActions": [
+							{
+								"$type": "RemoveModifier",
+								"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_LowLevel"
+							}
+						]
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "NoMask",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type":"TriggerSetRenderersEnable",
+						"renderNames":["Mask_L","Mask_R"],
+						"setEnable":true
+					},
+					{
+						"$type":"SetAnimatorTrigger",
+						"triggerID":"BlockIsOver",
+						"MPTriggerOnRemote":true
+					},
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThan"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_HighLevel"
+							}
+						],
+						"failActions": [
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_LowLevel"
+							}
+						]
+					},
+					{
+						"$type": "SetPoseBool",
+						"boolID": "NoMask",
+						"value": false
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_BurstAtk_SPAngryUp":{
+				"onBeingHit": [
+					{
+						"$type": "AddChargeBarValue",
+						"value": 5,
+						"predicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["ExtraAttack"]
+							}
+						]
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_Go_Battle":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BEGIN_FIGHT",
+						"value": 1
+					}
+				]
+			},
+			"Ningyo_NoBattle":{
+
+			},
+			"Hit_CD_Checker":{
+				"duration": 3,
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_HITING",
+						"value": 1
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_HITING",
+						"value": 0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_ChargeBarHighLevel_Down":{
+				"onBeingHit": [
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Hit_CD_Checker"
+					}
+				],
+				"thinkInterval": 3,
+				"onThinkInterval": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						],
+						"successActions": [
+							//难度3下3秒未受攻击，降低怒气
+							{
+								"$type": "AddChargeBarValue",
+								"value": -3,
+								"minValue": 0,
+								"maxValue": "%BarMaxNum",
+								"predicates": [
+									{
+										"$type": "ByTargetGlobalValue",
+										"key": "_HITING",
+										"value": 0,
+										"compareType": "NoneOrEqual"
+									}
+								]
+							}
+						]
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BEGIN_FIGHT",
+						"value": 0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_Initial":{
+				"onAdded": [
+					//难度1
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "Level",
+								"value": 1
+							},
+							{
+								"$type": "UseSkillEliteSet",
+								"skillEliteSetID": 1
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BAR_MAX_NUM",
+								"value": 10
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_NORMAL_ATK_UP_NUM",
+								"value": 2
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_EXTRAK_ATK_UP_NUM",
+								"value": 5
+							}
+						]
+					},
+					//难度2
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "Level",
+								"value": 2
+							},
+							{
+								"$type": "UseSkillEliteSet",
+								"skillEliteSetID": 2
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BAR_MAX_NUM",
+								"value": 15
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_NORMAL_ATK_UP_NUM",
+								"value": 2
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_EXTRAK_ATK_UP_NUM",
+								"value": 5
+							}
+						]
+					},
+					//难度3
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "NoneOrEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorInt",
+								"intID": "Level",
+								"value": 3
+							},
+							{
+								"$type": "UseSkillEliteSet",
+								"skillEliteSetID": 3
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_BAR_MAX_NUM",
+								"value": 30
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_NORMAL_ATK_UP_NUM",
+								"value": 1
+							},
+							{
+								"$type": "SetGlobalValue",
+								"key": "_EXTRAK_ATK_UP_NUM",
+								"value": 5
+							}
+						]
+					},
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_BAR_MAX_NUM",
+						"overrideMapKey": "BarMaxNum"
+					},
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_NORMAL_ATK_UP_NUM",
+						"overrideMapKey": "NormalAtkUpNum"
+					},
+					{
+						"$type": "SetGlobalValueToOverrideMap",
+						"globalValueKey": "_EXTRAK_ATK_UP_NUM",
+						"overrideMapKey": "ExtraAtkUpNum"
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_AngrySystem":{
+				"onAdded": [
+					{
+						"$type": "SetChargeBarValue",
+						"value": 0
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_LowLevel",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "LessAndEqual"
+							}
+						]
+					},
+					{
+						"$type": "AttachModifier",
+						"modifierName": "Monster_Samurai_Ningyo_BladeMaster2_Block_HighLevel",
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+				],
+				//受到攻击增加怒气
+				"onBeingHit": [
+					{
+						"$type": "AddChargeBarValue",
+						"value": "%NormalAtkUpNum",
+						"predicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["NormalAttack_01", "NormalAttack_02", "NormalAttack_03", "NormalAttack_04", "NormalAttack_05", "NormalAttack_06"]
+							}
+						]
+					},
+					{
+						"$type": "AddChargeBarValue",
+						"value": "%ExtraAtkUpNum",
+						"predicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["ExtraAttack"]
+							}
+						]
+					}
+				],
+				"properties": {
+					"Actor_EndureDelta":0.001
+				},
+				"modifierMixins": [
+					{
+						"$type": "ChargeBarMixin",
+						"chargeBarIconID": 2,
+						"initialValue": 0,
+						"maxValue": "%BarMaxNum"
+					},
+					{
+						"$type": "AttachModifierToSelfGlobalValueMixin",
+						"globalValueKey": "_CHARGEBAR_VALUE",
+						"valueSteps": [-0.5,"%BarMaxNum-1","%BarMaxNum+1"],
+						"modifierNameSteps": ["Go_BlueLightAtkEmpty","Go_BlueLightAtk"]
+					}
+				]
+			},
+			"Go_BlueLightAtkEmpty":{
+
+			},
+			"Go_BlueLightAtk":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "DefendAtk"
+					},
+					{
+						"$type": "ApplyModifier",
+						"modifierName": "Reset_ChargeBarValue_Delay"
+					}
+				]
+			},
+			"Reset_ChargeBarValue_Delay":{
+				"duration": 5,
+				"onAdded": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "BurstAtkStop",
+						"value": true
+					}
+				],
+				"onRemoved": [
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "BurstAtkStop",
+						"value": false
+					},
+					{
+						"$type": "SetChargeBarValue",
+						"value": 0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_Block_LowLevel":{
+				"modifierMixins": [
+					{
+						"$type":"MonsterDefendMixin",
+						"stateIDs":["NormalIdle","NormalMove","Provoke","RushCharge","Turn"],
+						"attackType": "Melee",
+						"defendTimeInterval":0.2,
+						"defendAngle":120,
+						"doNotTurnDirection":true,
+						"onDefendSucceded":
+						[
+							{
+								"$type": "Predicated",
+								"target": "Target",
+								"targetPredicates": [
+									{
+										"$type": "ByEntityTypes",
+										"entityTypes": ["Avatar"]
+									}
+								],
+								"successActions": [
+									{
+										"$type": "SetGlobalDir",
+										"target": "Target",
+										"key": "_SAMURAI_NINGYO_MASK_BLOCK_DIR",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"direction":
+											{
+												"$type": "ConfigDirectionByLookAtEntity",
+											}
+										},
+										"setTarget": false,
+									}
+								],
+								"failActions": [
+									{
+										"$type": "SetGlobalDir",
+										"target": "TargetOriginOwner",
+										"key": "_SAMURAI_NINGYO_MASK_BLOCK_DIR",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"direction":
+											{
+												"$type": "ConfigDirectionByLookAtEntity",
+											}
+										},
+										"setTarget": false,
+									}
+								]
+							},
+							{
+								"$type":"TriggerSetRenderersEnable",
+								"renderNames":["Mask_L","Mask_R"],
+								"setEnable":false
+							},
+							{
+								"$type":"FireEffect",
+								"effectPattern":"Eff_Monster_Samurai_Ningyo_Block",
+								"born":
+								{
+									"$type":"ConfigBornBySelf",
+									"direction":
+									{
+										"$type": "ConfigDirectionByGlobalValue",
+										"directionKey":"_SAMURAI_NINGYO_MASK_BLOCK_DIR"
+									}
+								}
+							},
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"Monster_Samurai_Ningyo_01_BlockEffectTimer"
+							}
+						]
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BladeMaster2_Block_HighLevel":{
+				"modifierMixins": [
+					{
+						"$type":"MonsterDefendMixin",
+						"stateIDs":["NormalIdle","NormalMove","Provoke","RushCharge",
+						"Turn","MeleeAtk1_1","MeleeAtk1_2","MeleeAtk1_3","MeleeAttack1_1Wind_Middle","MeleeAttack1_2Wind_Middle",
+						"RushAttack","RangedChargeAttack_BS","RangedChargeAttack_Loop","RangedChargeAttack_AS",
+						"MeleeAtk2_1","MeleeAtk2_2","MeleeAtk2_3","MeleeAttack2_1Ice_Middle","MeleeAttack2_2Ice_Middle",
+						"RushAttack","RangedChargeAttack_BS","RangedChargeAttack_Loop","RangedChargeAttack_AS",
+						"ChargeAttack","GhostRangedChargeAttack_BS","RangedChargeAttack_BS","RangedChargeAttack_Loop","RangedChargeAttack_AS",
+						"BurstAttack","Provoke"
+						],
+						"attackType": "Melee",
+						"defendTimeInterval":0.2,
+						"defendAngle":120,
+						"doNotTurnDirection":true,
+						"onDefendSucceded":
+						[
+							{
+								"$type": "Predicated",
+								"target": "Target",
+								"targetPredicates": [
+									{
+										"$type": "ByEntityTypes",
+										"entityTypes": ["Avatar"]
+									}
+								],
+								"successActions": [
+									{
+										"$type": "SetGlobalDir",
+										"target": "Target",
+										"key": "_SAMURAI_NINGYO_MASK_BLOCK_DIR",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"direction":
+											{
+												"$type": "ConfigDirectionByLookAtEntity",
+											}
+										},
+										"setTarget": false,
+									}
+								],
+								"failActions": [
+									{
+										"$type": "SetGlobalDir",
+										"target": "TargetOriginOwner",
+										"key": "_SAMURAI_NINGYO_MASK_BLOCK_DIR",
+										"born":
+										{
+											"$type": "ConfigBornBySelf",
+											"direction":
+											{
+												"$type": "ConfigDirectionByLookAtEntity",
+											}
+										},
+										"setTarget": false,
+									}
+								]
+							},
+							{
+								"$type":"TriggerSetRenderersEnable",
+								"renderNames":["Mask_L","Mask_R"],
+								"setEnable":false
+							},
+							{
+								"$type":"FireEffect",
+								"effectPattern":"Eff_Monster_Samurai_Ningyo_Block",
+								"born":
+								{
+									"$type":"ConfigBornBySelf",
+									"direction":
+									{
+										"$type": "ConfigDirectionByGlobalValue",
+										"directionKey":"_SAMURAI_NINGYO_MASK_BLOCK_DIR"
+									}
+								}
+							},
+							{
+								"$type":"ApplyModifier",
+								"modifierName":"Monster_Samurai_Ningyo_01_BlockEffectTimer"
+							}
+						]
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_01_BlockEffectTimer":
+			{
+				"duration":0.5,
+				"onAdded":
+				[
+					
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"TriggerSetRenderersEnable",
+						"renderNames":["Mask_L","Mask_R"],
+						"setEnable":true
+					},
+					{
+						"$type":"SetAnimatorTrigger",
+						"triggerID":"BlockIsOver",
+						"MPTriggerOnRemote":true
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+// 3.4入战不锁血 并且直接入战风刀强化
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":
+	{
+		"$type":"ConfigAbility",
+		"abilityName":"Monster_Samurai_Ningyo_BladeMaster2_SPState",
+		"onAdded":
+		[
+			{
+				"$type":"SetGlobalValue",
+				"key":"_SAMURAI_NINGYO_CHANGE_STATE",
+				"value":0,
+			}
+		],
+		"abilityMixins":
+		[
+			// {
+			// 	"$type":"AttachModifierToHPPercentMixin",
+			// 	"valueSteps":[0.71],
+			// 	"modifierNameSteps":["Monster_Samurai_Ningyo_StateOne","Monster_Samurai_Ningyo_StateTwo"]
+			// },
+			// {
+			// 	"$type":"AttachToNormalizedTimeMixin",
+			// 	"stateID":"BurstAttack",
+			// 	"normalizeStart":0,
+			// 	"normalizeEnd":1,
+			// 	"modifierName":"Monster_Samurai_Ningyo_ChangeState"
+			// },
+			{
+				"$type":"AttachToPoseIDMixin",
+				"poseIDs":[901,902,903],
+				"modifierName":"Monster_Samurai_Ningyo_RemoveImprovedEff"
+			},
+			{
+				"$type": "AttachToAIAlertnessMixin",
+				"alertness": [2],
+				"modifierName": "Monster_Samurai_Ningyo_ImproveState"
+			}
+		],
+		"onAbilityStart":
+		[
+			{
+				"$type":"SetPoseInt",
+				"intID":"StateID",
+				"value":2
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Samurai_Ningyo_ImproveState":{
+				"onAdded": [
+					{
+						"$type":"SetPoseBool",
+						"boolID":"ChangeState",
+						"value":true
+					},
+					{
+						"$type":"SetPoseInt",
+						"intID":"StateID",
+						"value":2
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_ChangeState_EffChange"
+					},
+					{
+						"$type":"SetAISkillGCD",
+						"value":1
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_StateOne":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"ChangeState",
+						"value":false
+					},
+					{
+						"$type":"SetAISkillGCD",
+						"value":1.5
+					}
+				],
+				"onReconnect":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"ChangeState",
+						"value":false
+					},
+				],
+				"onChangeAuthority":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"ChangeState",
+						"value":false
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_StateTwo":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"SetPoseBool",
+						"boolID":"ChangeState",
+						"value":true
+					},
+					{
+						"$type":"SetAnimatorTrigger",
+						"triggerID":"ChangeStateAttack"
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_ChangeState_EffChange"
+					},
+					{
+						"$type":"SetAISkillGCD",
+						"value":1
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_ChangeState":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"SetPoseInt",
+						"intID":"StateID",
+						"value":2
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SAMURAI_NINGYO_IMPROVED_STATE",
+						"value":1
+					},
+					{
+						"$type":"SetAnimatorTrigger",
+						"triggerID":"BurstAttackBodyShow",
+						"MPTriggerOnRemote":true
+					}
+				],
+				"onRemoved":
+				[
+					// {
+					// 	"$type":"RemoveModifier",
+					// 	"modifierName":"Monster_Samurai_Ningyo_StateInitial"
+					// },
+					{
+						"$type":"ReTriggerAISkillInitialCD",
+						"skillIDs":[601]
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_ChangeState_EffChange":
+			{
+				"duration":2.4,
+				"onAdded":
+				[
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_ChangeState_EffChange_ForSure"
+					},
+				]
+			},
+			"Monster_Samurai_Ningyo_WeaponEffChange":
+			{
+				"duration":3,
+				"onAdded":
+				[
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SAMURAI_NINGYO_IMPROVED_EFF",
+						"value":1
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_ChangeState_EffChange_ForSure":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"Improved",
+						"value":true
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_WeaponEffChange"
+					}
+				],
+				"onReconnect":
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"Improved",
+						"value":true,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_SAMURAI_NINGYO_IMPROVED_STATE",
+								"value":1,
+								"compareType":"Equal"
+							}
+						]
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_WeaponEffChange",
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_SAMURAI_NINGYO_IMPROVED_STATE",
+								"value":1,
+								"compareType":"Equal"
+							}
+						]
+					}
+				],
+				"onChangeAuthority":
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"Improved",
+						"value":true,
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_SAMURAI_NINGYO_IMPROVED_STATE",
+								"value":1,
+								"compareType":"Equal"
+							}
+						]
+					},
+					{
+						"$type":"ApplyModifier",
+						"modifierName":"Monster_Samurai_Ningyo_WeaponEffChange",
+						"predicates":
+						[
+							{
+								"$type":"ByTargetGlobalValue",
+								"key":"_SAMURAI_NINGYO_IMPROVED_STATE",
+								"value":1,
+								"compareType":"Equal"
+							}
+						]
+					}
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"SetAnimatorBool",
+						"boolID":"Improved",
+						"value":false
+					},
+					{
+						"$type":"SetGlobalValue",
+						"key":"_SAMURAI_NINGYO_IMPROVED_EFF",
+						"value":0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_RemoveImprovedEff":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"RemoveModifier",
+						"modifierName":"Monster_Samurai_Ningyo_ChangeState_EffChange_ForSure"
+					}
+				]
+			}
+		}	
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+// 3.4 剑道 剑气技能释放位置选择
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Samurai_Ningyo_BladeMaster2_BladeAir_ChoosePos",
+		"abilityMixins":
+		[
+			{
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"GhostRangedChargeAttack_BS",
+				"normalizeStart":0.1,
+				"normalizeEnd":0.4,
+				"modifierName":"Monster_Samurai_Ningyo_GhostRangedChargeAttack"
+			},
+			{
+				"$type":"AttachToNormalizedTimeMixin",
+				"stateID":"BlinkToInnerCircle",
+				"normalizeStart":0.1,
+				"normalizeEnd":0.4,
+				"modifierName":"Monster_Samurai_Ningyo_BlinkToInnerCircle"
+			}
+		],
+		"modifiers":
+		{
+			"Monster_Samurai_Ningyo_GhostRangedChargeAttack":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"EnableAfterImage",
+						"enable":true,
+						"index":0
+					},
+					{
+						"$type":"FixedMonsterRushMove",
+						"toPos":
+						{
+							"$type":"ConfigBornBySelf",
+							"offset":
+							{
+								"x":0,
+								"y":0,
+								"z":-5
+							}
+						},
+						"timeRange":0.1,
+						"maxRange":6,
+						"animatorStateIDs":["GhostRangedChargeAttack_BS"]
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Samurai_Ningyo_RushChargeBody"
+					}
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"EnableAfterImage",
+						"enable":false,
+						"index":0
+					}
+				]
+			},
+			"Monster_Samurai_Ningyo_BlinkToInnerCircle":
+			{
+				"onAdded":
+				[
+					{
+						"$type":"EnableAfterImage",
+						"enable":true,
+						"index":0
+					},
+					// {
+					// 	"$type":"CreateGadget",
+					// 	"gadgetID":42509009,
+					// 	"campID":4001,
+					// 	"byServer":false,
+					// },
+					{
+						"$type":"FixedMonsterRushMove",
+						"toPos":
+						{
+							"$type":"ConfigBornByGlobalValue",
+							"positionKey":"_SAMURAI_NINGYO_BORN_POS",
+							"bornRandom":
+							{
+								"$type":"BornRandomFromCenter",
+								"minRandomRange":0,
+								"maxRandomRange":7
+							}
+						},
+						"timeRange":0.1,
+						"maxRange":25,
+						"animatorStateIDs":["BlinkToInnerCircle"]
+					},
+					{
+						"$type":"AttachEffect",
+						"effectPattern":"Eff_Monster_Samurai_Ningyo_RushChargeBody"
+					}
+				],
+				"onRemoved":
+				[
+					{
+						"$type":"EnableAfterImage",
+						"enable":false,
+						"index":0
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
 // 剧情关卡特殊入战
 //
 ////////////////////////////////////////////////////////////////

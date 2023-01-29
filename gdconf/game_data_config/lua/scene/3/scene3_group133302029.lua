@@ -411,10 +411,10 @@ end
 
 -- 触发操作
 function action_EVENT_GROUP_REFRESH_29022(context, evt)
-	-- 创生gadget 29018
+	-- 创建id为29018的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 29018 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 		-- 卸载指定gadget

@@ -2762,9 +2762,23 @@
     "Default": {
       "$type": "ConfigAbility",
       "abilityName": "ActivityAbility_HideSeek_kong",
+      "abilityMixins":[
+        {
+          "$type": "AttachModifierToGlobalValueMixin",
+          "globalValueTarget": "OriginOwner",
+          "globalValueKey": "SGV_HideSeek_Real_Invisible_Mark",
+          "valueSteps": [-0.5, 0.5, 1.5],
+          "modifierNameSteps": ["UNIQUE_CopySGV", "UNIQUE_CopySGV"],
+        },
+      ],
       "onAdded": 
       [
-         {
+        {
+          "$type": "SetGlobalValue",
+          "key": "_HideSeek_Is_Disguise_Gadget",
+          "value": 1
+        },
+        {
           "$type": "KillSelf",
           "predicates": 
           [
@@ -2780,7 +2794,32 @@
         {
           "$type": "AttachModifier",
           "modifierName": "KillSelf_CountDown",
-        }        
+        } , 
+        {
+          "$type": "AttachModifier",
+          "modifierName": "HideSeek_Disguise_Gadget_Invisible_Handler",         
+        },
+        {//在自己端一直显示
+          "$type": "DoActionsLocal",
+          "canBeHandledOnRecover": true,
+          "actionList": 
+          [
+            {
+              "$type": "EnableSceneTransformByName",
+              "transformNames": ["Obj"],
+              "setEnable": true,
+              "predicates": 
+              [
+                {
+                  "$type": "ByTargetType",
+                  "target": "OriginOwner",
+                  "targetType": "Team",
+                  // "isTarget": false
+                }
+              ]
+            }
+          ]
+        },
       ],
       "modifiers": {
         "KillSelf_CountDown":{
@@ -2815,7 +2854,336 @@
               "$type": "KillSelf",
             }
           ]
-        }
+        },
+        "UNIQUE_CopySGV":
+        {
+          "isUnique": true,
+          "stacking": "Refresh",
+          "onAdded":[
+            {
+              "$type": "CopyGlobalValue",
+              "srcTarget": "OriginOwner",
+              "srcKey": "SGV_HideSeek_Real_Invisible_Mark",
+              "dstTarget": "Self",
+              "dstKey": "_HideSeek_Disguise_Gadget_Invisible_Mark",
+            }
+          ]
+        },
+        "HideSeek_Disguise_Gadget_Invisible_Handler":
+        {
+          "modifierMixins": 
+          [
+            {
+              "$type":"AttachModifierToSelfGlobalValueNoInitMixin",
+              "globalValueKey":"_HideSeek_Disguise_Gadget_Invisible_Mark",
+              "valueSteps":
+              [
+                -0.5,
+                 0.5,
+                 1.5,
+              ],
+              "removeAppliedModifier":true,
+              "modifierNameSteps":
+              [
+                "HideSeek_Disguise_Gadget_Visible",
+                "UNIQUE_HideSeek_Disguise_Gadget_Invisible"
+              ]
+           },
+          ],
+          "onAdded": 
+          [
+            {
+              "$type": "SetGlobalValue",
+              "doOffStage": true,
+              "key": "GV_HideAndSeek_DisguiseObject_Size",
+              "value": 2,
+            },
+          //   {
+          //     "$type": "CopyGlobalValue",
+          //     "srcTarget": "OriginOwner",
+          //     "srcKey": "SGV_HideSeek_Real_Invisible_Mark",
+          //     "dstTarget": "Self",
+          //     "dstKey": "_HideSeek_Disguise_Gadget_Invisible_Mark",
+          //   }
+          // ],
+          // "thinkInterval": 0.3,
+          // "onThinkInterval": 
+          // [
+          //   {
+          //     "$type": "CopyGlobalValue",
+          //     "srcTarget": "OriginOwner",
+          //     "srcKey": "SGV_HideSeek_Real_Invisible_Mark",
+          //     "dstTarget": "Self",
+          //     "dstKey": "_HideSeek_Disguise_Gadget_Invisible_Mark",
+          //   }
+          ]
+        },
+        "HideSeek_Disguise_Gadget_Visible":
+        {//用这个modifier解决在隐身诱饵旁边变身，变身物件会先出现一下再消失的问题（物件默认消失，正常情况下通过这个modifier创建后显示自身）
+          "onAdded": 
+          [
+            {
+              "$type": "EnableSceneTransformByName",
+              "transformNames": ["Obj"],
+              "setEnable": true,
+            }
+          ],
+        },
+        "UNIQUE_HideSeek_Disguise_Gadget_Invisible":
+        {
+          "isUnique": true,
+          "stacking":"Unique",
+          "modifierMixins": 
+          [//材质shader没开放dither参数，不生效
+            {
+              "$type":"EntityDitherMixin",
+              "ditherValue":0.5,
+              "cutInTime":0.2,
+              "cutOutTime":0.2
+            },
+            {
+              "$type": "AttachModifierToSelfGlobalValueMixin",
+              "globalValueKey": "GV_HideAndSeek_DisguiseObject_Size",
+              "valueSteps":[0.5, 1.5, 2.5, 3.5],
+              "modifierNameSteps": ["UNIQUE_AttachEffect_Small", "UNIQUE_AttachEffect_Middle", "UNIQUE_AttachEffect_Big"],
+            }
+          ],
+          "onAdded": 
+          [
+            //根据变身物件的大小挂接size不同的3中隐身特效
+            // {
+            //   "$type": "AttachEffect",
+            //   "effectPattern": "Eff_Activity_HideSeek_Invisibility_Little",
+            //   "predicates": 
+            //   [
+            //     {
+            //       "$type": "ByTargetGlobalValue",
+            //       "key": "GV_HideAndSeek_DisguiseObject_Size",
+            //       "compareType": "Equal",
+            //       "value": 1
+            //     }
+            //   ]
+            // },
+            // {
+            //   "$type": "AttachEffect",
+            //   "effectPattern": "Eff_Activity_HideSeek_Invisibility_Bait",
+            //   "predicates": 
+            //   [
+            //     {
+            //       "$type": "ByTargetGlobalValue",
+            //       "key": "GV_HideAndSeek_DisguiseObject_Size",
+            //       "compareType": "Equal",
+            //       "value": 2
+            //     }
+            //   ]
+            // },
+            // {
+            //   "$type": "AttachEffect",
+            //   "effectPattern": "Eff_Activity_HideSeek_Invisibility_Big",
+            //   "predicates": 
+            //   [
+            //     {
+            //       "$type": "ByTargetGlobalValue",
+            //       "key": "GV_HideAndSeek_DisguiseObject_Size",
+            //       "compareType": "Equal",
+            //       "value": 3
+            //     }
+            //   ]
+            // },
+            {//在其他人端消失
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList": 
+              [
+                {
+                  "$type": "EnableSceneTransformByName",
+                  "transformNames": ["Obj"],
+                  "setEnable": false,
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                      "isTarget": false
+                    }
+                  ]
+                }
+              ]
+            },
+          ],
+          "onRemoved": 
+          [
+            {//在其他人端恢复
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList": 
+              [
+                {
+                  "$type": "EnableSceneTransformByName",
+                  "transformNames": ["Obj"],
+                  "setEnable": true,
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                      "isTarget": false
+                    }                   
+                  ]
+                }
+              ]
+            },
+            //根据GV播放不同size的隐身退出特效
+            {//只能在自己端显示
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList": 
+              [
+                {
+                  "$type": "FireEffect",
+                  "effectPattern":"Eff_Activity_HideSeek_Invisibility_Quit_Little",
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "GV_HideAndSeek_DisguiseObject_Size",
+                      "compareType": "Equal",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "$type": "FireEffect",
+                  "effectPattern":"Eff_Activity_HideSeek_Invisibility_Quit_Bait",
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "GV_HideAndSeek_DisguiseObject_Size",
+                      "compareType": "Equal",
+                      "value": 2
+                    }
+                  ]
+                },
+                {
+                  "$type": "FireEffect",
+                  "effectPattern":"Eff_Activity_HideSeek_Invisibility_Quit_Big",
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                    },
+                    {
+                      "$type": "ByTargetGlobalValue",
+                      "key": "GV_HideAndSeek_DisguiseObject_Size",
+                      "compareType": "Equal",
+                      "value": 3
+                    }
+                  ]
+                },
+              ]
+            },
+          ]
+        },
+        "UNIQUE_AttachEffect_Small":
+        {
+          "isUnique": true,
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {//只能在自己端显示
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList": 
+              [
+                {
+                  "$type": "AttachEffect",
+                  "effectPattern":"Eff_Activity_HideSeek_Invisibility_Little",
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                      // "isTarget": false
+                    }
+                  ]
+                }
+              ]
+            },
+          ]
+        },
+        "UNIQUE_AttachEffect_Middle":
+        {
+          "isUnique": true,
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {//只能在自己端显示
+             "$type": "DoActionsLocal",
+             "canBeHandledOnRecover": true,
+             "actionList": 
+             [
+               {
+                 "$type": "AttachEffect",
+                 "effectPattern":"Eff_Activity_HideSeek_Invisibility_Bait",
+                 "predicates": 
+                 [
+                   {
+                     "$type": "ByTargetType",
+                     "target": "OriginOwner",
+                     "targetType": "Team",
+                     // "isTarget": false
+                   }
+                 ]
+               }
+             ]
+            },
+          ]
+        },
+        "UNIQUE_AttachEffect_Big":
+        {
+          "isUnique": true,
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {//只能在自己端显示
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList": 
+              [
+                {
+                  "$type": "AttachEffect",
+                  "effectPattern":"Eff_Activity_HideSeek_Invisibility_Big",
+                  "predicates": 
+                  [
+                    {
+                      "$type": "ByTargetType",
+                      "target": "OriginOwner",
+                      "targetType": "Team",
+                      // "isTarget": false
+                    }
+                  ]
+                }
+              ]
+            },
+          ]
+        },
+        
       }
     },
   },
@@ -3208,7 +3576,27 @@
                 20.5,
                 21.5,
                 22.5,
-                23.5,
+                23.5,//以下为三期物件
+                24.5,
+                25.5,
+                26.5,
+                27.5,
+                28.5,
+                29.5,
+                30.5,
+                31.5,
+                32.5,
+                33.5,
+                34.5,
+                35.5,
+                36.5,
+                37.5,
+                38.5,
+                39.5,
+                40.5,
+                41.5,
+                42.5,
+                43.5,
               ],
               "removeAppliedModifier": true,
               "modifierNameSteps": [
@@ -3237,12 +3625,33 @@
                 "HideType_Team_11",
                 "HideType_Team_12",
                 "HideType_Team_13",
+                //以下为三期物件
+                "HideType_Team_24",
+                "HideType_Team_25",
+                "HideType_Team_26",
+                "HideType_Team_27",
+                "HideType_Team_28",
+                "HideType_Team_29",
+                "HideType_Team_30",
+                "HideType_Team_31",
+                "HideType_Team_32",
+                "HideType_Team_33",
+                "HideType_Team_34",
+                "HideType_Team_35",
+                "HideType_Team_36",
+                "HideType_Team_37",
+                "HideType_Team_38",
+                "HideType_Team_39",
+                "HideType_Team_40",
+                "HideType_Team_41",
+                "HideType_Team_42",
+                "HideType_Team_43",
               ],
             },
           ],
         },
         "Blank_Team": { },
-        "HideType_A_Style_1_Team_1": //轻策庄-稻草人蓝
+        "HideType_A_Style_1_Team_1": //1轻策庄-稻草人蓝
         {
           "onAdded": [
             {
@@ -3272,7 +3681,7 @@
             },
           ],
         },
-        "HideType_A_Style_2_Team_2": //轻策庄-稻草人红
+        "HideType_A_Style_2_Team_2": //2轻策庄-稻草人红
         {
           "onAdded": [
             {
@@ -3302,7 +3711,7 @@
             },
           ],
         },
-        "HideType_A_Style_3_Team_3": //轻策庄-枯木
+        "HideType_A_Style_3_Team_3": //3轻策庄-枯木
         {
           "onAdded": [
             {
@@ -3332,7 +3741,7 @@
             },
           ],
         },
-        "HideType_B_Style_1_Team_4": //清泉镇-丘丘人木箱
+        "HideType_B_Style_1_Team_4": //4清泉镇-丘丘人木箱
         {
           "onAdded": [
             {
@@ -3362,7 +3771,7 @@
             },
           ],
         },
-        "HideType_B_Style_2_Team_5": //清泉镇-草垛
+        "HideType_B_Style_2_Team_5": //5清泉镇-草垛
         {
           "onAdded": [
             {
@@ -3392,7 +3801,7 @@
             },
           ],
         },
-        "HideType_C_Style_1_Team_6": //无望坡-鬼火
+        "HideType_C_Style_1_Team_6": //6无望坡-鬼火
         {
           "onAdded": [
             {
@@ -3422,7 +3831,7 @@
             },
           ],
         },
-        "HideType_D_Style_1_Team_7": //酒庄-小路灯
+        "HideType_D_Style_1_Team_7": //7酒庄-小路灯
         {
           "onAdded": [
             {
@@ -3452,7 +3861,7 @@
             },
           ],
         },
-        "HideType_D_Style_2_Team_8": //酒庄-木桶
+        "HideType_D_Style_2_Team_8": //8酒庄-木桶
         {
           "onAdded": [
             {
@@ -3482,7 +3891,7 @@
             },
           ],
         },
-        "HideType_E_Style_1_Team_9": //雪山-火仙灵
+        "HideType_E_Style_1_Team_9": //9雪山-火仙灵
         {
           "onAdded": [
             {
@@ -3512,7 +3921,7 @@
             },
           ],
         },
-        "HideType_E_Style_2_Team_10": //雪山-龙血矿石
+        "HideType_E_Style_2_Team_10": //10雪山-龙血矿石
         {
           "onAdded": [
             {
@@ -3542,7 +3951,7 @@
             },
           ],
         },
-        "HideType_Team_1": //1.木盆
+        "HideType_Team_1": //11.木盆
         {
           "onAdded": [
             {
@@ -3572,7 +3981,7 @@
             },
           ],
         },
-        "HideType_Team_2": //2.水桶
+        "HideType_Team_2": //12.水桶
         {
           "onAdded": [
             {
@@ -3602,7 +4011,7 @@
             },
           ],
         },
-        "HideType_Team_3": //3.纸灯
+        "HideType_Team_3": //13.纸灯
         {
           "onAdded": [
             {
@@ -3632,7 +4041,7 @@
             },
           ],
         },
-        "HideType_Team_4": //4.咸菜缸
+        "HideType_Team_4": //14.咸菜缸
         {
           "onAdded": [
             {
@@ -3662,7 +4071,7 @@
             },
           ],
         },
-        "HideType_Team_5": //5.泡菜缸
+        "HideType_Team_5": //15.泡菜缸
         {
           "onAdded": [
             {
@@ -3692,7 +4101,7 @@
             },
           ],
         },
-        "HideType_Team_6": //6
+        "HideType_Team_6": //16.稻草靶子
         {
           "onAdded": [
             {
@@ -3722,7 +4131,7 @@
             },
           ],
         },
-        "HideType_Team_7": //7
+        "HideType_Team_7": //17.经典木桶
         {
           "onAdded": [
             {
@@ -3752,7 +4161,7 @@
             },
           ],
         },
-        "HideType_Team_8": //8
+        "HideType_Team_8": //18.经典木箱
         {
           "onAdded": [
             {
@@ -3782,7 +4191,7 @@
             },
           ],
         },
-        "HideType_Team_9": //9
+        "HideType_Team_9": //19.米袋子
         {
           "onAdded": [
             {
@@ -3812,7 +4221,7 @@
             },
           ],
         },
-        "HideType_Team_10": //10
+        "HideType_Team_10": //20.小板凳
         {
           "onAdded": [
             {
@@ -3842,7 +4251,7 @@
             },
           ],
         },
-        "HideType_Team_11": //11
+        "HideType_Team_11": //21.qq人木桶
         {
           "onAdded": [
             {
@@ -3872,7 +4281,7 @@
             },
           ],
         },
-        "HideType_Team_12": //12
+        "HideType_Team_12": //22.璃月石灯
         {
           "onAdded": [
             {
@@ -3902,7 +4311,7 @@
             },
           ],
         },
-        "HideType_Team_13": //13
+        "HideType_Team_13": //23.凳子
         {
           "onAdded": [
             {
@@ -3932,6 +4341,607 @@
             },
           ],
         },
+        ////////////////////三期物件分界线/////////////////////
+        "HideType_Team_24": //24
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000501,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000501,
+              },
+              },
+            ],
+        },
+        "HideType_Team_25": //25
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000502,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000502,
+              },
+              },
+            ],
+        },
+        "HideType_Team_26": //26
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000503,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000503,
+              },
+              },
+            ],
+        },
+        "HideType_Team_27": //27
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000504,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000504,
+              },
+              },
+            ],
+        },
+        "HideType_Team_28": //28
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000505,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000505,
+              },
+              },
+            ],
+        },
+        "HideType_Team_29": //29
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000506,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000506,
+              },
+              },
+            ],
+        },
+        "HideType_Team_30": //30
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000507,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000507,
+              },
+              },
+            ],
+        },
+        "HideType_Team_31": //31
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000508,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000508,
+              },
+              },
+            ],
+        },
+        "HideType_Team_32": //32
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000509,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000509,
+              },
+              },
+            ],
+        },
+        "HideType_Team_33": //33
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000510,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000510,
+              },
+              },
+            ],
+        },
+        "HideType_Team_34": //34
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000511,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000511,
+              },
+              },
+            ],
+        },
+        "HideType_Team_35": //35
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000512,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000512,
+              },
+              },
+            ],
+        },
+        "HideType_Team_36": //36
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000513,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000513,
+              },
+              },
+            ],
+        },
+        "HideType_Team_37": //37
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000514,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000514,
+              },
+              },
+            ],
+        },
+        "HideType_Team_38": //38
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000515,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000515,
+              },
+              },
+            ],
+        },
+        "HideType_Team_39": //39
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000516,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000516,
+              },
+              },
+            ],
+        },
+        "HideType_Team_40": //40
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000517,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000517,
+              },
+              },
+            ],
+        },
+        "HideType_Team_41": //41
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000518,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000518,
+              },
+              },
+            ],
+        },
+        "HideType_Team_42": //42
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000519,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000519,
+              },
+              },
+            ],
+        },
+        "HideType_Team_43": //43
+        {
+            "onAdded": [
+              {
+              "$type": "CreateGadget",
+              "gadgetID": 44000520,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                  "$type": "ConfigBornBySelf",
+              },
+              },
+              {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_Bait_BornEffect"
+              }
+            ],
+            "onRemoved": [
+              {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                  "$type": "SelectTargetsByChildren",
+                  "configID": 44000520,
+              },
+              },
+            ],
+        },
         //诱饵modifier列举结束。
         "UNIQUE_HideSeek_Bait_BornEffect":{
           "isUnique": true,
@@ -3944,7 +4954,7 @@
           ]
         },
 
-        "UNIQUE_HideSeek_Seeker_Execution_Bait": {
+        "UNIQUE_HideSeek_Seeker_Execution_Bait": {//似乎用不到
           "isUnique": true,
           "duration": 3,
           "onAdded": [
@@ -4038,6 +5048,1681 @@
     },
   }, //ActivityAbility_HideSeek_Seeker_Bait_Gadget
 
+  //【三期新增】隐身诱饵Gadget创建
+  {
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_HideSeek_Seeker_InvisibleBait_Gadget",
+      "isDynamicAbility": true,
+      "onAdded": [
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_ActivityAbility_HideSeek_Hider_PlaceInvisibleBait_Team",
+        },
+        {//标记用于判断能否创建诱饵-诱饵通用
+          "$type": "SetGlobalValue",
+          "key": "HideAndSeek_Seeker_Bait_Gadget",
+          "value": 1,
+        },
+        {//标记用于判断能否创建诱饵-隐身诱饵专用
+          "$type": "SetGlobalValue",
+          "key": "HideAndSeek_Seeker_InvisibleBait_Gadget",
+          "value": 1,
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName":"UNIQUE_HideSeek_InvisibleBait_Timer",
+        },
+        {
+          "$type": "AttachModifier",
+          "modifierName": "UNIQUE_InvisibleBait_AttachEffect",
+        },
+      ],
+      "abilityMixins":
+      [
+        {
+          "$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+          "globalValueKey": "SGV_HideAndSeek_PlayerState_Play",//玩家阵营发生变化的时候重新确认要不要下掉特效（没有从无到有的情况）
+          "valueSteps": [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5],
+          "modifierNameSteps": ["UNIQUE_InvisibleBait_CheckEffect", "UNIQUE_InvisibleBait_CheckEffect",
+            "UNIQUE_InvisibleBait_CheckEffect", "UNIQUE_InvisibleBait_CheckEffect"],
+        },
+      ],
+      "onFieldExit":[//只有avatar才能触发
+        {
+          "$type":"DebugLog",
+          "content":"HideAndSeek_V3 onfieldexit!!!!!!!!!!!!"
+        },
+        {
+          "$type": "ApplyModifier",
+          "modifierName": "UNIQUE_Check_InvisibleBaits_Around_Avatar"
+        },
+      ],
+      "modifiers":{
+        "UNIQUE_Check_InvisibleBaits_Around_Avatar":{//avatar身上的
+          "isUnique": true,
+          "stacking": "Refresh",
+          "duration": 1,
+          "onAdded":[
+            {
+              "$type": "Predicated",
+              "otherTargets": 
+              {
+                "$type": "SelectTargetsByShape",
+                "shapeName": "CircleR10H3",
+                "centerBasedOn": "Self",
+                "campTargetType": "AllExceptSelf",
+                "campBasedOn": "Self",
+              },
+              "targetPredicates": 
+              [
+                {
+                  "$type": "ByTargetGlobalValue",
+                  "key": "HideAndSeek_Seeker_InvisibleBait_Gadget",
+                  "value": 1,
+                  "compareType": "Equal",
+                },
+              ],
+              "successActions":
+              [
+                {
+                  "$type":"DebugLog",
+                  "content":"HideAndSeek_V3 玩家离开一个隐身诱饵，在周围找到了另一个隐身诱饵!!!!!!!!!!!!"
+                },
+                {
+                  "$type":"AddGlobalValue",
+                  "key":"_INVISIBLE_BAITS_AROUND_AVATAR",
+                  "target":"Self",
+                  "value" : 1,
+                },
+              ],
+              "failActions":
+              [
+                {
+                  "$type":"DebugLog",
+                  "content":"HideAndSeek_V3 玩家离开一个隐身诱饵，周围也没有其他隐身诱饵!!!!!!!!!!!!"
+                },
+              ],
+            },
+          ]
+        },
+        "UNIQUE_HideSeek_InvisibleBait_Timer":{//隐身诱饵持续300s，unique不然断线重连又续上了
+          "isUnique": true,
+          "stacking": "Unique",
+          "duration": 300,
+          "onRemoved":[
+            {
+              "$type": "KillSelf",
+            }
+          ]
+        },
+        "UNIQUE_ActivityAbility_HideSeek_Hider_PlaceInvisibleBait_Team": {
+          "isUnique": true,
+          "modifierMixins": [
+            {
+              "$type": "AttachModifierToSelfGlobalValueNoInitMixin",
+              "globalValueKey": "SGV_HideAndSeek_InvisibleBait_Transfer",
+              "valueSteps": [
+                -0.5,
+                0.5,
+                1.5,
+                2.5,
+                3.5,
+                4.5,
+                5.5,
+                6.5,
+                7.5,
+                8.5,
+                9.5,
+                10.5,//一期物件为1~10，二期为11~23，但二期也会复用一期物件，所以保留，序号往下顺延。
+                11.5,
+                12.5,
+                13.5,
+                14.5,
+                15.5,
+                16.5,
+                17.5,
+                18.5,
+                19.5,
+                20.5,
+                21.5,
+                22.5,
+                23.5,//三期物件从下一行24开始，预留了20个位置，24到43
+                24.5,
+                25.5,
+                26.5,
+                27.5,
+                28.5,
+                29.5,
+                30.5,
+                31.5,
+                32.5,
+                33.5,
+                34.5,
+                35.5,
+                36.5,
+                37.5,
+                38.5,
+                39.5,
+                40.5,
+                41.5,
+                42.5,
+                43.5,
+              ],
+              "removeAppliedModifier": true,
+              "modifierNameSteps": [
+                "Blank_Team",
+                "HideType_A_Style_1_Team_1",
+                "HideType_A_Style_2_Team_2",
+                "HideType_A_Style_3_Team_3",
+                "HideType_B_Style_1_Team_4",
+                "HideType_B_Style_2_Team_5",
+                "HideType_C_Style_1_Team_6",
+                "HideType_D_Style_1_Team_7",
+                "HideType_D_Style_2_Team_8",
+                "HideType_E_Style_1_Team_9",
+                "HideType_E_Style_2_Team_10",
+                //以下为二期物件
+                "HideType_Team_1",
+                "HideType_Team_2",
+                "HideType_Team_3",
+                "HideType_Team_4",
+                "HideType_Team_5",
+                "HideType_Team_6",
+                "HideType_Team_7",
+                "HideType_Team_8",
+                "HideType_Team_9",
+                "HideType_Team_10",
+                "HideType_Team_11",
+                "HideType_Team_12",
+                "HideType_Team_13",
+                //以下为三期物件
+                "HideType_Team_24",
+                "HideType_Team_25",
+                "HideType_Team_26",
+                "HideType_Team_27",
+                "HideType_Team_28",
+                "HideType_Team_29",
+                "HideType_Team_30",
+                "HideType_Team_31",
+                "HideType_Team_32",
+                "HideType_Team_33",
+                "HideType_Team_34",
+                "HideType_Team_35",
+                "HideType_Team_36",
+                "HideType_Team_37",
+                "HideType_Team_38",
+                "HideType_Team_39",
+                "HideType_Team_40",
+                "HideType_Team_41",
+                "HideType_Team_42",
+                "HideType_Team_43",
+              ],
+            },
+          ],
+        },
+        "Blank_Team": { },
+        "HideType_A_Style_1_Team_1": //1轻策庄-稻草人蓝
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000458,
+              "byServer": true,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "campBasedOn": "Self",
+              "lifeByOwnerIsAlive": true,
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000260,
+              },
+            },
+          ],
+        },
+        "HideType_A_Style_2_Team_2": //2轻策庄-稻草人红
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000459,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "lifeByOwnerIsAlive": true,
+              "byServer": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000459,
+              },
+            },
+          ],
+        },
+        "HideType_A_Style_3_Team_3": //3轻策庄-枯木
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000460,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000460,
+              },
+            },
+          ],
+        },
+        "HideType_B_Style_1_Team_4": //4清泉镇-丘丘人木箱
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000461,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "lifeByOwnerIsAlive": true,
+              "byServer": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000461,
+              },
+            },
+          ],
+        },
+        "HideType_B_Style_2_Team_5": //5清泉镇-草垛
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000462,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000462,
+              },
+            },
+          ],
+        },
+        "HideType_C_Style_1_Team_6": //6无望坡-鬼火
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000463,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000463,
+              },
+            },
+          ],
+        },
+        "HideType_D_Style_1_Team_7": //7酒庄-小路灯
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000464,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000464,
+              },
+            },
+          ],
+        },
+        "HideType_D_Style_2_Team_8": //8酒庄-木桶
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000465,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000465,
+              },
+            },
+          ],
+        },
+        "HideType_E_Style_1_Team_9": //9雪山-火仙灵
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000466,
+              "byServer": true,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000466,
+              },
+            },
+          ],
+        },
+        "HideType_E_Style_2_Team_10": //10雪山-龙血矿石
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000467,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000467,
+              },
+            },
+          ],
+        },
+        "HideType_Team_1": //11.木盆
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000468,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000468,
+              },
+            },
+          ],
+        },
+        "HideType_Team_2": //12.水桶
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000469,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000469,
+              },
+            },
+          ],
+        },
+        "HideType_Team_3": //13.纸灯
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000470,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000470,
+              },
+            },
+          ],
+        },
+        "HideType_Team_4": //14.咸菜缸
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000471,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000471,
+              },
+            },
+          ],
+        },
+        "HideType_Team_5": //15.泡菜缸
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000472,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000472,
+              },
+            },
+          ],
+        },
+        "HideType_Team_6": //16稻草靶子
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000473,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000473,
+              },
+            },
+          ],
+        },
+        "HideType_Team_7": //17经典木桶
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000474,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000474,
+              },
+            },
+          ],
+        },
+        "HideType_Team_8": //18经典木箱
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000475,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000475,
+              },
+            },
+          ],
+        },
+        "HideType_Team_9": //19米袋子
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000476,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000476,
+              },
+            },
+          ],
+        },
+        "HideType_Team_10": //20小板凳
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000477,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000477,
+              },
+            },
+          ],
+        },
+        "HideType_Team_11": //21qq人木桶
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000478,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000478,
+              },
+            },
+          ],
+        },
+        "HideType_Team_12": //22璃月石灯
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000479,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000479,
+              },
+            },
+          ],
+        },
+        "HideType_Team_13": //23凳子
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000480,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000480,
+              },
+            },
+          ],
+        },
+        //往下是三期新增
+        "HideType_Team_24": //24
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000481,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000481,
+              },
+            },
+          ],
+        },
+        "HideType_Team_25": //25
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000482,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000482,
+              },
+            },
+          ],
+        },
+        "HideType_Team_26": //26
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000483,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000483,
+              },
+            },
+          ],
+        },
+        "HideType_Team_27": //27
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000484,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000484,
+              },
+            },
+          ],
+        },
+        "HideType_Team_28": //28
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000485,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000485,
+              },
+            },
+          ],
+        },
+        "HideType_Team_29": //29
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000486,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000486,
+              },
+            },
+          ],
+        },
+        "HideType_Team_30": //30
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000487,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000487,
+              },
+            },
+          ],
+        },
+        "HideType_Team_31": //31
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000488,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000488,
+              },
+            },
+          ],
+        },
+        "HideType_Team_32": //32
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000489,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000489,
+              },
+            },
+          ],
+        },
+        "HideType_Team_33": //33
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000490,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000490,
+              },
+            },
+          ],
+        },
+        "HideType_Team_34": //34
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000491,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000491,
+              },
+            },
+          ],
+        },
+        "HideType_Team_35": //35
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000492,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000492,
+              },
+            },
+          ],
+        },
+        "HideType_Team_36": //36
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000493,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000493,
+              },
+            },
+          ],
+        },
+        "HideType_Team_37": //37
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000494,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000494,
+              },
+            },
+          ],
+        },
+        "HideType_Team_38": //38
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000495,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000495,
+              },
+            },
+          ],
+        },
+        "HideType_Team_39": //39
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000496,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000496,
+              },
+            },
+          ],
+        },
+        "HideType_Team_40": //40
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000497,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000497,
+              },
+            },
+          ],
+        },
+        "HideType_Team_41": //41
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000498,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000498,
+              },
+            },
+          ],
+        },
+        "HideType_Team_42": //42
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000499,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000499,
+              },
+            },
+          ],
+        },
+        "HideType_Team_43": //43
+        {
+          "onAdded": [
+            {
+              "$type": "CreateGadget",
+              "gadgetID": 44000500,
+              "campID": 1001,
+              "campTargetType": "Enemy",
+              "byServer": true,
+              "lifeByOwnerIsAlive": true,
+              "campBasedOn": "Self",
+              "born": {
+                "$type": "ConfigBornBySelf",
+              },
+            },
+            {
+              "$type": "ApplyModifier",
+              "modifierName": "UNIQUE_HideSeek_InvisibleBait_BornEffect"
+            }
+          ],
+          "onRemoved": [
+            {
+              "$type": "KillGadget",
+              "gadgetInfo": {
+                "$type": "SelectTargetsByChildren",
+                "configID": 44000500,
+              },
+            },
+          ],
+        },
+        //诱饵modifier列举结束。
+        "UNIQUE_HideSeek_InvisibleBait_BornEffect":{
+          "isUnique": true,
+          "duration": 0.1,
+          "onAdded": [
+            {
+              "$type": "FireEffect",
+              "effectPattern": "Eff_Activity_HideSeek_Bait",
+            }
+          ]
+        },
+
+        "UNIQUE_HideSeek_Seeker_Execution_InvisibleBait": {
+          "isUnique": true,
+          "duration": 3,
+          "onAdded": [
+            //非屏幕后效，为了加一个一直面向摄像机的角色身上的特效
+            {
+              "$type": "DungeonFogEffects",
+              "enable": true,
+              "muteRemoteAction": true,
+              "cameraFogEffectName": "Eff_Activity_HideSeek_Bait_MuddyBullet",
+              "localOffset": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+              },
+            },
+            {
+              "$type": "ServerLuaCall",
+              "luaCallType": "AbilityGroupSourceGroup",
+              "funcName": "HideAndSeek_Skill_Blind",
+            },
+            {
+              "$type": "DebugLog",
+              "content": "##slc:诱饵命中了猎手",
+            },
+            //HUNTER身上的特效
+            {
+              "$type": "AttachEffect",
+              "effectPattern": "Eff_Activity_HideSeek_Bait_Hider",
+              "target": "Self",
+              "born": {
+                "$type": "ConfigBornByTarget",
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                },
+              }
+            },
+          ],
+          "onRemoved": [
+            {
+              "$type": "DungeonFogEffects",
+              "enable": false,
+              "cameraFogEffectName": "Eff_Activity_HideSeek_Bait_MuddyBullet",
+              "localOffset": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+              },
+            },
+          ]
+        },
+        "Blank":{},
+        "UNIQUE_InvisibleBait_AttachEffect":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList":
+              [
+                {
+                  "$type": "AttachEffect",
+                  "effectPattern": "Eff_Activity_HideSeek_Invisible_Bait_Range",
+                  "predicates":
+                  [
+                    {
+                      "$type": "ByAny",
+                      "predicates":
+                      [
+                        {
+                          "$type":"ByTargetGlobalValue",
+                          "key":"SGV_HideAndSeek_PlayerState_Play",
+                          "target":"Team",
+                          "value":1,
+                          "compareType":"Equal",
+                        },
+                        {
+                          "$type":"ByTargetGlobalValue",
+                          "key":"SGV_HideAndSeek_PlayerState_Play",
+                          "target":"Team",
+                          "value":3,
+                          "compareType":"Equal",
+                        },
+                      ],
+                    }
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        "UNIQUE_InvisibleBait_CheckEffect":
+        {
+          "isUnique":true,
+          "stacking":"Unique",
+          "onAdded":
+          [
+            {
+              "$type": "DoActionsLocal",
+              "canBeHandledOnRecover": true,
+              "actionList":
+              [
+                 {//如果play值为0或2或4，不可见特效（只有游侠可见，游侠是1或3）
+                  "$type": "RemoveUniqueModifier",
+                  "modifierName": "UNIQUE_InvisibleBait_AttachEffect",
+                  "predicates":
+                  [
+                    {
+                      "$type": "ByNot",
+                      "predicates":
+                      [
+                        {
+                          "$type": "ByAny",
+                          "predicates":
+                          [
+                            {
+                              "$type":"ByTargetGlobalValue",
+                              "key":"SGV_HideAndSeek_PlayerState_Play",
+                              "target":"Team",//指的是local team
+                              "value":1,
+                              "compareType":"Equal",
+                            },
+                            {
+                              "$type":"ByTargetGlobalValue",
+                              "key":"SGV_HideAndSeek_PlayerState_Play",
+                              "target":"Team",//指的是local team
+                              "value":3,
+                              "compareType":"Equal",
+                            },
+                          ],
+                        },
+                      ]
+                    }
+                  ],
+                },
+              ],
+            },
+          ],
+        }
+      },
+      "onKill": [
+        {
+          "$type": "DebugLog",
+          "content": "HideAndSeek_V3 invisible bait is killed",
+        },
+        {
+          "$type": "FireEffect",
+          "effectPattern": "Eff_Activity_HideSeek_Bait_Disappear",
+        }
+      ],
+    },
+  }, //ActivityAbility_HideSeek_Seeker_InvisibleBait_Gadget
+  
   //Hider加速技能替换逻辑
   {
     "Default": {
@@ -6197,6 +8882,26 @@ local HS_State
       ]
     },
   }, //ActivityAbility_HideSeek_Bait_Target
+
+  {//【三期新增】隐身诱饵-具体的物件
+    "Default": {
+      "$type": "ConfigAbility",
+      "abilityName": "ActivityAbility_HideSeek_InvisibleBait_Target",
+      "isDynamicAbility": true,
+      "onAdded": [
+        {
+          "$type": "SetGlobalValue",
+          "key": "_Is_HideSeek_InvisibleBait",
+          "value": 1,
+        },
+        {//标记用于判断能否创建诱饵
+          "$type": "SetGlobalValue",
+          "key": "HideAndSeek_Seeker_InvisibleBait_Gadget",
+          "value": 1,
+        },
+      ],
+    },
+  }, //ActivityAbility_HideSeek_InvisibleBait_Target
 
   {
     "Default": {

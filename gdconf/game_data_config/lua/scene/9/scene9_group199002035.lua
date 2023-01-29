@@ -104,8 +104,10 @@ suites = {
 function action_EVENT_QUEST_START_35003(context, evt)
 	if 7902601 == evt.param1 then
 		ScriptLib.TryRecordActivityPushTips(context, 2014007)
+		
 		ScriptLib.SetGroupVariableValue(context, "start", 3)
 	end
+	
 	return 0
 end
 
@@ -129,9 +131,11 @@ end
 -- 触发操作
 function action_EVENT_GROUP_LOAD_35005(context, evt)
 	ScriptLib.GetHostQuestState(context,7902602)
+	
 	if 2 == ScriptLib.GetHostQuestState(context,7902602) or 3 == ScriptLib.GetHostQuestState(context,7902602) then
 		ScriptLib.CreateGadget(context, {config_id=35002})
 	end
+	
 	return 0
 end
 

@@ -131,11 +131,16 @@ suites = {
 function action_EVENT_OBSERVATION_POINT_NOTIFY_19009(context, evt)
 	if 19002 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,19006, GadgetState.GearStart)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,19003, GadgetState.Default)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,19011, GadgetState.GearStart)
-		ScriptLib.SetGadgetStateByConfigId(context,19002, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,19002, GadgetState.ChestOpened)
+		
 		ScriptLib.SetGadgetStateByConfigId(context,19004, GadgetState.GearStart)
 	end
+	
 	return 0
 end
 
@@ -143,9 +148,12 @@ end
 function action_EVENT_OBSERVATION_POINT_NOTIFY_19010(context, evt)
 	if 19003 == evt.param1 and 405 == evt.param2 then
 		ScriptLib.SetGadgetStateByConfigId(context,19007, GadgetState.GearStart)
+		
 		ScriptLib.SetGroupVariableValue(context, "finish1", 1)
-		ScriptLib.SetGadgetStateByConfigId(context,19003, 102)
+		
+		ScriptLib.SetGadgetStateByConfigId(context,19003, GadgetState.ChestOpened)
 	end
+	
 	return 0
 end
 

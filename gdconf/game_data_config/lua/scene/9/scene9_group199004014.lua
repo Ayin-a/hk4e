@@ -308,15 +308,22 @@ end
 
 -- 触发操作
 function action_EVENT_ENTER_REGION_14018(context, evt)
-	if ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) >= 1 then
+	if ScriptLib.GetRegionEntityCount(context, {region_eid = evt.source_eid, entity_type = EntityType.AVATAR}) == 1 then
 		ScriptLib.SetGroupVariableValue(context, "temp", 1)
+		
 		ScriptLib.AddQuestProgress(context, "Q7902517finish")
+		
 		ScriptLib.RemoveExtraGroupSuite(context, 199004014, 2)
+		
 		ScriptLib.AddQuestProgress(context, "7902514fail")
+		
 		ScriptLib.AddQuestProgress(context, "7902515fail")
+		
 		ScriptLib.AddQuestProgress(context, "7902516fail")
+		
 		ScriptLib.AddQuestProgress(context, "7902513fail")
 	end
+	
 	return 0
 end
 

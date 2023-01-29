@@ -37,7 +37,7 @@ variables = {
 garbages = {
 	gadgets = {
 		{ config_id = 656001, gadget_id = 70310224, pos = { x = -1328.880, y = 252.630, z = 4096.580 }, rot = { x = 6.233, y = 0.772, z = 7.078 }, level = 1, area_id = 26 },
-		{ config_id = 656002, gadget_id = 70310224, pos = { x = -1173.000, y = 293.410, z = 4071.570 }, rot = { x = 2.265, y = 316.057, z = 10.100 }, level = 1 }
+		{ config_id = 656002, gadget_id = 70310224, pos = { x = -1173.000, y = 293.410, z = 4071.570 }, rot = { x = 2.265, y = 316.057, z = 10.100 }, level = 1, area_id = 32 }
 	}
 }
 

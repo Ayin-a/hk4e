@@ -195,10 +195,10 @@ end
 
 -- 触发操作
 function action_EVENT_DUNGEON_SETTLE_6(context, evt)
-	-- 创生gadget 3009
+	-- 创建id为3009的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3009 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -226,10 +226,10 @@ end
 
 -- 触发操作
 function action_EVENT_TIMER_EVENT_8(context, evt)
-	-- 创生gadget 3010
+	-- 创建id为3010的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3010 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

@@ -318,32 +318,41 @@ end
 function action_EVENT_LEVEL_TAG_CHANGE_206012(context, evt)
 	if ScriptLib.CheckSceneTag(context, 9,1025 ) then
 		ScriptLib.SetGroupVariableValue(context, "temp", 0)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
+		
 		if ScriptLib.GetGroupVariableValue(context, "start") == 1 then
 			ScriptLib.KillEntityByConfigId(context, {group_id=199004206, config_id=206010, entity_type=EntityType.GADGET})
 		end
 	else
 		ScriptLib.RemoveExtraGroupSuite(context, 199004206, 4)
 	end
+	
 	ScriptLib.AddExtraGroupSuite(context, 0, 3)
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_REFRESH_206013(context, evt)
 	ScriptLib.AddExtraGroupSuite(context, 0, 3)
+	
 	if ScriptLib.CheckSceneTag(context, 9,1025 ) then
 		ScriptLib.SetGroupVariableValue(context, "temp", 0)
+		
 		ScriptLib.AddExtraGroupSuite(context, 0, 4)
+		
 		if ScriptLib.GetGroupVariableValue(context, "start") == 1 then
 			ScriptLib.KillEntityByConfigId(context, {group_id=199004206, config_id=206010, entity_type=EntityType.GADGET})
 		end
 	end
+	
 	return 0
 end
 
 -- 触发操作
 function action_EVENT_GROUP_LOAD_206014(context, evt)
-	ScriptLib.RefreshGroup(context, {    suite=1})
+	ScriptLib.RefreshGroup(context, {group_id=0, refresh_level_revise=0, exclude_prev=false, is_force_random_suite=false, suite=1})
+	
 	return 0
 end

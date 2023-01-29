@@ -662,6 +662,8 @@ groups = {
 	{ id = 133303662, refresh_id = 1000, area = 23, pos = { x = -1129.108, y = 178.090, z = 3665.247 }, is_replaceable = { value = false, version = 0, new_bin_only = true } },
 	{ id = 133303663, refresh_id = 1, area = 23, pos = { x = -1155.762, y = 82.271, z = 3851.246 }, is_replaceable = { value = false, version = 0, new_bin_only = true } },
 	{ id = 133303664, area = 23, pos = { x = -1721.511, y = 213.776, z = 3499.920 }, is_replaceable = { value = false, version = 0, new_bin_only = true } },
+	{ id = 133303665, area = 26, pos = { x = -2000.289, y = 299.263, z = 4093.641 }, dynamic_load = true, is_replaceable = { value = true, version = 0, new_bin_only = true }, business = { type = 4 }, vision_type = 0 },
 	{ id = 133303666, area = 23, pos = { x = -1202.136, y = 227.296, z = 3132.102 }, dynamic_load = true, is_replaceable = { value = true, version = 0, new_bin_only = true }, business = { type = 1 } },
-	{ id = 133303667, area = 23, pos = { x = -1088.673, y = 283.635, z = 3171.715 }, dynamic_load = true, is_replaceable = { value = true, version = 0, new_bin_only = true }, business = { type = 1 } }
+	{ id = 133303667, area = 23, pos = { x = -1088.673, y = 283.635, z = 3171.715 }, dynamic_load = true, is_replaceable = { value = true, version = 0, new_bin_only = true }, business = { type = 1 } },
+	{ id = 133303668, area = 26, pos = { x = -1997.413, y = 280.383, z = 4042.514 }, dynamic_load = true, is_replaceable = { value = true, version = 0, new_bin_only = true }, business = { type = 4 } }
 }

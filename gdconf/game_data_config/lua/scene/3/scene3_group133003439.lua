@@ -93,10 +93,10 @@ function action_EVENT_ANY_GADGET_DIE_510(context, evt)
 	  return -1
 	end
 	
-	-- 创生gadget 4115
+	-- 创建id为4115的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 4115 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0
@@ -124,10 +124,10 @@ end
 
 -- 触发操作
 function action_EVENT_TIMER_EVENT_542(context, evt)
-	-- 创生gadget 3834
+	-- 创建id为3834的gadget
 	if 0 ~= ScriptLib.CreateGadget(context, { config_id = 3834 }) then
-	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : dungeon_settle")
-		return -1
+	  ScriptLib.PrintContextLog(context, "@@ LUA_WARNING : create_gadget")
+	  return -1
 	end
 	
 	return 0

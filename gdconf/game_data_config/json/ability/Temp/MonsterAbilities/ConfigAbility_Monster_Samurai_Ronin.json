@@ -1,5 +1,303 @@
 [
+////////////////////////////////////////////////////////////////
+//
+// 武士3.4剑道 连续combo
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo",
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["PowerAtk1"],
+				"modifierName": "Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_ResetTimes"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["PowerAtk1_Combo"],
+				"modifierName": "Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_AddTimes"
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["PowerAtk2"],
+				"modifierName": "Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_CheckTimes"
+			}
+		],
+		"modifiers": {
+			"Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_ResetTimes":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_POWERATK_TIMES",
+						"value": 0
+					},
+					{
+						"$type": "SetAnimatorBool",
+						"boolID": "PowerAttackComboOver",
+						"value": false
+					}
+				]
+			},
+			"Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_AddTimes":{
+				"onAdded": [
+					{
+						"$type": "AddGlobalValue",
+						"key": "_POWERATK_TIMES",
+						"value": 1
+					}
+				]
+			},
+			"Monster_Samurai_Hatamoto_BladeMasterTwo_PowerCombo_CheckTimes":{
+				"onAdded": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_POWERATK_TIMES",
+								"value": 2,
+								"compareType": "MoreThanAndEqual"
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorBool",
+								"boolID": "PowerAttackComboOver",
+								"value": true
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+},
+////////////////////////////////////////////////////////////////
+//
+// 幕府武士3.4剑道 破防格挡
+//
+////////////////////////////////////////////////////////////////
+{
+	"Default":{
+		"$type": "ConfigAbility",
+		"abilityName": "Monster_Samurai_Hatamoto_DefendBreak",
+		"abilitySpecials": {
+			"WeakTime":1
+		},
+		"onAdded": [
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_Samurai_AtkDefend_EnbreakMax"
+			},
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_BladeMaster_InitialLevel"
+			},
+			//判attacktag的做法
+			{
+				"$type": "ApplyModifier",
+				"modifierName": "Monster_BladeMaster_BlockBreak_Check"
+			}
+		],
+		"onAbilityStart": [
+			
+		],
+		"abilityMixins": [
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["DefendBS"],
+				"modifierName": "Monster_BladeMaster_Reset_HitTimesAction"
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_PARRY_HIT",
+				"valueSteps": [-0.5,0.5,1.5],
+				"modifierNameSteps": ["Monster_Parry_None","Monster_Parry_Success"]
+			},
+			{
+				"$type": "AttachModifierToSelfGlobalValueMixin",
+				"globalValueKey": "_PARRY_SUCCUSS_TIMES",
+				"valueSteps": [-0.5,0.5,"%WeakTime+0.5"],
+				"modifierNameSteps": ["Monster_Hatamoto_WeakEmpty","Monster_Hatamoto_Weak"]
+			},
+			{
+				"$type": "AttachToStateIDMixin",
+				"stateIDs": ["Breaked"],
+				"modifierName": "Monster_Samurai_Hatamoto_BladeMaster2_Break"
+			}
+		],
+		"modifiers": {
+			"Monster_Samurai_Hatamoto_BladeMaster2_Break":{
+				"onAdded": [
+					{
+						"$type": "FireEffect",
+						"effectPattern": "Eff_Mosnter_GeneralSkill_BreakeDefendShield"
+					}
+				]
+			},
+			"Monster_Hatamoto_WeakEmpty":{
 
+			},
+			"Monster_Hatamoto_Weak":{
+				"onAdded": [
+					{
+						"$type": "SetAnimatorTrigger",
+						"triggerID": "BeBreaked"
+					}
+				]
+			},
+			"Monster_Parry_None":{
+
+			},
+			"Monster_Parry_Success":{
+				"onAdded": [
+					{
+						"$type": "AddGlobalValue",
+						"key": "_PARRY_SUCCUSS_TIMES",
+						"value": 1,
+						"useLimitRange": true,
+						"maxValue": 4
+					},
+					{
+						"$type": "SetGlobalValue",
+						"key": "_PARRY_HIT",
+						"value": 0
+					}
+				]
+			},
+			"Monster_BladeMaster_BlockBreak_Check":{
+				"onBeingHit": [
+					{
+						"$type": "Predicated",
+						"targetPredicates": [
+							{
+								"$type": "ByAttackTags",
+								"attackTags": ["Avatar_Blocking"]
+							}
+						],
+						"successActions": [
+							{
+								"$type": "SetAnimatorTrigger",
+						        "triggerID": "BlockBreak"
+							},						
+							{
+								"$type": "ApplyModifier",
+								"modifierName": "Monster_Samurai_EnBreakDuring"
+							}
+						]
+					}	
+				]
+			},
+			"Monster_BladeMaster_InitialLevel":{
+				"onAdded": [
+					{
+						"$type": "SetOverrideMapValue",
+						"overrideMapKey": "WeakTime",
+						"value": 4,
+						"canBeHandledOnRecover": true,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 3,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "SetAISkillGCD",
+						"value": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 1,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 1,
+								"compareType": "Equal"
+							}
+						]
+					},
+					{
+						"$type": "UseSkillEliteSet",
+						"skillEliteSetID": 2,
+						"predicates": [
+							{
+								"$type": "ByTargetGlobalValue",
+								"key": "_BLADEMASTER_LEVEL",
+								"value": 2,
+								"compareType": "MoreThanAndEqual"
+							}
+						]
+					}					
+				]
+			},
+			"Monster_Samurai_AtkDefend_EnbreakMax":{
+				"properties": {
+					"Actor_EndureDelta":0.0001
+				}
+			},
+			"Monster_Samurai_EnBreakDuring":{
+				"duration": "%WeakTime",
+				// "properties": {
+				// 	"Actor_WeightDelta":-21,
+				// 	"Actor_EndureDelta":100
+				// }, 
+				"onAdded": [
+
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_CAL_HITNUM",
+						"value": 0
+					}
+				],
+
+				"onRemoved": [
+					// {
+					// 	"$type": "ApplyModifier",
+					// 	"modifierName": "Monster_Samurai_AtkDefend_EnbreakMax"
+					// },
+					{
+						"$type": "SetGlobalValue",
+						"key": "_CAN_CAL_HITNUM",
+						"value": 1
+					}
+				]
+			},
+			"Monster_BladeMaster_Reset_HitTimes_Delay":{
+				"duration": 0.3,
+				"onRemoved": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BE_HIT_TIMES",
+						"value": 0
+					}
+				]
+			},
+			"Monster_BladeMaster_Reset_HitTimesAction":{
+				"onAdded": [
+					{
+						"$type": "SetGlobalValue",
+						"key": "_BE_HIT_TIMES",
+						"value": 0
+					}
+				]
+			}
+		}
+	}
+},
 ////////////////////////////////////////////////////////////////
 //
 // 武士2.8线 1阶段锁血
@@ -1596,7 +1894,7 @@
 			},
 			{
 				"$type": "SteerAttackMixin",
-				"steerStateIDs": ["PowerAtk1"],
+				"steerStateIDs": ["PowerAtk1_Combo"],
 				"startNormalizedTime" : 0.03,
 				"endNormalizedTime" : 0.12,
 				"angularSpeed" : 360,

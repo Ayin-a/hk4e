@@ -1,9 +1,7 @@
 package client_proto
 
 import (
-	"os"
-	"strconv"
-	"strings"
+	"reflect"
 
 	"hk4e/pkg/logger"
 )
@@ -11,31 +9,16 @@ import (
 type ClientCmdProtoMap struct {
 	clientCmdIdCmdNameMap map[uint16]string
 	clientCmdNameCmdIdMap map[string]uint16
+	RefValue              reflect.Value
 }
 
 func NewClientCmdProtoMap() (r *ClientCmdProtoMap) {
 	r = new(ClientCmdProtoMap)
 	r.clientCmdIdCmdNameMap = make(map[uint16]string)
 	r.clientCmdNameCmdIdMap = make(map[string]uint16)
-	clientCmdFile, err := os.ReadFile("./client_cmd.csv")
-	if err != nil {
-		panic(err)
-	}
-	clientCmdData := string(clientCmdFile)
-	lineList := strings.Split(clientCmdData, "\n")
-	for _, line := range lineList {
-		item := strings.Split(line, ",")
-		if len(item) != 2 {
-			panic("parse client cmd file error")
-		}
-		cmdName := item[0]
-		cmdId, err := strconv.Atoi(item[1])
-		if err != nil {
-			panic(err)
-		}
-		r.clientCmdIdCmdNameMap[uint16(cmdId)] = cmdName
-		r.clientCmdNameCmdIdMap[cmdName] = uint16(cmdId)
-	}
+	r.RefValue = reflect.ValueOf(r)
+	fn := r.RefValue.MethodByName("LoadClientCmdIdAndCmdName")
+	fn.Call([]reflect.Value{})
 	return r
 }
 

@@ -295,7 +295,7 @@ func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uin
 }
 
 func (k *KcpConnectManager) getClientProtoObjByName(protoObjName string) pb.Message {
-	fn := k.clientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
+	fn := k.clientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()
 	if obj == nil {

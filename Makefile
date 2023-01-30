@@ -2,11 +2,15 @@ CUR_DIR=$(shell pwd)
 
 VERSION=1.0.0
 
+.PHONY: all
+all: build
+
 # 清理
 .PHONY: clean
 clean:
 	rm -rf ./bin
 	rm -rf ./protocol/proto
+	rm -rf ./gate/client_proto/client_proto_gen.go
 
 # 构建服务器二进制文件
 .PHONY: build
@@ -92,4 +96,4 @@ gen_csv:
 # 生成客户端协议代理功能所需的代码
 .PHONY: gen_client_proto
 gen_client_proto:
-	cd gate/client_proto && go test -v -run TestClientProtoGen .
+	cd gate/client_proto && rm -rf client_proto_gen.go && go test -v -run TestClientProtoGen .

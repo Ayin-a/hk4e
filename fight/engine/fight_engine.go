@@ -301,17 +301,15 @@ func (f *FightRoutine) getAllPlayer(entityMap map[uint32]*Entity) []uint32 {
 }
 
 var ClientCmdProtoMap *client_proto.ClientCmdProtoMap
-var ClientCmdProtoMapRefValue reflect.Value
 
 func initClientCmdProtoMap() {
 	if config.CONF.Hk4e.ClientProtoProxyEnable {
 		ClientCmdProtoMap = client_proto.NewClientCmdProtoMap()
-		ClientCmdProtoMapRefValue = reflect.ValueOf(ClientCmdProtoMap)
 	}
 }
 
 func GetClientProtoObjByName(protoObjName string) pb.Message {
-	fn := ClientCmdProtoMapRefValue.MethodByName("GetClientProtoObjByName")
+	fn := ClientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()
 	if obj == nil {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -29,20 +28,19 @@ const (
 )
 
 type KcpConnectManager struct {
-	discovery                 *rpc.DiscoveryClient
-	openState                 bool
-	sessionConvIdMap          map[uint64]*Session
-	sessionUserIdMap          map[uint32]*Session
-	sessionMapLock            sync.RWMutex
-	kcpEventInput             chan *KcpEvent
-	kcpEventOutput            chan *KcpEvent
-	serverCmdProtoMap         *cmd.CmdProtoMap
-	clientCmdProtoMap         *client_proto.ClientCmdProtoMap
-	clientCmdProtoMapRefValue reflect.Value
-	messageQueue              *mq.MessageQueue
-	localMsgOutput            chan *ProtoMsg
-	createSessionChan         chan *Session
-	destroySessionChan        chan *Session
+	discovery          *rpc.DiscoveryClient
+	openState          bool
+	sessionConvIdMap   map[uint64]*Session
+	sessionUserIdMap   map[uint32]*Session
+	sessionMapLock     sync.RWMutex
+	kcpEventInput      chan *KcpEvent
+	kcpEventOutput     chan *KcpEvent
+	serverCmdProtoMap  *cmd.CmdProtoMap
+	clientCmdProtoMap  *client_proto.ClientCmdProtoMap
+	messageQueue       *mq.MessageQueue
+	localMsgOutput     chan *ProtoMsg
+	createSessionChan  chan *Session
+	destroySessionChan chan *Session
 	// 密钥相关
 	dispatchKey  []byte
 	signRsaKey   []byte
@@ -60,7 +58,6 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.serverCmdProtoMap = cmd.NewCmdProtoMap()
 	if config.CONF.Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
-		r.clientCmdProtoMapRefValue = reflect.ValueOf(r.clientCmdProtoMap)
 	}
 	r.messageQueue = messageQueue
 	r.localMsgOutput = make(chan *ProtoMsg, 1000)

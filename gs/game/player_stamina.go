@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	appConfig "hk4e/common/config"
+	"hk4e/common/config"
 	"hk4e/common/constant"
 	"hk4e/common/utils"
 	"hk4e/gdconf"
@@ -23,7 +23,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
 		// 大剑重击 或 持续技能 耐力消耗
 		costStamina := new(proto.AbilityMixinCostStamina)
-		if appConfig.CONF.Hk4e.ClientProtoProxyEnable {
+		if config.CONF.Hk4e.ClientProtoProxyEnable {
 			clientProtoObj := g.GetClientProtoObjByName("AbilityMixinCostStamina")
 			if clientProtoObj == nil {
 				logger.Error("get client proto obj is nil")

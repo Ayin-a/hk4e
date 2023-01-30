@@ -43,7 +43,7 @@ type ServerInstance struct {
 	gateServerKcpPort uint32
 	gateServerMqAddr  string
 	gateServerMqPort  uint32
-	version           string
+	version           []string
 	lastAliveTime     int64
 	gsId              uint32
 }
@@ -186,10 +186,12 @@ func (s *DiscoveryService) GetGateServerAddr(ctx context.Context, req *api.GetGa
 	versionInstMap := sync.Map{}
 	instMap.Range(func(key, value any) bool {
 		serverInstance := value.(*ServerInstance)
-		if serverInstance.version != req.Version {
-			return true
+		for _, version := range serverInstance.version {
+			if version == req.Version {
+				versionInstMap.Store(key, serverInstance)
+				return true
+			}
 		}
-		versionInstMap.Store(key, serverInstance)
 		return true
 	})
 	if s.getServerInstanceMapLen(&versionInstMap) == 0 {

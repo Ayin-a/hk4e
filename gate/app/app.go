@@ -5,6 +5,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,7 +37,7 @@ func Run(ctx context.Context, configFile string) error {
 			MqAddr:  config.CONF.Hk4e.GateTcpMqAddr,
 			MqPort:  uint32(config.CONF.Hk4e.GateTcpMqPort),
 		},
-		Version: config.CONF.Hk4e.Version,
+		Version: strings.Split(config.CONF.Hk4e.Version, ","),
 	})
 	if err != nil {
 		return err

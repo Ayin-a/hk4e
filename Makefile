@@ -11,6 +11,7 @@ clean:
 	rm -rf ./bin
 	rm -rf ./protocol/proto
 	rm -rf ./gate/client_proto/client_proto_gen.go
+	rm -rf ./gs/api/*.pb.go && rm -rf ./node/api/*.pb.go
 
 # 构建服务器二进制文件
 .PHONY: build
@@ -20,13 +21,13 @@ build:
 # 清理镜像
 .PHONY: docker_clean
 docker_clean:
-	rm -rf ./docker/node/bin/*
-	rm -rf ./docker/dispatch/bin/*
-	rm -rf ./docker/gate/bin/*
-	rm -rf ./docker/fight/bin/*
-	rm -rf ./docker/pathfinding/bin/*
-	rm -rf ./docker/gs/bin/*
-	rm -rf ./docker/gm/bin/*
+	rm -rf ./docker/node/bin/node
+	rm -rf ./docker/dispatch/bin/dispatch
+	rm -rf ./docker/gate/bin/gate
+	rm -rf ./docker/fight/bin/fight
+	rm -rf ./docker/pathfinding/bin/pathfinding
+	rm -rf ./docker/gs/bin/gs
+	rm -rf ./docker/gm/bin/gm
 	docker rmi flswld/node:$(VERSION)
 	docker rmi flswld/dispatch:$(VERSION)
 	docker rmi flswld/gate:$(VERSION)
@@ -35,16 +36,27 @@ docker_clean:
 	docker rmi flswld/gs:$(VERSION)
 	docker rmi flswld/gm:$(VERSION)
 
+# 复制配置模板等文件
+.PHONY: docker_config
+docker_config:
+	mkdir -p ./docker/node/bin && cp -rf ./cmd/node/* ./docker/node/bin/
+	mkdir -p ./docker/dispatch/bin && cp -rf ./cmd/dispatch/* ./docker/dispatch/bin/
+	mkdir -p ./docker/gate/bin && cp -rf ./cmd/gate/* ./docker/gate/bin/
+	mkdir -p ./docker/fight/bin && cp -rf ./cmd/fight/* ./docker/fight/bin/
+	mkdir -p ./docker/pathfinding/bin && cp -rf ./cmd/pathfinding/* ./docker/pathfinding/bin/
+	mkdir -p ./docker/gs/bin && cp -rf ./cmd/gs/* ./docker/gs/bin/
+	mkdir -p ./docker/gm/bin && cp -rf ./cmd/gm/* ./docker/gm/bin/
+
 # 构建镜像
 .PHONY: docker_build
 docker_build:
-	mkdir -p ./docker/node/bin && cp -rf ./bin/node ./cmd/node/* ./docker/node/bin/
-	mkdir -p ./docker/dispatch/bin && cp -rf ./bin/dispatch ./cmd/dispatch/* ./docker/dispatch/bin/
-	mkdir -p ./docker/gate/bin && cp -rf ./bin/gate ./cmd/gate/* ./docker/gate/bin/
-	mkdir -p ./docker/fight/bin && cp -rf ./bin/fight ./cmd/fight/* ./docker/fight/bin/
-	mkdir -p ./docker/pathfinding/bin && cp -rf ./bin/pathfinding ./cmd/pathfinding/* ./docker/pathfinding/bin/
-	mkdir -p ./docker/gs/bin && cp -rf ./bin/gs ./cmd/gs/* ./docker/gs/bin/
-	mkdir -p ./docker/gm/bin && cp -rf ./bin/gm ./cmd/gm/* ./docker/gm/bin/
+	mkdir -p ./docker/node/bin && cp -rf ./bin/node ./docker/node/bin/
+	mkdir -p ./docker/dispatch/bin && cp -rf ./bin/dispatch ./docker/dispatch/bin/
+	mkdir -p ./docker/gate/bin && cp -rf ./bin/gate ./docker/gate/bin/
+	mkdir -p ./docker/fight/bin && cp -rf ./bin/fight ./docker/fight/bin/
+	mkdir -p ./docker/pathfinding/bin && cp -rf ./bin/pathfinding ./docker/pathfinding/bin/
+	mkdir -p ./docker/gs/bin && cp -rf ./bin/gs ./docker/gs/bin/
+	mkdir -p ./docker/gm/bin && cp -rf ./bin/gm ./docker/gm/bin/
 	docker build -t flswld/node:$(VERSION) ./docker/node
 	docker build -t flswld/dispatch:$(VERSION) ./docker/dispatch
 	docker build -t flswld/gate:$(VERSION) ./docker/gate

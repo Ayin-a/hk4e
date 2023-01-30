@@ -43,10 +43,10 @@ type Hk4e struct {
 	GameDataConfigPath     string `toml:"game_data_config_path"`
 	GachaHistoryServer     string `toml:"gacha_history_server"`
 	ClientProtoProxyEnable bool   `toml:"client_proto_proxy_enable"`
-	Version                string `toml:"version"`
+	Version                string `toml:"version"`          // 支持的客户端协议版本号 三位数字 多个以逗号分隔 如300,310,320
 	GateTcpMqAddr          string `toml:"gate_tcp_mq_addr"` // 访问网关tcp直连消息队列的地址 填网关的内网地址
 	GateTcpMqPort          int32  `toml:"gate_tcp_mq_port"`
-	LoginSdkUrl            string `toml:"login_sdk_url"`
+	LoginSdkUrl            string `toml:"login_sdk_url"` // 网关登录验证token的sdk服务器地址 目前填dispatch的内网地址
 }
 
 // MQ 消息队列

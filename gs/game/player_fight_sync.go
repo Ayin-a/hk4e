@@ -394,6 +394,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 				}
 				ok := utils.UnmarshalProtoObj(abilityMetaAddAbility, clientProtoObj, abilityInvokeEntry.AbilityData)
 				if !ok {
+					logger.Error("AbilityMetaAddAbility proto error")
 					continue
 				}
 			} else {
@@ -421,6 +422,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 				}
 				ok := utils.UnmarshalProtoObj(abilityMetaModifierChange, clientProtoObj, abilityInvokeEntry.AbilityData)
 				if !ok {
+					logger.Error("AbilityMetaModifierChange proto error")
 					continue
 				}
 			} else {

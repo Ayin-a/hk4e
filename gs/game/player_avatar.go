@@ -23,6 +23,10 @@ func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
 			// 跳过主角
 			continue
 		}
+		if avatarId >= 10000079 {
+			// 跳过后续版本的角色
+			continue
+		}
 		allAvatarDataConfig[avatarId] = avatarData
 	}
 	return allAvatarDataConfig
@@ -67,8 +71,18 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	req := payloadMsg.(*proto.WearEquipReq)
 	avatarGuid := req.AvatarGuid
 	equipGuid := req.EquipGuid
-	avatar := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
-	weapon := player.GameObjectGuidMap[equipGuid].(*model.Weapon)
+	avatar, ok := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
+	if !ok {
+		logger.Error("avatar error, avatar guid: %v", avatarGuid)
+		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
+		return
+	}
+	weapon, ok := player.GameObjectGuidMap[equipGuid].(*model.Weapon)
+	if !ok {
+		logger.Error("equip error, equip guid: %v", equipGuid)
+		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
+		return
+	}
 	g.WearUserAvatarEquip(player.PlayerID, avatar.AvatarId, weapon.WeaponId)
 
 	wearEquipRsp := &proto.WearEquipRsp{
@@ -203,22 +217,29 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon *model.Weapon, entityId uint32) *proto.AvatarEquipChangeNotify {
+	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
+	if !ok {
+		logger.Error("item data config error, item id: %v")
+		return new(proto.AvatarEquipChangeNotify)
+	}
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
 		AvatarGuid: avatar.Guid,
 		ItemId:     weapon.ItemId,
 		EquipGuid:  weapon.Guid,
 	}
+	switch itemDataConfig.Type {
+	case int32(constant.ItemTypeConst.ITEM_WEAPON):
+		avatarEquipChangeNotify.EquipType = uint32(constant.EquipTypeConst.EQUIP_WEAPON)
+	case int32(constant.ItemTypeConst.ITEM_RELIQUARY):
+		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.ReliquaryType)
+	}
 	avatarEquipChangeNotify.Weapon = &proto.SceneWeaponInfo{
 		EntityId:    entityId,
-		GadgetId:    uint32(gdconf.CONF.ItemDataMap[int32(weapon.ItemId)].GadgetId),
+		GadgetId:    uint32(itemDataConfig.GadgetId),
 		ItemId:      weapon.ItemId,
 		Guid:        weapon.Guid,
 		Level:       uint32(weapon.Level),
 		AbilityInfo: new(proto.AbilitySyncStateInfo),
-	}
-	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if exist {
-		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.Type)
 	}
 	return avatarEquipChangeNotify
 }

@@ -16,26 +16,30 @@ func (g *GameManager) GCGLogin(player *model.Player) {
 	// player.Pos.X = 8.974
 	// player.Pos.Y = 0
 	// player.Pos.Z = 9.373
-	// GCG基础信息
-	g.SendMsg(cmd.GCGBasicDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGBasicDataNotify(player))
-	// GCG等级挑战解锁
-	g.SendMsg(cmd.GCGLevelChallengeNotify, player.PlayerID, player.ClientSeq, g.PacketGCGLevelChallengeNotify(player))
-	// GCG禁止的卡牌
-	g.SendMsg(cmd.GCGDSBanCardNotify, player.PlayerID, player.ClientSeq, g.PacketGCGDSBanCardNotify(player))
-	// GCG解锁或拥有的内容
-	g.SendMsg(cmd.GCGDSDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGDSDataNotify(player))
-	// GCG酒馆挑战数据
-	g.SendMsg(cmd.GCGTCTavernChallengeDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernChallengeDataNotify(player))
+
+	// GCG目前可能有点问题先不发送
+	// 以后再慢慢搞
+
+	// // GCG基础信息
+	// g.SendMsg(cmd.GCGBasicDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGBasicDataNotify(player))
+	// // GCG等级挑战解锁
+	// g.SendMsg(cmd.GCGLevelChallengeNotify, player.PlayerID, player.ClientSeq, g.PacketGCGLevelChallengeNotify(player))
+	// // GCG禁止的卡牌
+	// g.SendMsg(cmd.GCGDSBanCardNotify, player.PlayerID, player.ClientSeq, g.PacketGCGDSBanCardNotify(player))
+	// // GCG解锁或拥有的内容
+	// g.SendMsg(cmd.GCGDSDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGDSDataNotify(player))
+	// // GCG酒馆挑战数据
+	// g.SendMsg(cmd.GCGTCTavernChallengeDataNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernChallengeDataNotify(player))
 }
 
 // GCGTavernInit GCG酒馆初始化
 func (g *GameManager) GCGTavernInit(player *model.Player) {
-	if player.SceneId == 1076 {
-		// GCG酒馆信息通知
-		g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
-		// GCG酒馆NPC信息通知
-		g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
-	}
+	// if player.SceneId == 1076 {
+	// 	// GCG酒馆信息通知
+	// 	g.SendMsg(cmd.GCGTCTavernInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTCTavernInfoNotify(player))
+	// 	// GCG酒馆NPC信息通知
+	// 	g.SendMsg(cmd.GCGTavernNpcInfoNotify, player.PlayerID, player.ClientSeq, g.PacketGCGTavernNpcInfoNotify(player))
+	// }
 }
 
 // GCGStartChallenge GCG开始挑战

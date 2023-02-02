@@ -41,12 +41,23 @@ func (p *Player) InitAllAvatar() {
 }
 
 func (p *Player) InitAvatar(avatar *Avatar) {
+	// 角色战斗属性
+	p.InitAvatarFightProp(avatar)
+	// guid
+	avatar.Guid = p.GetNextGameObjectGuid()
+	p.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
+	avatar.EquipGuidList = make(map[uint64]uint64)
+	p.AvatarMap[avatar.AvatarId] = avatar
+	return
+}
+
+// InitAvatarFightProp 初始化角色面板
+func (p *Player) InitAvatarFightProp(avatar *Avatar) {
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
 		return
 	}
-	// 角色战斗属性
 	avatar.FightPropMap = make(map[uint32]float32)
 	avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_NONE)] = 0.0
 	// 白字攻防血
@@ -65,12 +76,6 @@ func (p *Player) InitAvatar(avatar *Avatar) {
 	// 元素充能
 	avatar.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CHARGE_EFFICIENCY)] = 1.0
 	p.SetCurrEnergy(avatar, avatar.CurrEnergy, true)
-	// guid
-	avatar.Guid = p.GetNextGameObjectGuid()
-	p.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
-	avatar.EquipGuidList = make(map[uint64]uint64)
-	p.AvatarMap[avatar.AvatarId] = avatar
-	return
 }
 
 func (p *Player) GetAvatarIdByGuid(guid uint64) uint32 {

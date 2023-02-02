@@ -66,6 +66,107 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	g.SendMsg(cmd.AvatarAddNotify, userId, player.ClientSeq, avatarAddNotify)
 }
 
+// AvatarUpgradeReq 角色升级请求
+func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user upgrade, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.AvatarUpgradeReq)
+	// 是否拥有角色
+	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	if !ok {
+		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
+		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		return
+	}
+	// 经验书数量是否足够
+	if player.GetItemCount(req.ItemId) < req.Count {
+		logger.Error("item count not enough, itemCount: %v", req.Count)
+		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+		return
+	}
+	// TODO 摩拉数量是否足够
+	// 获取角色突破配置表
+	avatarPromoteConfig, ok := gdconf.CONF.AvatarPromoteDataMap[int32(avatar.Promote)]
+	if !ok {
+		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
+		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		return
+	}
+	// 角色等级是否达到限制
+	if avatar.Level >= uint8(avatarPromoteConfig.LevelLimit) {
+		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
+		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		return
+	}
+	// 消耗升级材料并升级角色
+	GAME_MANAGER.CostUserItem(player.PlayerID, []*UserItem{
+		{
+			ItemId:      req.ItemId,
+			ChangeCount: req.Count,
+		},
+	})
+	// 角色升级前的信息
+	oldLevel := avatar.Level
+	oldFightPropMap := make(map[uint32]float32, len(avatar.FightPropMap))
+	for propType, propValue := range avatar.FightPropMap {
+		oldFightPropMap[propType] = propValue
+	}
+	// 角色增加经验
+	avatar.Exp += req.Count * 20000 // TODO 根据物品id给予相应的经验
+	// 角色升级
+	for {
+		// 获取角色等级配置表
+		avatarLevelConfig, ok := gdconf.CONF.AvatarLevelDataMap[int32(avatar.Level)]
+		if !ok {
+			logger.Error("avatar level config error, level: %v", avatar.Level)
+			g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+			return
+		}
+		// 角色当前等级未突破则跳出循环
+		if avatar.Level >= uint8(avatarPromoteConfig.LevelLimit) {
+			break
+		}
+		// 角色经验小于升级所需的经验则跳出循环
+		if avatar.Exp < uint32(avatarLevelConfig.Exp) {
+			break
+		}
+		// 角色等级提升
+		avatar.Exp -= uint32(avatarLevelConfig.Exp)
+		avatar.Level++
+	}
+	// 角色更新面板
+	player.InitAvatarFightProp(avatar)
+	// 角色属性表更新通知
+	g.SendMsg(cmd.AvatarPropNotify, player.PlayerID, player.ClientSeq, g.PacketAvatarPropNotify(avatar))
+	avatarUpgradeRsp := &proto.AvatarUpgradeRsp{
+		CurLevel:        uint32(avatar.Level),
+		OldLevel:        uint32(oldLevel),
+		OldFightPropMap: oldFightPropMap,
+		CurFightPropMap: avatar.FightPropMap,
+		AvatarGuid:      req.AvatarGuid,
+	}
+	g.SendMsg(cmd.AvatarUpgradeRsp, player.PlayerID, player.ClientSeq, avatarUpgradeRsp)
+}
+
+// PacketAvatarPropNotify 角色属性表更新通知
+func (g *GameManager) PacketAvatarPropNotify(avatar *model.Avatar) *proto.AvatarPropNotify {
+	avatarPropNotify := &proto.AvatarPropNotify{
+		PropMap:    make(map[uint32]int64, 5),
+		AvatarGuid: avatar.Guid,
+	}
+	// 角色等级
+	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_LEVEL)] = int64(avatar.Level)
+	// 角色经验
+	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_EXP)] = int64(avatar.Exp)
+	// 角色突破等级
+	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL)] = int64(avatar.Promote)
+	// 角色饱食度
+	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL)] = int64(avatar.Satiation)
+	// 角色饱食度溢出
+	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME)] = int64(avatar.SatiationPenalty)
+
+	return avatarPropNotify
+}
+
 func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user wear equip, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WearEquipReq)
@@ -73,13 +174,13 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	equipGuid := req.EquipGuid
 	avatar, ok := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
 	if !ok {
-		logger.Error("avatar error, avatar guid: %v", avatarGuid)
-		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
+		logger.Error("avatar error, avatarGuid: %v", avatarGuid)
+		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	weapon, ok := player.GameObjectGuidMap[equipGuid].(*model.Weapon)
 	if !ok {
-		logger.Error("equip error, equip guid: %v", equipGuid)
+		logger.Error("equip error, equipGuid: %v", equipGuid)
 		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
 		return
 	}
@@ -219,7 +320,7 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon *model.Weapon, entityId uint32) *proto.AvatarEquipChangeNotify {
 	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
 	if !ok {
-		logger.Error("item data config error, item id: %v")
+		logger.Error("item data config error, itemId: %v")
 		return new(proto.AvatarEquipChangeNotify)
 	}
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{

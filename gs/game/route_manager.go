@@ -129,6 +129,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.GCGInitFinishReq, GAME_MANAGER.GCGInitFinishReq)
 	r.registerRouter(cmd.GCGOperationReq, GAME_MANAGER.GCGOperationReq)
 	r.registerRouter(cmd.ObstacleModifyNotify, GAME_MANAGER.ObstacleModifyNotify)
+	r.registerRouter(cmd.AvatarUpgradeReq, GAME_MANAGER.AvatarUpgradeReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

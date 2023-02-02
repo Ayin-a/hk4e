@@ -221,6 +221,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(AvatarWearFlycloakRsp, &proto.AvatarWearFlycloakRsp{})             // 角色换风之翼响应
 	c.registerMessage(AvatarFlycloakChangeNotify, &proto.AvatarFlycloakChangeNotify{})   // 角色换风之翼通知
 	c.registerMessage(AvatarLifeStateChangeNotify, &proto.AvatarLifeStateChangeNotify{}) // 角色存活状态改变通知
+	c.registerMessage(AvatarUpgradeReq, &proto.AvatarUpgradeReq{})                       // 角色升级请求
+	c.registerMessage(AvatarUpgradeRsp, &proto.AvatarUpgradeRsp{})                       // 角色升级通知
+	c.registerMessage(AvatarPropNotify, &proto.AvatarPropNotify{})                       // 角色属性表更新通知
 
 	// 背包与道具
 	c.registerMessage(PlayerStoreNotify, &proto.PlayerStoreNotify{})           // 玩家背包数据通知

@@ -38,6 +38,8 @@ type GameDataConfig struct {
 	FetterDataMap           map[int32]*FetterData           // 角色资料解锁
 	FetterDataAvatarIdMap   map[int32][]int32               // 角色资料解锁角色id索引
 	ItemDataMap             map[int32]*ItemData             // 统一道具
+	AvatarLevelDataMap      map[int32]*AvatarLevelData      // 角色等级
+	AvatarPromoteDataMap    map[int32]*AvatarPromoteData    // 角色突破
 }
 
 func InitGameDataConfig() {
@@ -97,6 +99,8 @@ func (g *GameDataConfig) load() {
 	g.loadGatherData()           // 采集物
 	g.loadFetterData()           // 角色资料解锁
 	g.loadItemData()             // 统一道具
+	g.loadAvatarLevelData()      // 角色等级
+	g.loadAvatarPromoteData()    // 角色突破
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

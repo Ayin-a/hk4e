@@ -19,7 +19,6 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	targetAvatarId := player.GetAvatarIdByGuid(targetAvatarGuid)
-	logger.Error("avatarId: %v", targetAvatarGuid)
 	oldAvatarId := world.GetPlayerActiveAvatarId(player)
 	if targetAvatarId == oldAvatarId {
 		logger.Error("can not change to the same avatar, uid: %v, oldAvatarId: %v, targetAvatarId: %v", player.PlayerID, oldAvatarId, targetAvatarId)

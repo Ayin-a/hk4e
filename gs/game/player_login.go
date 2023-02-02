@@ -386,6 +386,9 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.CostumeList = append(player.CostumeList, 204501)
 	player.CostumeList = append(player.CostumeList, 201601)
 	player.CostumeList = append(player.CostumeList, 203101)
+	player.CostumeList = append(player.CostumeList, 200201)
+	player.CostumeList = append(player.CostumeList, 200601)
+	player.CostumeList = append(player.CostumeList, 208201)
 
 	player.SafePos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 	player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}

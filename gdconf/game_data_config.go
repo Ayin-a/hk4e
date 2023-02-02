@@ -86,7 +86,7 @@ func (g *GameDataConfig) load() {
 	g.loadAvatarData()           // 角色
 	g.loadAvatarSkillData()      // 角色技能
 	g.loadAvatarSkillDepotData() // 角色技能库
-	g.loadDropGroupData()        // 掉落组
+	g.loadDropGroupData()        // 掉落组 卡池 临时的
 	g.loadGCGCharData()          // 角色卡牌
 	g.loadGCGSkillData()         // 卡牌技能
 	g.loadSceneData()            // 场景

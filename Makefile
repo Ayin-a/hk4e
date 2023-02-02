@@ -103,9 +103,9 @@ gen_proto:
 # 生成服务器配置表
 .PHONY: gen_csv
 gen_csv:
-	cd gdconf && go test -v -run TestGenGdCsv .
+	cd gdconf && mkdir -p ./game_data_config/csv && go test -count=1 -v -run TestGenGdCsv .
 
 # 生成客户端协议代理功能所需的代码
 .PHONY: gen_client_proto
 gen_client_proto:
-	cd gate/client_proto && rm -rf client_proto_gen.go && go test -v -run TestClientProtoGen .
+	cd gate/client_proto && rm -rf client_proto_gen.go && go test -count=1 -v -run TestClientProtoGen .

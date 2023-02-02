@@ -6,6 +6,8 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
+// 当初写卡池算法的时候临时建立的表 以后再做迁移吧
+
 type Drop struct {
 	DropId int32 `csv:"DropId"`
 	Weight int32 `csv:"Weight"`
@@ -23,7 +25,7 @@ func (g *GameDataConfig) loadDropGroupData() {
 	g.DropGroupDataMap = make(map[int32]*DropGroupData)
 	fileNameList := []string{"DropGachaAvatarUp.csv", "DropGachaWeaponUp.csv", "DropGachaNormal.csv"}
 	for _, fileName := range fileNameList {
-		data := g.readCsvFileData("ext/" + fileName)
+		data := g.readCsvFileData("../ext/" + fileName)
 		var dropList []*Drop
 		err := csvutil.Unmarshal(data, &dropList)
 		if err != nil {

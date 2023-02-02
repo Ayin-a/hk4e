@@ -73,12 +73,17 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 			return
 		}
 		// 距离技能开始过去的时间
-		pastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
-		// 法器角色轻击也会算触发重击消耗
-		// 所以通过策略判断 必须距离技能开始过去200ms才算重击
-		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && pastTime > 200 {
+		startPastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
+		// 距离上次技能消耗的时间
+		changePastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillChargeTime
+		// 法器角色轻击也会算触发重击消耗 胡桃等角色重击一次会多次消耗
+		// 所以通过策略判断 必须距离技能开始过去200ms才算重击 两次技能耐力消耗之间需间隔500ms
+
+		// 暂时就这样实现重击消耗 以后应该还会有更好的办法~
+		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && startPastTime > 200 && changePastTime > 500 {
 			// 重击对应的耐力消耗
 			g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
+			player.StaminaInfo.LastSkillChargeTime = time.Now().UnixMilli()
 		}
 	default:
 		break

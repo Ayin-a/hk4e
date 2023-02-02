@@ -14,6 +14,7 @@ type StaminaInfo struct {
 	LastSkillId         uint32            // 最后释放的技能Id
 	LastSkillTime       int64             // 最后释放技能的时间
 	LastSkillStartTime  int64             // 最后执行开始技能耐力消耗的时间
+	LastSkillChargeTime int64             // 最后执行技能耐力消耗的时间
 	DrownBackDelay      uint8             // 溺水返回安全点延时
 }
 

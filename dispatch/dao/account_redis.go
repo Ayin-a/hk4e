@@ -8,9 +8,9 @@ const RedisPlayerKeyPrefix = "HK4E"
 
 const (
 	AccountIdRedisKey          = "AccountId"
-	AccountIdBegin      uint64 = 1
+	AccountIdBegin      uint64 = 10000
 	YuanShenUidRedisKey        = "YuanShenUid"
-	YuanShenUidBegin    uint64 = 100000001
+	YuanShenUidBegin    uint64 = 100000000
 )
 
 func (d *Dao) GetNextAccountId() (uint64, error) {
@@ -28,9 +28,9 @@ func (d *Dao) redisInc(keyName string) (uint64, error) {
 	}
 	if exist == 0 {
 		var value uint64 = 0
-		if keyName == AccountIdRedisKey {
+		if keyName == RedisPlayerKeyPrefix+":"+AccountIdRedisKey {
 			value = AccountIdBegin
-		} else if keyName == YuanShenUidRedisKey {
+		} else if keyName == RedisPlayerKeyPrefix+":"+YuanShenUidRedisKey {
 			value = YuanShenUidBegin
 		}
 		err := d.redis.Set(context.TODO(), keyName, value, 0).Err()

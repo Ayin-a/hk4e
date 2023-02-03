@@ -48,14 +48,46 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	return allItemDataConfig
 }
 
+// AddUserItem 玩家添加物品
 func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bool, hintReason uint16) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
+	playerPropNotify := &proto.PlayerPropNotify{
+		PropMap: make(map[uint32]*proto.PropValue),
+	}
 	for _, userItem := range itemList {
-		player.AddItem(userItem.ItemId, userItem.ChangeCount)
+		// 物品为虚拟物品则另外处理
+		switch userItem.ItemId {
+		case constant.ItemConstantConst.RESIN, constant.ItemConstantConst.LEGENDARY_KEY, constant.ItemConstantConst.HCOIN,
+			constant.ItemConstantConst.SCOIN, constant.ItemConstantConst.MCOIN, constant.ItemConstantConst.HOME_COIN:
+			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
+			prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[userItem.ItemId]
+			if !ok {
+				continue
+			}
+			// 角色属性物品数量增加
+			player.PropertiesMap[prop] += userItem.ChangeCount
+
+			playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
+				Type: uint32(prop),
+				Val:  int64(player.PropertiesMap[prop]),
+				Value: &proto.PropValue_Ival{
+					Ival: int64(player.PropertiesMap[prop]),
+				},
+			}
+		case constant.ItemConstantConst.PLAYER_EXP:
+			// 冒险阅历
+			g.AddUserPlayerExp(userId, userItem.ChangeCount)
+		default:
+			// 普通物品直接进背包
+			player.AddItem(userItem.ItemId, userItem.ChangeCount)
+		}
+	}
+	if len(playerPropNotify.PropMap) > 0 {
+		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
 	}
 
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
@@ -93,26 +125,6 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 		}
 		g.SendMsg(cmd.ItemAddHintNotify, userId, player.ClientSeq, itemAddHintNotify)
 	}
-
-	playerPropNotify := &proto.PlayerPropNotify{
-		PropMap: make(map[uint32]*proto.PropValue),
-	}
-	for _, userItem := range itemList {
-		isVirtualItem, prop := player.GetVirtualItemProp(userItem.ItemId)
-		if !isVirtualItem {
-			continue
-		}
-		playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
-			Type: uint32(prop),
-			Val:  int64(player.PropertiesMap[prop]),
-			Value: &proto.PropValue_Ival{
-				Ival: int64(player.PropertiesMap[prop]),
-			},
-		}
-	}
-	if len(playerPropNotify.PropMap) > 0 {
-		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
-	}
 }
 
 func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
@@ -121,8 +133,42 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
+	playerPropNotify := &proto.PlayerPropNotify{
+		PropMap: make(map[uint32]*proto.PropValue),
+	}
 	for _, userItem := range itemList {
-		player.CostItem(userItem.ItemId, userItem.ChangeCount)
+		// 物品为虚拟物品则另外处理
+		switch userItem.ItemId {
+		case constant.ItemConstantConst.RESIN, constant.ItemConstantConst.LEGENDARY_KEY, constant.ItemConstantConst.HCOIN,
+			constant.ItemConstantConst.SCOIN, constant.ItemConstantConst.MCOIN, constant.ItemConstantConst.HOME_COIN:
+			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
+			prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[userItem.ItemId]
+			if !ok {
+				continue
+			}
+			// 角色属性物品数量增加
+			if player.PropertiesMap[prop] < userItem.ChangeCount {
+				player.PropertiesMap[prop] = 0
+			} else {
+				player.PropertiesMap[prop] -= userItem.ChangeCount
+			}
+
+			playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
+				Type: uint32(prop),
+				Val:  int64(player.PropertiesMap[prop]),
+				Value: &proto.PropValue_Ival{
+					Ival: int64(player.PropertiesMap[prop]),
+				},
+			}
+		case constant.ItemConstantConst.PLAYER_EXP:
+			// 冒险阅历应该也没人会去扣吧?
+		default:
+			// 普通物品直接扣除
+			player.CostItem(userItem.ItemId, userItem.ChangeCount)
+		}
+	}
+	if len(playerPropNotify.PropMap) > 0 {
+		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
 	}
 
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
@@ -162,25 +208,5 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	}
 	if len(storeItemDelNotify.GuidList) > 0 {
 		g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)
-	}
-
-	playerPropNotify := &proto.PlayerPropNotify{
-		PropMap: make(map[uint32]*proto.PropValue),
-	}
-	for _, userItem := range itemList {
-		isVirtualItem, prop := player.GetVirtualItemProp(userItem.ItemId)
-		if !isVirtualItem {
-			continue
-		}
-		playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
-			Type: uint32(prop),
-			Val:  int64(player.PropertiesMap[prop]),
-			Value: &proto.PropValue_Ival{
-				Ival: int64(player.PropertiesMap[prop]),
-			},
-		}
-	}
-	if len(playerPropNotify.PropMap) > 0 {
-		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
 	}
 }

@@ -24,24 +24,25 @@ type GameDataConfig struct {
 	jsonPrefix string
 	luaPrefix  string
 	// 配置表数据
-	AvatarDataMap           map[int32]*AvatarData           // 角色
-	AvatarSkillDataMap      map[int32]*AvatarSkillData      // 角色技能
-	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData // 角色技能库
-	DropGroupDataMap        map[int32]*DropGroupData        // 掉落组
-	GCGCharDataMap          map[int32]*GCGCharData          // 角色卡牌
-	GCGSkillDataMap         map[int32]*GCGSkillData         // 卡牌技能
-	SceneDataMap            map[int32]*SceneData            // 场景
-	ScenePointMap           map[int32]*ScenePoint           // 场景传送点
-	SceneTagDataMap         map[int32]*SceneTagData         // 场景地图图标
-	SceneMap                map[int32]*Scene                // 场景详情
-	WorldAreaDataMap        map[int32]*WorldAreaData        // 世界区域
-	GatherDataMap           map[int32]*GatherData           // 采集物
-	GatherDataPointTypeMap  map[int32]*GatherData           // 采集物场景节点索引
-	FetterDataMap           map[int32]*FetterData           // 角色资料解锁
-	FetterDataAvatarIdMap   map[int32][]int32               // 角色资料解锁角色id索引
-	ItemDataMap             map[int32]*ItemData             // 统一道具
-	AvatarLevelDataMap      map[int32]*AvatarLevelData      // 角色等级
-	AvatarPromoteDataMap    map[int32]*AvatarPromoteData    // 角色突破
+	AvatarDataMap           map[int32]*AvatarData                  // 角色
+	AvatarSkillDataMap      map[int32]*AvatarSkillData             // 角色技能
+	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData        // 角色技能库
+	DropGroupDataMap        map[int32]*DropGroupData               // 掉落组
+	GCGCharDataMap          map[int32]*GCGCharData                 // 角色卡牌
+	GCGSkillDataMap         map[int32]*GCGSkillData                // 卡牌技能
+	SceneDataMap            map[int32]*SceneData                   // 场景
+	ScenePointMap           map[int32]*ScenePoint                  // 场景传送点
+	SceneTagDataMap         map[int32]*SceneTagData                // 场景地图图标
+	SceneMap                map[int32]*Scene                       // 场景详情
+	WorldAreaDataMap        map[int32]*WorldAreaData               // 世界区域
+	GatherDataMap           map[int32]*GatherData                  // 采集物
+	GatherDataPointTypeMap  map[int32]*GatherData                  // 采集物场景节点索引
+	FetterDataMap           map[int32]*FetterData                  // 角色资料解锁
+	FetterDataAvatarIdMap   map[int32][]int32                      // 角色资料解锁角色id索引
+	ItemDataMap             map[int32]*ItemData                    // 统一道具
+	AvatarLevelDataMap      map[int32]*AvatarLevelData             // 角色等级
+	AvatarPromoteDataMap    map[int32]map[int32]*AvatarPromoteData // 角色突破
+	PlayerLevelDataMap      map[int32]*PlayerLevelData             // 玩家等级
 }
 
 func InitGameDataConfig() {
@@ -117,6 +118,7 @@ func (g *GameDataConfig) load() {
 	g.loadItemData()             // 统一道具
 	g.loadAvatarLevelData()      // 角色等级
 	g.loadAvatarPromoteData()    // 角色突破
+	g.loadPlayerLevelData()      // 玩家等级
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

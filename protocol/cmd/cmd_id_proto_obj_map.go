@@ -224,6 +224,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(AvatarUpgradeReq, &proto.AvatarUpgradeReq{})                       // 角色升级请求
 	c.registerMessage(AvatarUpgradeRsp, &proto.AvatarUpgradeRsp{})                       // 角色升级通知
 	c.registerMessage(AvatarPropNotify, &proto.AvatarPropNotify{})                       // 角色属性表更新通知
+	c.registerMessage(AvatarPromoteReq, &proto.AvatarPromoteReq{})                       // 角色突破请求
+	c.registerMessage(AvatarPromoteRsp, &proto.AvatarPromoteRsp{})                       // 角色突破响应
 
 	// 背包与道具
 	c.registerMessage(PlayerStoreNotify, &proto.PlayerStoreNotify{})           // 玩家背包数据通知

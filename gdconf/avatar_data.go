@@ -25,6 +25,7 @@ type AvatarData struct {
 	InitialWeapon int32   `csv:"InitialWeapon,omitempty"` // 初始武器
 	WeaponType    int32   `csv:"WeaponType,omitempty"`    // 武器种类
 	SkillDepotId  int32   `csv:"SkillDepotId,omitempty"`  // 技能库ID
+	PromoteId     int32   `csv:"PromoteId,omitempty"`     // 角色突破ID
 
 	AbilityHashCodeList []int32
 }

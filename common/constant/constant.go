@@ -21,4 +21,5 @@ func InitConstant() {
 	InitStaminaCostConst()
 	InitWeaponTypeConst()
 	InitGCGTokenConst()
+	InitItemConstantConst()
 }

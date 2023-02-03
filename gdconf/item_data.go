@@ -17,7 +17,8 @@ type ItemData struct {
 	GadgetId  int32  `csv:"GadgetId,omitempty"`  // 物件ID
 	Name      string `csv:"Name,omitempty"`      // 数值用类型
 	// 材料
-	MaterialType int32 `csv:"MaterialType,omitempty"` // 材料类型
+	MaterialType int32  `csv:"MaterialType,omitempty"` // 材料类型
+	Use1Param1   string `csv:"Use1Param1,omitempty"`   // [使用]1参数1
 	// 武器
 	EquipType   int32 `csv:"EquipType,omitempty"`   // 武器种类
 	EquipLevel  int32 `csv:"EquipLevel,omitempty"`  // 武器阶数

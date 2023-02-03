@@ -1,6 +1,7 @@
 FROM ubuntu:18.04
 
 EXPOSE 22222/udp
+EXPOSE 23333/udp
 EXPOSE 33333/tcp
 
 WORKDIR /gate

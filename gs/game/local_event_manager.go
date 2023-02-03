@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"hk4e/common/mq"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
@@ -17,6 +18,8 @@ const (
 	RunUserCopyAndSave                     // 执行一次在线玩家内存数据复制到数据库写入协程
 	ExitRunUserCopyAndSave
 	UserOfflineSaveToDbFinish
+	ReloadGameDataConfig
+	ReloadGameDataConfigFinish
 )
 
 type LocalEvent struct {
@@ -134,5 +137,19 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 			logger.Info("user change gs notify to gate, uid: %v, gate appid: %v, gs appid: %v, host uid: %v",
 				playerOfflineInfo.Player.PlayerID, playerOfflineInfo.Player.GateAppId, gsAppId, playerOfflineInfo.ChangeGsInfo.JoinHostUserId)
 		}
+	case ReloadGameDataConfig:
+		go func() {
+			defer func() {
+				if err := recover(); err != nil {
+					logger.Error("reload game data config error: %v", err)
+				}
+			}()
+			gdconf.ReloadGameDataConfig()
+			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+				EventId: ReloadGameDataConfigFinish,
+			}
+		}()
+	case ReloadGameDataConfigFinish:
+		gdconf.ReplaceGameDataConfig()
 	}
 }

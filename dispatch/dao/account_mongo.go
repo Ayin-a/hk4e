@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func (d *Dao) GetNextAccountId() (uint64, error) {
+func (d *Dao) _GetNextAccountId() (uint64, error) {
 	db := d.db.Collection("account_id_counter")
 	find := db.FindOne(context.TODO(), bson.D{{"_id", "default"}})
 	item := new(model.AccountIDCounter)
@@ -50,7 +50,7 @@ func (d *Dao) GetNextAccountId() (uint64, error) {
 	return item.AccountID, nil
 }
 
-func (d *Dao) GetNextYuanShenUid() (uint64, error) {
+func (d *Dao) _GetNextYuanShenUid() (uint64, error) {
 	db := d.db.Collection("player_id_counter")
 	find := db.FindOne(context.TODO(), bson.D{{"_id", "default"}})
 	item := new(model.PlayerIDCounter)

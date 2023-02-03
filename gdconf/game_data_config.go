@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"hk4e/common/config"
 	"hk4e/pkg/logger"
@@ -15,6 +16,7 @@ import (
 // 游戏数据配置表
 
 var CONF *GameDataConfig = nil
+var CONF_RELOAD *GameDataConfig = nil
 
 type GameDataConfig struct {
 	// 配置表路径前缀
@@ -44,8 +46,22 @@ type GameDataConfig struct {
 
 func InitGameDataConfig() {
 	CONF = new(GameDataConfig)
+	startTime := time.Now().Unix()
 	CONF.loadAll()
-	logger.Info("load all game data config finish")
+	endTime := time.Now().Unix()
+	logger.Info("load all game data config finish, cost: %v(s)", endTime-startTime)
+}
+
+func ReloadGameDataConfig() {
+	CONF_RELOAD = new(GameDataConfig)
+	startTime := time.Now().Unix()
+	CONF_RELOAD.loadAll()
+	endTime := time.Now().Unix()
+	logger.Info("reload all game data config finish, cost: %v(s)", endTime-startTime)
+}
+
+func ReplaceGameDataConfig() {
+	CONF = CONF_RELOAD
 }
 
 func (g *GameDataConfig) loadAll() {

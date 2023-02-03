@@ -50,6 +50,7 @@ make docker_build  # 构建镜像
 
 ```shell
 make gen_csv # 生成配置表
+cd docker
 # 启动前请先确保各服务器的配置文件正确(如docker/node/bin/application.toml)
 docker-compose up -d # 启动服务器
 ```

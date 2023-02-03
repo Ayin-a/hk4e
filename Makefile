@@ -39,6 +39,7 @@ docker_clean:
 # 复制配置模板等文件
 .PHONY: docker_config
 docker_config:
+	mkdir -p ./docker && cp -rf ./docker-compose.yaml ./docker/
 	mkdir -p ./docker/node/bin && cp -rf ./cmd/node/* ./docker/node/bin/
 	mkdir -p ./docker/dispatch/bin && cp -rf ./cmd/dispatch/* ./docker/dispatch/bin/
 	mkdir -p ./docker/gate/bin && cp -rf ./cmd/gate/* ./docker/gate/bin/

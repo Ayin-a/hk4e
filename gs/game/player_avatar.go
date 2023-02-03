@@ -75,28 +75,41 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.Guid)]
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.Guid)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	// 获取角色配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarUpgradeRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 获取角色突破配置表
 	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
 	if !ok {
 		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarUpgradeRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		return
+	}
+	// 获取角色突破的配置表
+	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
+	if !ok {
+		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		return
+	}
+	// 角色等级是否达到限制
+	if avatar.Level < uint8(avatarPromoteConfig.LevelLimit) {
+		logger.Error("avatar level le level limit, level: %v", avatar.Level)
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 获取角色突破下一级的配置表
-	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote+1)]
+	avatarPromoteConfig, ok = avatarPromoteDataMap[int32(avatar.Promote+1)]
 	if !ok {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarUpgradeRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 将被消耗的物品列表

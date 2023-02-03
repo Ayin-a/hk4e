@@ -27,7 +27,7 @@ func (c *CommandManager) OpCommand(cmd *CommandMessage) {
 	}
 
 	player.IsGM = 1
-	c.SendMessage(player, "权限修改完毕，现在你是GM啦 %v", cmd.Args)
+	c.SendMessage(player, "权限修改完毕，现在你是GM啦~")
 }
 
 // TeleportCommand 传送玩家命令
@@ -248,6 +248,17 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		c.GMAddUserAllEvery(target.PlayerID, count, count) // TODO 武器额外获取数量
 		c.SendMessage(player, "已给予玩家 UID：%v, 所有内容。", target.PlayerID)
 	}
+}
+
+// ReloadConfigCommand 帮助命令
+func (c *CommandManager) ReloadConfigCommand(cmd *CommandMessage) {
+	executor := cmd.Executor
+
+	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+		EventId: ReloadGameDataConfig,
+	}
+
+	c.SendMessage(executor, "成功发送重载配置请求。")
 }
 
 // GcgCommand Gcg测试命令

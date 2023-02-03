@@ -65,12 +65,12 @@ func (c *CommandManager) InitRouter() {
 		c.RegisterRouter(CommandPermNormal, c.OpCommand, "op")
 		c.RegisterRouter(CommandPermNormal, c.TeleportCommand, "teleport", "tp")
 		c.RegisterRouter(CommandPermNormal, c.GiveCommand, "give", "item")
-		c.RegisterRouter(CommandPermNormal, c.GcgCommand, "gcg")
+		// c.RegisterRouter(CommandPermNormal, c.GcgCommand, "gcg")
 	}
 	// GM命令
 	{
 		// 权限等级 1: GM 1级
-		c.RegisterRouter(CommandPermGM, c.HelpCommand, "nmsl")
+		c.RegisterRouter(CommandPermGM, c.ReloadConfigCommand, "reloadconfig")
 	}
 }
 
@@ -81,7 +81,7 @@ func (c *CommandManager) RegisterRouter(cmdPerm CommandPerm, cmdFunc CommandFunc
 		// 命令名统一转为小写
 		s = strings.ToLower(s)
 		// 如果命令已注册则报错 后者覆盖前者
-		if c.HasCommand(s) {
+		if c.IsCommand(s) {
 			logger.Error("register command repeat, name: %v", s)
 		}
 		// 记录命令
@@ -90,8 +90,8 @@ func (c *CommandManager) RegisterRouter(cmdPerm CommandPerm, cmdFunc CommandFunc
 	}
 }
 
-// HasCommand 命令是否已被注册
-func (c *CommandManager) HasCommand(cmdName string) bool {
+// IsCommand 命令是否已被注册
+func (c *CommandManager) IsCommand(cmdName string) bool {
 	_, cmdFuncOK := c.commandFuncRouter[cmdName]
 	_, cmdPermOK := c.commandPermMap[cmdName]
 	// 判断命令函数和命令权限是否已注册
@@ -108,7 +108,7 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 	// 确保消息文本为 / 开头
 	// 如果不为这个开头那接下来就毫无意义
 	if strings.HasPrefix(text, "/") {
-		logger.Debug("command input, uid: %v, text: %v", c.GetExecutorId(executor), text)
+		logger.Debug("input command, uid: %v text: %v", c.GetExecutorId(executor), text)
 
 		// 输入的命令将在其他协程中处理
 		c.commandTextInput <- &CommandMessage{Executor: executor, Text: text}
@@ -119,7 +119,6 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 // 主协程接收到命令消息后执行
 func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 	executor := cmd.Executor
-	logger.Debug("command handle, uid: %v, text: %v", c.GetExecutorId(executor), cmd.Text)
 
 	// 将开头的 / 去掉 并 分割出命令的每个参数
 	// 不区分命令的大小写 统一转为小写
@@ -146,8 +145,7 @@ func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 
 		// 分割出来的参数只有一个那肯定不是键值对
 		if len(cmdArg) < 2 {
-			logger.Debug("command arg error, uid: %v, name: %v, arg: %v, text: %v", c.GetExecutorId(executor), cmd.Name, cmdSplit, cmd.Text)
-			c.SendMessage(executor, "格式错误，用法: /[命令名] -[参数名] [参数]。")
+			c.SendMessage(executor, "格式错误，用法: /%v -[参数名] [参数]。", cmd.Name)
 			return
 		}
 
@@ -182,13 +180,11 @@ func (c *CommandManager) GetFriendList(friendList map[uint32]bool) map[uint32]bo
 // ExecCommand 执行命令
 func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 	executor := cmd.Executor
-	logger.Debug("command exec, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 
 	// 判断命令是否注册
 	cmdFunc, ok := c.commandFuncRouter[cmd.Name]
 	if !ok {
 		// 玩家可能会执行一些没有的命令仅做调试输出
-		logger.Debug("exec command not exist, uid: %v, name: %v", c.GetExecutorId(executor), cmd.Name)
 		c.SendMessage(executor, "命令不存在，输入 /help 查看帮助。")
 		return
 	}
@@ -208,9 +204,7 @@ func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 		return
 	}
 
-	logger.Debug("command start, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 	cmdFunc(cmd) // 执行命令
-	logger.Debug("command done, uid: %v, name: %v, args: %v", c.GetExecutorId(executor), cmd.Name, cmd.Args)
 }
 
 // SendMessage 发送消息
@@ -230,17 +224,20 @@ func (c *CommandManager) SendMessage(executor any, msg string, param ...any) {
 	}
 }
 
-// GetExecutorId 获取执行者的Id
-// 目前仅用于调试输出
-func (c *CommandManager) GetExecutorId(executor any) (userId any) {
+// GetExecutorId 获取执行者Id
+func (c *CommandManager) GetExecutorId(executor any) uint32 {
+	// 根据相应的类型获取Id
 	switch executor.(type) {
 	case *model.Player:
+		// 玩家类型
 		player := executor.(*model.Player)
-		userId = player.PlayerID
+		return player.PlayerID
 	case string:
-		userId = executor
+		// GM接口等
+		// return 123
 	default:
-		userId = fmt.Sprintf("%T", executor)
+		// 无效的类型报错
+		logger.Error("command executor type error, type: %T", executor)
 	}
-	return
+	return 0
 }

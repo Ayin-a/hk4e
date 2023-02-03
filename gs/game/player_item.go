@@ -146,7 +146,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 			if !ok {
 				continue
 			}
-			// 角色属性物品数量增加
+			// 角色属性物品数量减少
 			if player.PropertiesMap[prop] < userItem.ChangeCount {
 				player.PropertiesMap[prop] = 0
 			} else {

@@ -862,7 +862,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		lastMoveReliableSeq: 0,
 		fightProp:           player.AvatarMap[avatarId].FightPropMap,
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
-		level:               player.AvatarMap[avatarId].Level,
+		level:               0, // 角色等级直接读取角色对象
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
 			avatarId: avatarId,

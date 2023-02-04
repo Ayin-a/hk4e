@@ -654,6 +654,11 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 		Z: float32(entity.pos.Z),
 	}
 	worldAvatar := scene.world.GetWorldAvatarByEntityId(entity.id)
+	avatar, ok := player.AvatarMap[worldAvatar.avatarId]
+	if !ok {
+		logger.Error("avatar error, avatarId: %v", worldAvatar.avatarId)
+		return new(proto.SceneEntityInfo)
+	}
 	sceneEntityInfo := &proto.SceneEntityInfo{
 		EntityType: proto.ProtEntityType_PROT_ENTITY_AVATAR,
 		EntityId:   entity.id,
@@ -667,11 +672,43 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 			Speed: &proto.Vector{},
 			State: proto.MotionState(entity.moveState),
 		},
-		PropList: []*proto.PropPair{{Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL), PropValue: &proto.PropValue{
-			Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
-			Value: &proto.PropValue_Ival{Ival: int64(entity.level)},
-			Val:   int64(entity.level),
-		}}},
+		PropList: []*proto.PropPair{
+			{
+				Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+				PropValue: &proto.PropValue{
+					Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+					Value: &proto.PropValue_Ival{Ival: int64(avatar.Level)},
+					Val:   int64(avatar.Level)},
+			},
+			{
+				Type: uint32(constant.PlayerPropertyConst.PROP_EXP),
+				PropValue: &proto.PropValue{
+					Type:  uint32(constant.PlayerPropertyConst.PROP_EXP),
+					Value: &proto.PropValue_Ival{Ival: int64(avatar.Exp)},
+					Val:   int64(avatar.Exp)},
+			},
+			{
+				Type: uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL),
+				PropValue: &proto.PropValue{
+					Type:  uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL),
+					Value: &proto.PropValue_Ival{Ival: int64(avatar.Promote)},
+					Val:   int64(avatar.Promote)},
+			},
+			{
+				Type: uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL),
+				PropValue: &proto.PropValue{
+					Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL),
+					Value: &proto.PropValue_Ival{Ival: int64(avatar.Satiation)},
+					Val:   int64(avatar.Satiation)},
+			},
+			{
+				Type: uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME),
+				PropValue: &proto.PropValue{
+					Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME),
+					Value: &proto.PropValue_Ival{Ival: int64(avatar.SatiationPenalty)},
+					Val:   int64(avatar.SatiationPenalty)},
+			},
+		},
 		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
 		LifeState:        uint32(entity.lifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),

@@ -102,14 +102,14 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	// 角色等级是否达到限制
 	if avatar.Level < uint8(avatarPromoteConfig.LevelLimit) {
 		logger.Error("avatar level le level limit, level: %v", avatar.Level)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_LEVEL_LESS_THAN)
 		return
 	}
 	// 获取角色突破下一级的配置表
 	avatarPromoteConfig, ok = avatarPromoteDataMap[int32(avatar.Promote+1)]
 	if !ok {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_ON_MAX_BREAK_LEVEL)
 		return
 	}
 	// 将被消耗的物品列表
@@ -130,14 +130,18 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	for _, item := range costItemList {
 		if player.GetItemCount(item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
-			g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+			// 摩拉的错误提示与材料不同
+			if item.ItemId == constant.ItemConstantConst.SCOIN {
+				g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+			}
+			g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
 			return
 		}
 	}
 	// 冒险等级是否符合要求
 	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL] < uint32(avatarPromoteConfig.MinPlayerLevel) {
 		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL])
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_PLAYER_LEVEL_LESS_THAN)
 		return
 	}
 	// 消耗突破材料和摩拉
@@ -219,7 +223,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 角色等级是否达到限制
 	if avatar.Level >= uint8(avatarPromoteConfig.LevelLimit) {
 		logger.Error("avatar level ge level limit, level: %v", avatar.Level)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_AVATAR_BREAK_LEVEL_LESS_THAN)
 		return
 	}
 	// 消耗升级材料以及摩拉

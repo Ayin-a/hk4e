@@ -54,9 +54,18 @@ func (c *CommandManager) GMAddUserAvatar(userId, avatarId uint32) {
 
 // GMAddUserAllItem 给予玩家所有物品
 func (c *CommandManager) GMAddUserAllItem(userId, itemCount uint32) {
+	// 猜猜这样做为啥不行?
+	// for itemId := range GAME_MANAGER.GetAllItemDataConfig() {
+	// 	c.GMAddUserItem(userId, uint32(itemId), itemCount)
+	// }
+	itemList := make([]*UserItem, 0)
 	for itemId := range GAME_MANAGER.GetAllItemDataConfig() {
-		c.GMAddUserItem(userId, uint32(itemId), itemCount)
+		itemList = append(itemList, &UserItem{
+			ItemId:      uint32(itemId),
+			ChangeCount: itemCount,
+		})
 	}
+	GAME_MANAGER.AddUserItem(userId, itemList, false, 0)
 }
 
 // GMAddUserAllWeapon 给予玩家所有武器

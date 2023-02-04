@@ -42,6 +42,8 @@ var COMMAND_MANAGER *CommandManager = nil
 var GCG_MANAGER *GCGManager = nil
 var MESSAGE_QUEUE *mq.MessageQueue
 
+var ONLINE_PLAYER_NUM int32 = 0 // 当前在线玩家数
+
 var SELF *model.Player
 
 type GameManager struct {
@@ -235,6 +237,7 @@ func (g *GameManager) gameMainLoop() {
 			COMMAND_MANAGER.HandleCommand(command)
 			end := time.Now().UnixNano()
 			commandCost += end - start
+			logger.Info("run gm cmd cost: %v ns", commandCost)
 		}
 	}
 }

@@ -1,6 +1,11 @@
 package controller
 
-import "github.com/gin-gonic/gin"
+import (
+	"hk4e/dispatch/model"
+	"hk4e/pkg/logger"
+
+	"github.com/gin-gonic/gin"
+)
 
 // POST https://log-upload-os.mihoyo.com/sdk/dataUpload HTTP/1.1
 func (c *Controller) sdkDataUpload(context *gin.Context) {
@@ -22,6 +27,17 @@ func (c *Controller) perfDataUpload(context *gin.Context) {
 
 // POST http://overseauspider.yuanshen.com:8888/log HTTP/1.1
 func (c *Controller) log8888(context *gin.Context) {
+	clientLog := new(model.ClientLog)
+	err := context.ShouldBindJSON(clientLog)
+	if err != nil {
+		logger.Error("parse client log error: %v", err)
+		return
+	}
+	_, err = c.dao.InsertClientLog(clientLog)
+	if err != nil {
+		logger.Error("insert client log error: %v", err)
+		return
+	}
 	context.Header("Content-type", "application/json")
 	_, _ = context.Writer.WriteString("{\"code\":0}")
 }

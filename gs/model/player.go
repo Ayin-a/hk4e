@@ -57,6 +57,7 @@ type Player struct {
 	GCGInfo          *GCGInfo              `bson:"gcgInfo"`          // 七圣召唤信息
 	IsGM             uint8                 `bson:"isGM"`             // 管理员权限等级
 	// 在线数据 请随意 记得加忽略字段的tag
+	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
 	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌
 	DbState               int                                      `bson:"-" msgpack:"-"` // 数据库存档状态
 	WorldId               uint32                                   `bson:"-" msgpack:"-"` // 所在的世界id

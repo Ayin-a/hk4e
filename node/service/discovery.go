@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -46,6 +47,7 @@ type ServerInstance struct {
 	version           []string
 	lastAliveTime     int64
 	gsId              uint32
+	loadCount         uint32
 }
 
 type DiscoveryService struct {
@@ -90,6 +92,7 @@ func (s *DiscoveryService) RegisterServer(ctx context.Context, req *api.Register
 		serverType:    req.ServerType,
 		appId:         appId,
 		lastAliveTime: time.Now().Unix(),
+		loadCount:     0,
 	}
 	if req.ServerType == api.GATE {
 		logger.Info("register new gate server, ip: %v, port: %v", req.GateServerAddr.KcpAddr, req.GateServerAddr.KcpPort)
@@ -133,7 +136,7 @@ func (s *DiscoveryService) CancelServer(ctx context.Context, req *api.CancelServ
 
 // KeepaliveServer 服务器在线心跳保持
 func (s *DiscoveryService) KeepaliveServer(ctx context.Context, req *api.KeepaliveServerReq) (*api.NullMsg, error) {
-	logger.Debug("server keepalive, server type: %v, appid: %v", req.ServerType, req.AppId)
+	logger.Debug("server keepalive, server type: %v, appid: %v, load: %v", req.ServerType, req.AppId, req.LoadCount)
 	instMap, exist := s.serverInstanceMap[req.ServerType]
 	if !exist {
 		return nil, errors.New("server type not exist")
@@ -145,6 +148,7 @@ func (s *DiscoveryService) KeepaliveServer(ctx context.Context, req *api.Keepali
 	}
 	serverInstance := inst.(*ServerInstance)
 	serverInstance.lastAliveTime = time.Now().Unix()
+	serverInstance.loadCount = req.LoadCount
 	return &api.NullMsg{}, nil
 }
 
@@ -158,7 +162,12 @@ func (s *DiscoveryService) GetServerAppId(ctx context.Context, req *api.GetServe
 	if s.getServerInstanceMapLen(instMap) == 0 {
 		return nil, errors.New("no server found")
 	}
-	inst := s.getRandomServerInstance(instMap)
+	var inst *ServerInstance = nil
+	if req.ServerType == api.GATE || req.ServerType == api.GS {
+		inst = s.getMinLoadServerInstance(instMap)
+	} else {
+		inst = s.getRandomServerInstance(instMap)
+	}
 	logger.Debug("get server appid is: %v", inst.appId)
 	return &api.GetServerAppIdRsp{
 		AppId: inst.appId,
@@ -197,7 +206,7 @@ func (s *DiscoveryService) GetGateServerAddr(ctx context.Context, req *api.GetGa
 	if s.getServerInstanceMapLen(&versionInstMap) == 0 {
 		return nil, errors.New("no gate server found")
 	}
-	inst := s.getRandomServerInstance(&versionInstMap)
+	inst := s.getMinLoadServerInstance(&versionInstMap)
 	logger.Debug("get gate server addr is, ip: %v, port: %v", inst.gateServerKcpAddr, inst.gateServerKcpPort)
 	return &api.GateServerAddr{
 		KcpAddr: inst.gateServerKcpAddr,
@@ -267,6 +276,25 @@ func (s *DiscoveryService) getRandomServerInstance(instMap *sync.Map) *ServerIns
 	sort.Stable(instList)
 	index := random.GetRandomInt32(0, int32(len(instList)-1))
 	inst := instList[index]
+	return inst
+}
+
+func (s *DiscoveryService) getMinLoadServerInstance(instMap *sync.Map) *ServerInstance {
+	instList := make(ServerInstanceSortList, 0)
+	instMap.Range(func(key, value any) bool {
+		instList = append(instList, value.(*ServerInstance))
+		return true
+	})
+	sort.Stable(instList)
+	minLoadInstIndex := 0
+	minLoadInstCount := math.MaxUint32
+	for index, inst := range instList {
+		if inst.loadCount < uint32(minLoadInstCount) {
+			minLoadInstCount = int(inst.loadCount)
+			minLoadInstIndex = index
+		}
+	}
+	inst := instList[minLoadInstIndex]
 	return inst
 }
 

@@ -16,11 +16,18 @@ import (
 
 // 世界管理器
 
+const (
+	ENTITY_NUM_UNLIMIT        = false // 是否不限制场景内实体数量
+	ENTITY_MAX_SEND_NUM       = 300   // 场景内最大实体数量
+	MAX_MULTIPLAYER_WORLD_NUM = 10    // 本服务器最大多人世界数量
+)
+
 type WorldManager struct {
-	worldMap         map[uint32]*World
-	snowflake        *alg.SnowflakeWorker
-	aiWorld          *World                     // 本服的Ai玩家世界
-	sceneBlockAoiMap map[uint32]*alg.AoiManager // 全局各场景地图的aoi管理器
+	worldMap            map[uint32]*World
+	snowflake           *alg.SnowflakeWorker
+	aiWorld             *World                     // 本服的Ai玩家世界
+	sceneBlockAoiMap    map[uint32]*alg.AoiManager // 全局各场景地图的aoi管理器
+	multiplayerWorldNum uint32                     // 本服务器的多人世界数量
 }
 
 func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
@@ -136,6 +143,7 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 		}
 		r.sceneBlockAoiMap[uint32(sceneConfig.Id)] = aoiManager
 	}
+	r.multiplayerWorldNum = 0
 	return r
 }
 
@@ -176,6 +184,9 @@ func (w *WorldManager) DestroyWorld(worldId uint32) {
 		player.WorldId = 0
 	}
 	delete(w.worldMap, worldId)
+	if world.multiplayer {
+		w.multiplayerWorldNum--
+	}
 }
 
 // GetAiWorld 获取本服务器的Ai世界
@@ -618,6 +629,7 @@ func (w *World) GetChatList() []*proto.ChatInfo {
 
 // ChangeToMultiplayer 转换为多人世界
 func (w *World) ChangeToMultiplayer() {
+	WORLD_MANAGER.multiplayerWorldNum++
 	w.multiplayer = true
 }
 
@@ -665,10 +677,10 @@ type Scene struct {
 	world             *World
 	playerMap         map[uint32]*model.Player
 	entityMap         map[uint32]*Entity
-	objectIdEntityMap map[int64]*Entity
-	gameTime          uint32 // 游戏内提瓦特大陆的时间
-	createTime        int64
-	meeoIndex         uint32 // 客户端风元素染色同步协议的计数器
+	objectIdEntityMap map[int64]*Entity // 用于标识配置档里的唯一实体是否已被创建
+	gameTime          uint32            // 游戏内提瓦特大陆的时间
+	createTime        int64             // 场景创建时间
+	meeoIndex         uint32            // 客户端风元素染色同步协议的计数器
 }
 
 func (s *Scene) GetAllPlayer() map[uint32]*model.Player {
@@ -873,7 +885,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 			avatarId: avatarId,
 		},
 	}
-	s.entityMap[entity.id] = entity
+	s.CreateEntity(entity, 0)
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -903,7 +915,7 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON),
 		level:               0,
 	}
-	s.entityMap[entity.id] = entity
+	s.CreateEntity(entity, 0)
 	return entity.id
 }
 
@@ -931,8 +943,7 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 		configId: configId,
 		objectId: objectId,
 	}
-	s.entityMap[entity.id] = entity
-	s.objectIdEntityMap[objectId] = entity
+	s.CreateEntity(entity, objectId)
 	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.FightRoutineAddEntity,
@@ -976,8 +987,7 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 		configId: configId,
 		objectId: objectId,
 	}
-	s.entityMap[entity.id] = entity
-	s.objectIdEntityMap[objectId] = entity
+	s.CreateEntity(entity, objectId)
 	return entity.id
 }
 
@@ -1010,8 +1020,7 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 		configId: configId,
 		objectId: objectId,
 	}
-	s.entityMap[entity.id] = entity
-	s.objectIdEntityMap[objectId] = entity
+	s.CreateEntity(entity, objectId)
 	return entity.id
 }
 
@@ -1047,8 +1056,7 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 		configId: configId,
 		objectId: objectId,
 	}
-	s.entityMap[entity.id] = entity
-	s.objectIdEntityMap[objectId] = entity
+	s.CreateEntity(entity, objectId)
 	return entity.id
 }
 
@@ -1081,7 +1089,7 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 			},
 		},
 	}
-	s.entityMap[entity.id] = entity
+	s.CreateEntity(entity, 0)
 }
 
 func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
@@ -1119,8 +1127,19 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 			},
 		},
 	}
-	s.entityMap[entity.id] = entity
+	s.CreateEntity(entity, 0)
 	return entity.id
+}
+
+func (s *Scene) CreateEntity(entity *Entity, objectId int64) {
+	if len(s.entityMap) >= ENTITY_MAX_SEND_NUM && !ENTITY_NUM_UNLIMIT {
+		logger.Error("above max scene entity num limit: %v, id: %v, pos: %v", ENTITY_MAX_SEND_NUM, entity.id, entity.pos)
+		return
+	}
+	if objectId != 0 {
+		s.objectIdEntityMap[objectId] = entity
+	}
+	s.entityMap[entity.id] = entity
 }
 
 func (s *Scene) DestroyEntity(entityId uint32) {

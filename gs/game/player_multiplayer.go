@@ -175,18 +175,18 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) {
-	applyFailNotify := func() {
+	applyFailNotify := func(reason proto.PlayerApplyEnterMpResultNotify_Reason) {
 		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
 			TargetUid:      targetUid,
 			TargetNickname: "",
 			IsAgreed:       false,
-			Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
+			Reason:         reason,
 		}
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.multiplayer {
-		applyFailNotify()
+		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
 		return
 	}
 	targetPlayer := USER_MANAGER.GetOnlineUser(targetUid)
@@ -194,7 +194,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		if !USER_MANAGER.GetRemoteUserOnlineState(targetUid) {
 			// 全服不存在该在线玩家
 			logger.Error("target user not online in any game server, uid: %v", targetUid)
-			applyFailNotify()
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
 			return
 		}
 		gsAppId := USER_MANAGER.GetRemoteUserGsAppId(targetUid)
@@ -224,18 +224,32 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		})
 		return
 	}
-	applyTime, exist := targetPlayer.CoopApplyMap[player.PlayerID]
-	if exist && time.Now().UnixNano() < applyTime+int64(10*time.Second) {
-		applyFailNotify()
+	if WORLD_MANAGER.multiplayerWorldNum >= MAX_MULTIPLAYER_WORLD_NUM {
+		// 超过本服务器最大多人世界数量限制
+		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_MAX_PLAYER)
 		return
 	}
-	targetPlayer.CoopApplyMap[player.PlayerID] = time.Now().UnixNano()
 	targetWorld := WORLD_MANAGER.GetWorldByID(targetPlayer.WorldId)
 	if targetWorld.multiplayer && targetWorld.owner.PlayerID != targetPlayer.PlayerID {
 		// 向同一世界内的非房主玩家申请时直接拒绝
-		applyFailNotify()
+		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
 		return
 	}
+	mpSetting := targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]
+	if mpSetting == 0 {
+		// 房主玩家没开权限
+		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_SCENE_CANNOT_ENTER)
+		return
+	} else if mpSetting == 1 {
+		g.UserDealEnterWorld(targetPlayer, player.PlayerID, true)
+		return
+	}
+	applyTime, exist := targetPlayer.CoopApplyMap[player.PlayerID]
+	if exist && time.Now().UnixNano() < applyTime+int64(10*time.Second) {
+		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
+		return
+	}
+	targetPlayer.CoopApplyMap[player.PlayerID] = time.Now().UnixNano()
 
 	playerApplyEnterMpNotify := new(proto.PlayerApplyEnterMpNotify)
 	playerApplyEnterMpNotify.SrcPlayerInfo = g.PacketOnlinePlayerInfo(player)
@@ -520,7 +534,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string) {
 	switch userMpInfo.OriginInfo.CmdName {
 	case "PlayerApplyEnterMpReq":
-		applyFailNotify := func() {
+		applyFailNotify := func(reason proto.PlayerApplyEnterMpResultNotify_Reason) {
 			MESSAGE_QUEUE.SendToGs(gsAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeServer,
 				EventId: mq.ServerUserMpRsp,
@@ -529,6 +543,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 						OriginInfo: userMpInfo.OriginInfo,
 						HostUserId: userMpInfo.HostUserId,
 						ApplyOk:    false,
+						Reason:     int32(reason),
 					},
 				},
 			})
@@ -536,21 +551,35 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 		hostPlayer := USER_MANAGER.GetOnlineUser(userMpInfo.HostUserId)
 		if hostPlayer == nil {
 			logger.Error("player is nil, uid: %v", userMpInfo.HostUserId)
-			applyFailNotify()
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
+			return
+		}
+		if WORLD_MANAGER.multiplayerWorldNum >= MAX_MULTIPLAYER_WORLD_NUM {
+			// 超过本服务器最大多人世界数量限制
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_MAX_PLAYER)
+			return
+		}
+		hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
+		if hostWorld.multiplayer && hostWorld.owner.PlayerID != hostPlayer.PlayerID {
+			// 向同一世界内的非房主玩家申请时直接拒绝
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
+			return
+		}
+		mpSetting := hostPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]
+		if mpSetting == 0 {
+			// 房主玩家没开权限
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_SCENE_CANNOT_ENTER)
+			return
+		} else if mpSetting == 1 {
+			g.UserDealEnterWorld(hostPlayer, userMpInfo.ApplyUserId, true)
 			return
 		}
 		applyTime, exist := hostPlayer.CoopApplyMap[userMpInfo.ApplyUserId]
 		if exist && time.Now().UnixNano() < applyTime+int64(10*time.Second) {
-			applyFailNotify()
+			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
 			return
 		}
 		hostPlayer.CoopApplyMap[userMpInfo.ApplyUserId] = time.Now().UnixNano()
-		hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-		if hostWorld.multiplayer && hostWorld.owner.PlayerID != hostPlayer.PlayerID {
-			// 向同一世界内的非房主玩家申请时直接拒绝
-			applyFailNotify()
-			return
-		}
 
 		playerApplyEnterMpNotify := new(proto.PlayerApplyEnterMpNotify)
 		playerApplyEnterMpNotify.SrcPlayerInfo = &proto.OnlinePlayerInfo{
@@ -617,7 +646,7 @@ func (g *GameManager) ServerUserMpRsp(userMpInfo *mq.UserMpInfo) {
 				TargetUid:      userMpInfo.HostUserId,
 				TargetNickname: "",
 				IsAgreed:       false,
-				Reason:         proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP,
+				Reason:         proto.PlayerApplyEnterMpResultNotify_Reason(userMpInfo.Reason),
 			}
 			g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 		}

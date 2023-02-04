@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sync/atomic"
 	"time"
 
 	"hk4e/common/constant"
@@ -81,6 +82,8 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 
 	TICK_MANAGER.CreateUserGlobalTick(userId)
 	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100)
+
+	atomic.AddInt32(&ONLINE_PLAYER_NUM, 1)
 }
 
 func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
@@ -134,6 +137,8 @@ func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	player.Online = false
 	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
 	USER_MANAGER.OfflineUser(player, changeGsInfo)
+
+	atomic.AddInt32(&ONLINE_PLAYER_NUM, -1)
 }
 
 func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {

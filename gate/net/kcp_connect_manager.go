@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"hk4e/common/config"
@@ -21,27 +22,36 @@ import (
 )
 
 const (
-	PacketFreqLimit = 1000
-	PacketMaxLen    = 343 * 1024
-	ConnRecvTimeout = 30
-	ConnSendTimeout = 10
+	ConnSynPacketFreqLimit = 100        // 连接建立握手包每秒发包频率限制
+	RecvPacketFreqLimit    = 100        // 客户端上行每秒发包频率限制
+	SendPacketFreqLimit    = 1000       // 服务器下行每秒发包频率限制
+	PacketMaxLen           = 343 * 1024 // 最大应用层包长度
+	ConnRecvTimeout        = 30         // 收包超时时间 秒
+	ConnSendTimeout        = 10         // 发包超时时间 秒
+	MaxClientConnNumLimit  = 100        // 最大客户端连接数限制
 )
 
+var CLIENT_CONN_NUM int32 = 0 // 当前客户端连接数
+
 type KcpConnectManager struct {
-	discovery          *rpc.DiscoveryClient
-	openState          bool
+	discovery *rpc.DiscoveryClient // node服务器客户端
+	openState bool                 // 网关开放状态
+	// 会话
 	sessionConvIdMap   map[uint64]*Session
 	sessionUserIdMap   map[uint32]*Session
 	sessionMapLock     sync.RWMutex
-	kcpEventInput      chan *KcpEvent
-	kcpEventOutput     chan *KcpEvent
-	serverCmdProtoMap  *cmd.CmdProtoMap
-	clientCmdProtoMap  *client_proto.ClientCmdProtoMap
-	messageQueue       *mq.MessageQueue
-	localMsgOutput     chan *ProtoMsg
 	createSessionChan  chan *Session
 	destroySessionChan chan *Session
-	// 密钥相关
+	// 连接事件
+	kcpEventInput  chan *KcpEvent
+	kcpEventOutput chan *KcpEvent
+	// 协议
+	serverCmdProtoMap *cmd.CmdProtoMap
+	clientCmdProtoMap *client_proto.ClientCmdProtoMap
+	// 输入输出管道
+	messageQueue   *mq.MessageQueue
+	localMsgOutput chan *ProtoMsg
+	// 密钥
 	dispatchKey  []byte
 	signRsaKey   []byte
 	encRsaKeyMap map[string][]byte
@@ -53,6 +63,8 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.openState = true
 	r.sessionConvIdMap = make(map[uint64]*Session)
 	r.sessionUserIdMap = make(map[uint32]*Session)
+	r.createSessionChan = make(chan *Session, 1000)
+	r.destroySessionChan = make(chan *Session, 1000)
 	r.kcpEventInput = make(chan *KcpEvent, 1000)
 	r.kcpEventOutput = make(chan *KcpEvent, 1000)
 	r.serverCmdProtoMap = cmd.NewCmdProtoMap()
@@ -61,8 +73,6 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	}
 	r.messageQueue = messageQueue
 	r.localMsgOutput = make(chan *ProtoMsg, 1000)
-	r.createSessionChan = make(chan *Session, 1000)
-	r.destroySessionChan = make(chan *Session, 1000)
 	r.run()
 	return r
 }
@@ -86,7 +96,7 @@ func (k *KcpConnectManager) run() {
 	k.dispatchKey = regionEc2b.XorKey()
 	// kcp
 	port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
-	listener, err := kcp.ListenWithOptions("0.0.0.0:"+port, nil, 0, 0)
+	listener, err := kcp.ListenWithOptions("0.0.0.0:" + port)
 	if err != nil {
 		logger.Error("listen kcp err: %v", err)
 		return
@@ -95,29 +105,56 @@ func (k *KcpConnectManager) run() {
 	go k.eventHandle()
 	go k.sendMsgHandle()
 	go k.acceptHandle(listener)
+	go k.gateNetInfo()
 }
 
 func (k *KcpConnectManager) Close() {
 	k.closeAllKcpConn()
+	// 等待所有连接关闭时需要发送的消息发送完毕
 	time.Sleep(time.Second * 3)
 }
 
+func (k *KcpConnectManager) gateNetInfo() {
+	ticker := time.NewTicker(time.Second * 60)
+	kcpErrorCount := uint64(0)
+	for {
+		<-ticker.C
+		snmp := kcp.DefaultSnmp.Copy()
+		kcpErrorCount += snmp.KCPInErrors
+		logger.Info("kcp send: %v B/s, kcp recv: %v B/s", snmp.BytesSent/60, snmp.BytesReceived/60)
+		logger.Info("udp send: %v B/s, udp recv: %v B/s", snmp.OutBytes/60, snmp.InBytes/60)
+		logger.Info("udp send: %v pps, udp recv: %v pps", snmp.OutPkts/60, snmp.InPkts/60)
+		clientConnNum := atomic.LoadInt32(&CLIENT_CONN_NUM)
+		logger.Info("conn num: %v, new conn num: %v, kcp error num: %v", clientConnNum, snmp.CurrEstab, kcpErrorCount)
+		kcp.DefaultSnmp.Reset()
+	}
+}
+
+// 接收并创建新连接处理函数
 func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
-	logger.Debug("accept handle start")
+	logger.Info("accept handle start")
 	for {
 		conn, err := listener.AcceptKCP()
 		if err != nil {
 			logger.Error("accept kcp err: %v", err)
 			return
 		}
+		convId := conn.GetConv()
 		if k.openState == false {
+			logger.Error("gate not open, convId: %v", convId)
 			_ = conn.Close()
+			continue
+		}
+		clientConnNum := atomic.AddInt32(&CLIENT_CONN_NUM, 1)
+		if clientConnNum > MaxClientConnNumLimit {
+			logger.Error("gate conn num limit, convId: %v", convId)
+			_ = conn.Close()
+			atomic.AddInt32(&CLIENT_CONN_NUM, -1)
 			continue
 		}
 		conn.SetACKNoDelay(true)
 		conn.SetWriteDelay(false)
-		convId := conn.GetConv()
-		logger.Debug("client connect, convId: %v", convId)
+		logger.Info("client connect, convId: %v", convId)
 		kcpRawSendChan := make(chan *ProtoMsg, 1000)
 		session := &Session{
 			conn:                   conn,
@@ -145,61 +182,76 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 	}
 }
 
+// 连接事件处理函数
 func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
-	logger.Debug("enet handle start")
+	logger.Info("enet handle start")
 	// conv短时间内唯一生成
 	convGenMap := make(map[uint64]int64)
+	pktFreqLimitCounter := 0
+	pktFreqLimitTimer := time.Now().UnixNano()
 	for {
 		enetNotify := <-listener.EnetNotify
 		logger.Info("[Enet Notify], addr: %v, conv: %v, conn: %v, enet: %v", enetNotify.Addr, enetNotify.ConvId, enetNotify.ConnType, enetNotify.EnetType)
 		switch enetNotify.ConnType {
 		case kcp.ConnEnetSyn:
-			if enetNotify.EnetType == kcp.EnetClientConnectKey {
-				// 清理老旧的conv
+			// 连接建立握手包频率限制
+			pktFreqLimitCounter++
+			if pktFreqLimitCounter > ConnSynPacketFreqLimit {
 				now := time.Now().UnixNano()
-				oldConvList := make([]uint64, 0)
-				for conv, timestamp := range convGenMap {
-					if now-timestamp > int64(time.Hour) {
-						oldConvList = append(oldConvList, conv)
-					}
+				if now-pktFreqLimitTimer > int64(time.Second) {
+					pktFreqLimitCounter = 0
+					pktFreqLimitTimer = now
+				} else {
+					continue
 				}
-				delConvList := make([]uint64, 0)
-				k.sessionMapLock.RLock()
-				for _, conv := range oldConvList {
-					_, exist := k.sessionConvIdMap[conv]
-					if !exist {
-						delConvList = append(delConvList, conv)
-						delete(convGenMap, conv)
-					}
-				}
-				k.sessionMapLock.RUnlock()
-				logger.Info("clean dead conv list: %v", delConvList)
-				// 生成没用过的conv
-				var conv uint64
-				for {
-					convData := random.GetRandomByte(8)
-					convDataBuffer := bytes.NewBuffer(convData)
-					_ = binary.Read(convDataBuffer, binary.LittleEndian, &conv)
-					_, exist := convGenMap[conv]
-					if exist {
-						continue
-					} else {
-						convGenMap[conv] = time.Now().UnixNano()
-						break
-					}
-				}
-				listener.SendEnetNotifyToClient(&kcp.Enet{
-					Addr:     enetNotify.Addr,
-					ConvId:   conv,
-					ConnType: kcp.ConnEnetEst,
-					EnetType: enetNotify.EnetType,
-				})
 			}
+			if enetNotify.EnetType != kcp.EnetClientConnectKey {
+				continue
+			}
+			// 清理老旧的conv
+			now := time.Now().UnixNano()
+			oldConvList := make([]uint64, 0)
+			for conv, timestamp := range convGenMap {
+				if now-timestamp > int64(time.Hour) {
+					oldConvList = append(oldConvList, conv)
+				}
+			}
+			delConvList := make([]uint64, 0)
+			k.sessionMapLock.RLock()
+			for _, conv := range oldConvList {
+				_, exist := k.sessionConvIdMap[conv]
+				if !exist {
+					delConvList = append(delConvList, conv)
+					delete(convGenMap, conv)
+				}
+			}
+			k.sessionMapLock.RUnlock()
+			logger.Info("clean dead conv list: %v", delConvList)
+			// 生成没用过的conv
+			var conv uint64
+			for {
+				convData := random.GetRandomByte(8)
+				convDataBuffer := bytes.NewBuffer(convData)
+				_ = binary.Read(convDataBuffer, binary.LittleEndian, &conv)
+				_, exist := convGenMap[conv]
+				if exist {
+					continue
+				} else {
+					convGenMap[conv] = time.Now().UnixNano()
+					break
+				}
+			}
+			listener.SendEnetNotifyToClient(&kcp.Enet{
+				Addr:     enetNotify.Addr,
+				ConvId:   conv,
+				ConnType: kcp.ConnEnetEst,
+				EnetType: enetNotify.EnetType,
+			})
 		case kcp.ConnEnetEst:
 		case kcp.ConnEnetFin:
 			session := k.GetSessionByConvId(enetNotify.ConvId)
 			if session == nil {
-				logger.Error("session not exist, convId: %v", enetNotify.ConvId)
+				logger.Error("session not exist, conv: %v", enetNotify.ConvId)
 				continue
 			}
 			session.conn.SendEnetNotify(&kcp.Enet{
@@ -219,6 +271,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 	}
 }
 
+// Session 连接会话结构
 type Session struct {
 	conn                   *kcp.UDPSession
 	connState              uint8
@@ -237,13 +290,13 @@ type Session struct {
 
 // 接收
 func (k *KcpConnectManager) recvHandle(session *Session) {
-	logger.Debug("recv handle start")
+	logger.Info("recv handle start")
 	conn := session.conn
 	convId := conn.GetConv()
-	pktFreqLimitCounter := 0
-	pktFreqLimitTimer := time.Now().UnixNano()
 	recvBuf := make([]byte, PacketMaxLen)
 	dataBuf := make([]byte, 0, 1500)
+	pktFreqLimitCounter := 0
+	pktFreqLimitTimer := time.Now().UnixNano()
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(time.Second * ConnRecvTimeout))
 		recvLen, err := conn.Read(recvBuf)
@@ -254,16 +307,16 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		}
 		// 收包频率限制
 		pktFreqLimitCounter++
-		now := time.Now().UnixNano()
-		if now-pktFreqLimitTimer > int64(time.Second) {
-			if pktFreqLimitCounter > PacketFreqLimit {
+		if pktFreqLimitCounter > RecvPacketFreqLimit {
+			now := time.Now().UnixNano()
+			if now-pktFreqLimitTimer > int64(time.Second) {
+				pktFreqLimitCounter = 0
+				pktFreqLimitTimer = now
+			} else {
 				logger.Error("exit recv loop, client packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
 				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
 				break
-			} else {
-				pktFreqLimitCounter = 0
 			}
-			pktFreqLimitTimer = now
 		}
 		recvData := recvBuf[:recvLen]
 		kcpMsgList := make([]*KcpMsg, 0)
@@ -279,9 +332,11 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 
 // 发送
 func (k *KcpConnectManager) sendHandle(session *Session) {
-	logger.Debug("send handle start")
+	logger.Info("send handle start")
 	conn := session.conn
 	convId := conn.GetConv()
+	pktFreqLimitCounter := 0
+	pktFreqLimitTimer := time.Now().UnixNano()
 	for {
 		protoMsg, ok := <-session.kcpRawSendChan
 		if !ok {
@@ -302,9 +357,22 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
+		// 发包频率限制
+		pktFreqLimitCounter++
+		if pktFreqLimitCounter > SendPacketFreqLimit {
+			now := time.Now().UnixNano()
+			if now-pktFreqLimitTimer > int64(time.Second) {
+				pktFreqLimitCounter = 0
+				pktFreqLimitTimer = now
+			} else {
+				logger.Error("exit send loop, server packet send freq too high, convId: %v, pps: %v", convId, pktFreqLimitCounter)
+				k.closeKcpConn(session, kcp.EnetPacketFreqTooHigh)
+				break
+			}
+		}
 		if session.changeXorKeyFin == false && protoMsg.CmdId == cmd.GetPlayerTokenRsp {
 			// XOR密钥切换
-			logger.Debug("change session xor key, convId: %v", convId)
+			logger.Info("change session xor key, convId: %v", convId)
 			session.changeXorKeyFin = true
 			keyBlock := random.NewKeyBlock(session.seed, session.useMagicSeed)
 			xorKey := keyBlock.XorKey()
@@ -315,8 +383,8 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 	}
 }
 
+// 强制关闭指定连接
 func (k *KcpConnectManager) forceCloseKcpConn(convId uint64, reason uint32) {
-	// 强制关闭某个连接
 	session := k.GetSessionByConvId(convId)
 	if session == nil {
 		logger.Error("session not exist, convId: %v", convId)
@@ -326,6 +394,7 @@ func (k *KcpConnectManager) forceCloseKcpConn(convId uint64, reason uint32) {
 	logger.Info("conn has been force close, convId: %v", convId)
 }
 
+// 关闭指定连接
 func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 	if session.connState == ConnClose {
 		return
@@ -358,8 +427,10 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 	})
 	logger.Info("send to gs user offline, ConvId: %v, UserId: %v", convId, connCtrlMsg.UserId)
 	k.destroySessionChan <- session
+	atomic.AddInt32(&CLIENT_CONN_NUM, -1)
 }
 
+// 关闭所有连接
 func (k *KcpConnectManager) closeAllKcpConn() {
 	sessionList := make([]*Session, 0)
 	k.sessionMapLock.RLock()

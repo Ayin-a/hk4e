@@ -1,6 +1,8 @@
 package game
 
 import (
+	"strconv"
+
 	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
@@ -8,7 +10,6 @@ import (
 	"hk4e/pkg/object"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
-	"strconv"
 
 	pb "google.golang.org/protobuf/proto"
 )

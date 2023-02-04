@@ -22,24 +22,42 @@ type TokenVerifyRsp struct {
 }
 
 func (c *Controller) gateTokenVerify(context *gin.Context) {
-	tokenVerifyReq := new(TokenVerifyReq)
-	err := context.ShouldBindJSON(tokenVerifyReq)
-	if err != nil {
-		return
-	}
-	logger.Debug("gate token verify, req: %v", tokenVerifyReq)
-	accountId, err := strconv.ParseUint(tokenVerifyReq.AccountId, 10, 64)
-	if err != nil {
-		return
-	}
-	account, err := c.dao.QueryAccountByField("accountID", accountId)
-	if err != nil || account == nil {
+	VerifyFail := func() {
 		context.JSON(http.StatusOK, &TokenVerifyRsp{
 			Valid:         false,
 			Forbid:        false,
 			ForbidEndTime: 0,
 			PlayerID:      0,
 		})
+	}
+	tokenVerifyReq := new(TokenVerifyReq)
+	err := context.ShouldBindJSON(tokenVerifyReq)
+	if err != nil {
+		VerifyFail()
+		return
+	}
+	logger.Info("gate token verify, req: %v", tokenVerifyReq)
+	accountId, err := strconv.ParseUint(tokenVerifyReq.AccountId, 10, 64)
+	if err != nil {
+		VerifyFail()
+		return
+	}
+	account, err := c.dao.QueryAccountByField("accountID", accountId)
+	if err != nil || account == nil {
+		VerifyFail()
+		return
+	}
+	if tokenVerifyReq.AccountToken != account.ComboToken {
+		VerifyFail()
+		return
+	}
+	if account.ComboTokenUsed {
+		VerifyFail()
+		return
+	}
+	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboTokenUsed", true)
+	if err != nil {
+		VerifyFail()
 		return
 	}
 	context.JSON(http.StatusOK, &TokenVerifyRsp{

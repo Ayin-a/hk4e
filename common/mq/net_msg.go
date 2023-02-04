@@ -111,6 +111,7 @@ type UserMpInfo struct {
 	ApplyPlayerOnlineInfo *UserBaseInfo `msgpack:"ApplyPlayerOnlineInfo"`
 	ApplyOk               bool          `msgpack:"ApplyOk"`
 	Agreed                bool          `msgpack:"Agreed"`
+	Reason                int32         `msgpack:"Reason"`
 	HostNickname          string        `msgpack:"HostNickname"`
 }
 

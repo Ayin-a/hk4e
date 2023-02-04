@@ -81,12 +81,6 @@ func (t *TickManager) onUserTickSecond(userId uint32, now int64) {
 }
 
 func (t *TickManager) onUserTickMinute(userId uint32, now int64) {
-	// 每分钟保存玩家数据
-	saveUserIdList := []uint32{userId}
-	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
-		EventId: RunUserCopyAndSave,
-		Msg:     saveUserIdList,
-	}
 }
 
 // 玩家定时任务常量

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -50,6 +51,7 @@ func Run(ctx context.Context, configFile string) error {
 			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
 				ServerType: api.GATE,
 				AppId:      APPID,
+				LoadCount:  uint32(atomic.LoadInt32(&net.CLIENT_CONN_NUM)),
 			})
 			if err != nil {
 				logger.Error("keepalive error: %v", err)
@@ -75,7 +77,8 @@ func Run(ctx context.Context, configFile string) error {
 	go func() {
 		outputChan := connectManager.GetKcpEventOutputChan()
 		for {
-			<-outputChan
+			kcpEvent := <-outputChan
+			logger.Info("kcpEvent: %v", kcpEvent)
 		}
 	}()
 

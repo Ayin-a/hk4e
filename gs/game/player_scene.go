@@ -17,6 +17,10 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+const (
+	ENTITY_MAX_BATCH_SEND_NUM = 1000 // 单次同步的最大实体数量
+)
+
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -531,16 +535,14 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 	}
 }
 
-const ENTITY_BATCH_SIZE = 1000
-
 func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	// 如果总数量太多则分包发送
-	times := int(math.Ceil(float64(len(entityIdList)) / float64(ENTITY_BATCH_SIZE)))
+	times := int(math.Ceil(float64(len(entityIdList)) / float64(ENTITY_MAX_BATCH_SEND_NUM)))
 	for i := 0; i < times; i++ {
-		begin := ENTITY_BATCH_SIZE * i
-		end := ENTITY_BATCH_SIZE * (i + 1)
+		begin := ENTITY_MAX_BATCH_SEND_NUM * i
+		end := ENTITY_MAX_BATCH_SEND_NUM * (i + 1)
 		if i == times-1 {
 			end = len(entityIdList)
 		}

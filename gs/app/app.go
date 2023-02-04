@@ -5,6 +5,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -49,6 +50,7 @@ func Run(ctx context.Context, configFile string) error {
 			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
 				ServerType: api.GS,
 				AppId:      APPID,
+				LoadCount:  uint32(atomic.LoadInt32(&game.ONLINE_PLAYER_NUM)),
 			})
 			if err != nil {
 				logger.Error("keepalive error: %v", err)

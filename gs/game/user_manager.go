@@ -1,11 +1,14 @@
 package game
 
 import (
+	"time"
+
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/object"
 	"hk4e/protocol/proto"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // 玩家管理器
@@ -167,14 +170,19 @@ type PlayerOfflineInfo struct {
 
 // OfflineUser 玩家离线
 func (u *UserManager) OfflineUser(player *model.Player, changeGsInfo *ChangeGsInfo) {
-	playerCopy := new(model.Player)
-	err := object.FastDeepCopy(playerCopy, player)
+	playerData, err := msgpack.Marshal(player)
 	if err != nil {
-		logger.Error("deep copy player error: %v", err)
+		logger.Error("marshal player data error: %v", err)
 		return
 	}
-	playerCopy.DbState = player.DbState
 	go func() {
+		playerCopy := new(model.Player)
+		err := msgpack.Unmarshal(playerData, playerCopy)
+		if err != nil {
+			logger.Error("unmarshal player data error: %v", err)
+			return
+		}
+		playerCopy.DbState = player.DbState
 		u.SaveUserToDbSync(playerCopy)
 		u.SaveUserToRedisSync(playerCopy)
 		LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
@@ -336,14 +344,19 @@ func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 	// 主协程同步写入redis
 	u.SaveUserToRedisSync(player)
 	// 另一个协程异步的写回db
-	playerCopy := new(model.Player)
-	err := object.FastDeepCopy(playerCopy, player)
+	playerData, err := msgpack.Marshal(player)
 	if err != nil {
-		logger.Error("deep copy player error: %v", err)
+		logger.Error("marshal player data error: %v", err)
 		return
 	}
-	playerCopy.DbState = player.DbState
 	go func() {
+		playerCopy := new(model.Player)
+		err := msgpack.Unmarshal(playerData, playerCopy)
+		if err != nil {
+			logger.Error("unmarshal player data error: %v", err)
+			return
+		}
+		playerCopy.DbState = player.DbState
 		u.SaveUserToDbSync(playerCopy)
 	}()
 }
@@ -351,21 +364,56 @@ func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 // db和redis相关操作
 
 type SaveUserData struct {
-	insertPlayerList []*model.Player
-	updatePlayerList []*model.Player
+	insertPlayerList [][]byte
+	updatePlayerList [][]byte
 	exitSave         bool
 }
 
 func (u *UserManager) saveUserHandle() {
-	for {
-		saveUserData := <-u.saveUserChan
-		u.SaveUserListToDbSync(saveUserData)
-		u.SaveUserListToRedisSync(saveUserData)
-		if saveUserData.exitSave {
-			// 停服落地玩家数据完毕 通知APP主协程关闭程序
-			EXIT_SAVE_FIN_CHAN <- true
+	go func() {
+		ticker := time.NewTicker(time.Minute)
+		for {
+			<-ticker.C
+			// 保存玩家数据
+			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+				EventId: RunUserCopyAndSave,
+			}
 		}
-	}
+	}()
+	go func() {
+		for {
+			saveUserData := <-u.saveUserChan
+			insertPlayerList := make([]*model.Player, 0)
+			updatePlayerList := make([]*model.Player, 0)
+			setPlayerList := make([]*model.Player, 0)
+			for _, playerData := range saveUserData.insertPlayerList {
+				player := new(model.Player)
+				err := msgpack.Unmarshal(playerData, player)
+				if err != nil {
+					logger.Error("unmarshal player data error: %v", err)
+					continue
+				}
+				insertPlayerList = append(insertPlayerList, player)
+				setPlayerList = append(setPlayerList, player)
+			}
+			for _, playerData := range saveUserData.updatePlayerList {
+				player := new(model.Player)
+				err := msgpack.Unmarshal(playerData, player)
+				if err != nil {
+					logger.Error("unmarshal player data error: %v", err)
+					continue
+				}
+				updatePlayerList = append(updatePlayerList, player)
+				setPlayerList = append(setPlayerList, player)
+			}
+			u.SaveUserListToDbSync(insertPlayerList, updatePlayerList)
+			u.SaveUserListToRedisSync(setPlayerList)
+			if saveUserData.exitSave {
+				// 停服落地玩家数据完毕 通知APP主协程关闭程序
+				EXIT_SAVE_FIN_CHAN <- true
+			}
+		}
+	}()
 }
 
 func (u *UserManager) LoadUserFromDbSync(userId uint32) *model.Player {
@@ -395,18 +443,18 @@ func (u *UserManager) SaveUserToDbSync(player *model.Player) {
 	}
 }
 
-func (u *UserManager) SaveUserListToDbSync(saveUserData *SaveUserData) {
-	err := u.dao.InsertPlayerList(saveUserData.insertPlayerList)
+func (u *UserManager) SaveUserListToDbSync(insertPlayerList []*model.Player, updatePlayerList []*model.Player) {
+	err := u.dao.InsertPlayerList(insertPlayerList)
 	if err != nil {
 		logger.Error("insert player list error: %v", err)
 		return
 	}
-	err = u.dao.UpdatePlayerList(saveUserData.updatePlayerList)
+	err = u.dao.UpdatePlayerList(updatePlayerList)
 	if err != nil {
 		logger.Error("update player list error: %v", err)
 		return
 	}
-	logger.Info("save user finish, insert user count: %v, update user count: %v", len(saveUserData.insertPlayerList), len(saveUserData.updatePlayerList))
+	logger.Info("save user finish, insert user count: %v, update user count: %v", len(insertPlayerList), len(updatePlayerList))
 }
 
 func (u *UserManager) LoadUserFromRedisSync(userId uint32) *model.Player {
@@ -418,13 +466,6 @@ func (u *UserManager) SaveUserToRedisSync(player *model.Player) {
 	u.dao.SetRedisPlayer(player)
 }
 
-func (u *UserManager) SaveUserListToRedisSync(saveUserData *SaveUserData) {
-	setPlayerList := make([]*model.Player, 0, len(saveUserData.insertPlayerList)+len(saveUserData.updatePlayerList))
-	for _, player := range saveUserData.insertPlayerList {
-		setPlayerList = append(setPlayerList, player)
-	}
-	for _, player := range saveUserData.updatePlayerList {
-		setPlayerList = append(setPlayerList, player)
-	}
+func (u *UserManager) SaveUserListToRedisSync(setPlayerList []*model.Player) {
 	u.dao.SetRedisPlayerList(setPlayerList)
 }

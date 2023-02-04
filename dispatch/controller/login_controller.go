@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"hk4e/dispatch/api"
 	"hk4e/dispatch/model"
@@ -98,7 +99,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		return
 	}
 	if account == nil {
-		// 注册一个原神account
+		// 自动注册
 		accountId, err := c.dao.GetNextAccountId()
 		if err != nil {
 			responseData.Retcode = -201
@@ -138,12 +139,19 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	// 生产新的token
+	// 生成新的token
 	account.Token = base64.StdEncoding.EncodeToString(random.GetRandomByte(24))
 	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "token", account.Token)
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-4"
+		context.JSON(http.StatusOK, responseData)
+		return
+	}
+	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "tokenCreateTime", time.Now().UnixMilli())
+	if err != nil {
+		responseData.Retcode = -201
+		responseData.Message = "服务器内部错误:-5"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
@@ -175,6 +183,12 @@ func (c *Controller) apiVerify(context *gin.Context) {
 	if account == nil || account.Token != requestData.Token {
 		responseData.Retcode = -111
 		responseData.Message = "账号本地缓存信息错误"
+		context.JSON(http.StatusOK, responseData)
+		return
+	}
+	if uint64(time.Now().UnixMilli())-account.TokenCreateTime > uint64(time.Hour.Milliseconds()*24*7) {
+		responseData.Retcode = -111
+		responseData.Message = "登录已失效"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
@@ -222,6 +236,13 @@ func (c *Controller) v2Login(context *gin.Context) {
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-1"
+		context.JSON(http.StatusOK, responseData)
+		return
+	}
+	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboTokenUsed", false)
+	if err != nil {
+		responseData.Retcode = -201
+		responseData.Message = "服务器内部错误:-2"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}

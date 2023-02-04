@@ -7,6 +7,14 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
+func (s *UDPSession) readLoop() {
+	s.defaultReadLoop()
+}
+
+func (l *Listener) monitor() {
+	l.defaultMonitor()
+}
+
 func (l *Listener) SendEnetNotifyToClient(enet *Enet) {
 	l.defaultSendEnetNotifyToClient(enet)
 }

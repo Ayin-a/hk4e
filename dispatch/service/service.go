@@ -8,71 +8,36 @@ type Service struct {
 	dao *dao.Dao
 }
 
-// 用户密码改变
-func (f *Service) UserPasswordChange(uid uint32) bool {
-	// dispatch登录态失效
-	_, err := f.dao.UpdateAccountFieldByFieldName("accountID", uid, "token", "")
+// UserPasswordChange 用户密码改变
+func (s *Service) UserPasswordChange(uid uint32) bool {
+	// http登录态失效
+	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "tokenCreateTime", 0)
 	if err != nil {
 		return false
 	}
-	// 游戏内登录态失效
-	account, err := f.dao.QueryAccountByField("accountID", uid)
-	if err != nil {
-		return false
-	}
-	if account == nil {
-		return false
-	}
-	// convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
-	// if !exist {
-	//	return true
-	// }
-	// f.kcpEventInput <- &net.KcpEvent{
-	//	ConvId:       convId,
-	//	EventId:      net.KcpConnForceClose,
-	//	EventMessage: uint32(kcp.EnetAccountPasswordChange),
-	// }
+	// TODO 游戏内登录态失效
 	return true
 }
 
-// 封号
-func (f *Service) ForbidUser(info *ForbidUserInfo) bool {
-	if info == nil {
-		return false
-	}
+// ForbidUser 封号
+func (s *Service) ForbidUser(uid uint32, forbidEndTime uint64) bool {
 	// 写入账号封禁信息
-	_, err := f.dao.UpdateAccountFieldByFieldName("accountID", info.UserId, "forbid", true)
+	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbid", true)
 	if err != nil {
 		return false
 	}
-	_, err = f.dao.UpdateAccountFieldByFieldName("accountID", info.UserId, "forbidEndTime", info.ForbidEndTime)
+	_, err = s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbidEndTime", forbidEndTime)
 	if err != nil {
 		return false
 	}
-	// 游戏强制下线
-	account, err := f.dao.QueryAccountByField("accountID", info.UserId)
-	if err != nil {
-		return false
-	}
-	if account == nil {
-		return false
-	}
-	// convId, exist := f.getConvIdByUserId(uint32(account.PlayerID))
-	// if !exist {
-	//	return true
-	// }
-	// f.kcpEventInput <- &net.KcpEvent{
-	//	ConvId:       convId,
-	//	EventId:      net.KcpConnForceClose,
-	//	EventMessage: uint32(kcp.EnetServerKillClient),
-	// }
+	// TODO 游戏强制下线
 	return true
 }
 
-// 解封
+// UnForbidUser 解封
 func (s *Service) UnForbidUser(uid uint32) bool {
 	// 解除账号封禁
-	_, err := s.dao.UpdateAccountFieldByFieldName("accountID", uid, "forbid", false)
+	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbid", false)
 	if err != nil {
 		return false
 	}

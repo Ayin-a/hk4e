@@ -1,13 +1,15 @@
 package game
 
 import (
+	"sort"
 	"time"
 
 	"hk4e/common/mq"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/object"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // 本地事件队列管理器
@@ -16,10 +18,10 @@ const (
 	LoadLoginUserFromDbFinish       = iota // 玩家登录从数据库加载完成回调
 	CheckUserExistOnRegFromDbFinish        // 玩家注册从数据库查询是否已存在完成回调
 	RunUserCopyAndSave                     // 执行一次在线玩家内存数据复制到数据库写入协程
-	ExitRunUserCopyAndSave
-	UserOfflineSaveToDbFinish
-	ReloadGameDataConfig
-	ReloadGameDataConfigFinish
+	ExitRunUserCopyAndSave                 // 停服时执行全部玩家保存操作
+	UserOfflineSaveToDbFinish              // 玩家离线保存完成
+	ReloadGameDataConfig                   // 执行热更表
+	ReloadGameDataConfigFinish             // 热更表完成
 )
 
 type LocalEvent struct {
@@ -37,6 +39,20 @@ func NewLocalEventManager() (r *LocalEventManager) {
 	return r
 }
 
+type PlayerLastSaveTimeSortList []*model.Player
+
+func (p PlayerLastSaveTimeSortList) Len() int {
+	return len(p)
+}
+
+func (p PlayerLastSaveTimeSortList) Less(i, j int) bool {
+	return p[i].LastSaveTime < p[j].LastSaveTime
+}
+
+func (p PlayerLastSaveTimeSortList) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
 func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	switch localEvent.EventId {
 	case LoadLoginUserFromDbFinish:
@@ -51,49 +67,45 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	case ExitRunUserCopyAndSave:
 		fallthrough
 	case RunUserCopyAndSave:
-		saveUserIdList := localEvent.Msg.([]uint32)
 		startTime := time.Now().UnixNano()
-		// 拷贝一份数据避免并发访问
-		insertPlayerList := make([]*model.Player, 0)
-		updatePlayerList := make([]*model.Player, 0)
-		for _, uid := range saveUserIdList {
-			player := USER_MANAGER.GetOnlineUser(uid)
-			if player == nil {
-				logger.Error("try to save but user not exist or online, uid: %v", uid)
+		playerList := make(PlayerLastSaveTimeSortList, 0)
+		for _, player := range USER_MANAGER.playerMap {
+			if player.PlayerID < 100000000 {
 				continue
 			}
-			if uid < 100000000 {
+			playerList = append(playerList, player)
+		}
+		sort.Stable(playerList)
+		// 拷贝一份数据避免并发访问
+		insertPlayerList := make([][]byte, 0)
+		updatePlayerList := make([][]byte, 0)
+		saveCount := 0
+		for _, player := range playerList {
+			totalCostTime := time.Now().UnixNano() - startTime
+			if totalCostTime > time.Millisecond.Nanoseconds()*50 {
+				// 总耗时超过50ms就中止本轮保存
+				logger.Debug("user copy loop overtime exit, total cost time: %v ns", totalCostTime)
+				break
+			}
+			playerData, err := msgpack.Marshal(player)
+			if err != nil {
+				logger.Error("marshal player data error: %v", err)
 				continue
 			}
 			switch player.DbState {
 			case model.DbNone:
 				break
 			case model.DbInsert:
-				playerCopy := new(model.Player)
-				err := object.FastDeepCopy(playerCopy, player)
-				if err != nil {
-					logger.Error("deep copy player error: %v", err)
-					continue
-				}
-				insertPlayerList = append(insertPlayerList, playerCopy)
-				USER_MANAGER.playerMap[uid].DbState = model.DbNormal
+				insertPlayerList = append(insertPlayerList, playerData)
+				USER_MANAGER.playerMap[player.PlayerID].DbState = model.DbNormal
+				player.LastSaveTime = uint32(time.Now().UnixMilli())
+				saveCount++
 			case model.DbDelete:
-				playerCopy := new(model.Player)
-				err := object.FastDeepCopy(playerCopy, player)
-				if err != nil {
-					logger.Error("deep copy player error: %v", err)
-					continue
-				}
-				updatePlayerList = append(updatePlayerList, playerCopy)
-				delete(USER_MANAGER.playerMap, uid)
+				delete(USER_MANAGER.playerMap, player.PlayerID)
 			case model.DbNormal:
-				playerCopy := new(model.Player)
-				err := object.FastDeepCopy(playerCopy, player)
-				if err != nil {
-					logger.Error("deep copy player error: %v", err)
-					continue
-				}
-				updatePlayerList = append(updatePlayerList, playerCopy)
+				updatePlayerList = append(updatePlayerList, playerData)
+				player.LastSaveTime = uint32(time.Now().UnixMilli())
+				saveCount++
 			}
 		}
 		saveUserData := &SaveUserData{
@@ -107,7 +119,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		USER_MANAGER.saveUserChan <- saveUserData
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime
-		logger.Info("run save user copy cost time: %v ns", costTime)
+		logger.Debug("run save user copy cost time: %v ns, save user count: %v", costTime, saveCount)
 		if localEvent.EventId == ExitRunUserCopyAndSave {
 			// 在此阻塞掉主协程 不再进行任何消息和任务的处理
 			select {}

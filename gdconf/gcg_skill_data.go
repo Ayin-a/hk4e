@@ -2,9 +2,10 @@ package gdconf
 
 import (
 	"fmt"
-	"github.com/hjson/hjson-go/v4"
 	"hk4e/pkg/logger"
 	"os"
+
+	"github.com/hjson/hjson-go/v4"
 
 	"github.com/jszwec/csvutil"
 )
@@ -44,9 +45,10 @@ func (g *GameDataConfig) loadGCGSkillData() {
 	}
 	for _, gcgSkillData := range gcgSkillDataList {
 		// 技能消耗整合进CostMap
-		gcgSkillData.CostMap = make(map[uint32]uint32, 2)
-		gcgSkillData.CostMap[uint32(gcgSkillData.CostType1)] = uint32(gcgSkillData.CostValue1)
-		gcgSkillData.CostMap[uint32(gcgSkillData.CostType2)] = uint32(gcgSkillData.CostValue2)
+		gcgSkillData.CostMap = map[uint32]uint32{
+			uint32(gcgSkillData.CostType1): uint32(gcgSkillData.CostValue1),
+			uint32(gcgSkillData.CostType2): uint32(gcgSkillData.CostValue2),
+		}
 		for costType, costValue := range gcgSkillData.CostMap {
 			// 两个值都不能为0
 			if costType == 0 || costValue == 0 {

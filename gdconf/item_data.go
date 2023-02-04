@@ -20,11 +20,13 @@ type ItemData struct {
 	MaterialType int32  `csv:"MaterialType,omitempty"` // 材料类型
 	Use1Param1   string `csv:"Use1Param1,omitempty"`   // [使用]1参数1
 	// 武器
-	EquipType   int32 `csv:"EquipType,omitempty"`   // 武器种类
-	EquipLevel  int32 `csv:"EquipLevel,omitempty"`  // 武器阶数
-	SkillAffix1 int32 `csv:"SkillAffix1,omitempty"` // 初始技能词缀1
-	SkillAffix2 int32 `csv:"SkillAffix2,omitempty"` // 初始技能词缀2
-	SkillAffix  []int32
+	EquipType    int32 `csv:"EquipType,omitempty"`    // 武器种类
+	EquipLevel   int32 `csv:"EquipLevel,omitempty"`   // 武器阶数
+	SkillAffix1  int32 `csv:"SkillAffix1,omitempty"`  // 初始技能词缀1
+	SkillAffix2  int32 `csv:"SkillAffix2,omitempty"`  // 初始技能词缀2
+	PromoteId    int32 `csv:"PromoteId,omitempty"`    // 武器突破ID
+	EquipBaseExp int32 `csv:"EquipBaseExp,omitempty"` // 武器初始经验
+	SkillAffix   []int32
 	// 圣遗物
 	ReliquaryType int32 `csv:"ReliquaryType,omitempty"` // 圣遗物类别
 }

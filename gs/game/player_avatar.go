@@ -245,7 +245,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	}
 
 	// 角色添加经验
-	g.UpgradeUserAvatar(player.PlayerID, avatar.AvatarId, expCount)
+	g.UpgradePlayerAvatar(player, avatar, expCount)
 
 	avatarUpgradeRsp := &proto.AvatarUpgradeRsp{
 		CurLevel:        uint32(avatar.Level),
@@ -257,18 +257,8 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	g.SendMsg(cmd.AvatarUpgradeRsp, player.PlayerID, player.ClientSeq, avatarUpgradeRsp)
 }
 
-// UpgradeUserAvatar 玩家角色升级
-func (g *GameManager) UpgradeUserAvatar(userId uint32, avatarId uint32, expCount uint32) {
-	player := USER_MANAGER.GetOnlineUser(userId)
-	if player == nil {
-		logger.Error("player is nil, uid: %v", userId)
-		return
-	}
-	avatar, ok := player.AvatarMap[avatarId]
-	if !ok {
-		logger.Error("avatar error, avatarId: %v", avatarId)
-		return
-	}
+// UpgradePlayerAvatar 玩家角色升级
+func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Avatar, expCount uint32) {
 	// 获取角色配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
@@ -394,6 +384,9 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 			weakWorldAvatar.weaponEntityId = scene.CreateEntityWeapon()
 			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, weakWorldAvatar.weaponEntityId)
 			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
+		} else {
+			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, 0)
+			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 		}
 	} else if avatar.EquipWeapon != nil {
 		// 角色当前有武器
@@ -408,6 +401,9 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 	if worldAvatar != nil {
 		worldAvatar.weaponEntityId = scene.CreateEntityWeapon()
 		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, worldAvatar.weaponEntityId)
+		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
+	} else {
+		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, 0)
 		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 	}
 }

@@ -43,6 +43,15 @@ func (p *Player) GetWeaponGuid(weaponId uint64) uint64 {
 	return weaponInfo.Guid
 }
 
+func (p *Player) GetWeaponIdByGuid(guid uint64) uint64 {
+	for weaponId, weapon := range p.WeaponMap {
+		if guid == weapon.Guid {
+			return weaponId
+		}
+	}
+	return 0
+}
+
 func (p *Player) GetWeapon(weaponId uint64) *Weapon {
 	return p.WeaponMap[weaponId]
 }

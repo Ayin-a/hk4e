@@ -19,6 +19,8 @@ type AvatarPromoteData struct {
 	CostItemCount2 int32 `csv:"CostItemCount2,omitempty"` // [消耗物品]2数量
 	CostItemId3    int32 `csv:"CostItemId3,omitempty"`    // [消耗物品]3ID
 	CostItemCount3 int32 `csv:"CostItemCount3,omitempty"` // [消耗物品]3数量
+	CostItemId4    int32 `csv:"CostItemId4,omitempty"`    // [消耗物品]4ID
+	CostItemCount4 int32 `csv:"CostItemCount4,omitempty"` // [消耗物品]4数量
 	LevelLimit     int32 `csv:"LevelLimit,omitempty"`     // 解锁等级上限
 	MinPlayerLevel int32 `csv:"MinPlayerLevel,omitempty"` // 冒险等级要求
 
@@ -40,10 +42,12 @@ func (g *GameDataConfig) loadAvatarPromoteData() {
 		if !ok {
 			g.AvatarPromoteDataMap[avatarPromoteData.PromoteId] = make(map[int32]*AvatarPromoteData)
 		}
-		avatarPromoteData.CostItemMap = make(map[uint32]uint32, 3)
-		avatarPromoteData.CostItemMap[uint32(avatarPromoteData.CostItemId1)] = uint32(avatarPromoteData.CostItemCount1)
-		avatarPromoteData.CostItemMap[uint32(avatarPromoteData.CostItemId2)] = uint32(avatarPromoteData.CostItemCount2)
-		avatarPromoteData.CostItemMap[uint32(avatarPromoteData.CostItemId3)] = uint32(avatarPromoteData.CostItemCount3)
+		avatarPromoteData.CostItemMap = map[uint32]uint32{
+			uint32(avatarPromoteData.CostItemId1): uint32(avatarPromoteData.CostItemCount1),
+			uint32(avatarPromoteData.CostItemId2): uint32(avatarPromoteData.CostItemCount2),
+			uint32(avatarPromoteData.CostItemId3): uint32(avatarPromoteData.CostItemCount3),
+			uint32(avatarPromoteData.CostItemId4): uint32(avatarPromoteData.CostItemCount4),
+		}
 		for itemId, count := range avatarPromoteData.CostItemMap {
 			// 两个值都不能为0
 			if itemId == 0 || count == 0 {

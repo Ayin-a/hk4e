@@ -235,9 +235,13 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(StoreItemDelNotify, &proto.StoreItemDelNotify{})         // 背包道具删除通知
 
 	// 装备
-	c.registerMessage(WearEquipReq, &proto.WearEquipReq{})                       // 装备穿戴请求
-	c.registerMessage(WearEquipRsp, &proto.WearEquipRsp{})                       // 装备穿戴响应
-	c.registerMessage(AvatarEquipChangeNotify, &proto.AvatarEquipChangeNotify{}) // 角色装备改变通知
+	c.registerMessage(WearEquipReq, &proto.WearEquipReq{})                                       // 装备穿戴请求
+	c.registerMessage(WearEquipRsp, &proto.WearEquipRsp{})                                       // 装备穿戴响应
+	c.registerMessage(AvatarEquipChangeNotify, &proto.AvatarEquipChangeNotify{})                 // 角色装备改变通知
+	c.registerMessage(CalcWeaponUpgradeReturnItemsReq, &proto.CalcWeaponUpgradeReturnItemsReq{}) // 计算武器升级返回矿石请求
+	c.registerMessage(CalcWeaponUpgradeReturnItemsRsp, &proto.CalcWeaponUpgradeReturnItemsRsp{}) // 计算武器升级返回矿石响应
+	c.registerMessage(WeaponUpgradeReq, &proto.WeaponUpgradeReq{})                               // 武器升级请求
+	c.registerMessage(WeaponUpgradeRsp, &proto.WeaponUpgradeRsp{})                               // 武器升级响应
 
 	// 商店
 	c.registerMessage(GetShopmallDataReq, &proto.GetShopmallDataReq{})       // 商店信息请求

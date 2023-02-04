@@ -709,8 +709,8 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 					Val:   int64(avatar.SatiationPenalty)},
 			},
 		},
-		FightPropList:    g.PacketFightPropMapToPbFightPropList(entity.fightProp),
-		LifeState:        uint32(entity.lifeState),
+		FightPropList:    g.PacketFightPropMapToPbFightPropList(avatar.FightPropMap),
+		LifeState:        uint32(avatar.LifeState),
 		AnimatorParaList: make([]*proto.AnimatorParameterValueInfoPair, 0),
 		Entity: &proto.SceneEntityInfo_Avatar{
 			Avatar: g.PacketSceneAvatarInfo(scene, player, avatarId),

@@ -851,18 +851,23 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.EntityIdTypeConst.AVATAR)
+	avatar, ok := player.AvatarMap[avatarId]
+	if !ok {
+		logger.Error("avatar error, avatarId: %v", avatar)
+		return 0
+	}
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
-		lifeState:           constant.LifeStateConst.LIFE_ALIVE,
+		lifeState:           avatar.LifeState,
 		pos:                 player.Pos,
 		rot:                 player.Rot,
 		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
-		fightProp:           player.AvatarMap[avatarId].FightPropMap,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
-		level:               0, // 角色等级直接读取角色对象
+		// fightProp:           player.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
+		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
+		// level:               0, // 使用角色结构的数据
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
 			avatarId: avatarId,

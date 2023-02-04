@@ -20,10 +20,13 @@ func main() {
 		SilenceUsage: true,
 	}
 	rootCmd.AddCommand(
-		GSCmd(),
-		GMCmd(),
+		NodeCmd(),
 		DispatchCmd(),
 		GateCmd(),
+		FightCmd(),
+		PathfindingCmd(),
+		GSCmd(),
+		GMCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

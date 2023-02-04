@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// FightCmd 检查配表命令
 func FightCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GateCmd 检查配表命令
 func GateCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

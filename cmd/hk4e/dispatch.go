@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DispatchCmd
 func DispatchCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

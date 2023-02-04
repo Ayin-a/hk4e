@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// PathfindingCmd 检查配表命令
 func PathfindingCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

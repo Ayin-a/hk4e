@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NodeCmd 检查配表命令
 func NodeCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

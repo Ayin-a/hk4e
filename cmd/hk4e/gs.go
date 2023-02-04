@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GSCmd
 func GSCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{

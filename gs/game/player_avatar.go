@@ -68,6 +68,57 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	g.SendMsg(cmd.AvatarAddNotify, userId, player.ClientSeq, avatarAddNotify)
 }
 
+// AvatarPromoteGetRewardReq 角色突破获取奖励请求
+func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg pb.Message) {
+	logger.Debug("user promote get reward, uid: %v", player.PlayerID)
+	req := payloadMsg.(*proto.AvatarPromoteGetRewardReq)
+	// 是否拥有角色
+	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	if !ok {
+		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
+		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		return
+	}
+	// 获取角色配置表
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
+	if !ok {
+		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
+		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
+		return
+	}
+	// 角色是否获取过该突破等级的奖励
+	if avatar.PromoteRewardMap[req.PromoteLevel] {
+		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
+		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_REWARD_HAS_TAKEN)
+		return
+	}
+	// 获取奖励配置表
+	rewardConfig, ok := gdconf.CONF.RewardDataMap[int32(avatarDataConfig.PromoteRewardMap[req.PromoteLevel])]
+	if !ok {
+		logger.Error("reward config error, rewardId: %v", avatarDataConfig.PromoteRewardMap[req.PromoteLevel])
+		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
+		return
+	}
+	// 设置该奖励为已被获取状态
+	avatar.PromoteRewardMap[req.PromoteLevel] = true
+	// 给予突破奖励
+	rewardItemList := make([]*UserItem, 0, len(rewardConfig.RewardItemMap))
+	for itemId, count := range rewardConfig.RewardItemMap {
+		rewardItemList = append(rewardItemList, &UserItem{
+			ItemId:      itemId,
+			ChangeCount: count,
+		})
+	}
+	g.AddUserItem(player.PlayerID, rewardItemList, false, 0)
+
+	avatarPromoteGetRewardRsp := &proto.AvatarPromoteGetRewardRsp{
+		RewardId:     uint32(rewardConfig.RewardID),
+		AvatarGuid:   req.AvatarGuid,
+		PromoteLevel: req.PromoteLevel,
+	}
+	g.SendMsg(cmd.AvatarPromoteGetRewardRsp, player.PlayerID, player.ClientSeq, avatarPromoteGetRewardRsp)
+}
+
 // AvatarPromoteReq 角色突破请求
 func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user promote, uid: %v", player.PlayerID)
@@ -151,7 +202,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	// 角色突破等级+1
 	avatar.Promote++
 	// 角色更新面板
-	player.InitAvatarFightProp(avatar)
+	g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	// 角色属性表更新通知
 	g.SendMsg(cmd.AvatarPropNotify, player.PlayerID, player.ClientSeq, g.PacketAvatarPropNotify(avatar))
 
@@ -303,7 +354,7 @@ func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Av
 		avatar.Level++
 	}
 	// 角色更新面板
-	player.InitAvatarFightProp(avatar)
+	g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	// 角色属性表更新通知
 	g.SendMsg(cmd.AvatarPropNotify, player.PlayerID, player.ClientSeq, g.PacketAvatarPropNotify(avatar))
 }
@@ -534,6 +585,9 @@ func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) 
 		logger.Error("avatar is nil, avatarId: %v", avatar)
 		return
 	}
+	// 角色初始化面板
+	player.InitAvatarFightProp(avatar)
+
 	avatarFightPropNotify := &proto.AvatarFightPropNotify{
 		AvatarGuid:   avatar.Guid,
 		FightPropMap: avatar.FightPropMap,
@@ -578,8 +632,8 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 			},
 		},
 		LifeState:     uint32(avatar.LifeState),
-		EquipGuidList: object.ConvMapToList(avatar.EquipGuidList),
-		FightPropMap:  nil,
+		EquipGuidList: object.ConvMapToList(avatar.EquipGuidMap),
+		FightPropMap:  avatar.FightPropMap,
 		SkillDepotId:  avatar.SkillDepotId,
 		FetterInfo: &proto.AvatarFetterInfo{
 			ExpLevel:                uint32(avatar.FetterLevel),
@@ -587,13 +641,13 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 			FetterList:              nil,
 			RewardedFetterLevelList: []uint32{10},
 		},
-		SkillLevelMap:     nil,
-		AvatarType:        1,
-		WearingFlycloakId: avatar.FlyCloak,
-		CostumeId:         avatar.Costume,
-		BornTime:          uint32(avatar.BornTime),
+		SkillLevelMap:            avatar.SkillLevelMap,
+		AvatarType:               1,
+		WearingFlycloakId:        avatar.FlyCloak,
+		CostumeId:                avatar.Costume,
+		BornTime:                 uint32(avatar.BornTime),
+		PendingPromoteRewardList: make([]uint32, 0, len(avatar.PromoteRewardMap)),
 	}
-	pbAvatar.FightPropMap = avatar.FightPropMap
 	for _, v := range avatar.FetterList {
 		pbAvatar.FetterInfo.FetterList = append(pbAvatar.FetterInfo.FetterList, &proto.FetterData{
 			FetterId:    v,
@@ -607,9 +661,11 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 			FetterState: uint32(constant.FetterStateConst.FINISH),
 		})
 	}
-	pbAvatar.SkillLevelMap = make(map[uint32]uint32)
-	for k, v := range avatar.SkillLevelMap {
-		pbAvatar.SkillLevelMap[k] = v
+	// 突破等级奖励
+	for promoteLevel, isTaken := range avatar.PromoteRewardMap {
+		if !isTaken {
+			pbAvatar.PendingPromoteRewardList = append(pbAvatar.PendingPromoteRewardList, promoteLevel)
+		}
 	}
 	return pbAvatar
 }

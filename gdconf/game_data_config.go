@@ -45,6 +45,7 @@ type GameDataConfig struct {
 	PlayerLevelDataMap      map[int32]*PlayerLevelData             // 玩家等级
 	WeaponLevelDataMap      map[int32]*WeaponLevelData             // 武器等级
 	WeaponPromoteDataMap    map[int32]map[int32]*WeaponPromoteData // 角色突破
+	RewardDataMap           map[int32]*RewardData                  // 奖励
 }
 
 func InitGameDataConfig() {
@@ -123,6 +124,7 @@ func (g *GameDataConfig) load() {
 	g.loadPlayerLevelData()      // 玩家等级
 	g.loadWeaponLevelData()      // 武器等级
 	g.loadWeaponPromoteData()    // 武器突破
+	g.loadRewardData()           // 奖励
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

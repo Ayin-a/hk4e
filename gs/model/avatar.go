@@ -26,8 +26,9 @@ type Avatar struct {
 	BornTime            int64              `bson:"bornTime"`         // 获得时间
 	FetterLevel         uint8              `bson:"fetterLevel"`      // 好感度等级
 	FetterExp           uint32             `bson:"fetterExp"`        // 好感度经验
+	PromoteRewardMap    map[uint32]bool    `bson:"promoteRewardMap"` // 突破奖励 map[突破等级]是否已被领取
 	Guid                uint64             `bson:"-"`
-	EquipGuidList       map[uint64]uint64  `bson:"-"`
+	EquipGuidMap        map[uint64]uint64  `bson:"-"`
 	EquipWeapon         *Weapon            `bson:"-"`
 	EquipReliquaryList  []*Reliquary       `bson:"-"`
 	FightPropMap        map[uint32]float32 `bson:"-"`
@@ -46,7 +47,7 @@ func (p *Player) InitAvatar(avatar *Avatar) {
 	// guid
 	avatar.Guid = p.GetNextGameObjectGuid()
 	p.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
-	avatar.EquipGuidList = make(map[uint64]uint64)
+	avatar.EquipGuidMap = make(map[uint64]uint64)
 	p.AvatarMap[avatar.AvatarId] = avatar
 	return
 }
@@ -126,11 +127,12 @@ func (p *Player) AddAvatar(avatarId uint32) {
 		FetterLevel:         1,
 		FetterExp:           0,
 		Guid:                0,
-		EquipGuidList:       nil,
+		EquipGuidMap:        nil,
 		EquipWeapon:         nil,
 		EquipReliquaryList:  nil,
 		FightPropMap:        nil,
 		ExtraAbilityEmbryos: make(map[string]bool),
+		PromoteRewardMap:    make(map[uint32]bool, len(avatarDataConfig.PromoteRewardMap)),
 	}
 
 	// 元素爆发1级
@@ -140,6 +142,11 @@ func (p *Player) AddAvatar(avatarId uint32) {
 		avatar.SkillLevelMap[uint32(skillId)] = 1
 	}
 	avatar.CurrHP = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
+
+	// 角色突破奖励领取状态
+	for promoteLevel := range avatarDataConfig.PromoteRewardMap {
+		avatar.PromoteRewardMap[promoteLevel] = false
+	}
 
 	p.InitAvatar(avatar)
 	p.AvatarMap[avatarId] = avatar
@@ -181,7 +188,7 @@ func (p *Player) WearWeapon(avatarId uint32, weaponId uint64) {
 	weapon := p.WeaponMap[weaponId]
 	avatar.EquipWeapon = weapon
 	weapon.AvatarId = avatarId
-	avatar.EquipGuidList[weapon.Guid] = weapon.Guid
+	avatar.EquipGuidMap[weapon.Guid] = weapon.Guid
 }
 
 func (p *Player) TakeOffWeapon(avatarId uint32, weaponId uint64) {
@@ -189,5 +196,5 @@ func (p *Player) TakeOffWeapon(avatarId uint32, weaponId uint64) {
 	weapon := p.WeaponMap[weaponId]
 	avatar.EquipWeapon = nil
 	weapon.AvatarId = 0
-	delete(avatar.EquipGuidList, weapon.Guid)
+	delete(avatar.EquipGuidMap, weapon.Guid)
 }

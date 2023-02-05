@@ -24,7 +24,7 @@ func (p *Player) InitReliquary(reliquary *Reliquary) {
 	p.ReliquaryMap[reliquary.ReliquaryId] = reliquary
 	if reliquary.AvatarId != 0 {
 		avatar := p.AvatarMap[reliquary.AvatarId]
-		avatar.EquipGuidList[reliquary.Guid] = reliquary.Guid
+		avatar.EquipGuidMap[reliquary.Guid] = reliquary.Guid
 		avatar.EquipReliquaryList = append(avatar.EquipReliquaryList, reliquary)
 	}
 }

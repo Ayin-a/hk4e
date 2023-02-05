@@ -233,7 +233,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	if ok {
 		weaponAwakenRsp.AvatarGuid = avatar.Guid
 		// 角色更新面板
-		player.InitAvatarFightProp(avatar)
+		g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	}
 
 	// 武器精炼后的信息
@@ -336,7 +336,7 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 	// 武器可能没被任何角色装备 仅在被装备时更新面板
 	if ok {
 		// 角色更新面板
-		player.InitAvatarFightProp(avatar)
+		g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	}
 
 	weaponPromoteRsp := &proto.WeaponPromoteRsp{
@@ -632,7 +632,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 武器可能没被任何角色装备 仅在被装备时更新面板
 	if ok {
 		// 角色更新面板
-		player.InitAvatarFightProp(avatar)
+		g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	}
 
 	// 将给予的材料列表

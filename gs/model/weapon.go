@@ -24,7 +24,7 @@ func (p *Player) InitWeapon(weapon *Weapon) {
 	p.WeaponMap[weapon.WeaponId] = weapon
 	if weapon.AvatarId != 0 {
 		avatar := p.AvatarMap[weapon.AvatarId]
-		avatar.EquipGuidList[weapon.Guid] = weapon.Guid
+		avatar.EquipGuidMap[weapon.Guid] = weapon.Guid
 		avatar.EquipWeapon = weapon
 	}
 }

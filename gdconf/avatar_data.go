@@ -2,10 +2,11 @@ package gdconf
 
 import (
 	"fmt"
-	"os"
-
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/jszwec/csvutil"
@@ -14,20 +15,23 @@ import (
 // 角色配置表
 
 type AvatarData struct {
-	AvatarId      int32   `csv:"AvatarId"`                // ID
-	HpBase        float64 `csv:"HpBase,omitempty"`        // 基础生命值
-	AttackBase    float64 `csv:"AttackBase,omitempty"`    // 基础攻击力
-	DefenseBase   float64 `csv:"DefenseBase,omitempty"`   // 基础防御力
-	Critical      float64 `csv:"Critical,omitempty"`      // 暴击率
-	CriticalHurt  float64 `csv:"CriticalHurt,omitempty"`  // 暴击伤害
-	QualityType   int32   `csv:"QualityType,omitempty"`   // 角色品质
-	ConfigJson    string  `csv:"ConfigJson,omitempty"`    // 战斗config
-	InitialWeapon int32   `csv:"InitialWeapon,omitempty"` // 初始武器
-	WeaponType    int32   `csv:"WeaponType,omitempty"`    // 武器种类
-	SkillDepotId  int32   `csv:"SkillDepotId,omitempty"`  // 技能库ID
-	PromoteId     int32   `csv:"PromoteId,omitempty"`     // 角色突破ID
+	AvatarId              int32   `csv:"AvatarId"`                        // ID
+	HpBase                float64 `csv:"HpBase,omitempty"`                // 基础生命值
+	AttackBase            float64 `csv:"AttackBase,omitempty"`            // 基础攻击力
+	DefenseBase           float64 `csv:"DefenseBase,omitempty"`           // 基础防御力
+	Critical              float64 `csv:"Critical,omitempty"`              // 暴击率
+	CriticalHurt          float64 `csv:"CriticalHurt,omitempty"`          // 暴击伤害
+	QualityType           int32   `csv:"QualityType,omitempty"`           // 角色品质
+	ConfigJson            string  `csv:"ConfigJson,omitempty"`            // 战斗config
+	InitialWeapon         int32   `csv:"InitialWeapon,omitempty"`         // 初始武器
+	WeaponType            int32   `csv:"WeaponType,omitempty"`            // 武器种类
+	SkillDepotId          int32   `csv:"SkillDepotId,omitempty"`          // 技能库ID
+	PromoteId             int32   `csv:"PromoteId,omitempty"`             // 角色突破ID
+	PromoteRewardLevelStr string  `csv:"PromoteRewardLevelStr,omitempty"` // 角色突破奖励获取等阶
+	PromoteRewardStr      string  `csv:"PromoteRewardStr,omitempty"`      // 角色突破奖励
 
 	AbilityHashCodeList []int32
+	PromoteRewardMap    map[uint32]uint32
 }
 
 type ConfigAvatar struct {
@@ -67,6 +71,25 @@ func (g *GameDataConfig) loadAvatarData() {
 		for _, configAvatarAbility := range configAvatar.Abilities {
 			abilityHashCode := endec.Hk4eAbilityHashCode(configAvatarAbility.AbilityName)
 			avatarData.AbilityHashCodeList = append(avatarData.AbilityHashCodeList, abilityHashCode)
+		}
+		// 突破奖励转换列表
+		if avatarData.PromoteRewardLevelStr != "" && avatarData.PromoteRewardStr != "" {
+			tempRewardLevelList := strings.Split(strings.ReplaceAll(avatarData.PromoteRewardLevelStr, " ", ""), "#")
+			tempRewardList := strings.Split(strings.ReplaceAll(avatarData.PromoteRewardStr, " ", ""), "#")
+			avatarData.PromoteRewardMap = make(map[uint32]uint32, len(tempRewardList))
+			for i, s := range tempRewardList {
+				promoteLevel, err := strconv.Atoi(tempRewardLevelList[i])
+				if err != nil {
+					logger.Error("level to i err, %v", err)
+					return
+				}
+				rewardId, err := strconv.Atoi(s)
+				if err != nil {
+					logger.Error("reward id to i err, %v", err)
+					return
+				}
+				avatarData.PromoteRewardMap[uint32(promoteLevel)] = uint32(rewardId)
+			}
 		}
 		// list -> map
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData

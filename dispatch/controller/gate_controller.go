@@ -85,7 +85,7 @@ func (c *Controller) gateTokenReset(context *gin.Context) {
 		})
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("PlayerID", req.PlayerId, "comboTokenUsed", false)
+	_, err = c.dao.UpdateAccountFieldByFieldName("playerID", req.PlayerId, "comboTokenUsed", false)
 	if err != nil {
 		context.JSON(http.StatusOK, &TokenResetRsp{
 			Result: false,

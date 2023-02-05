@@ -169,7 +169,6 @@ func (k *KcpConnectManager) sendMsgHandle() {
 			logger.Error("kcpRawSendChan is full, convId: %v", protoMsg.ConvId)
 			return
 		}
-		kcpRawSendChan <- protoMsg
 		if protoMsg.CmdId == cmd.PlayerLoginRsp {
 			logger.Debug("session active, convId: %v", protoMsg.ConvId)
 			session.connState = ConnActive
@@ -188,7 +187,30 @@ func (k *KcpConnectManager) sendMsgHandle() {
 				EventId:   mq.ServerAppidBindNotify,
 				ServerMsg: serverMsg,
 			})
+		} else if protoMsg.CmdId == cmd.ClientReconnectNotify {
+			tokenResetRsp, err := httpclient.Post[controller.TokenResetRsp](config.CONF.Hk4e.LoginSdkUrl+"/gate/token/reset", &controller.TokenResetReq{
+				PlayerId: session.userId,
+			}, "")
+			if err != nil {
+				logger.Error("reset token error: %v", err)
+				k.kcpEventInput <- &KcpEvent{
+					ConvId:       protoMsg.ConvId,
+					EventId:      KcpConnForceClose,
+					EventMessage: uint32(kcp.EnetServerKick),
+				}
+				return
+			}
+			if !tokenResetRsp.Result {
+				logger.Error("reset token fail")
+				k.kcpEventInput <- &KcpEvent{
+					ConvId:       protoMsg.ConvId,
+					EventId:      KcpConnForceClose,
+					EventMessage: uint32(kcp.EnetServerKick),
+				}
+				return
+			}
 		}
+		kcpRawSendChan <- protoMsg
 	}
 	for {
 		select {
@@ -279,16 +301,25 @@ func (k *KcpConnectManager) getHeadMsg(clientSeq uint32) (headMsg *proto.PacketH
 }
 
 func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session *Session) (rsp *proto.GetPlayerTokenRsp) {
-	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp](config.CONF.Hk4e.LoginSdkUrl, &controller.TokenVerifyReq{
+	loginFail := func() {
+		k.kcpEventInput <- &KcpEvent{
+			ConvId:       session.conn.GetConv(),
+			EventId:      KcpConnForceClose,
+			EventMessage: uint32(kcp.EnetLoginUnfinished),
+		}
+	}
+	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp](config.CONF.Hk4e.LoginSdkUrl+"/gate/token/verify", &controller.TokenVerifyReq{
 		AccountId:    req.AccountUid,
 		AccountToken: req.AccountToken,
 	}, "")
 	if err != nil {
 		logger.Error("verify token error: %v", err)
+		loginFail()
 		return nil
 	}
 	if !tokenVerifyRsp.Valid {
 		logger.Error("token error")
+		loginFail()
 		return nil
 	}
 	// comboToken验证成功
@@ -343,6 +374,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	})
 	if err != nil {
 		logger.Error("get gs server appid error: %v", err)
+		loginFail()
 		return nil
 	}
 	session.gsServerAppId = gsServerAppId.AppId
@@ -392,52 +424,61 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]
 		if !exist {
 			logger.Error("can not found key id: %v", keyId)
-			return
+			loginFail()
+			return nil
 		}
 		pubKey, err := endec.RsaParsePubKeyByPrivKey(encPubPrivKey)
 		if err != nil {
 			logger.Error("parse rsa pub key error: %v", err)
+			loginFail()
 			return nil
 		}
 		signPrivkey, err := endec.RsaParsePrivKey(k.signRsaKey)
 		if err != nil {
 			logger.Error("parse rsa priv key error: %v", err)
+			loginFail()
 			return nil
 		}
 		clientSeedBase64 := req.GetClientRandKey()
 		clientSeedEnc, err := base64.StdEncoding.DecodeString(clientSeedBase64)
 		if err != nil {
 			logger.Error("parse client seed base64 error: %v", err)
+			loginFail()
 			return nil
 		}
 		clientSeed, err := endec.RsaDecrypt(clientSeedEnc, signPrivkey)
 		if err != nil {
 			logger.Error("rsa dec error: %v", err)
-			return rsp
+			loginFail()
+			return nil
 		}
 		clientSeedUint64 := uint64(0)
 		err = binary.Read(bytes.NewReader(clientSeed), binary.BigEndian, &clientSeedUint64)
 		if err != nil {
 			logger.Error("parse client seed to uint64 error: %v", err)
-			return rsp
+			loginFail()
+			return nil
 		}
 		seedUint64 := serverSeedUint64 ^ clientSeedUint64
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
 		if err != nil {
 			logger.Error("conv seed uint64 to bytes error: %v", err)
-			return rsp
+			loginFail()
+			return nil
 		}
 		seed := seedBuf.Bytes()
 		seedEnc, err := endec.RsaEncrypt(seed, pubKey)
 		if err != nil {
 			logger.Error("rsa enc error: %v", err)
-			return rsp
+			loginFail()
+			return nil
 		}
 		seedSign, err := endec.RsaSign(seed, signPrivkey)
 		if err != nil {
 			logger.Error("rsa sign error: %v", err)
-			return rsp
+			loginFail()
+			return nil
 		}
 		rsp.KeyId = req.KeyId
 		rsp.ServerRandKey = base64.StdEncoding.EncodeToString(seedEnc)

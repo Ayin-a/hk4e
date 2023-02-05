@@ -67,3 +67,32 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		PlayerID:      uint32(account.PlayerID),
 	})
 }
+
+type TokenResetReq struct {
+	PlayerId uint32 `json:"playerId"`
+}
+
+type TokenResetRsp struct {
+	Result bool `json:"result"`
+}
+
+func (c *Controller) gateTokenReset(context *gin.Context) {
+	req := new(TokenResetReq)
+	err := context.ShouldBindJSON(req)
+	if err != nil {
+		context.JSON(http.StatusOK, &TokenResetRsp{
+			Result: false,
+		})
+		return
+	}
+	_, err = c.dao.UpdateAccountFieldByFieldName("PlayerID", req.PlayerId, "comboTokenUsed", false)
+	if err != nil {
+		context.JSON(http.StatusOK, &TokenResetRsp{
+			Result: false,
+		})
+		return
+	}
+	context.JSON(http.StatusOK, &TokenResetRsp{
+		Result: true,
+	})
+}

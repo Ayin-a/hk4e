@@ -2,8 +2,10 @@ package gdconf
 
 import (
 	"fmt"
-
+	"hk4e/common/constant"
 	"hk4e/pkg/logger"
+	"strconv"
+	"strings"
 
 	"github.com/jszwec/csvutil"
 )
@@ -20,13 +22,16 @@ type ItemData struct {
 	MaterialType int32  `csv:"MaterialType,omitempty"` // 材料类型
 	Use1Param1   string `csv:"Use1Param1,omitempty"`   // [使用]1参数1
 	// 武器
-	EquipType    int32 `csv:"EquipType,omitempty"`    // 武器种类
-	EquipLevel   int32 `csv:"EquipLevel,omitempty"`   // 武器阶数
-	SkillAffix1  int32 `csv:"SkillAffix1,omitempty"`  // 初始技能词缀1
-	SkillAffix2  int32 `csv:"SkillAffix2,omitempty"`  // 初始技能词缀2
-	PromoteId    int32 `csv:"PromoteId,omitempty"`    // 武器突破ID
-	EquipBaseExp int32 `csv:"EquipBaseExp,omitempty"` // 武器初始经验
-	SkillAffix   []int32
+	EquipType          int32  `csv:"EquipType,omitempty"`         // 武器种类
+	EquipLevel         int32  `csv:"EquipLevel,omitempty"`        // 武器阶数
+	SkillAffix1        int32  `csv:"SkillAffix1,omitempty"`       // 初始技能词缀1
+	SkillAffix2        int32  `csv:"SkillAffix2,omitempty"`       // 初始技能词缀2
+	PromoteId          int32  `csv:"PromoteId,omitempty"`         // 武器突破ID
+	EquipBaseExp       int32  `csv:"EquipBaseExp,omitempty"`      // 武器初始经验
+	AwakenMaterial     int32  `csv:"AwakenMaterial,omitempty"`    // 武器精炼道具
+	AwakenCoinCostStr  string `csv:"AwakenCoinCostStr,omitempty"` // 精炼摩拉消耗
+	SkillAffix         []int32
+	AwakenCoinCostList []uint32
 	// 圣遗物
 	ReliquaryType int32 `csv:"ReliquaryType,omitempty"` // 圣遗物类别
 }
@@ -50,6 +55,19 @@ func (g *GameDataConfig) loadItemData() {
 			}
 			if itemData.SkillAffix2 != 0 {
 				itemData.SkillAffix = append(itemData.SkillAffix, itemData.SkillAffix2)
+			}
+			// 武器精炼摩拉消耗列表读取转换
+			if itemData.Type == int32(constant.ItemTypeConst.ITEM_WEAPON) && itemData.AwakenCoinCostStr != "" {
+				tempCostList := strings.Split(strings.ReplaceAll(itemData.AwakenCoinCostStr, " ", ""), "#")
+				itemData.AwakenCoinCostList = make([]uint32, 0, len(tempCostList))
+				for _, s := range tempCostList {
+					costCount, err := strconv.Atoi(s)
+					if err != nil {
+						logger.Error("cost count to i err, %v", err)
+						return
+					}
+					itemData.AwakenCoinCostList = append(itemData.AwakenCoinCostList, uint32(costCount))
+				}
 			}
 			g.ItemDataMap[itemData.ItemId] = itemData
 		}

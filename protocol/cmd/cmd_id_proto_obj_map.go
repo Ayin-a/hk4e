@@ -242,6 +242,10 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(CalcWeaponUpgradeReturnItemsRsp, &proto.CalcWeaponUpgradeReturnItemsRsp{}) // 计算武器升级返回矿石响应
 	c.registerMessage(WeaponUpgradeReq, &proto.WeaponUpgradeReq{})                               // 武器升级请求
 	c.registerMessage(WeaponUpgradeRsp, &proto.WeaponUpgradeRsp{})                               // 武器升级响应
+	c.registerMessage(WeaponPromoteReq, &proto.WeaponPromoteReq{})                               // 武器突破请求
+	c.registerMessage(WeaponPromoteRsp, &proto.WeaponPromoteRsp{})                               // 武器突破响应
+	c.registerMessage(WeaponAwakenReq, &proto.WeaponAwakenReq{})                                 // 武器精炼请求
+	c.registerMessage(WeaponAwakenRsp, &proto.WeaponAwakenRsp{})                                 // 武器精炼响应
 
 	// 商店
 	c.registerMessage(GetShopmallDataReq, &proto.GetShopmallDataReq{})       // 商店信息请求

@@ -133,6 +133,8 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.AvatarPromoteReq, GAME_MANAGER.AvatarPromoteReq)
 	r.registerRouter(cmd.CalcWeaponUpgradeReturnItemsReq, GAME_MANAGER.CalcWeaponUpgradeReturnItemsReq)
 	r.registerRouter(cmd.WeaponUpgradeReq, GAME_MANAGER.WeaponUpgradeReq)
+	r.registerRouter(cmd.WeaponPromoteReq, GAME_MANAGER.WeaponPromoteReq)
+	r.registerRouter(cmd.WeaponAwakenReq, GAME_MANAGER.WeaponAwakenReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

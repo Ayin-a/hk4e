@@ -23,6 +23,28 @@ func (p *Player) GetItemGuid(itemId uint32) uint64 {
 	return itemInfo.Guid
 }
 
+func (p *Player) GetItemIdByGuid(itemGuid uint64) uint32 {
+	for _, item := range p.ItemMap {
+		if item.Guid == itemGuid {
+			return item.ItemId
+		}
+	}
+	return 0
+}
+func (p *Player) GetItemIdByItemAndWeaponGuid(guid uint64) uint32 {
+	for _, item := range p.ItemMap {
+		if item.Guid == guid {
+			return item.ItemId
+		}
+	}
+	for _, weapon := range p.WeaponMap {
+		if weapon.Guid == guid {
+			return weapon.ItemId
+		}
+	}
+	return 0
+}
+
 func (p *Player) GetItemCount(itemId uint32) uint32 {
 	prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[itemId]
 	if ok {
@@ -60,5 +82,9 @@ func (p *Player) CostItem(itemId uint32, count uint32) {
 	} else {
 		itemInfo.Count -= count
 	}
-	p.ItemMap[itemId] = itemInfo
+	if itemInfo.Count == 0 {
+		delete(p.ItemMap, itemId)
+	} else {
+		p.ItemMap[itemId] = itemInfo
+	}
 }

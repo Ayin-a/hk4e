@@ -79,3 +79,12 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 	p.InitWeapon(weapon)
 	p.WeaponMap[weaponId] = weapon
 }
+
+func (p *Player) CostWeapon(weaponId uint64) uint64 {
+	weapon := p.WeaponMap[weaponId]
+	if weapon == nil {
+		return 0
+	}
+	delete(p.WeaponMap, weaponId)
+	return weapon.Guid
+}

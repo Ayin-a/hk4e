@@ -93,7 +93,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
-	// 获取角色突破的配置表
+	// 获取角色突破等级的配置表
 	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
 	if !ok {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
@@ -109,7 +109,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	// 获取角色突破下一级的配置表
 	avatarPromoteConfig, ok = avatarPromoteDataMap[int32(avatar.Promote+1)]
 	if !ok {
-		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
+		logger.Error("avatar promote config error, next promoteLevel: %v", avatar.Promote+1)
 		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_ON_MAX_BREAK_LEVEL)
 		return
 	}
@@ -146,7 +146,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 消耗突破材料和摩拉
-	GAME_MANAGER.CostUserItem(player.PlayerID, costItemList)
+	g.CostUserItem(player.PlayerID, costItemList)
 
 	// 角色突破等级+1
 	avatar.Promote++
@@ -228,7 +228,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 消耗升级材料以及摩拉
-	GAME_MANAGER.CostUserItem(player.PlayerID, []*UserItem{
+	g.CostUserItem(player.PlayerID, []*UserItem{
 		{
 			ItemId:      req.ItemId,
 			ChangeCount: req.Count,
@@ -487,7 +487,7 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon *model.Weapon, entityId uint32) *proto.AvatarEquipChangeNotify {
 	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
 	if !ok {
-		logger.Error("item data config error, itemId: %v")
+		logger.Error("item data config error, itemId: %v", weapon.ItemId)
 		return new(proto.AvatarEquipChangeNotify)
 	}
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{

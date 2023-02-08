@@ -23,7 +23,7 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 
 	targetPlayer, _, _ := USER_MANAGER.LoadGlobalPlayer(targetUid)
 	if targetPlayer == nil {
-		g.CommonRetError(cmd.GetPlayerSocialDetailRsp, player, &proto.GetPlayerSocialDetailRsp{}, proto.Retcode_RET_PLAYER_NOT_EXIST)
+		g.SendError(cmd.GetPlayerSocialDetailRsp, player, &proto.GetPlayerSocialDetailRsp{}, proto.Retcode_RET_PLAYER_NOT_EXIST)
 		return
 	}
 	_, exist := player.FriendList[targetPlayer.PlayerID]
@@ -50,7 +50,7 @@ func (g *GameManager) SetPlayerBirthdayReq(player *model.Player, payloadMsg pb.M
 	logger.Debug("user set birthday, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerBirthdayReq)
 	if player.Birthday[0] != 0 || player.Birthday[1] != 0 {
-		g.CommonRetError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
+		g.SendError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
 		return
 	}
 	birthday := req.Birthday
@@ -440,7 +440,7 @@ func (g *GameManager) GetOnlinePlayerInfoReq(player *model.Player, payloadMsg pb
 
 	targetPlayer, online, _ := USER_MANAGER.LoadGlobalPlayer(targetUid.TargetUid)
 	if targetPlayer == nil || !online {
-		g.CommonRetError(cmd.GetOnlinePlayerInfoRsp, player, &proto.GetOnlinePlayerInfoRsp{}, proto.Retcode_RET_PLAYER_NOT_ONLINE)
+		g.SendError(cmd.GetOnlinePlayerInfoRsp, player, &proto.GetOnlinePlayerInfoRsp{}, proto.Retcode_RET_PLAYER_NOT_ONLINE)
 		return
 	}
 

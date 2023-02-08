@@ -157,12 +157,12 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 		MsgType: mq.MsgTypeFight,
 		EventId: mq.AddFightRoutine,
 		FightMsg: &mq.FightMsg{
-			FightRoutineId:  world.id,
+			FightRoutineId:  world.GetId(),
 			GateServerAppId: player.GateAppId,
 		},
 	})
 	world.AddPlayer(player, player.SceneId)
-	player.WorldId = world.id
+	player.WorldId = world.GetId()
 	// 进入场景
 	player.SceneJump = true
 	player.SceneLoadState = model.SceneNone

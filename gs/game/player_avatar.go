@@ -76,27 +76,27 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
-		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	// 获取角色配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
-		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
+		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
 		return
 	}
 	// 角色是否获取过该突破等级的奖励
 	if avatar.PromoteRewardMap[req.PromoteLevel] {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
-		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_REWARD_HAS_TAKEN)
+		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_REWARD_HAS_TAKEN)
 		return
 	}
 	// 获取奖励配置表
 	rewardConfig, ok := gdconf.CONF.RewardDataMap[int32(avatarDataConfig.PromoteRewardMap[req.PromoteLevel])]
 	if !ok {
 		logger.Error("reward config error, rewardId: %v", avatarDataConfig.PromoteRewardMap[req.PromoteLevel])
-		g.CommonRetError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
+		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
 		return
 	}
 	// 设置该奖励为已被获取状态
@@ -127,41 +127,41 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.Guid)]
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.Guid)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	// 获取角色配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 获取角色突破配置表
 	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
 	if !ok {
 		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 获取角色突破等级的配置表
 	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
 	if !ok {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 角色等级是否达到限制
 	if avatar.Level < uint8(avatarPromoteConfig.LevelLimit) {
 		logger.Error("avatar level le level limit, level: %v", avatar.Level)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_LEVEL_LESS_THAN)
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_LEVEL_LESS_THAN)
 		return
 	}
 	// 获取角色突破下一级的配置表
 	avatarPromoteConfig, ok = avatarPromoteDataMap[int32(avatar.Promote+1)]
 	if !ok {
 		logger.Error("avatar promote config error, next promoteLevel: %v", avatar.Promote+1)
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_ON_MAX_BREAK_LEVEL)
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_ON_MAX_BREAK_LEVEL)
 		return
 	}
 	// 将被消耗的物品列表
@@ -184,16 +184,16 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ItemConstantConst.SCOIN {
-				g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+				g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 			}
-			g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+			g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
 			return
 		}
 	}
 	// 冒险等级是否符合要求
 	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL] < uint32(avatarPromoteConfig.MinPlayerLevel) {
 		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL])
-		g.CommonRetError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_PLAYER_LEVEL_LESS_THAN)
+		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_PLAYER_LEVEL_LESS_THAN)
 		return
 	}
 	// 消耗突破材料和摩拉
@@ -220,27 +220,27 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	// 经验书数量是否足够
 	if player.GetItemCount(req.ItemId) < req.Count {
 		logger.Error("item count not enough, itemId: %v", req.ItemId)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
 		return
 	}
 	// 获取经验书物品配置表
 	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(req.ItemId)]
 	if !ok {
 		logger.Error("item data config error, itemId: %v", constant.ItemConstantConst.SCOIN)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 		return
 	}
 	// 经验书将给予的经验数
 	itemParam, err := strconv.Atoi(itemDataConfig.Use1Param1)
 	if err != nil {
 		logger.Error("parse item param error: %v", err)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
 	}
 	// 角色获得的经验
@@ -248,34 +248,34 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 摩拉数量是否足够
 	if player.GetItemCount(constant.ItemConstantConst.SCOIN) < expCount/5 {
 		logger.Error("item count not enough, itemId: %v", constant.ItemConstantConst.SCOIN)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 		return
 	}
 	// 获取角色配置表
 	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
 	if !ok {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
 	}
 	// 获取角色突破配置表
 	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
 	if !ok {
 		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
 	}
 	// 获取角色突破等级对应的配置表
 	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
 	if !ok {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
 	}
 	// 角色等级是否达到限制
 	if avatar.Level >= uint8(avatarPromoteConfig.LevelLimit) {
 		logger.Error("avatar level ge level limit, level: %v", avatar.Level)
-		g.CommonRetError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_AVATAR_BREAK_LEVEL_LESS_THAN)
+		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_AVATAR_BREAK_LEVEL_LESS_THAN)
 		return
 	}
 	// 消耗升级材料以及摩拉
@@ -387,13 +387,13 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	avatar, ok := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", avatarGuid)
-		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
 		return
 	}
 	weapon, ok := player.GameObjectGuidMap[equipGuid].(*model.Weapon)
 	if !ok {
 		logger.Error("equip error, equipGuid: %v", equipGuid)
-		g.CommonRetError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
+		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
 		return
 	}
 	g.WearUserAvatarEquip(player.PlayerID, avatar.AvatarId, weapon.WeaponId)
@@ -433,8 +433,8 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 
 		weakWorldAvatar := world.GetPlayerWorldAvatar(player, weakAvatarId)
 		if weakWorldAvatar != nil {
-			weakWorldAvatar.weaponEntityId = scene.CreateEntityWeapon()
-			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, weakWorldAvatar.weaponEntityId)
+			weakWorldAvatar.SetWeaponEntityId(scene.CreateEntityWeapon())
+			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, weakWorldAvatar.GetWeaponEntityId())
 			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 		} else {
 			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(weakAvatar, weakWeapon, 0)
@@ -451,8 +451,8 @@ func (g *GameManager) WearUserAvatarEquip(userId uint32, avatarId uint32, weapon
 
 	worldAvatar := world.GetPlayerWorldAvatar(player, avatarId)
 	if worldAvatar != nil {
-		worldAvatar.weaponEntityId = scene.CreateEntityWeapon()
-		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, worldAvatar.weaponEntityId)
+		worldAvatar.SetWeaponEntityId(scene.CreateEntityWeapon())
+		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, worldAvatar.GetWeaponEntityId())
 		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 	} else {
 		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotify(avatar, weapon, 0)
@@ -487,7 +487,7 @@ func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb
 
 	avatarChangeCostumeNotify := new(proto.AvatarChangeCostumeNotify)
 	avatarChangeCostumeNotify.EntityInfo = g.PacketSceneEntityInfoAvatar(scene, player, avatar.AvatarId)
-	for _, scenePlayer := range scene.playerMap {
+	for _, scenePlayer := range scene.GetAllPlayer() {
 		g.SendMsg(cmd.AvatarChangeCostumeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, avatarChangeCostumeNotify)
 	}
 
@@ -524,7 +524,7 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 		AvatarGuid: avatarGuid,
 		FlycloakId: flycloakId,
 	}
-	for _, scenePlayer := range scene.playerMap {
+	for _, scenePlayer := range scene.GetAllPlayer() {
 		g.SendMsg(cmd.AvatarFlycloakChangeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, avatarFlycloakChangeNotify)
 	}
 

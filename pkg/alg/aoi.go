@@ -78,8 +78,8 @@ func (a *AoiManager) AoiInfoLog(debug bool) {
 			minGridObjectCount = gridObjectCount
 		}
 		if debug {
-			logger.Debug("Grid: gid: %d, minX: %d, maxX: %d, minY: %d, maxY: %d, minZ: %d, maxZ: %d, object count: %v",
-				grid.gid, grid.minX, grid.maxX, grid.minY, grid.maxY, grid.minZ, grid.maxZ, gridObjectCount)
+			// logger.Debug("Grid: gid: %d, minX: %d, maxX: %d, minY: %d, maxY: %d, minZ: %d, maxZ: %d, object count: %v",
+			// 	grid.gid, grid.minX, grid.maxX, grid.minY, grid.maxY, grid.minZ, grid.maxZ, gridObjectCount)
 			for objectId, object := range grid.objectMap {
 				logger.Debug("objectId: %v, object: %v", objectId, object)
 			}

@@ -213,6 +213,14 @@ func (w *WorldManager) IsBigWorld(world *World) bool {
 	return (world.id == w.aiWorld.id) && (w.aiWorld.owner.PlayerID == BigWorldAiUid)
 }
 
+func (w *WorldManager) GetSceneBlockAoiMap() map[uint32]*alg.AoiManager {
+	return w.sceneBlockAoiMap
+}
+
+func (w *WorldManager) GetMultiplayerWorldNum() uint32 {
+	return w.multiplayerWorldNum
+}
+
 // 世界数据结构
 
 type World struct {
@@ -231,12 +239,32 @@ type World struct {
 	peerList            []*model.Player // 玩家编号列表
 }
 
+func (w *World) GetId() uint32 {
+	return w.id
+}
+
+func (w *World) GetOwner() *model.Player {
+	return w.owner
+}
+
 func (w *World) GetAllPlayer() map[uint32]*model.Player {
 	return w.playerMap
 }
 
 func (w *World) GetAllScene() map[uint32]*Scene {
 	return w.sceneMap
+}
+
+func (w *World) GetWorldLevel() uint8 {
+	return w.worldLevel
+}
+
+func (w *World) GetMultiplayer() bool {
+	return w.multiplayer
+}
+
+func (w *World) GetMpLevelEntityId() uint32 {
+	return w.mpLevelEntityId
 }
 
 func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
@@ -351,6 +379,42 @@ type WorldAvatar struct {
 	weaponEntityId uint32
 	abilityList    []*proto.AbilityAppliedAbility
 	modifierList   []*proto.AbilityAppliedModifier
+}
+
+func (w *WorldAvatar) GetUid() uint32 {
+	return w.uid
+}
+
+func (w *WorldAvatar) GetAvatarId() uint32 {
+	return w.avatarId
+}
+
+func (w *WorldAvatar) GetAvatarEntityId() uint32 {
+	return w.avatarEntityId
+}
+
+func (w *WorldAvatar) GetWeaponEntityId() uint32 {
+	return w.weaponEntityId
+}
+
+func (w *WorldAvatar) SetWeaponEntityId(weaponEntityId uint32) {
+	w.weaponEntityId = weaponEntityId
+}
+
+func (w *WorldAvatar) GetAbilityList() []*proto.AbilityAppliedAbility {
+	return w.abilityList
+}
+
+func (w *WorldAvatar) SetAbilityList(abilityList []*proto.AbilityAppliedAbility) {
+	w.abilityList = abilityList
+}
+
+func (w *WorldAvatar) GetModifierList() []*proto.AbilityAppliedModifier {
+	return w.modifierList
+}
+
+func (w *WorldAvatar) SetModifierList(modifierList []*proto.AbilityAppliedModifier) {
+	w.modifierList = modifierList
 }
 
 // GetWorldAvatarList 获取世界队伍的全部角色列表
@@ -643,8 +707,24 @@ func (w *World) IsPlayerFirstEnter(player *model.Player) bool {
 	}
 }
 
-func (w *World) PlayerEnter(player *model.Player) {
-	w.playerFirstEnterMap[player.PlayerID] = time.Now().UnixMilli()
+func (w *World) PlayerEnter(uid uint32) {
+	w.playerFirstEnterMap[uid] = time.Now().UnixMilli()
+}
+
+func (w *World) AddWaitPlayer(uid uint32) {
+	w.waitEnterPlayerMap[uid] = time.Now().UnixMilli()
+}
+
+func (w *World) GetAllWaitPlayer() []uint32 {
+	uidList := make([]uint32, 0)
+	for uid := range w.waitEnterPlayerMap {
+		uidList = append(uidList, uid)
+	}
+	return uidList
+}
+
+func (w *World) RemoveWaitPlayer(uid uint32) {
+	delete(w.waitEnterPlayerMap, uid)
 }
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
@@ -683,6 +763,14 @@ type Scene struct {
 	meeoIndex         uint32            // 客户端风元素染色同步协议的计数器
 }
 
+func (s *Scene) GetId() uint32 {
+	return s.id
+}
+
+func (s *Scene) GetWorld() *World {
+	return s.world
+}
+
 func (s *Scene) GetAllPlayer() map[uint32]*model.Player {
 	return s.playerMap
 }
@@ -691,13 +779,37 @@ func (s *Scene) GetAllEntity() map[uint32]*Entity {
 	return s.entityMap
 }
 
+func (s *Scene) GetGameTime() uint32 {
+	return s.gameTime
+}
+
+func (s *Scene) GetMeeoIndex() uint32 {
+	return s.meeoIndex
+}
+
+func (s *Scene) SetMeeoIndex(meeoIndex uint32) {
+	s.meeoIndex = meeoIndex
+}
+
 type AvatarEntity struct {
 	uid      uint32
 	avatarId uint32
 }
 
+func (a *AvatarEntity) GetUid() uint32 {
+	return a.uid
+}
+
+func (a *AvatarEntity) GetAvatarId() uint32 {
+	return a.avatarId
+}
+
 type MonsterEntity struct {
 	monsterId uint32
+}
+
+func (m *MonsterEntity) GetMonsterId() uint32 {
+	return m.monsterId
 }
 
 type NpcEntity struct {
@@ -723,8 +835,36 @@ type GadgetClientEntity struct {
 	propOwnerEntityId uint32
 }
 
+func (g *GadgetClientEntity) GetConfigId() uint32 {
+	return g.configId
+}
+
+func (g *GadgetClientEntity) GetCampId() uint32 {
+	return g.campId
+}
+
+func (g *GadgetClientEntity) GetCampType() uint32 {
+	return g.campType
+}
+
+func (g *GadgetClientEntity) GetOwnerEntityId() uint32 {
+	return g.ownerEntityId
+}
+
+func (g *GadgetClientEntity) GetTargetEntityId() uint32 {
+	return g.targetEntityId
+}
+
+func (g *GadgetClientEntity) GetPropOwnerEntityId() uint32 {
+	return g.propOwnerEntityId
+}
+
 type GadgetGatherEntity struct {
 	gatherId uint32
+}
+
+func (g *GadgetGatherEntity) GetGatherId() uint32 {
+	return g.gatherId
 }
 
 type GadgetVehicleEntity struct {
@@ -735,12 +875,56 @@ type GadgetVehicleEntity struct {
 	memberMap  map[uint32]*model.Player // uint32 = pos
 }
 
+func (g *GadgetVehicleEntity) GetVehicleId() uint32 {
+	return g.vehicleId
+}
+
+func (g *GadgetVehicleEntity) GetOwner() *model.Player {
+	return g.owner
+}
+
+func (g *GadgetVehicleEntity) GetMaxStamina() float32 {
+	return g.maxStamina
+}
+
+func (g *GadgetVehicleEntity) GetCurStamina() float32 {
+	return g.curStamina
+}
+
+func (g *GadgetVehicleEntity) SetCurStamina(curStamina float32) {
+	g.curStamina = curStamina
+}
+
+func (g *GadgetVehicleEntity) GetMemberMap() map[uint32]*model.Player {
+	return g.memberMap
+}
+
 type GadgetEntity struct {
 	gadgetType          int
 	gadgetId            uint32
 	gadgetClientEntity  *GadgetClientEntity
 	gadgetGatherEntity  *GadgetGatherEntity
 	gadgetVehicleEntity *GadgetVehicleEntity
+}
+
+func (g *GadgetEntity) GetGadgetType() int {
+	return g.gadgetType
+}
+
+func (g *GadgetEntity) GetGadgetId() uint32 {
+	return g.gadgetId
+}
+
+func (g *GadgetEntity) GetGadgetClientEntity() *GadgetClientEntity {
+	return g.gadgetClientEntity
+}
+
+func (g *GadgetEntity) GetGadgetGatherEntity() *GadgetGatherEntity {
+	return g.gadgetGatherEntity
+}
+
+func (g *GadgetEntity) GetGadgetVehicleEntity() *GadgetVehicleEntity {
+	return g.gadgetVehicleEntity
 }
 
 // 场景实体数据结构
@@ -763,6 +947,78 @@ type Entity struct {
 	gadgetEntity        *GadgetEntity
 	configId            uint32
 	objectId            int64
+}
+
+func (e *Entity) GetId() uint32 {
+	return e.id
+}
+
+func (e *Entity) GetLifeState() uint16 {
+	return e.lifeState
+}
+
+func (e *Entity) GetPos() *model.Vector {
+	return e.pos
+}
+
+func (e *Entity) GetRot() *model.Vector {
+	return e.rot
+}
+
+func (e *Entity) GetMoveState() uint16 {
+	return e.moveState
+}
+
+func (e *Entity) SetMoveState(moveState uint16) {
+	e.moveState = moveState
+}
+
+func (e *Entity) GetLastMoveSceneTimeMs() uint32 {
+	return e.lastMoveSceneTimeMs
+}
+
+func (e *Entity) SetLastMoveSceneTimeMs(lastMoveSceneTimeMs uint32) {
+	e.lastMoveSceneTimeMs = lastMoveSceneTimeMs
+}
+
+func (e *Entity) GetLastMoveReliableSeq() uint32 {
+	return e.lastMoveReliableSeq
+}
+
+func (e *Entity) SetLastMoveReliableSeq(lastMoveReliableSeq uint32) {
+	e.lastMoveReliableSeq = lastMoveReliableSeq
+}
+
+func (e *Entity) GetFightProp() map[uint32]float32 {
+	return e.fightProp
+}
+
+func (e *Entity) GetEntityType() uint32 {
+	return e.entityType
+}
+
+func (e *Entity) GetLevel() uint8 {
+	return e.level
+}
+
+func (e *Entity) GetAvatarEntity() *AvatarEntity {
+	return e.avatarEntity
+}
+
+func (e *Entity) GetMonsterEntity() *MonsterEntity {
+	return e.monsterEntity
+}
+
+func (e *Entity) GetNpcEntity() *NpcEntity {
+	return e.npcEntity
+}
+
+func (e *Entity) GetGadgetEntity() *GadgetEntity {
+	return e.gadgetEntity
+}
+
+func (e *Entity) GetConfigId() uint32 {
+	return e.configId
 }
 
 type Attack struct {
@@ -913,7 +1169,6 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		lastMoveReliableSeq: 0,
 		fightProp:           nil,
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON),
-		level:               0,
 	}
 	s.CreateEntity(entity, 0)
 	return entity.id
@@ -977,7 +1232,6 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_NPC),
-		level:      0,
 		npcEntity: &NpcEntity{
 			NpcId:         npcId,
 			RoomId:        roomId,
@@ -1012,7 +1266,6 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
-		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_NORMAL,
@@ -1045,7 +1298,6 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
-		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_GATHER,
@@ -1076,7 +1328,6 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
-		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_CLIENT,
 			gadgetClientEntity: &GadgetClientEntity{
@@ -1115,7 +1366,6 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 			uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP): float32(1),
 		},
 		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
-		level:      0,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_VEHICLE,
 			gadgetVehicleEntity: &GadgetVehicleEntity{

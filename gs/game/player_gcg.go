@@ -71,13 +71,13 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 	// 获取玩家所在的游戏
 	game, ok := GCG_MANAGER.gameMap[player.GCGCurGameGuid]
 	if !ok {
-		g.CommonRetError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
+		g.SendError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
 		return
 	}
 	// 获取玩家的操控者对象
 	gameController := game.GetControllerByUserId(player.PlayerID)
 	if gameController == nil {
-		g.CommonRetError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
+		g.SendError(cmd.GCGAskDuelRsp, player, &proto.GCGAskDuelRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
 		return
 	}
 
@@ -265,13 +265,13 @@ func (g *GameManager) GCGInitFinishReq(player *model.Player, payloadMsg pb.Messa
 	// 获取玩家所在的游戏
 	game, ok := GCG_MANAGER.gameMap[player.GCGCurGameGuid]
 	if !ok {
-		g.CommonRetError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
+		g.SendError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
 		return
 	}
 	// 获取玩家的操控者对象
 	gameController := game.GetControllerByUserId(player.PlayerID)
 	if gameController == nil {
-		g.CommonRetError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
+		g.SendError(cmd.GCGInitFinishRsp, player, &proto.GCGInitFinishRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
 		return
 	}
 
@@ -291,13 +291,13 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 	// 获取玩家所在的游戏
 	game, ok := GCG_MANAGER.gameMap[player.GCGCurGameGuid]
 	if !ok {
-		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
+		g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_GAME_NOT_RUNNING)
 		return
 	}
 	// 获取玩家的操控者对象
 	gameController := game.GetControllerByUserId(player.PlayerID)
 	if gameController == nil {
-		g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
+		g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_NOT_IN_GCG_DUNGEON)
 		return
 	}
 
@@ -308,7 +308,7 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		// 操作者是否拥有该卡牌
 		cardInfo := gameController.GetCharCardByGuid(op.CardGuid)
 		if cardInfo == nil {
-			GAME_MANAGER.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_SELECT_HAND_CARD_GUID_ERROR)
+			GAME_MANAGER.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_SELECT_HAND_CARD_GUID_ERROR)
 			return
 		}
 		// 操控者选择角色牌
@@ -318,13 +318,13 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		op := req.Op.GetOpReroll()
 		diceSideList, ok := game.roundInfo.diceSideMap[gameController.controllerId]
 		if !ok {
-			g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+			g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
 			return
 		}
 		// 判断骰子索引是否有效
 		for _, diceIndex := range op.DiceIndexList {
 			if diceIndex > uint32(len(diceSideList)) {
-				g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+				g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
 				return
 			}
 		}
@@ -335,13 +335,13 @@ func (g *GameManager) GCGOperationReq(player *model.Player, payloadMsg pb.Messag
 		op := req.Op.GetOpAttack()
 		diceSideList, ok := game.roundInfo.diceSideMap[gameController.controllerId]
 		if !ok {
-			g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+			g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
 			return
 		}
 		// 判断骰子索引是否有效
 		for _, diceIndex := range op.CostDiceIndexList {
 			if diceIndex > uint32(len(diceSideList)) {
-				g.CommonRetError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
+				g.SendError(cmd.GCGOperationRsp, player, &proto.GCGOperationRsp{}, proto.Retcode_RET_GCG_DICE_INDEX_INVALID)
 				return
 			}
 		}

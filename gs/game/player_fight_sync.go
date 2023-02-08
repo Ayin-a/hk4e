@@ -29,7 +29,7 @@ func DoForward[IET model.InvokeEntryType](player *model.Player, req pb.Message, 
 		for _, fieldName := range copyFieldList {
 			reflection.CopyStructField(ntf, req, fieldName)
 		}
-		for _, v := range world.playerMap {
+		for _, v := range world.GetAllPlayer() {
 			GAME_MANAGER.SendMsg(cmdId, v.PlayerID, player.ClientSeq, ntf)
 		}
 	}
@@ -84,8 +84,8 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	ntf.OpIdx = scene.meeoIndex
-	scene.meeoIndex++
+	ntf.OpIdx = scene.GetMeeoIndex()
+	scene.SetMeeoIndex(scene.GetMeeoIndex() + 1)
 	g.SendToWorldA(world, cmd.MassiveEntityElementOpBatchNotify, player.ClientSeq, ntf)
 }
 
@@ -137,20 +137,21 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			attackerId := attackResult.AttackerId
 			_ = attackerId
 			currHp := float32(0)
-			if target.fightProp != nil {
-				currHp = target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
+			fightProp := target.GetFightProp()
+			if fightProp != nil {
+				currHp = fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
 				currHp -= damage
 				if currHp < 0 {
 					currHp = 0
 				}
-				target.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
+				fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
 			}
 			entityFightPropUpdateNotify := &proto.EntityFightPropUpdateNotify{
-				FightPropMap: target.fightProp,
-				EntityId:     target.id,
+				FightPropMap: fightProp,
+				EntityId:     target.GetId(),
 			}
 			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
-			if currHp == 0 && target.avatarEntity == nil {
+			if currHp == 0 && target.GetAvatarEntity() == nil {
 				scene.SetEntityLifeState(target, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(hitInfo)
@@ -186,7 +187,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if sceneEntity == nil {
 				continue
 			}
-			if sceneEntity.avatarEntity != nil {
+			if sceneEntity.GetAvatarEntity() != nil {
 				// 玩家实体在移动
 				g.AoiPlayerMove(player, player.Pos, &model.Vector{
 					X: float64(motionInfo.Pos.X),
@@ -206,23 +207,26 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			} else {
 				// 非玩家实体在移动
 				// 更新场景实体的位置信息
-				sceneEntity.pos.X = float64(motionInfo.Pos.X)
-				sceneEntity.pos.Y = float64(motionInfo.Pos.Y)
-				sceneEntity.pos.Z = float64(motionInfo.Pos.Z)
-				sceneEntity.rot.X = float64(motionInfo.Rot.X)
-				sceneEntity.rot.Y = float64(motionInfo.Rot.Y)
-				sceneEntity.rot.Z = float64(motionInfo.Rot.Z)
+				pos := sceneEntity.GetPos()
+				pos.X = float64(motionInfo.Pos.X)
+				pos.Y = float64(motionInfo.Pos.Y)
+				pos.Z = float64(motionInfo.Pos.Z)
+				rot := sceneEntity.GetRot()
+				rot.X = float64(motionInfo.Rot.X)
+				rot.Y = float64(motionInfo.Rot.Y)
+				rot.Z = float64(motionInfo.Rot.Z)
 				// 载具耐力消耗
-				if sceneEntity.gadgetEntity != nil && sceneEntity.gadgetEntity.gadgetVehicleEntity != nil {
+				gadgetEntity := sceneEntity.GetGadgetEntity()
+				if gadgetEntity != nil && gadgetEntity.GetGadgetVehicleEntity() != nil {
 					// 处理耐力消耗
 					g.ImmediateStamina(player, motionInfo.State)
 					// 处理载具销毁请求
 					g.VehicleDestroyMotion(player, sceneEntity, motionInfo.State)
 				}
 			}
-			sceneEntity.moveState = uint16(motionInfo.State)
-			sceneEntity.lastMoveSceneTimeMs = entityMoveInfo.SceneTime
-			sceneEntity.lastMoveReliableSeq = entityMoveInfo.ReliableSeq
+			sceneEntity.SetMoveState(uint16(motionInfo.State))
+			sceneEntity.SetLastMoveSceneTimeMs(entityMoveInfo.SceneTime)
+			sceneEntity.SetLastMoveReliableSeq(entityMoveInfo.ReliableSeq)
 
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
@@ -253,7 +257,8 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 }
 
 func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
-	aoiManager, exist := WORLD_MANAGER.sceneBlockAoiMap[player.SceneId]
+	sceneBlockAoiMap := WORLD_MANAGER.GetSceneBlockAoiMap()
+	aoiManager, exist := sceneBlockAoiMap[player.SceneId]
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if exist {
@@ -287,8 +292,8 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 				if entity == nil {
 					continue
 				}
-				scene.DestroyEntity(entity.id)
-				delEntityIdList = append(delEntityIdList, entity.id)
+				scene.DestroyEntity(entity.GetId())
+				delEntityIdList = append(delEntityIdList, entity.GetId())
 			}
 			addEntityIdList := make([]uint32, 0)
 			for newObjectId, newObject := range newObjectMap {
@@ -411,7 +416,9 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			if abilityMetaAddAbility.Ability == nil {
 				continue
 			}
-			worldAvatar.abilityList = append(worldAvatar.abilityList, abilityMetaAddAbility.Ability)
+			abilityList := worldAvatar.GetAbilityList()
+			abilityList = append(abilityList, abilityMetaAddAbility.Ability)
+			worldAvatar.SetAbilityList(abilityList)
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)
 			if config.CONF.Hk4e.ClientProtoProxyEnable {
@@ -451,7 +458,9 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			if worldAvatar == nil {
 				continue
 			}
-			worldAvatar.modifierList = append(worldAvatar.modifierList, abilityAppliedModifier)
+			modifierList := worldAvatar.GetModifierList()
+			modifierList = append(modifierList, abilityAppliedModifier)
+			worldAvatar.SetModifierList(modifierList)
 		default:
 		}
 	}

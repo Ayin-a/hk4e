@@ -31,7 +31,7 @@ func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Mess
 	}
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world.multiplayer {
+	if world.GetMultiplayer() {
 		chatList := world.GetChatList()
 		count := len(chatList)
 		if count > 10 {
@@ -239,7 +239,7 @@ func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message)
 		ChannelId: channelId,
 		ChatInfo:  sendChatInfo,
 	}
-	for _, worldPlayer := range world.playerMap {
+	for _, worldPlayer := range world.GetAllPlayer() {
 		g.SendMsg(cmd.PlayerChatNotify, worldPlayer.PlayerID, player.ClientSeq, playerChatNotify)
 	}
 

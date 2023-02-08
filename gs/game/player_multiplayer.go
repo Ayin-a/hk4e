@@ -93,7 +93,7 @@ func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Pla
 		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_OTHER)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 	} else {
-		hostWorld.waitEnterPlayerMap[player.PlayerID] = time.Now().UnixMilli()
+		hostWorld.AddWaitPlayer(player.PlayerID)
 	}
 }
 
@@ -103,17 +103,17 @@ func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payload
 	logger.Debug("user get world exit ban info, uid: %v", player.PlayerID)
 	ok := true
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	for _, worldPlayer := range world.playerMap {
+	for _, worldPlayer := range world.GetAllPlayer() {
 		if worldPlayer.SceneLoadState != model.SceneEnterDone {
 			ok = false
 		}
 	}
 
 	if !ok {
-		g.CommonRetError(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		g.SendError(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
 		return
 	}
-	g.CommonRetSucc(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{})
+	g.SendSucc(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{})
 }
 
 func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
@@ -122,10 +122,10 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 	ok := g.UserLeaveWorld(player)
 
 	if !ok {
-		g.CommonRetError(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		g.SendError(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
 		return
 	}
-	g.CommonRetSucc(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{})
+	g.SendSucc(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{})
 }
 
 func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
@@ -134,18 +134,18 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 	ok := g.UserLeaveWorld(player)
 
 	if !ok {
-		g.CommonRetError(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		g.SendError(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
 		return
 	}
-	g.CommonRetSucc(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{})
+	g.SendSucc(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{})
 }
 
 func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user kick player, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if player.PlayerID != world.owner.PlayerID {
-		g.CommonRetError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{})
+	if player.PlayerID != world.GetOwner().PlayerID {
+		g.SendError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{})
 		return
 	}
 	targetUid := req.TargetUid
@@ -156,7 +156,7 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	}
 	ok := g.UserLeaveWorld(targetPlayer)
 	if !ok {
-		g.CommonRetError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
+		g.SendError(cmd.SceneKickPlayerRsp, player, &proto.SceneKickPlayerRsp{}, proto.Retcode_RET_MP_TARGET_PLAYER_IN_TRANSFER)
 		return
 	}
 
@@ -164,7 +164,7 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 		TargetUid: targetUid,
 		KickerUid: player.PlayerID,
 	}
-	for _, worldPlayer := range world.playerMap {
+	for _, worldPlayer := range world.GetAllPlayer() {
 		g.SendMsg(cmd.SceneKickPlayerNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneKickPlayerNotify)
 	}
 
@@ -185,7 +185,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, player.PlayerID, player.ClientSeq, playerApplyEnterMpResultNotify)
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world.multiplayer {
+	if world.GetMultiplayer() {
 		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
 		return
 	}
@@ -224,13 +224,13 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		})
 		return
 	}
-	if WORLD_MANAGER.multiplayerWorldNum >= MAX_MULTIPLAYER_WORLD_NUM {
+	if WORLD_MANAGER.GetMultiplayerWorldNum() >= MAX_MULTIPLAYER_WORLD_NUM {
 		// 超过本服务器最大多人世界数量限制
 		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_MAX_PLAYER)
 		return
 	}
 	targetWorld := WORLD_MANAGER.GetWorldByID(targetPlayer.WorldId)
-	if targetWorld.multiplayer && targetWorld.owner.PlayerID != targetPlayer.PlayerID {
+	if targetWorld.GetMultiplayer() && targetWorld.GetOwner().PlayerID != targetPlayer.PlayerID {
 		// 向同一世界内的非房主玩家申请时直接拒绝
 		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
 		return
@@ -295,7 +295,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	}
 
 	otherPlayerWorld := WORLD_MANAGER.GetWorldByID(otherPlayer.WorldId)
-	if otherPlayerWorld.multiplayer {
+	if otherPlayerWorld.GetMultiplayer() {
 		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
 			TargetUid:      hostPlayer.PlayerID,
 			TargetNickname: hostPlayer.NickName,
@@ -317,7 +317,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 
 func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
 	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-	if world.multiplayer {
+	if world.GetMultiplayer() {
 		return
 	}
 	world.ChangeToMultiplayer()
@@ -328,8 +328,8 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 	// 是否多人游戏
 	worldDataNotify.WorldPropMap[2] = &proto.PropValue{
 		Type:  2,
-		Val:   object.ConvBoolToInt64(world.multiplayer),
-		Value: &proto.PropValue_Ival{Ival: object.ConvBoolToInt64(world.multiplayer)},
+		Val:   object.ConvBoolToInt64(world.GetMultiplayer()),
+		Value: &proto.PropValue_Ival{Ival: object.ConvBoolToInt64(world.GetMultiplayer())},
 	}
 	g.SendMsg(cmd.WorldDataNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, worldDataNotify)
 
@@ -360,10 +360,10 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 
 func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 	oldWorld := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if !oldWorld.multiplayer {
+	if !oldWorld.GetMultiplayer() {
 		return false
 	}
-	for _, worldPlayer := range oldWorld.playerMap {
+	for _, worldPlayer := range oldWorld.GetAllPlayer() {
 		if worldPlayer.SceneLoadState != model.SceneEnterDone {
 			return false
 		}
@@ -376,22 +376,22 @@ func (g *GameManager) UserWorldAddPlayer(world *World, player *model.Player) {
 	if !WORLD_MANAGER.IsBigWorld(world) && world.GetWorldPlayerNum() >= 4 {
 		return
 	}
-	_, exist := world.playerMap[player.PlayerID]
+	_, exist := world.GetAllPlayer()[player.PlayerID]
 	if exist {
 		return
 	}
 	world.AddPlayer(player, player.SceneId)
-	player.WorldId = world.id
+	player.WorldId = world.GetId()
 	if world.GetWorldPlayerNum() > 1 {
 		g.UpdateWorldPlayerInfo(world, player)
 	}
 }
 
 func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) {
-	if world.multiplayer && player.PlayerID == world.owner.PlayerID {
+	if world.GetMultiplayer() && player.PlayerID == world.GetOwner().PlayerID {
 		// 多人世界房主离开剔除所有其他玩家
-		for _, worldPlayer := range world.playerMap {
-			if worldPlayer.PlayerID == world.owner.PlayerID {
+		for _, worldPlayer := range world.GetAllPlayer() {
+			if worldPlayer.PlayerID == world.GetOwner().PlayerID {
 				continue
 			}
 			if ok := g.UserLeaveWorld(worldPlayer); !ok {
@@ -408,7 +408,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
 	g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
 
-	if world.multiplayer {
+	if world.GetMultiplayer() {
 		playerQuitFromMpNotify := &proto.PlayerQuitFromMpNotify{
 			Reason: proto.PlayerQuitFromMpNotify_BACK_TO_MY_WORLD,
 		}
@@ -420,25 +420,25 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 
 	world.RemovePlayer(player)
 	player.WorldId = 0
-	if world.owner.PlayerID == player.PlayerID {
+	if world.GetOwner().PlayerID == player.PlayerID {
 		// 房主离开销毁世界
-		WORLD_MANAGER.DestroyWorld(world.id)
-		MESSAGE_QUEUE.SendToFight(world.owner.FightAppId, &mq.NetMsg{
+		WORLD_MANAGER.DestroyWorld(world.GetId())
+		MESSAGE_QUEUE.SendToFight(world.GetOwner().FightAppId, &mq.NetMsg{
 			MsgType: mq.MsgTypeFight,
 			EventId: mq.DelFightRoutine,
 			FightMsg: &mq.FightMsg{
-				FightRoutineId: world.id,
+				FightRoutineId: world.GetId(),
 			},
 		})
 		return
 	}
-	if world.multiplayer && world.GetWorldPlayerNum() > 0 {
+	if world.GetMultiplayer() && world.GetWorldPlayerNum() > 0 {
 		g.UpdateWorldPlayerInfo(world, player)
 	}
 }
 
 func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *model.Player) {
-	for _, worldPlayer := range hostWorld.playerMap {
+	for _, worldPlayer := range hostWorld.GetAllPlayer() {
 		if worldPlayer.PlayerID == excludePlayer.PlayerID {
 			continue
 		}
@@ -454,7 +454,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
 			PlayerUidList:  make([]uint32, 0),
 		}
-		for _, subWorldPlayer := range hostWorld.playerMap {
+		for _, subWorldPlayer := range hostWorld.GetAllPlayer() {
 			onlinePlayerInfo := &proto.OnlinePlayerInfo{
 				Uid:                 subWorldPlayer.PlayerID,
 				Nickname:            subWorldPlayer.NickName,
@@ -479,7 +479,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 		scenePlayerInfoNotify := &proto.ScenePlayerInfoNotify{
 			PlayerInfoList: make([]*proto.ScenePlayerInfo, 0),
 		}
-		for _, worldPlayer := range hostWorld.playerMap {
+		for _, worldPlayer := range hostWorld.GetAllPlayer() {
 			onlinePlayerInfo := &proto.OnlinePlayerInfo{
 				Uid:                 worldPlayer.PlayerID,
 				Nickname:            worldPlayer.NickName,
@@ -507,8 +507,8 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			SceneId:            worldPlayer.SceneId,
 			TeamEntityInfoList: make([]*proto.TeamEntityInfo, 0),
 		}
-		if hostWorld.multiplayer {
-			for _, worldPlayer := range hostWorld.playerMap {
+		if hostWorld.GetMultiplayer() {
+			for _, worldPlayer := range hostWorld.GetAllPlayer() {
 				if worldPlayer.PlayerID == worldPlayer.PlayerID {
 					continue
 				}
@@ -554,13 +554,13 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_CANNOT_ENTER_MP)
 			return
 		}
-		if WORLD_MANAGER.multiplayerWorldNum >= MAX_MULTIPLAYER_WORLD_NUM {
+		if WORLD_MANAGER.GetMultiplayerWorldNum() >= MAX_MULTIPLAYER_WORLD_NUM {
 			// 超过本服务器最大多人世界数量限制
 			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_MAX_PLAYER)
 			return
 		}
 		hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
-		if hostWorld.multiplayer && hostWorld.owner.PlayerID != hostPlayer.PlayerID {
+		if hostWorld.GetMultiplayer() && hostWorld.GetOwner().PlayerID != hostPlayer.PlayerID {
 			// 向同一世界内的非房主玩家申请时直接拒绝
 			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
 			return
@@ -612,7 +612,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 			return
 		}
 		applyPlayerWorld := WORLD_MANAGER.GetWorldByID(applyPlayer.WorldId)
-		if applyPlayerWorld.multiplayer {
+		if applyPlayerWorld.GetMultiplayer() {
 			playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
 				TargetUid:      userMpInfo.HostUserId,
 				TargetNickname: userMpInfo.HostNickname,

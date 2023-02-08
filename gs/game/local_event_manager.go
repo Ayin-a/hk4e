@@ -39,6 +39,10 @@ func NewLocalEventManager() (r *LocalEventManager) {
 	return r
 }
 
+func (l *LocalEventManager) GetLocalEventChan() chan *LocalEvent {
+	return l.localEventChan
+}
+
 type PlayerLastSaveTimeSortList []*model.Player
 
 func (p PlayerLastSaveTimeSortList) Len() int {

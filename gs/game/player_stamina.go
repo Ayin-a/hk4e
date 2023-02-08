@@ -52,7 +52,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		}
 		// 查找是不是属于该角色实体的ability id
 		abilityNameHashCode := uint32(0)
-		for _, ability := range worldAvatar.abilityList {
+		for _, ability := range worldAvatar.GetAbilityList() {
 			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
 				// logger.Error("%v", ability)
 				abilityNameHashCode = ability.AbilityName.GetHash()
@@ -107,7 +107,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 			angleRevise = int32(req.Rot.X - 360.0)
 		} else {
 			logger.Error("invalid rot x angle: %v, uid: %v", req.Rot.X, player.PlayerID)
-			g.CommonRetError(cmd.SceneAvatarStaminaStepRsp, player, &proto.SceneAvatarStaminaStepRsp{})
+			g.SendError(cmd.SceneAvatarStaminaStepRsp, player, &proto.SceneAvatarStaminaStepRsp{})
 			return
 		}
 		// 攀爬耐力修正曲线
@@ -191,9 +191,9 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 		return
 	}
 	// 获取现行角色的配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.GetAvatarId())]
 	if !ok {
-		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
 		return
 	}
 
@@ -230,9 +230,9 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 		return
 	}
 	// 获取现行角色的配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.avatarId)]
+	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.GetAvatarId())]
 	if !ok {
-		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.avatarId)
+		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
 		return
 	}
 
@@ -307,11 +307,12 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 		return
 	}
 	// 确保实体类型是否为载具
-	if entity.gadgetEntity == nil || entity.gadgetEntity.gadgetVehicleEntity == nil {
+	gadgetEntity := entity.GetGadgetEntity()
+	if gadgetEntity == nil || gadgetEntity.GetGadgetVehicleEntity() == nil {
 		return
 	}
 	// 判断玩家处于载具中
-	if g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
+	if g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
 		// 角色回复耐力
 		g.UpdatePlayerStamina(player, constant.StaminaCostConst.IN_SKIFF)
 	} else {
@@ -333,7 +334,8 @@ func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	// 获取玩家处于的载具实体
 	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
 	// 确保实体类型是否为载具 且 根据玩家是否处于载具中更新耐力
-	if entity != nil && (entity.gadgetEntity != nil && entity.gadgetEntity.gadgetVehicleEntity != nil) && g.IsPlayerInVehicle(player, entity.gadgetEntity.gadgetVehicleEntity) {
+	gadgetEntity := entity.GetGadgetEntity()
+	if entity != nil && (gadgetEntity != nil && gadgetEntity.GetGadgetVehicleEntity() != nil) && g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
 		// 更新载具耐力
 		g.UpdateVehicleStamina(player, entity, player.StaminaInfo.CostStamina)
 	} else {
@@ -382,9 +384,10 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 	// 因为载具的耐力需要换算
 	// 这里先*100后面要用的时候再换算 为了确保精度
 	// 最大耐力值
-	maxStamina := int32(vehicleEntity.gadgetEntity.gadgetVehicleEntity.maxStamina * 100)
+	gadgetEntity := vehicleEntity.GetGadgetEntity()
+	maxStamina := int32(gadgetEntity.GetGadgetVehicleEntity().GetMaxStamina() * 100)
 	// 现行耐力值
-	curStamina := int32(vehicleEntity.gadgetEntity.gadgetVehicleEntity.curStamina * 100)
+	curStamina := int32(gadgetEntity.GetGadgetVehicleEntity().GetCurStamina() * 100)
 
 	// 将被变更的耐力
 	stamina := g.GetChangeStamina(curStamina, maxStamina, staminaCost)
@@ -449,9 +452,9 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
-	avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
+	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
 	if avatarEntity == nil {
-		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
+		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.GetAvatarEntityId())
 		return
 	}
 
@@ -514,9 +517,9 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
-	avatarEntity := scene.GetEntity(activeAvatar.avatarEntityId)
+	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
 	if avatarEntity == nil {
-		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.avatarEntityId)
+		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.GetAvatarEntityId())
 		return
 	}
 
@@ -533,12 +536,13 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 // SetVehicleStamina 设置载具耐力
 func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, stamina float32) {
 	// 设置载具的耐力
-	vehicleEntity.gadgetEntity.gadgetVehicleEntity.curStamina = stamina
+	gadgetEntity := vehicleEntity.GetGadgetEntity()
+	gadgetEntity.GetGadgetVehicleEntity().SetCurStamina(stamina)
 	// logger.Debug("vehicle stamina set, stamina: %v", stamina)
 
 	// PacketVehicleStaminaNotify
 	vehicleStaminaNotify := new(proto.VehicleStaminaNotify)
-	vehicleStaminaNotify.EntityId = vehicleEntity.id
+	vehicleStaminaNotify.EntityId = vehicleEntity.GetId()
 	vehicleStaminaNotify.CurStamina = stamina
 	g.SendMsg(cmd.VehicleStaminaNotify, player.PlayerID, player.ClientSeq, vehicleStaminaNotify)
 }

@@ -219,19 +219,19 @@ func (g *GameManager) gameMainLoop() {
 			ROUTE_MANAGER.RouteHandle(netMsg)
 			end := time.Now().UnixNano()
 			routeCost += end - start
-		case <-TICK_MANAGER.globalTick.C:
+		case <-TICK_MANAGER.GetGlobalTick().C:
 			// 游戏服务器定时帧
 			start := time.Now().UnixNano()
 			TICK_MANAGER.OnGameServerTick()
 			end := time.Now().UnixNano()
 			tickCost += end - start
-		case localEvent := <-LOCAL_EVENT_MANAGER.localEventChan:
+		case localEvent := <-LOCAL_EVENT_MANAGER.GetLocalEventChan():
 			// 处理本地事件
 			start := time.Now().UnixNano()
 			LOCAL_EVENT_MANAGER.LocalEventHandle(localEvent)
 			end := time.Now().UnixNano()
 			localEventCost += end - start
-		case command := <-COMMAND_MANAGER.commandTextInput:
+		case command := <-COMMAND_MANAGER.GetCommandTextInput():
 			// 处理传入的命令(普通玩家 GM命令)
 			start := time.Now().UnixNano()
 			COMMAND_MANAGER.HandleCommand(command)
@@ -252,7 +252,7 @@ func (g *GameManager) Close() {
 		saveUserIdList = append(saveUserIdList, userId)
 	}
 	EXIT_SAVE_FIN_CHAN = make(chan bool)
-	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+	LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 		EventId: ExitRunUserCopyAndSave,
 		Msg:     saveUserIdList,
 	}
@@ -319,8 +319,8 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 	})
 }
 
-// CommonRetError 通用返回错误码
-func (g *GameManager) CommonRetError(cmdId uint16, player *model.Player, rsp pb.Message, retCode ...proto.Retcode) {
+// SendError 通用返回错误码
+func (g *GameManager) SendError(cmdId uint16, player *model.Player, rsp pb.Message, retCode ...proto.Retcode) {
 	if rsp == nil {
 		return
 	}
@@ -340,8 +340,8 @@ func (g *GameManager) CommonRetError(cmdId uint16, player *model.Player, rsp pb.
 	g.SendMsg(cmdId, player.PlayerID, player.ClientSeq, rsp)
 }
 
-// CommonRetSucc 通用返回成功
-func (g *GameManager) CommonRetSucc(cmdId uint16, player *model.Player, rsp pb.Message) {
+// SendSucc 通用返回成功
+func (g *GameManager) SendSucc(cmdId uint16, player *model.Player, rsp pb.Message) {
 	if rsp == nil {
 		return
 	}
@@ -371,7 +371,7 @@ func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg
 
 // SendToWorldH 给世界房主发消息
 func (g *GameManager) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Message) {
-	GAME_MANAGER.SendMsg(cmdId, world.owner.PlayerID, seq, msg)
+	GAME_MANAGER.SendMsg(cmdId, world.GetOwner().PlayerID, seq, msg)
 }
 
 func (g *GameManager) ReconnectPlayer(userId uint32) {

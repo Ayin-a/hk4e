@@ -256,5 +256,5 @@ func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 			}
 		}
 	}
-	GAME_MANAGER.AddSceneEntityNotify(world.owner, proto.VisionType_VISION_BORN, SCREEN_ENTITY_ID_LIST, true, false)
+	GAME_MANAGER.AddSceneEntityNotify(world.GetOwner(), proto.VisionType_VISION_BORN, SCREEN_ENTITY_ID_LIST, true, false)
 }

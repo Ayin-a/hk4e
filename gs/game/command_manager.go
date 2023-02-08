@@ -50,6 +50,10 @@ func NewCommandManager() *CommandManager {
 	return r
 }
 
+func (c *CommandManager) GetCommandTextInput() chan *CommandMessage {
+	return c.commandTextInput
+}
+
 // SetSystem 设置GM指令聊天消息机器人
 func (c *CommandManager) SetSystem(system *model.Player) {
 	c.system = system

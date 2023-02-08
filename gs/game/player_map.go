@@ -19,12 +19,12 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 
 	scenePointConfig, exist := gdconf.CONF.ScenePointMap[int32(req.SceneId)]
 	if !exist {
-		g.CommonRetError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
+		g.SendError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
 		return
 	}
 	pointConfig, exist := scenePointConfig.PointMap[int32(req.PointId)]
 	if !exist {
-		g.CommonRetError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
+		g.SendError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
 		return
 	}
 

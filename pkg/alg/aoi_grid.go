@@ -8,12 +8,13 @@ import (
 type Grid struct {
 	gid uint32 // 格子id
 	// 格子边界坐标
-	minX      int16
-	maxX      int16
-	minY      int16
-	maxY      int16
-	minZ      int16
-	maxZ      int16
+	// 目前开发阶段暂时用不到 节省点内存
+	// minX      int16
+	// maxX      int16
+	// minY      int16
+	// maxY      int16
+	// minZ      int16
+	// maxZ      int16
 	objectMap map[int64]any // k:objectId v:对象
 }
 
@@ -21,12 +22,12 @@ type Grid struct {
 func NewGrid(gid uint32, minX, maxX, minY, maxY, minZ, maxZ int16) (r *Grid) {
 	r = new(Grid)
 	r.gid = gid
-	r.minX = minX
-	r.maxX = maxX
-	r.minY = minY
-	r.maxY = maxY
-	r.minZ = minZ
-	r.maxZ = maxZ
+	// r.minX = minX
+	// r.maxX = maxX
+	// r.minY = minY
+	// r.maxY = maxY
+	// r.minZ = minZ
+	// r.maxZ = maxZ
 	r.objectMap = make(map[int64]any)
 	return r
 }

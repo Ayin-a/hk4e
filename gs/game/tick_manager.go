@@ -44,6 +44,10 @@ func NewTickManager() (r *TickManager) {
 	return r
 }
 
+func (t *TickManager) GetGlobalTick() *time.Ticker {
+	return t.globalTick
+}
+
 // 每个玩家自己的tick
 
 // CreateUserGlobalTick 创建玩家tick对象

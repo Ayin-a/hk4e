@@ -346,10 +346,10 @@ func (t *TickManager) onTickSecond(now int64) {
 			}
 		}
 	}
-	// GCG游戏Tick
-	for _, game := range GCG_MANAGER.gameMap {
-		game.onTick()
-	}
+	// // GCG游戏Tick
+	// for _, game := range GCG_MANAGER.gameMap {
+	// 	game.onTick()
+	// }
 }
 
 func (t *TickManager) onTick200MilliSecond(now int64) {

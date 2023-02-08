@@ -325,17 +325,20 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
-
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
 	}
-
 	// 获取玩家处于的载具实体
 	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
+	if entity == nil {
+		// 更新玩家耐力
+		g.UpdatePlayerStamina(player, player.StaminaInfo.CostStamina)
+		return
+	}
 	// 确保实体类型是否为载具 且 根据玩家是否处于载具中更新耐力
 	gadgetEntity := entity.GetGadgetEntity()
-	if entity != nil && (gadgetEntity != nil && gadgetEntity.GetGadgetVehicleEntity() != nil) && g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
+	if gadgetEntity != nil && gadgetEntity.GetGadgetVehicleEntity() != nil && g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
 		// 更新载具耐力
 		g.UpdateVehicleStamina(player, entity, player.StaminaInfo.CostStamina)
 	} else {

@@ -158,7 +158,7 @@ func (g *GameManager) run() {
 }
 
 func (g *GameManager) gameMainLoopD() {
-	for times := 1; times <= 1000; times++ {
+	for times := 1; times <= 100000; times++ {
 		logger.Warn("start game main loop, times: %v", times)
 		g.gameMainLoop()
 		logger.Warn("game main loop stop")

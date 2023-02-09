@@ -147,7 +147,7 @@ func TestSceneBlock(t *testing.T) {
 	config.InitConfig("./bin/application.toml")
 	logger.InitLogger("SceneBlock")
 	InitGameDataConfig()
-	scene, exist := CONF.SceneMap[3]
+	scene, exist := CONF.SceneDetailMap[3]
 	if !exist {
 		panic("scene 3 not exist")
 	}

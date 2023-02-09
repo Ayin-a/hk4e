@@ -2,13 +2,13 @@ package gdconf
 
 import (
 	"fmt"
+
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 角色等级配置表
-
+// AvatarLevelData 角色等级配置表
 type AvatarLevelData struct {
 	Level int32 `csv:"Level"`         // 等级
 	Exp   int32 `csv:"Exp,omitempty"` // 升到下一级所需经验
@@ -28,4 +28,12 @@ func (g *GameDataConfig) loadAvatarLevelData() {
 		g.AvatarLevelDataMap[avatarLevelData.Level] = avatarLevelData
 	}
 	logger.Info("AvatarLevelData count: %v", len(g.AvatarLevelDataMap))
+}
+
+func GetAvatarLevelDataByLevel(level int32) *AvatarLevelData {
+	return CONF.AvatarLevelDataMap[level]
+}
+
+func GetAvatarLevelDataMap() map[int32]*AvatarLevelData {
+	return CONF.AvatarLevelDataMap
 }

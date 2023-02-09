@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"hk4e/common/config"
-	"hk4e/common/constant"
 	"hk4e/common/mq"
 	"hk4e/common/rpc"
 	"hk4e/fight/engine"
@@ -58,8 +57,6 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("fight_" + APPID)
 	logger.Warn("fight start, appid: %v", APPID)
-
-	constant.InitConstant()
 
 	messageQueue := mq.NewMessageQueue(api.FIGHT, APPID, client)
 	defer messageQueue.Close()

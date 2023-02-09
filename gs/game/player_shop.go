@@ -91,7 +91,7 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 	g.AddUserItem(player.PlayerID, []*UserItem{{
 		ItemId:      buyItemId,
 		ChangeCount: buyItemCount,
-	}}, true, constant.ActionReasonConst.Shop)
+	}}, true, constant.ActionReasonShop)
 	req.Goods.BoughtNum = player.GetItemCount(buyItemId)
 
 	buyGoodsRsp := &proto.BuyGoodsRsp{

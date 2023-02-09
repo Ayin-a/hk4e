@@ -63,7 +63,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 		}
 		// 根据ability name查找到对应的技能表里的技能配置
 		var avatarAbility *gdconf.AvatarSkillData = nil
-		for _, avatarSkillData := range gdconf.CONF.AvatarSkillDataMap {
+		for _, avatarSkillData := range gdconf.GetAvatarSkillDataMap() {
 			hashCode := endec.Hk4eAbilityHashCode(avatarSkillData.AbilityName)
 			if uint32(hashCode) == abilityNameHashCode {
 				avatarAbility = avatarSkillData
@@ -121,11 +121,11 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 			// 倒三角 非常消耗体力
 			costRevise = -(angleRevise * 2) + 10
 		}
-		logger.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMBING_BASE-costRevise)
+		logger.Debug("stamina climbing, rotX: %v, costRevise: %v, cost: %v", req.Rot.X, costRevise, constant.STAMINA_COST_CLIMBING_BASE-costRevise)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_CLIMBING_BASE-costRevise)
 	case proto.MotionState_MOTION_SWIM_MOVE:
 		// 缓慢游泳
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SWIMMING)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_SWIMMING)
 	}
 
 	// PacketSceneAvatarStaminaStepRsp
@@ -159,16 +159,16 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 	switch motionState {
 	case proto.MotionState_MOTION_CLIMB:
 		// 攀爬开始
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMB_START)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_CLIMB_START)
 	case proto.MotionState_MOTION_DASH_BEFORE_SHAKE:
 		// 冲刺
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SPRINT)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_SPRINT)
 	case proto.MotionState_MOTION_CLIMB_JUMP:
 		// 攀爬跳跃
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.CLIMB_JUMP)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_CLIMB_JUMP)
 	case proto.MotionState_MOTION_SWIM_DASH:
 		// 快速游泳开始
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.SWIM_DASH_START)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_SWIM_DASH_START)
 	}
 }
 
@@ -178,8 +178,8 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	skillId := staminaInfo.LastSkillId
 
 	// 读取技能配置表
-	avatarSkillConfig, ok := gdconf.CONF.AvatarSkillDataMap[int32(skillId)]
-	if !ok {
+	avatarSkillConfig := gdconf.GetAvatarSkillDataById(int32(skillId))
+	if avatarSkillConfig == nil {
 		logger.Error("avatarSkillConfig error, skillId: %v", skillId)
 		return
 	}
@@ -191,8 +191,8 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 		return
 	}
 	// 获取现行角色的配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.GetAvatarId())]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(worldAvatar.GetAvatarId()))
+	if avatarDataConfig == nil {
 		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
 		return
 	}
@@ -203,8 +203,8 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 	// 如果为0代表使用默认值
 	if avatarSkillConfig.CostStamina == 0 {
 		// 大剑持续耐力消耗默认值
-		if avatarDataConfig.WeaponType == constant.WeaponTypeConst.WEAPON_CLAYMORE {
-			costStamina = constant.StaminaCostConst.FIGHT_CLAYMORE_PER
+		if avatarDataConfig.WeaponType == constant.WEAPON_TYPE_CLAYMORE {
+			costStamina = constant.STAMINA_COST_FIGHT_CLAYMORE_PER
 		}
 	} else {
 		costStamina = -(avatarSkillConfig.CostStamina * 100)
@@ -230,8 +230,8 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 		return
 	}
 	// 获取现行角色的配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(worldAvatar.GetAvatarId())]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(worldAvatar.GetAvatarId()))
+	if avatarDataConfig == nil {
 		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
 		return
 	}
@@ -244,15 +244,15 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 		// 使用武器对应默认耐力消耗
 		// 双手剑为持续耐力消耗不在这里处理
 		switch avatarDataConfig.WeaponType {
-		case constant.WeaponTypeConst.WEAPON_SWORD_ONE_HAND:
+		case constant.WEAPON_TYPE_SWORD_ONE_HAND:
 			// 单手剑
-			costStamina = constant.StaminaCostConst.FIGHT_SWORD_ONE_HAND
-		case constant.WeaponTypeConst.WEAPON_POLE:
+			costStamina = constant.STAMINA_COST_FIGHT_SWORD_ONE_HAND
+		case constant.WEAPON_TYPE_POLE:
 			// 长枪
-			costStamina = constant.StaminaCostConst.FIGHT_POLE
-		case constant.WeaponTypeConst.WEAPON_CATALYST:
+			costStamina = constant.STAMINA_COST_FIGHT_POLE
+		case constant.WEAPON_TYPE_CATALYST:
 			// 法器
-			costStamina = constant.StaminaCostConst.FIGHT_CATALYST
+			costStamina = constant.STAMINA_COST_FIGHT_CATALYST
 		}
 	} else {
 		costStamina = -(skillData.CostStamina * 100)
@@ -268,17 +268,17 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 	staminaInfo := player.StaminaInfo
 
 	// 获取该技能开始时所需消耗的耐力
-	costStamina, ok := constant.StaminaCostConst.SKILL_START[skillId]
+	avatarSkillDataConfig := gdconf.GetAvatarSkillDataById(int32(skillId))
 
 	// 配置表确保存在技能开始对应的耐力消耗
-	if ok {
+	if avatarSkillDataConfig != nil {
 		// 距离上次处理技能开始耐力消耗过去的时间
 		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillStartTime
 		// 上次触发的技能相同则每400ms触发一次消耗
 		if staminaInfo.LastSkillId != skillId || pastTime > 400 {
-			logger.Debug("skill start stamina, skillId: %v, cost: %v", skillId, costStamina)
+			logger.Debug("skill start stamina, skillId: %v, cost: %v", skillId, avatarSkillDataConfig.CostStamina)
 			// 根据配置消耗耐力
-			g.UpdatePlayerStamina(player, costStamina)
+			g.UpdatePlayerStamina(player, avatarSkillDataConfig.CostStamina)
 			staminaInfo.LastSkillStartTime = time.Now().UnixMilli()
 		}
 	} else {
@@ -314,10 +314,10 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 	// 判断玩家处于载具中
 	if g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
 		// 角色回复耐力
-		g.UpdatePlayerStamina(player, constant.StaminaCostConst.IN_SKIFF)
+		g.UpdatePlayerStamina(player, constant.STAMINA_COST_IN_SKIFF)
 	} else {
 		// 载具回复耐力
-		g.UpdateVehicleStamina(player, entity, constant.StaminaCostConst.SKIFF_NOBODY)
+		g.UpdateVehicleStamina(player, entity, constant.STAMINA_COST_SKIFF_NOBODY)
 	}
 }
 
@@ -422,9 +422,9 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 	}
 
 	// 最大耐力值
-	maxStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA])
+	maxStamina := int32(player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA])
 	// 现行耐力值
-	curStamina := int32(player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA])
+	curStamina := int32(player.PropertiesMap[constant.PLAYER_PROP_CUR_PERSIST_STAMINA])
 
 	// 将被变更的耐力
 	stamina := g.GetChangeStamina(curStamina, maxStamina, staminaCost)
@@ -471,12 +471,12 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
 	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {
 		// 设置角色存活
-		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_REVIVE, proto.PlayerDieType_PLAYER_DIE_NONE)
+		scene.SetEntityLifeState(avatarEntity, constant.LIFE_STATE_REVIVE, proto.PlayerDieType_PLAYER_DIE_NONE)
 		// 重置溺水返回时间
 		player.StaminaInfo.DrownBackDelay = 0
 	} else if player.StaminaInfo.DrownBackDelay == 20 {
 		// TODO 队伍扣血
-		maxStamina := player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA]
+		maxStamina := player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA]
 		// 设置玩家耐力为一半
 		g.SetPlayerStamina(player, maxStamina/2)
 		// 如果玩家的位置比锚点距离近则优先使用玩家位置
@@ -502,7 +502,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		//	}
 		// }
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, constant.EnterReasonConst.Revival, player.SceneId, pos, new(model.Vector), 0)
+		g.TeleportPlayer(player, constant.EnterReasonRevival, player.SceneId, pos, new(model.Vector), 0)
 	}
 	// 防止重置后又被修改
 	if player.StaminaInfo.DrownBackDelay != 0 {
@@ -530,7 +530,7 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 	if player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_DASH {
 		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
 		// 设置角色为死亡
-		scene.SetEntityLifeState(avatarEntity, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_DRAWN)
+		scene.SetEntityLifeState(avatarEntity, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_DRAWN)
 		// 溺水返回安全点 计时开始
 		player.StaminaInfo.DrownBackDelay = 1
 	}
@@ -553,7 +553,7 @@ func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Ent
 // SetPlayerStamina 设置玩家耐力
 func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
-	prop := constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA
+	prop := constant.PLAYER_PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
 	// logger.Debug("player stamina set, stamina: %v", stamina)
 

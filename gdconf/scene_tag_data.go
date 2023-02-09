@@ -8,6 +8,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
+// SceneTagData 场景标签配置表
 type SceneTagData struct {
 	SceneTagId int32 `csv:"SceneTagId"`        // ID
 	SceneId    int32 `csv:"SceneId,omitempty"` // 场景ID
@@ -27,4 +28,12 @@ func (g *GameDataConfig) loadSceneTagData() {
 		g.SceneTagDataMap[sceneTagData.SceneTagId] = sceneTagData
 	}
 	logger.Info("SceneTagData count: %v", len(g.SceneTagDataMap))
+}
+
+func GetSceneTagDataById(sceneTagId int32) *SceneTagData {
+	return CONF.SceneTagDataMap[sceneTagId]
+}
+
+func GetSceneTagDataMap() map[int32]*SceneTagData {
+	return CONF.SceneTagDataMap
 }

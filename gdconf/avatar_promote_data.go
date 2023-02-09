@@ -2,13 +2,13 @@ package gdconf
 
 import (
 	"fmt"
+
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 角色突破配置表
-
+// AvatarPromoteData 角色突破配置表
 type AvatarPromoteData struct {
 	PromoteId      int32 `csv:"PromoteId"`                // 角色突破ID
 	PromoteLevel   int32 `csv:"PromoteLevel,omitempty"`   // 突破等级
@@ -58,4 +58,12 @@ func (g *GameDataConfig) loadAvatarPromoteData() {
 		g.AvatarPromoteDataMap[avatarPromoteData.PromoteId][avatarPromoteData.PromoteLevel] = avatarPromoteData
 	}
 	logger.Info("AvatarPromoteData count: %v", len(g.AvatarPromoteDataMap))
+}
+
+func GetAvatarPromoteDataByIdAndLevel(promoteId int32, promoteLevel int32) *AvatarPromoteData {
+	value, exist := CONF.AvatarPromoteDataMap[promoteId]
+	if !exist {
+		return nil
+	}
+	return value[promoteLevel]
 }

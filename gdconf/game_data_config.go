@@ -32,8 +32,8 @@ type GameDataConfig struct {
 	GCGSkillDataMap         map[int32]*GCGSkillData                // 卡牌技能
 	SceneDataMap            map[int32]*SceneData                   // 场景
 	ScenePointMap           map[int32]*ScenePoint                  // 场景传送点
-	SceneTagDataMap         map[int32]*SceneTagData                // 场景地图图标
-	SceneMap                map[int32]*Scene                       // 场景详情
+	SceneTagDataMap         map[int32]*SceneTagData                // 场景标签
+	SceneDetailMap          map[int32]*SceneDetail                 // 场景详情LUA配置数据
 	WorldAreaDataMap        map[int32]*WorldAreaData               // 世界区域
 	GatherDataMap           map[int32]*GatherData                  // 采集物
 	GatherDataPointTypeMap  map[int32]*GatherData                  // 采集物场景节点索引

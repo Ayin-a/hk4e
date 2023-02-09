@@ -2,18 +2,18 @@ package gdconf
 
 import (
 	"fmt"
-	"hk4e/pkg/endec"
-	"hk4e/pkg/logger"
 	"os"
 	"strconv"
 	"strings"
+
+	"hk4e/pkg/endec"
+	"hk4e/pkg/logger"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/jszwec/csvutil"
 )
 
-// 角色配置表
-
+// AvatarData 角色配置表
 type AvatarData struct {
 	AvatarId              int32   `csv:"AvatarId"`                        // ID
 	HpBase                float64 `csv:"HpBase,omitempty"`                // 基础生命值
@@ -95,6 +95,14 @@ func (g *GameDataConfig) loadAvatarData() {
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData
 	}
 	logger.Info("AvatarData count: %v", len(g.AvatarDataMap))
+}
+
+func GetAvatarDataById(avatarId int32) *AvatarData {
+	return CONF.AvatarDataMap[avatarId]
+}
+
+func GetAvatarDataMap() map[int32]*AvatarData {
+	return CONF.AvatarDataMap
 }
 
 // TODO 成长属性要读表

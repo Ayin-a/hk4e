@@ -40,7 +40,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
-		GAME_MANAGER.DisconnectPlayer(userId, kcp.EnetNotFoundSession)
+		GAME_MANAGER.KickPlayer(userId, kcp.EnetNotFoundSession)
 		return
 	}
 	if !player.Online {

@@ -68,8 +68,8 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 		Refinement:  0,
 		Guid:        0,
 	}
-	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(itemId)]
-	if !exist {
+	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+	if itemDataConfig == nil {
 		logger.Error("weapon config is nil, itemId: %v", itemId)
 		return
 	}

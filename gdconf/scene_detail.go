@@ -8,11 +8,13 @@ import (
 	"hk4e/pkg/logger"
 )
 
+// 场景详情配置数据
+
 const (
 	SceneGroupLoaderLimit = 4 // 加载文件的并发数 此操作很耗内存 调大之前请确保你的机器内存足够
 )
 
-type Scene struct {
+type SceneDetail struct {
 	Id          int32
 	SceneConfig *SceneConfig     // 地图配置
 	BlockMap    map[int32]*Block // 所有的区块
@@ -130,7 +132,7 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 }
 
 func (g *GameDataConfig) loadScene() {
-	g.SceneMap = make(map[int32]*Scene)
+	g.SceneDetailMap = make(map[int32]*SceneDetail)
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	for _, sceneData := range g.SceneDataMap {
 		sceneId := sceneData.SceneId
@@ -141,17 +143,17 @@ func (g *GameDataConfig) loadScene() {
 			continue
 		}
 		luaState := fixLuaState(string(mainLuaData))
-		scene := new(Scene)
-		scene.Id = sceneId
+		sceneDetail := new(SceneDetail)
+		sceneDetail.Id = sceneId
 		// scene_config
-		scene.SceneConfig = new(SceneConfig)
-		ok := parseLuaTableToObject[*SceneConfig](luaState, "scene_config", scene.SceneConfig)
+		sceneDetail.SceneConfig = new(SceneConfig)
+		ok := parseLuaTableToObject[*SceneConfig](luaState, "scene_config", sceneDetail.SceneConfig)
 		if !ok {
 			logger.Error("get scene_config object error, sceneId: %v", sceneId)
 			luaState.Close()
 			continue
 		}
-		scene.BlockMap = make(map[int32]*Block)
+		sceneDetail.BlockMap = make(map[int32]*Block)
 		// blocks
 		blockIdList := make([]int32, 0)
 		ok = parseLuaTableToObject[*[]int32](luaState, "blocks", &blockIdList)
@@ -205,9 +207,9 @@ func (g *GameDataConfig) loadScene() {
 				}()
 			}
 			wg.Wait()
-			scene.BlockMap[block.Id] = block
+			sceneDetail.BlockMap[block.Id] = block
 		}
-		g.SceneMap[sceneId] = scene
+		g.SceneDetailMap[sceneId] = sceneDetail
 	}
 	sceneCount := 0
 	blockCount := 0
@@ -215,7 +217,7 @@ func (g *GameDataConfig) loadScene() {
 	monsterCount := 0
 	npcCount := 0
 	gadgetCount := 0
-	for _, scene := range g.SceneMap {
+	for _, scene := range g.SceneDetailMap {
 		for _, block := range scene.BlockMap {
 			for _, group := range block.GroupMap {
 				monsterCount += len(group.MonsterList)
@@ -231,11 +233,19 @@ func (g *GameDataConfig) loadScene() {
 		sceneCount, blockCount, groupCount, monsterCount, npcCount, gadgetCount)
 }
 
-func (g *GameDataConfig) GetSceneBlockConfig(sceneId int32, blockId int32) ([]*Monster, []*Npc, []*Gadget, bool) {
+func GetSceneDetailById(sceneId int32) *SceneDetail {
+	return CONF.SceneDetailMap[sceneId]
+}
+
+func GetSceneDetailMap() map[int32]*SceneDetail {
+	return CONF.SceneDetailMap
+}
+
+func GetSceneBlockConfig(sceneId int32, blockId int32) ([]*Monster, []*Npc, []*Gadget, bool) {
 	monsterList := make([]*Monster, 0)
 	npcList := make([]*Npc, 0)
 	gadgetList := make([]*Gadget, 0)
-	sceneConfig, exist := g.SceneMap[sceneId]
+	sceneConfig, exist := CONF.SceneDetailMap[sceneId]
 	if !exist {
 		return nil, nil, nil, false
 	}

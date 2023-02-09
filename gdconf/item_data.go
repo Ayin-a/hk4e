@@ -2,14 +2,16 @@ package gdconf
 
 import (
 	"fmt"
-	"hk4e/common/constant"
-	"hk4e/pkg/logger"
 	"strconv"
 	"strings"
+
+	"hk4e/common/constant"
+	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
+// ItemData 统一道具配置表
 type ItemData struct {
 	// 公共字段
 	ItemId    int32  `csv:"ItemId"`              // ID
@@ -57,7 +59,7 @@ func (g *GameDataConfig) loadItemData() {
 				itemData.SkillAffix = append(itemData.SkillAffix, itemData.SkillAffix2)
 			}
 			// 武器精炼摩拉消耗列表读取转换
-			if itemData.Type == int32(constant.ItemTypeConst.ITEM_WEAPON) && itemData.AwakenCoinCostStr != "" {
+			if itemData.Type == int32(constant.ITEM_TYPE_WEAPON) && itemData.AwakenCoinCostStr != "" {
 				tempCostList := strings.Split(strings.ReplaceAll(itemData.AwakenCoinCostStr, " ", ""), "#")
 				itemData.AwakenCoinCostList = make([]uint32, 0, len(tempCostList))
 				for _, s := range tempCostList {
@@ -73,4 +75,12 @@ func (g *GameDataConfig) loadItemData() {
 		}
 	}
 	logger.Info("ItemData count: %v", len(g.ItemDataMap))
+}
+
+func GetItemDataById(itemId int32) *ItemData {
+	return CONF.ItemDataMap[itemId]
+}
+
+func GetItemDataMap() map[int32]*ItemData {
+	return CONF.ItemDataMap
 }

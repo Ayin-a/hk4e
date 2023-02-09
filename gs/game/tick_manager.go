@@ -188,7 +188,7 @@ func (t *TickManager) onTickMinute(now int64) {
 					return
 				}
 				// TODO 3.0.0REL版本中 发送某些无效家具 可能会导致客户端背包家具界面卡死
-				if uint16(itemDataConfig.Type) == constant.ItemTypeConst.ITEM_FURNITURE {
+				if uint16(itemDataConfig.Type) == constant.ITEM_TYPE_FURNITURE {
 					continue
 				}
 				num := random.GetRandomInt32(1, 9)
@@ -298,7 +298,7 @@ func (t *TickManager) onTick5Second(now int64) {
 								Z: float32(entity.rot.Z),
 							},
 							EntityId: entity.id,
-							CurHp:    entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)],
+							CurHp:    entity.fightProp[uint32(constant.FIGHT_PROP_CUR_HP)],
 							OwnerUid: entity.gadgetEntity.gadgetVehicleEntity.owner.PlayerID,
 							Pos: &proto.Vector{
 								X: float32(entity.pos.X),
@@ -307,7 +307,7 @@ func (t *TickManager) onTick5Second(now int64) {
 							},
 							UidList:  make([]uint32, 0, len(entity.gadgetEntity.gadgetVehicleEntity.memberMap)),
 							GadgetId: entity.gadgetEntity.gadgetVehicleEntity.vehicleId,
-							MaxHp:    entity.fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP)],
+							MaxHp:    entity.fightProp[uint32(constant.FIGHT_PROP_MAX_HP)],
 						}
 						for _, p := range entity.gadgetEntity.gadgetVehicleEntity.memberMap {
 							vehicleLocationInfo.UidList = append(vehicleLocationInfo.UidList, p.PlayerID)

@@ -8,6 +8,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
+// GatherData 采集物配置表
 type GatherData struct {
 	PointType int32 `csv:"PointType"` // 挂节点类型
 	GatherId  int32 `csv:"GatherId"`  // ID
@@ -31,4 +32,16 @@ func (g *GameDataConfig) loadGatherData() {
 		g.GatherDataPointTypeMap[gatherData.PointType] = gatherData
 	}
 	logger.Info("GatherData count: %v", len(g.GatherDataMap))
+}
+
+func GetGatherDataById(gatherId int32) *GatherData {
+	return CONF.GatherDataMap[gatherId]
+}
+
+func GetGatherDataByPointType(pointType int32) *GatherData {
+	return CONF.GatherDataPointTypeMap[pointType]
+}
+
+func GetGatherDataMap() map[int32]*GatherData {
+	return CONF.GatherDataMap
 }

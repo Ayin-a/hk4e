@@ -63,7 +63,7 @@ func (g *GameManager) GCGStartChallenge(player *model.Player) {
 		g.PacketGCGGameBriefDataNotify(player, proto.GCGGameBusinessType_GCG_GAME_GUIDE_GROUP, game))
 
 	// 玩家进入GCG界面
-	g.TeleportPlayer(player, constant.EnterReasonConst.DungeonEnter, 79999, new(model.Vector), new(model.Vector), 2162)
+	g.TeleportPlayer(player, constant.EnterReasonDungeonEnter, 79999, new(model.Vector), new(model.Vector), 2162)
 }
 
 // GCGAskDuelReq GCG决斗请求
@@ -392,8 +392,8 @@ func (g *GameManager) PacketGCGSkillPreviewNotify(game *GCGGame, controller *GCG
 	// SkillPreviewList
 	for _, skillInfo := range selectedCharCard.skillList {
 		// 读取卡牌技能配置表
-		gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillInfo.skillId)]
-		if !ok {
+		gcgSkillConfig := gdconf.GetGCGSkillDataById(int32(skillInfo.skillId))
+		if gcgSkillConfig == nil {
 			logger.Error("gcg skill config error, skillId: %v", skillInfo.skillId)
 			return new(proto.GCGSkillPreviewNotify)
 		}
@@ -421,10 +421,10 @@ func (g *GameManager) PacketGCGSkillPreviewNotify(game *GCGGame, controller *GCG
 			TokenChangeList: []*proto.GCGSkillPreviewTokenInfo{
 				{
 					// Token类型
-					TokenType:   constant.GCGTokenConst.TOKEN_CUR_ELEM,
+					TokenType:   constant.GCG_TOKEN_TYPE_CUR_ELEM,
 					BeforeValue: 0,
 					// 更改为的值
-					AfterValue: selectedCharCard.tokenMap[constant.GCGTokenConst.TOKEN_CUR_ELEM] + 1,
+					AfterValue: selectedCharCard.tokenMap[constant.GCG_TOKEN_TYPE_CUR_ELEM] + 1,
 				},
 			},
 		}

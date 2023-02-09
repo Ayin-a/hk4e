@@ -8,6 +8,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
+// FetterData 角色资料解锁配置表
 type FetterData struct {
 	FetterId int32 `csv:"FetterId"` // ID
 	AvatarId int32 `csv:"AvatarId"` // 角色ID
@@ -37,4 +38,16 @@ func (g *GameDataConfig) loadFetterData() {
 		}
 	}
 	logger.Info("FetterData count: %v", len(g.FetterDataMap))
+}
+
+func GetFetterDataByFetterId(fetterId int32) *FetterData {
+	return CONF.FetterDataMap[fetterId]
+}
+
+func GetFetterIdListByAvatarId(avatarId int32) []int32 {
+	return CONF.FetterDataAvatarIdMap[avatarId]
+}
+
+func GetFetterDataMap() map[int32]*FetterData {
+	return CONF.FetterDataMap
 }

@@ -58,8 +58,8 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			onlinePlayerInfo := &proto.OnlinePlayerInfo{
 				Uid:                 worldPlayer.PlayerID,
 				Nickname:            worldPlayer.NickName,
-				PlayerLevel:         worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+				PlayerLevel:         worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
 				NameCardId:          worldPlayer.NameCard,
 				Signature:           worldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
@@ -99,7 +99,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			},
 		}
 		for _, info := range playerWorldSceneInfoListNotify.InfoList {
-			for _, sceneTagDataConfig := range gdconf.CONF.SceneTagDataMap {
+			for _, sceneTagDataConfig := range gdconf.GetSceneTagDataMap() {
 				if uint32(sceneTagDataConfig.SceneId) == info.SceneId {
 					info.SceneTagIdList = append(info.SceneTagIdList, uint32(sceneTagDataConfig.SceneTagId))
 				}
@@ -167,7 +167,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 
 		sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
 			WeatherAreaId: 0,
-			ClimateType:   uint32(constant.ClimateTypeConst.CLIMATE_SUNNY),
+			ClimateType:   uint32(constant.CLIMATE_TYPE_SUNNY),
 		}
 		g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
 	}
@@ -179,8 +179,8 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 		onlinePlayerInfo := &proto.OnlinePlayerInfo{
 			Uid:                 worldPlayer.PlayerID,
 			Nickname:            worldPlayer.NickName,
-			PlayerLevel:         worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-			MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+			PlayerLevel:         worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+			MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
 			NameCardId:          worldPlayer.NameCard,
 			Signature:           worldPlayer.Signature,
 			ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
@@ -284,7 +284,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 
 	sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
 		WeatherAreaId: 0,
-		ClimateType:   uint32(constant.ClimateTypeConst.CLIMATE_SUNNY),
+		ClimateType:   uint32(constant.CLIMATE_TYPE_SUNNY),
 	}
 	g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
 
@@ -380,8 +380,8 @@ func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityCon
 		gadget := entityConfig.(*gdconf.Gadget)
 		// 70500000并不是实际的装置id 根据节点类型对应采集物配置表
 		if gadget.PointType != 0 && gadget.GadgetId == 70500000 {
-			gatherDataConfig, exist := gdconf.CONF.GatherDataPointTypeMap[gadget.PointType]
-			if !exist {
+			gatherDataConfig := gdconf.GetGatherDataByPointType(gadget.PointType)
+			if gatherDataConfig == nil {
 				return 0
 			}
 			return scene.CreateEntityGadgetGather(&model.Vector{
@@ -420,8 +420,8 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 		Type:                   enterType,
 		TargetUid:              player.PlayerID,
 		EnterSceneToken:        player.EnterSceneToken,
-		WorldLevel:             player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
-		EnterReason:            uint32(constant.EnterReasonConst.Login),
+		WorldLevel:             player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL],
+		EnterReason:            uint32(constant.EnterReasonLogin),
 		IsFirstLoginEnterScene: true,
 		WorldType:              1,
 		SceneTagIdList:         make([]uint32, 0),
@@ -430,7 +430,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 		strconv.Itoa(int(player.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
 		"296359"
-	for _, sceneTagDataConfig := range gdconf.CONF.SceneTagDataMap {
+	for _, sceneTagDataConfig := range gdconf.GetSceneTagDataMap() {
 		if uint32(sceneTagDataConfig.SceneId) == player.SceneId {
 			playerEnterSceneNotify.SceneTagIdList = append(playerEnterSceneNotify.SceneTagIdList, uint32(sceneTagDataConfig.SceneTagId))
 		}
@@ -470,7 +470,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 		Type:            enterType,
 		TargetUid:       targetPlayer.PlayerID,
 		EnterSceneToken: player.EnterSceneToken,
-		WorldLevel:      targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL],
+		WorldLevel:      targetPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL],
 		EnterReason:     enterReason,
 		WorldType:       1,
 		DungeonId:       dungeonId,
@@ -480,7 +480,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 		strconv.Itoa(int(targetPlayer.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
 		"296359"
-	for _, sceneTagDataConfig := range gdconf.CONF.SceneTagDataMap {
+	for _, sceneTagDataConfig := range gdconf.GetSceneTagDataMap() {
 		if uint32(sceneTagDataConfig.SceneId) == player.SceneId {
 			playerEnterSceneNotify.SceneTagIdList = append(playerEnterSceneNotify.SceneTagIdList, uint32(sceneTagDataConfig.SceneTagId))
 		}
@@ -591,56 +591,28 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 
 func (g *GameManager) EntityFightPropUpdateNotifyBroadcast(scene *Scene, entity *Entity, fightPropId uint32) {
 	for _, player := range scene.GetAllPlayer() {
-		// PacketEntityFightPropUpdateNotify
-		g.SendMsg(cmd.EntityFightPropUpdateNotify, player.PlayerID, player.ClientSeq, &proto.EntityFightPropUpdateNotify{
-			FightPropMap: entity.GetFightProp(),
+		fightProp := entity.GetFightProp()
+		ntf := &proto.EntityFightPropUpdateNotify{
+			FightPropMap: make(map[uint32]float32),
 			EntityId:     entity.GetId(),
-		})
+		}
+		ntf.FightPropMap[fightPropId] = fightProp[fightPropId]
+		g.SendMsg(cmd.EntityFightPropUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
 	}
 }
 
 func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint32]float32) []*proto.FightPropPair {
 	fightPropList := []*proto.FightPropPair{
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_ATTACK),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_ATTACK)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_DEFENSE),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_DEFENSE)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL_HURT),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL_HURT)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CHARGE_EFFICIENCY),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CHARGE_EFFICIENCY)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)],
-		},
-		{
-			PropType:  uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_DEFENSE),
-			PropValue: fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_DEFENSE)],
-		},
+		{PropType: uint32(constant.FIGHT_PROP_BASE_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_HP)]},
+		{PropType: uint32(constant.FIGHT_PROP_BASE_ATTACK), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_ATTACK)]},
+		{PropType: uint32(constant.FIGHT_PROP_BASE_DEFENSE), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_DEFENSE)]},
+		{PropType: uint32(constant.FIGHT_PROP_CRITICAL), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CRITICAL)]},
+		{PropType: uint32(constant.FIGHT_PROP_CRITICAL_HURT), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CRITICAL_HURT)]},
+		{PropType: uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY)]},
+		{PropType: uint32(constant.FIGHT_PROP_CUR_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)]},
+		{PropType: uint32(constant.FIGHT_PROP_MAX_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_MAX_HP)]},
+		{PropType: uint32(constant.FIGHT_PROP_CUR_ATTACK), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_ATTACK)]},
+		{PropType: uint32(constant.FIGHT_PROP_CUR_DEFENSE), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_DEFENSE)]},
 	}
 	return fightPropList
 }
@@ -676,37 +648,37 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 		},
 		PropList: []*proto.PropPair{
 			{
-				Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+				Type: uint32(constant.PLAYER_PROP_LEVEL),
 				PropValue: &proto.PropValue{
-					Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+					Type:  uint32(constant.PLAYER_PROP_LEVEL),
 					Value: &proto.PropValue_Ival{Ival: int64(avatar.Level)},
 					Val:   int64(avatar.Level)},
 			},
 			{
-				Type: uint32(constant.PlayerPropertyConst.PROP_EXP),
+				Type: uint32(constant.PLAYER_PROP_EXP),
 				PropValue: &proto.PropValue{
-					Type:  uint32(constant.PlayerPropertyConst.PROP_EXP),
+					Type:  uint32(constant.PLAYER_PROP_EXP),
 					Value: &proto.PropValue_Ival{Ival: int64(avatar.Exp)},
 					Val:   int64(avatar.Exp)},
 			},
 			{
-				Type: uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL),
+				Type: uint32(constant.PLAYER_PROP_BREAK_LEVEL),
 				PropValue: &proto.PropValue{
-					Type:  uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL),
+					Type:  uint32(constant.PLAYER_PROP_BREAK_LEVEL),
 					Value: &proto.PropValue_Ival{Ival: int64(avatar.Promote)},
 					Val:   int64(avatar.Promote)},
 			},
 			{
-				Type: uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL),
+				Type: uint32(constant.PLAYER_PROP_SATIATION_VAL),
 				PropValue: &proto.PropValue{
-					Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL),
+					Type:  uint32(constant.PLAYER_PROP_SATIATION_VAL),
 					Value: &proto.PropValue_Ival{Ival: int64(avatar.Satiation)},
 					Val:   int64(avatar.Satiation)},
 			},
 			{
-				Type: uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME),
+				Type: uint32(constant.PLAYER_PROP_SATIATION_PENALTY_TIME),
 				PropValue: &proto.PropValue{
-					Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME),
+					Type:  uint32(constant.PLAYER_PROP_SATIATION_PENALTY_TIME),
 					Value: &proto.PropValue_Ival{Ival: int64(avatar.SatiationPenalty)},
 					Val:   int64(avatar.SatiationPenalty)},
 			},
@@ -763,8 +735,8 @@ func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32
 			Speed: &proto.Vector{},
 			State: proto.MotionState(entity.GetMoveState()),
 		},
-		PropList: []*proto.PropPair{{Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL), PropValue: &proto.PropValue{
-			Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+		PropList: []*proto.PropPair{{Type: uint32(constant.PLAYER_PROP_LEVEL), PropValue: &proto.PropValue{
+			Type:  uint32(constant.PLAYER_PROP_LEVEL),
 			Value: &proto.PropValue_Ival{Ival: int64(entity.GetLevel())},
 			Val:   int64(entity.GetLevel()),
 		}}},
@@ -811,8 +783,8 @@ func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *p
 			Speed: &proto.Vector{},
 			State: proto.MotionState(entity.GetMoveState()),
 		},
-		PropList: []*proto.PropPair{{Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL), PropValue: &proto.PropValue{
-			Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+		PropList: []*proto.PropPair{{Type: uint32(constant.PLAYER_PROP_LEVEL), PropValue: &proto.PropValue{
+			Type:  uint32(constant.PLAYER_PROP_LEVEL),
 			Value: &proto.PropValue_Ival{Ival: int64(entity.GetLevel())},
 			Val:   int64(entity.GetLevel()),
 		}}},
@@ -859,8 +831,8 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 			Speed: &proto.Vector{},
 			State: proto.MotionState(entity.GetMoveState()),
 		},
-		PropList: []*proto.PropPair{{Type: uint32(constant.PlayerPropertyConst.PROP_LEVEL), PropValue: &proto.PropValue{
-			Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+		PropList: []*proto.PropPair{{Type: uint32(constant.PLAYER_PROP_LEVEL), PropValue: &proto.PropValue{
+			Type:  uint32(constant.PLAYER_PROP_LEVEL),
 			Value: &proto.PropValue_Ival{Ival: int64(1)},
 			Val:   int64(1),
 		}}},
@@ -917,7 +889,7 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 		SkillDepotId: player.AvatarMap[avatarId].SkillDepotId,
 		Weapon: &proto.SceneWeaponInfo{
 			EntityId:    scene.GetWorld().GetPlayerWorldAvatarWeaponEntityId(player, avatarId),
-			GadgetId:    uint32(gdconf.CONF.ItemDataMap[int32(weapon.ItemId)].GadgetId),
+			GadgetId:    uint32(gdconf.GetItemDataById(int32(weapon.ItemId)).GadgetId),
 			ItemId:      weapon.ItemId,
 			Guid:        weapon.Guid,
 			Level:       uint32(weapon.Level),
@@ -974,8 +946,8 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGa
 func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGadgetInfo {
 	gadgetEntity := entity.GetGadgetEntity()
 	gatherEntity := gadgetEntity.GetGadgetGatherEntity()
-	gather, ok := gdconf.CONF.GatherDataMap[int32(gatherEntity.GetGatherId())]
-	if !ok {
+	gatherDataConfig := gdconf.GetGatherDataById(int32(gatherEntity.GetGatherId()))
+	if gatherDataConfig == nil {
 		logger.Error("gather data error, gatherId: %v", gatherEntity.GetGatherId())
 		return new(proto.SceneGadgetInfo)
 	}
@@ -988,7 +960,7 @@ func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGa
 		AuthorityPeerId:  1,
 		Content: &proto.SceneGadgetInfo_GatherGadget{
 			GatherGadget: &proto.GatherGadgetInfo{
-				ItemId:        uint32(gather.ItemId),
+				ItemId:        uint32(gatherDataConfig.ItemId),
 				IsForbidGuest: false,
 			},
 		},
@@ -1041,21 +1013,21 @@ func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Play
 
 func (g *GameManager) GetTempFightPropMap() map[uint32]float32 {
 	fpm := map[uint32]float32{
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP):            float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_PHYSICAL_SUB_HURT): float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_DEFENSE):       float32(505.0),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK):        float32(45.679916),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ICE_SUB_HURT):      float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_ATTACK):       float32(45.679916),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_MAX_HP):            float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_FIRE_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ELEC_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_WIND_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_ROCK_SUB_HURT):     float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_GRASS_SUB_HURT):    float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_WATER_SUB_HURT):    float32(0.1),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_HP):           float32(72.91699),
-		uint32(constant.FightPropertyConst.FIGHT_PROP_BASE_DEFENSE):      float32(505.0),
+		uint32(constant.FIGHT_PROP_CUR_HP):            float32(72.91699),
+		uint32(constant.FIGHT_PROP_PHYSICAL_SUB_HURT): float32(0.1),
+		uint32(constant.FIGHT_PROP_CUR_DEFENSE):       float32(505.0),
+		uint32(constant.FIGHT_PROP_CUR_ATTACK):        float32(45.679916),
+		uint32(constant.FIGHT_PROP_ICE_SUB_HURT):      float32(0.1),
+		uint32(constant.FIGHT_PROP_BASE_ATTACK):       float32(45.679916),
+		uint32(constant.FIGHT_PROP_MAX_HP):            float32(72.91699),
+		uint32(constant.FIGHT_PROP_FIRE_SUB_HURT):     float32(0.1),
+		uint32(constant.FIGHT_PROP_ELEC_SUB_HURT):     float32(0.1),
+		uint32(constant.FIGHT_PROP_WIND_SUB_HURT):     float32(0.1),
+		uint32(constant.FIGHT_PROP_ROCK_SUB_HURT):     float32(0.1),
+		uint32(constant.FIGHT_PROP_GRASS_SUB_HURT):    float32(0.1),
+		uint32(constant.FIGHT_PROP_WATER_SUB_HURT):    float32(0.1),
+		uint32(constant.FIGHT_PROP_BASE_HP):           float32(72.91699),
+		uint32(constant.FIGHT_PROP_BASE_DEFENSE):      float32(505.0),
 	}
 	return fpm
 }

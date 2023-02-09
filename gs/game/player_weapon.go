@@ -16,8 +16,8 @@ import (
 
 func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 	allWeaponDataConfig := make(map[int32]*gdconf.ItemData)
-	for itemId, itemData := range gdconf.CONF.ItemDataMap {
-		if uint16(itemData.Type) != constant.ItemTypeConst.ITEM_WEAPON {
+	for itemId, itemData := range gdconf.GetItemDataMap() {
+		if uint16(itemData.Type) != constant.ITEM_TYPE_WEAPON {
 			continue
 		}
 		if (itemId >= 10000 && itemId <= 10008) ||
@@ -130,15 +130,15 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 获取武器物品配置表
-	weaponConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if !ok {
+	weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if weaponConfig == nil {
 		logger.Error("weapon config error, itemId: %v", weapon.ItemId)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 		return
 	}
 	// 摩拉数量是否足够
-	if player.GetItemCount(constant.ItemConstantConst.SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
-		logger.Error("item count not enough, itemId: %v", constant.ItemConstantConst.SCOIN)
+	if player.GetItemCount(constant.ITEM_ID_SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
+		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 		return
 	}
@@ -151,15 +151,15 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	}
 	// 获取精炼材料物品配置表
 	// 精炼的材料可能是武器也可能是物品
-	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(player.GetItemIdByItemAndWeaponGuid(req.ItemGuid))]
-	if !ok {
+	itemDataConfig := gdconf.GetItemDataById(int32(player.GetItemIdByItemAndWeaponGuid(req.ItemGuid)))
+	if itemDataConfig == nil {
 		logger.Error("item data config error, itemGuid: %v", req.ItemGuid)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 		return
 	}
 	// 根据精炼材料的类型做不同操作
 	switch itemDataConfig.Type {
-	case int32(constant.ItemTypeConst.ITEM_WEAPON):
+	case int32(constant.ITEM_TYPE_WEAPON):
 		// 精炼材料为武器
 		// 是否拥有将被用于精炼的武器
 		foodWeapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.ItemGuid)]
@@ -176,7 +176,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		}
 		// 消耗作为精炼材料的武器
 		g.CostUserWeapon(player.PlayerID, []uint64{foodWeapon.WeaponId})
-	case int32(constant.ItemTypeConst.ITEM_MATERIAL):
+	case int32(constant.ITEM_TYPE_MATERIAL):
 		// 精炼材料为道具
 		// 是否拥有将被用于精炼的道具
 		item, ok := player.ItemMap[player.GetItemIdByGuid(req.ItemGuid)]
@@ -206,7 +206,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	// 消耗摩拉
 	g.CostUserItem(player.PlayerID, []*UserItem{
 		{
-			ItemId:      constant.ItemConstantConst.SCOIN,
+			ItemId:      constant.ITEM_ID_SCOIN,
 			ChangeCount: weaponConfig.AwakenCoinCostList[weapon.Refinement],
 		},
 	})
@@ -256,22 +256,15 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取武器配置表
-	weaponConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if !ok {
+	weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if weaponConfig == nil {
 		logger.Error("weapon config error, itemId: %v", weapon.ItemId)
 		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{})
 		return
 	}
 	// 获取武器突破配置表
-	weaponPromoteDataMap, ok := gdconf.CONF.WeaponPromoteDataMap[weaponConfig.PromoteId]
-	if !ok {
-		logger.Error("weapon promote config error, promoteId: %v", weaponConfig.PromoteId)
-		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{})
-		return
-	}
-	// 获取武器突破等级的配置表
-	weaponPromoteConfig, ok := weaponPromoteDataMap[int32(weapon.Promote)]
-	if !ok {
+	weaponPromoteConfig := gdconf.GetWeaponPromoteDataByIdAndLevel(weaponConfig.PromoteId, int32(weapon.Promote))
+	if weaponPromoteConfig == nil {
 		logger.Error("weapon promote config error, promoteLevel: %v", weapon.Promote)
 		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{})
 		return
@@ -283,8 +276,8 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取武器突破下一级的配置表
-	weaponPromoteConfig, ok = weaponPromoteDataMap[int32(weapon.Promote+1)]
-	if !ok {
+	weaponPromoteConfig = gdconf.GetWeaponPromoteDataByIdAndLevel(weaponConfig.PromoteId, int32(weapon.Promote+1))
+	if weaponPromoteConfig == nil {
 		logger.Error("weapon promote config error, next promoteLevel: %v", weapon.Promote+1)
 		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_WEAPON_PROMOTE_LEVEL_EXCEED_LIMIT)
 		return
@@ -300,7 +293,7 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 	}
 	// 消耗列表添加摩拉的消耗
 	costItemList = append(costItemList, &UserItem{
-		ItemId:      constant.ItemConstantConst.SCOIN,
+		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: uint32(weaponPromoteConfig.CostCoin),
 	})
 	// 突破材料以及摩拉是否足够
@@ -308,7 +301,7 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		if player.GetItemCount(item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
-			if item.ItemId == constant.ItemConstantConst.SCOIN {
+			if item.ItemId == constant.ITEM_ID_SCOIN {
 				g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 			}
 			g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
@@ -316,8 +309,8 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		}
 	}
 	// 冒险等级是否符合要求
-	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL] < uint32(weaponPromoteConfig.MinPlayerLevel) {
-		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL])
+	if player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL] < uint32(weaponPromoteConfig.MinPlayerLevel) {
+		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL])
 		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_PLAYER_LEVEL_LESS_THAN)
 		return
 	}
@@ -356,12 +349,12 @@ func (g *GameManager) GetWeaponUpgradeReturnMaterial(overflowExp uint32) (return
 		Exp    uint32
 	}
 	// 武器强化返还材料的经验列表
-	materialExpList := make([]*materialExpData, 0, len(constant.ItemConstantConst.WEAPON_UPGRADE_MATERIAL))
-	for _, itemId := range constant.ItemConstantConst.WEAPON_UPGRADE_MATERIAL {
+	materialExpList := make([]*materialExpData, 0, len(constant.WEAPON_UPGRADE_MATERIAL))
+	for _, itemId := range constant.WEAPON_UPGRADE_MATERIAL {
 		// 获取物品配置表
-		itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(itemId)]
-		if !ok {
-			logger.Error("item data config error, itemId: %v", constant.ItemConstantConst.SCOIN)
+		itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+		if itemDataConfig == nil {
+			logger.Error("item data config error, itemId: %v", constant.ITEM_ID_SCOIN)
 			return
 		}
 		// 材料将给予的经验数
@@ -411,8 +404,8 @@ func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemPara
 			return
 		}
 		// 获取武器配置表
-		weaponConfig, ok := gdconf.CONF.ItemDataMap[int32(foodWeapon.ItemId)]
-		if !ok {
+		weaponConfig := gdconf.GetItemDataById(int32(foodWeapon.ItemId))
+		if weaponConfig == nil {
 			logger.Error("weapon config error, itemId: %v", foodWeapon.ItemId)
 			return
 		}
@@ -421,8 +414,8 @@ func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemPara
 		// 计算从1级到武器当前等级所需消耗的经验
 		for i := int32(1); i < int32(foodWeapon.Level); i++ {
 			// 获取武器等级配置表
-			weaponLevelConfig, ok := gdconf.CONF.WeaponLevelDataMap[i]
-			if !ok {
+			weaponLevelConfig := gdconf.GetWeaponLevelDataByLevel(i)
+			if weaponLevelConfig == nil {
 				logger.Error("weapon level config error, level: %v", i)
 				return
 			}
@@ -445,9 +438,9 @@ func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemPara
 	// 材料经验计算
 	for _, param := range itemParamList {
 		// 获取物品配置表
-		itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(param.ItemId)]
-		if !ok {
-			logger.Error("item data config error, itemId: %v", constant.ItemConstantConst.SCOIN)
+		itemDataConfig := gdconf.GetItemDataById(int32(param.ItemId))
+		if itemDataConfig == nil {
+			logger.Error("item data config error, itemId: %v", constant.ITEM_ID_SCOIN)
 			return
 		}
 		// 材料将给予的经验数
@@ -471,20 +464,14 @@ func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemPara
 // CalcWeaponUpgrade 计算使用材料给武器强化后的等级经验以及返回的矿石
 func (g *GameManager) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (weaponLevel uint8, weaponExp uint32, returnItemList []*proto.ItemParam, success bool) {
 	// 获取武器配置表
-	weaponConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if !ok {
+	weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if weaponConfig == nil {
 		logger.Error("weapon config error, itemId: %v", weapon.ItemId)
 		return
 	}
 	// 获取武器突破配置表
-	weaponPromoteDataMap, ok := gdconf.CONF.WeaponPromoteDataMap[weaponConfig.PromoteId]
-	if !ok {
-		logger.Error("weapon promote config error, promoteId: %v", weaponConfig.PromoteId)
-		return
-	}
-	// 获取武器突破等级对应的配置表
-	weaponPromoteConfig, ok := weaponPromoteDataMap[int32(weapon.Promote)]
-	if !ok {
+	weaponPromoteConfig := gdconf.GetWeaponPromoteDataByIdAndLevel(weaponConfig.PromoteId, int32(weapon.Promote))
+	if weaponPromoteConfig == nil {
 		logger.Error("weapon promote config error, promoteLevel: %v", weapon.Promote)
 		return
 	}
@@ -493,8 +480,8 @@ func (g *GameManager) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (
 	weaponExp = weapon.Exp + expCount
 	for {
 		// 获取武器等级配置表
-		weaponLevelConfig, ok := gdconf.CONF.WeaponLevelDataMap[int32(weaponLevel)]
-		if !ok {
+		weaponLevelConfig := gdconf.GetWeaponLevelDataByLevel(int32(weaponLevel))
+		if weaponLevelConfig == nil {
 			// 获取不到代表已经到达最大等级
 			break
 		}
@@ -537,22 +524,15 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取武器配置表
-	weaponConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if !ok {
+	weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if weaponConfig == nil {
 		logger.Error("weapon config error, itemId: %v", weapon.ItemId)
 		g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{})
 		return
 	}
 	// 获取武器突破配置表
-	weaponPromoteDataMap, ok := gdconf.CONF.WeaponPromoteDataMap[weaponConfig.PromoteId]
-	if !ok {
-		logger.Error("weapon promote config error, promoteId: %v", weaponConfig.PromoteId)
-		g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{})
-		return
-	}
-	// 获取武器突破等级对应的配置表
-	weaponPromoteConfig, ok := weaponPromoteDataMap[int32(weapon.Promote)]
-	if !ok {
+	weaponPromoteConfig := gdconf.GetWeaponPromoteDataByIdAndLevel(weaponConfig.PromoteId, int32(weapon.Promote))
+	if weaponPromoteConfig == nil {
 		logger.Error("weapon promote config error, promoteLevel: %v", weapon.Promote)
 		g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{})
 		return
@@ -581,7 +561,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	}
 	// 消耗列表添加摩拉的消耗
 	costItemList = append(costItemList, &UserItem{
-		ItemId:      constant.ItemConstantConst.SCOIN,
+		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: coinCost,
 	})
 	// 校验物品是否足够
@@ -589,7 +569,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		if player.GetItemCount(item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
-			if item.ItemId == constant.ItemConstantConst.SCOIN {
+			if item.ItemId == constant.ITEM_ID_SCOIN {
 				g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 			}
 			g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)

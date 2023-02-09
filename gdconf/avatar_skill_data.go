@@ -8,8 +8,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-// 角色技能配置表
-
+// AvatarSkillData 角色技能配置表
 type AvatarSkillData struct {
 	AvatarSkillId int32  `csv:"AvatarSkillId"`         // ID
 	AbilityName   string `csv:"AbilityName,omitempty"` // Ability名称
@@ -33,4 +32,12 @@ func (g *GameDataConfig) loadAvatarSkillData() {
 		g.AvatarSkillDataMap[avatarSkillData.AvatarSkillId] = avatarSkillData
 	}
 	logger.Info("AvatarSkillData count: %v", len(g.AvatarSkillDataMap))
+}
+
+func GetAvatarSkillDataById(avatarSkillId int32) *AvatarSkillData {
+	return CONF.AvatarSkillDataMap[avatarSkillId]
+}
+
+func GetAvatarSkillDataMap() map[int32]*AvatarSkillData {
+	return CONF.AvatarSkillDataMap
 }

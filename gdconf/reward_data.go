@@ -2,13 +2,13 @@ package gdconf
 
 import (
 	"fmt"
+
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 奖励配置表
-
+// RewardData 奖励配置表
 type RewardData struct {
 	RewardID         int32 `csv:"RewardID"`                   // 奖励ID
 	RewardItem1ID    int32 `csv:"RewardItem1ID,omitempty"`    // Reward道具1ID
@@ -65,4 +65,12 @@ func (g *GameDataConfig) loadRewardData() {
 		g.RewardDataMap[rewardData.RewardID] = rewardData
 	}
 	logger.Info("RewardData count: %v", len(g.RewardDataMap))
+}
+
+func GetRewardDataById(rewardID int32) *RewardData {
+	return CONF.RewardDataMap[rewardID]
+}
+
+func GetRewardDataMap() map[int32]*RewardData {
+	return CONF.RewardDataMap
 }

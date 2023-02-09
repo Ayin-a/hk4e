@@ -201,8 +201,8 @@ func (f *FightRoutine) onTickSecond(now int64) {
 		if entity.uid == 0 {
 			continue
 		}
-		entity.fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_ATTACK)] = 1000000
-		entity.fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CRITICAL)] = 1.0
+		entity.fightPropMap[uint32(constant.FIGHT_PROP_CUR_ATTACK)] = 1000000
+		entity.fightPropMap[uint32(constant.FIGHT_PROP_CRITICAL)] = 1.0
 		avatarFightPropNotify := &proto.AvatarFightPropNotify{
 			AvatarGuid:   entity.avatarGuid,
 			FightPropMap: entity.fightPropMap,
@@ -262,17 +262,17 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 			_ = attackerId
 			currHp := float32(0)
 			if target.fightPropMap != nil {
-				currHp = target.fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
+				currHp = target.fightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)]
 				currHp -= damage
 				if currHp < 0 {
 					currHp = 0
 				}
-				target.fightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
+				target.fightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)] = currHp
 			}
 			entityFightPropUpdateNotify := new(proto.EntityFightPropUpdateNotify)
 			entityFightPropUpdateNotify.EntityId = target.entityId
 			entityFightPropUpdateNotify.FightPropMap = make(map[uint32]float32)
-			entityFightPropUpdateNotify.FightPropMap[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
+			entityFightPropUpdateNotify.FightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)] = currHp
 			for _, uid := range f.getAllPlayer(f.entityMap) {
 				SendMsg(f.messageQueue, cmd.EntityFightPropUpdateNotify, uid, f.gateAppId, entityFightPropUpdateNotify)
 			}

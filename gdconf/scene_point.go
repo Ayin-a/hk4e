@@ -8,6 +8,8 @@ import (
 	"hk4e/pkg/logger"
 )
 
+// 场景传送点配置数据
+
 // 传送点类型
 const (
 	PointTypeStrTransPointNormal       = "TransPointNormal"
@@ -125,4 +127,20 @@ func (g *GameDataConfig) loadScenePoint() {
 		scenePointCount += len(scenePoint.PointMap)
 	}
 	logger.Info("ScenePoint count: %v", scenePointCount)
+}
+
+func GetScenePointBySceneIdAndPointId(sceneId int32, pointId int32) *PointData {
+	value, exist := CONF.ScenePointMap[sceneId]
+	if !exist {
+		return nil
+	}
+	return value.PointMap[pointId]
+}
+
+func GetScenePointMapBySceneId(sceneId int32) map[int32]*PointData {
+	value, exist := CONF.ScenePointMap[sceneId]
+	if !exist {
+		return nil
+	}
+	return value.PointMap
 }

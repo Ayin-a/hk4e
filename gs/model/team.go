@@ -61,7 +61,7 @@ func (t *TeamInfo) UpdateTeam() {
 	t.TeamResonancesConfig = make(map[int32]bool)
 	teamElementTypeCountMap := make(map[uint16]uint8)
 	for _, avatarId := range activeTeam.GetAvatarIdList() {
-		avatarSkillDataConfig := gdconf.CONF.GetAvatarEnergySkillConfig(avatarId)
+		avatarSkillDataConfig := gdconf.GetAvatarEnergySkillConfig(avatarId)
 		if avatarSkillDataConfig == nil {
 			logger.Error("get avatar energy skill is nil, avatarId: %v", avatarId)
 			continue

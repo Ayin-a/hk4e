@@ -46,7 +46,7 @@ func (p *Player) GetItemIdByItemAndWeaponGuid(guid uint64) uint32 {
 }
 
 func (p *Player) GetItemCount(itemId uint32) uint32 {
-	prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[itemId]
+	prop, ok := constant.VIRTUAL_ITEM_PROP[itemId]
 	if ok {
 		value := p.PropertiesMap[prop]
 		return value

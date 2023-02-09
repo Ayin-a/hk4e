@@ -212,8 +212,8 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 					ApplyPlayerOnlineInfo: &mq.UserBaseInfo{
 						UserId:         player.PlayerID,
 						Nickname:       player.NickName,
-						PlayerLevel:    player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-						MpSettingType:  uint8(player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+						PlayerLevel:    player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+						MpSettingType:  uint8(player.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
 						NameCardId:     player.NameCard,
 						Signature:      player.Signature,
 						HeadImageId:    player.HeadImage,
@@ -235,7 +235,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
 		return
 	}
-	mpSetting := targetPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]
+	mpSetting := targetPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]
 	if mpSetting == 0 {
 		// 房主玩家没开权限
 		applyFailNotify(proto.PlayerApplyEnterMpResultNotify_SCENE_CANNOT_ENTER)
@@ -340,7 +340,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 		hostPlayer,
 		hostPlayer,
 		proto.EnterType_ENTER_GOTO,
-		uint32(constant.EnterReasonConst.HostFromSingleToMp),
+		uint32(constant.EnterReasonHostFromSingleToMp),
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
 		0,
@@ -368,7 +368,7 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 			return false
 		}
 	}
-	g.ReconnectPlayer(player.PlayerID)
+	g.ReLoginPlayer(player.PlayerID)
 	return true
 }
 
@@ -458,8 +458,8 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			onlinePlayerInfo := &proto.OnlinePlayerInfo{
 				Uid:                 subWorldPlayer.PlayerID,
 				Nickname:            subWorldPlayer.NickName,
-				PlayerLevel:         subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-				MpSettingType:       proto.MpSettingType(subWorldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+				PlayerLevel:         subWorldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+				MpSettingType:       proto.MpSettingType(subWorldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
 				NameCardId:          subWorldPlayer.NameCard,
 				Signature:           subWorldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: subWorldPlayer.HeadImage},
@@ -483,8 +483,8 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 			onlinePlayerInfo := &proto.OnlinePlayerInfo{
 				Uid:                 worldPlayer.PlayerID,
 				Nickname:            worldPlayer.NickName,
-				PlayerLevel:         worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL],
-				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]),
+				PlayerLevel:         worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
 				NameCardId:          worldPlayer.NameCard,
 				Signature:           worldPlayer.Signature,
 				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
@@ -565,7 +565,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_PLAYER_NOT_IN_PLAYER_WORLD)
 			return
 		}
-		mpSetting := hostPlayer.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE]
+		mpSetting := hostPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]
 		if mpSetting == 0 {
 			// 房主玩家没开权限
 			applyFailNotify(proto.PlayerApplyEnterMpResultNotify_SCENE_CANNOT_ENTER)

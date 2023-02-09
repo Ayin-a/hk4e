@@ -2,13 +2,13 @@ package gdconf
 
 import (
 	"fmt"
+
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 武器等级配置表
-
+// WeaponLevelData 武器等级配置表
 type WeaponLevelData struct {
 	Level      int32 `csv:"Level"`                // 等级
 	ExpByStar1 int32 `csv:"ExpByStar1,omitempty"` // 武器升级经验1
@@ -41,4 +41,12 @@ func (g *GameDataConfig) loadWeaponLevelData() {
 		g.WeaponLevelDataMap[weaponLevelData.Level] = weaponLevelData
 	}
 	logger.Info("WeaponLevelData count: %v", len(g.WeaponLevelDataMap))
+}
+
+func GetWeaponLevelDataByLevel(level int32) *WeaponLevelData {
+	return CONF.WeaponLevelDataMap[level]
+}
+
+func GetWeaponLevelDataMap() map[int32]*WeaponLevelData {
+	return CONF.WeaponLevelDataMap
 }

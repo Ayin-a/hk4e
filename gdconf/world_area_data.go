@@ -8,6 +8,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
+// WorldAreaData 世界区域配置表
 type WorldAreaData struct {
 	WorldAreaId int32 `csv:"WorldAreaId"`       // 条目ID
 	SceneId     int32 `csv:"SceneId,omitempty"` // 场景ID
@@ -29,4 +30,12 @@ func (g *GameDataConfig) loadWorldAreaData() {
 		g.WorldAreaDataMap[worldAreaData.WorldAreaId] = worldAreaData
 	}
 	logger.Info("WorldAreaData count: %v", len(g.WorldAreaDataMap))
+}
+
+func GetWorldAreaDataById(worldAreaId int32) *WorldAreaData {
+	return CONF.WorldAreaDataMap[worldAreaId]
+}
+
+func GetWorldAreaDataMap() map[int32]*WorldAreaData {
+	return CONF.WorldAreaDataMap
 }

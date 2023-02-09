@@ -100,7 +100,7 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 		for i := 1; i < 3; i++ {
 			uid := 1000000 + uint32(i)
 			avatarId := uint32(0)
-			for _, avatarData := range gdconf.CONF.AvatarDataMap {
+			for _, avatarData := range gdconf.GetAvatarDataMap() {
 				avatarId = uint32(avatarData.AvatarId)
 				break
 			}
@@ -175,7 +175,7 @@ func (g *GameManager) gameMainLoop() {
 			motherfuckerPlayerInfo, _ := json.Marshal(SELF)
 			logger.Error("the motherfucker player info: %v", string(motherfuckerPlayerInfo))
 			if SELF != nil {
-				GAME_MANAGER.DisconnectPlayer(SELF.PlayerID, kcp.EnetServerKick)
+				GAME_MANAGER.KickPlayer(SELF.PlayerID, kcp.EnetServerKick)
 			}
 		}
 	}()
@@ -260,7 +260,7 @@ func (g *GameManager) Close() {
 	// 单纯的告诉网关下线玩家
 	userList := USER_MANAGER.GetAllOnlineUserList()
 	for _, player := range userList {
-		g.DisconnectPlayer(player.PlayerID, kcp.EnetServerShutdown)
+		g.KickPlayer(player.PlayerID, kcp.EnetServerShutdown)
 	}
 	time.Sleep(time.Second)
 }
@@ -374,11 +374,11 @@ func (g *GameManager) SendToWorldH(world *World, cmdId uint16, seq uint32, msg p
 	GAME_MANAGER.SendMsg(cmdId, world.GetOwner().PlayerID, seq, msg)
 }
 
-func (g *GameManager) ReconnectPlayer(userId uint32) {
+func (g *GameManager) ReLoginPlayer(userId uint32) {
 	g.SendMsg(cmd.ClientReconnectNotify, userId, 0, new(proto.ClientReconnectNotify))
 }
 
-func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
+func (g *GameManager) KickPlayer(userId uint32, reason uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		return
@@ -391,7 +391,6 @@ func (g *GameManager) DisconnectPlayer(userId uint32, reason uint32) {
 			KickReason: reason,
 		},
 	})
-	// g.SendMsg(cmd.ServerDisconnectClientNotify, userId, 0, new(proto.ServerDisconnectClientNotify))
 }
 
 func (g *GameManager) GetClientProtoObjByName(protoObjName string) pb.Message {

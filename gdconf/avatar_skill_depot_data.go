@@ -11,8 +11,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-// 角色技能库配置表
-
+// AvatarSkillDepotData 角色技能库配置表
 type AvatarSkillDepotData struct {
 	AvatarSkillDepotId                int32  `csv:"AvatarSkillDepotId"`                          // ID
 	EnergySkill                       int32  `csv:"EnergySkill,omitempty"`                       // 充能技能
@@ -127,7 +126,15 @@ func (g *GameDataConfig) loadAvatarSkillDepotData() {
 	logger.Info("AvatarSkillDepotData count: %v", len(g.AvatarSkillDepotDataMap))
 }
 
-func (g *GameDataConfig) GetAvatarEnergySkillConfig(avatarId uint32) *AvatarSkillData {
+func GetAvatarSkillDepotDataById(avatarSkillDepotId int32) *AvatarSkillDepotData {
+	return CONF.AvatarSkillDepotDataMap[avatarSkillDepotId]
+}
+
+func GetAvatarSkillDepotDataMap() map[int32]*AvatarSkillDepotData {
+	return CONF.AvatarSkillDepotDataMap
+}
+
+func GetAvatarEnergySkillConfig(avatarId uint32) *AvatarSkillData {
 	if avatarId == 10000005 || avatarId == 10000007 {
 		return nil
 	}

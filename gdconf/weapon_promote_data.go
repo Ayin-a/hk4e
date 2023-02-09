@@ -2,13 +2,13 @@ package gdconf
 
 import (
 	"fmt"
+
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 武器突破配置表
-
+// WeaponPromoteData 武器突破配置表
 type WeaponPromoteData struct {
 	PromoteId      int32 `csv:"PromoteId"`                // 武器突破ID
 	PromoteLevel   int32 `csv:"PromoteLevel,omitempty"`   // 突破等级
@@ -55,4 +55,12 @@ func (g *GameDataConfig) loadWeaponPromoteData() {
 		g.WeaponPromoteDataMap[weaponPromoteData.PromoteId][weaponPromoteData.PromoteLevel] = weaponPromoteData
 	}
 	logger.Info("WeaponPromoteData count: %v", len(g.WeaponPromoteDataMap))
+}
+
+func GetWeaponPromoteDataByIdAndLevel(promoteId int32, promoteLevel int32) *WeaponPromoteData {
+	value, exist := CONF.WeaponPromoteDataMap[promoteId]
+	if !exist {
+		return nil
+	}
+	return value[promoteLevel]
 }

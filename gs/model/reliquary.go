@@ -48,8 +48,8 @@ func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint
 		AvatarId:    0,
 		Guid:        0,
 	}
-	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(itemId)]
-	if !exist {
+	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+	if itemDataConfig == nil {
 		logger.Error("reliquary config is nil, itemId: %v", itemId)
 		return
 	}

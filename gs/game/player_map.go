@@ -17,27 +17,22 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	logger.Debug("user get scene trans to point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneTransToPointReq)
 
-	scenePointConfig, exist := gdconf.CONF.ScenePointMap[int32(req.SceneId)]
-	if !exist {
-		g.SendError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
-		return
-	}
-	pointConfig, exist := scenePointConfig.PointMap[int32(req.PointId)]
-	if !exist {
+	pointDataConfig := gdconf.GetScenePointBySceneIdAndPointId(int32(req.SceneId), int32(req.PointId))
+	if pointDataConfig == nil {
 		g.SendError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{})
 		return
 	}
 
 	// 传送玩家
 	sceneId := req.SceneId
-	g.TeleportPlayer(player, constant.EnterReasonConst.TransPoint, sceneId, &model.Vector{
-		X: pointConfig.TranPos.X,
-		Y: pointConfig.TranPos.Y,
-		Z: pointConfig.TranPos.Z,
+	g.TeleportPlayer(player, constant.EnterReasonTransPoint, sceneId, &model.Vector{
+		X: pointDataConfig.TranPos.X,
+		Y: pointDataConfig.TranPos.Y,
+		Z: pointDataConfig.TranPos.Z,
 	}, &model.Vector{
-		X: pointConfig.TranRot.X,
-		Y: pointConfig.TranRot.Y,
-		Z: pointConfig.TranRot.Z,
+		X: pointDataConfig.TranRot.X,
+		Y: pointDataConfig.TranRot.Y,
+		Z: pointDataConfig.TranRot.Z,
 	}, 0)
 
 	sceneTransToPointRsp := &proto.SceneTransToPointRsp{
@@ -60,7 +55,7 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 				posYInt = 300
 			}
 			// 传送玩家
-			g.TeleportPlayer(player, constant.EnterReasonConst.Gm, req.Mark.SceneId, &model.Vector{
+			g.TeleportPlayer(player, constant.EnterReasonGm, req.Mark.SceneId, &model.Vector{
 				X: float64(req.Mark.Pos.X),
 				Y: float64(posYInt),
 				Z: float64(req.Mark.Pos.Z),
@@ -107,7 +102,7 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 
 	var enterType proto.EnterType
 	switch enterReason {
-	case constant.EnterReasonConst.DungeonEnter:
+	case constant.EnterReasonDungeonEnter:
 		logger.Debug("player dungeon scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_DUNGEON
 	default:
@@ -127,8 +122,8 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 	logger.Debug("user get scene point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetScenePointReq)
 
-	scenePointConfig, exist := gdconf.CONF.ScenePointMap[int32(req.SceneId)]
-	if !exist {
+	scenePointMapConfig := gdconf.GetScenePointMapBySceneId(int32(req.SceneId))
+	if scenePointMapConfig == nil {
 		return
 	}
 
@@ -136,7 +131,7 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 		SceneId: req.SceneId,
 	}
 	areaIdMap := make(map[uint32]bool)
-	for _, worldAreaData := range gdconf.CONF.WorldAreaDataMap {
+	for _, worldAreaData := range gdconf.GetWorldAreaDataMap() {
 		if uint32(worldAreaData.SceneId) == req.SceneId {
 			areaIdMap[uint32(worldAreaData.AreaId1)] = true
 		}
@@ -146,7 +141,7 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 		areaList = append(areaList, areaId)
 	}
 	getScenePointRsp.UnlockAreaList = areaList
-	for _, pointData := range scenePointConfig.PointMap {
+	for _, pointData := range scenePointMapConfig {
 		if pointData.PointType == gdconf.PointTypeOther {
 			continue
 		}
@@ -163,7 +158,7 @@ func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Messag
 		SceneId: req.SceneId,
 	}
 	areaIdMap := make(map[uint32]bool)
-	for _, worldAreaData := range gdconf.CONF.WorldAreaDataMap {
+	for _, worldAreaData := range gdconf.GetWorldAreaDataMap() {
 		if uint32(worldAreaData.SceneId) == req.SceneId {
 			areaIdMap[uint32(worldAreaData.AreaId1)] = true
 		}

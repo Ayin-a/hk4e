@@ -16,7 +16,7 @@ import (
 
 func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
 	allAvatarDataConfig := make(map[int32]*gdconf.AvatarData)
-	for avatarId, avatarData := range gdconf.CONF.AvatarDataMap {
+	for avatarId, avatarData := range gdconf.GetAvatarDataMap() {
 		if avatarId < 10000002 || avatarId >= 11000000 {
 			// 跳过无效角色
 			continue
@@ -49,8 +49,8 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	player.AddAvatar(avatarId)
 
 	// 添加初始武器
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatarId))
+	if avatarDataConfig == nil {
 		logger.Error("config is nil, itemId: %v", avatarId)
 		return
 	}
@@ -80,8 +80,8 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 		return
 	}
 	// 获取角色配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
+	if avatarDataConfig == nil {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
 		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
 		return
@@ -93,8 +93,8 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 		return
 	}
 	// 获取奖励配置表
-	rewardConfig, ok := gdconf.CONF.RewardDataMap[int32(avatarDataConfig.PromoteRewardMap[req.PromoteLevel])]
-	if !ok {
+	rewardConfig := gdconf.GetRewardDataById(int32(avatarDataConfig.PromoteRewardMap[req.PromoteLevel]))
+	if rewardConfig == nil {
 		logger.Error("reward config error, rewardId: %v", avatarDataConfig.PromoteRewardMap[req.PromoteLevel])
 		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{})
 		return
@@ -131,22 +131,15 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取角色配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
+	if avatarDataConfig == nil {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
 		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
 	}
 	// 获取角色突破配置表
-	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
-	if !ok {
-		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
-		return
-	}
-	// 获取角色突破等级的配置表
-	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
-	if !ok {
+	avatarPromoteConfig := gdconf.GetAvatarPromoteDataByIdAndLevel(avatarDataConfig.PromoteId, int32(avatar.Promote))
+	if avatarPromoteConfig == nil {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
 		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{})
 		return
@@ -158,8 +151,8 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取角色突破下一级的配置表
-	avatarPromoteConfig, ok = avatarPromoteDataMap[int32(avatar.Promote+1)]
-	if !ok {
+	avatarPromoteConfig = gdconf.GetAvatarPromoteDataByIdAndLevel(avatarDataConfig.PromoteId, int32(avatar.Promote+1))
+	if avatarPromoteConfig == nil {
 		logger.Error("avatar promote config error, next promoteLevel: %v", avatar.Promote+1)
 		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_AVATAR_ON_MAX_BREAK_LEVEL)
 		return
@@ -175,7 +168,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	}
 	// 消耗列表添加摩拉的消耗
 	costItemList = append(costItemList, &UserItem{
-		ItemId:      constant.ItemConstantConst.SCOIN,
+		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: uint32(avatarPromoteConfig.CostCoin),
 	})
 	// 突破材料以及摩拉是否足够
@@ -183,7 +176,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		if player.GetItemCount(item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
-			if item.ItemId == constant.ItemConstantConst.SCOIN {
+			if item.ItemId == constant.ITEM_ID_SCOIN {
 				g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 			}
 			g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
@@ -191,8 +184,8 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		}
 	}
 	// 冒险等级是否符合要求
-	if player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL] < uint32(avatarPromoteConfig.MinPlayerLevel) {
-		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL])
+	if player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL] < uint32(avatarPromoteConfig.MinPlayerLevel) {
+		logger.Error("player level not enough, level: %v", player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL])
 		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_PLAYER_LEVEL_LESS_THAN)
 		return
 	}
@@ -230,9 +223,9 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 获取经验书物品配置表
-	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(req.ItemId)]
-	if !ok {
-		logger.Error("item data config error, itemId: %v", constant.ItemConstantConst.SCOIN)
+	itemDataConfig := gdconf.GetItemDataById(int32(req.ItemId))
+	if itemDataConfig == nil {
+		logger.Error("item data config error, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 		return
 	}
@@ -246,28 +239,21 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 角色获得的经验
 	expCount := uint32(itemParam) * req.Count
 	// 摩拉数量是否足够
-	if player.GetItemCount(constant.ItemConstantConst.SCOIN) < expCount/5 {
-		logger.Error("item count not enough, itemId: %v", constant.ItemConstantConst.SCOIN)
+	if player.GetItemCount(constant.ITEM_ID_SCOIN) < expCount/5 {
+		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 		return
 	}
 	// 获取角色配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
+	if avatarDataConfig == nil {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
 	}
 	// 获取角色突破配置表
-	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
-	if !ok {
-		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
-		return
-	}
-	// 获取角色突破等级对应的配置表
-	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
-	if !ok {
+	avatarPromoteConfig := gdconf.GetAvatarPromoteDataByIdAndLevel(avatarDataConfig.PromoteId, int32(avatar.Promote))
+	if avatarPromoteConfig == nil {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{})
 		return
@@ -285,7 +271,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 			ChangeCount: req.Count,
 		},
 		{
-			ItemId:      constant.ItemConstantConst.SCOIN,
+			ItemId:      constant.ITEM_ID_SCOIN,
 			ChangeCount: expCount / 5,
 		},
 	})
@@ -312,20 +298,14 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 // UpgradePlayerAvatar 玩家角色升级
 func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Avatar, expCount uint32) {
 	// 获取角色配置表
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(avatar.AvatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
+	if avatarDataConfig == nil {
 		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
 		return
 	}
 	// 获取角色突破配置表
-	avatarPromoteDataMap, ok := gdconf.CONF.AvatarPromoteDataMap[avatarDataConfig.PromoteId]
-	if !ok {
-		logger.Error("avatar promote config error, promoteId: %v", avatarDataConfig.PromoteId)
-		return
-	}
-	// 获取角色突破等级对应的配置表
-	avatarPromoteConfig, ok := avatarPromoteDataMap[int32(avatar.Promote)]
-	if !ok {
+	avatarPromoteConfig := gdconf.GetAvatarPromoteDataByIdAndLevel(avatarDataConfig.PromoteId, int32(avatar.Promote))
+	if avatarPromoteConfig == nil {
 		logger.Error("avatar promote config error, promoteLevel: %v", avatar.Promote)
 		return
 	}
@@ -334,8 +314,8 @@ func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Av
 	// 角色升级
 	for {
 		// 获取角色等级配置表
-		avatarLevelConfig, ok := gdconf.CONF.AvatarLevelDataMap[int32(avatar.Level)]
-		if !ok {
+		avatarLevelConfig := gdconf.GetAvatarLevelDataByLevel(int32(avatar.Level))
+		if avatarLevelConfig == nil {
 			// 获取不到代表已经到达最大等级
 			break
 		}
@@ -366,15 +346,15 @@ func (g *GameManager) PacketAvatarPropNotify(avatar *model.Avatar) *proto.Avatar
 		AvatarGuid: avatar.Guid,
 	}
 	// 角色等级
-	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_LEVEL)] = int64(avatar.Level)
+	avatarPropNotify.PropMap[uint32(constant.PLAYER_PROP_LEVEL)] = int64(avatar.Level)
 	// 角色经验
-	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_EXP)] = int64(avatar.Exp)
+	avatarPropNotify.PropMap[uint32(constant.PLAYER_PROP_EXP)] = int64(avatar.Exp)
 	// 角色突破等级
-	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL)] = int64(avatar.Promote)
+	avatarPropNotify.PropMap[uint32(constant.PLAYER_PROP_BREAK_LEVEL)] = int64(avatar.Promote)
 	// 角色饱食度
-	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL)] = int64(avatar.Satiation)
+	avatarPropNotify.PropMap[uint32(constant.PLAYER_PROP_SATIATION_VAL)] = int64(avatar.Satiation)
 	// 角色饱食度溢出
-	avatarPropNotify.PropMap[uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME)] = int64(avatar.SatiationPenalty)
+	avatarPropNotify.PropMap[uint32(constant.PLAYER_PROP_SATIATION_PENALTY_TIME)] = int64(avatar.SatiationPenalty)
 
 	return avatarPropNotify
 }
@@ -536,8 +516,8 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon *model.Weapon, entityId uint32) *proto.AvatarEquipChangeNotify {
-	itemDataConfig, ok := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if !ok {
+	itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if itemDataConfig == nil {
 		logger.Error("item data config error, itemId: %v", weapon.ItemId)
 		return new(proto.AvatarEquipChangeNotify)
 	}
@@ -547,9 +527,9 @@ func (g *GameManager) PacketAvatarEquipChangeNotify(avatar *model.Avatar, weapon
 		EquipGuid:  weapon.Guid,
 	}
 	switch itemDataConfig.Type {
-	case int32(constant.ItemTypeConst.ITEM_WEAPON):
-		avatarEquipChangeNotify.EquipType = uint32(constant.EquipTypeConst.EQUIP_WEAPON)
-	case int32(constant.ItemTypeConst.ITEM_RELIQUARY):
+	case int32(constant.ITEM_TYPE_WEAPON):
+		avatarEquipChangeNotify.EquipType = uint32(constant.EQUIP_TYPE_WEAPON)
+	case int32(constant.ITEM_TYPE_RELIQUARY):
 		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.ReliquaryType)
 	}
 	avatarEquipChangeNotify.Weapon = &proto.SceneWeaponInfo{
@@ -567,8 +547,8 @@ func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapo
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
 		AvatarGuid: avatar.Guid,
 	}
-	itemDataConfig, exist := gdconf.CONF.ItemDataMap[int32(weapon.ItemId)]
-	if exist {
+	itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+	if itemDataConfig != nil {
 		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.Type)
 	}
 	return avatarEquipChangeNotify
@@ -605,28 +585,28 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 		AvatarId: avatar.AvatarId,
 		Guid:     avatar.Guid,
 		PropMap: map[uint32]*proto.PropValue{
-			uint32(constant.PlayerPropertyConst.PROP_LEVEL): {
-				Type:  uint32(constant.PlayerPropertyConst.PROP_LEVEL),
+			uint32(constant.PLAYER_PROP_LEVEL): {
+				Type:  uint32(constant.PLAYER_PROP_LEVEL),
 				Val:   int64(avatar.Level),
 				Value: &proto.PropValue_Ival{Ival: int64(avatar.Level)},
 			},
-			uint32(constant.PlayerPropertyConst.PROP_EXP): {
-				Type:  uint32(constant.PlayerPropertyConst.PROP_EXP),
+			uint32(constant.PLAYER_PROP_EXP): {
+				Type:  uint32(constant.PLAYER_PROP_EXP),
 				Val:   int64(avatar.Exp),
 				Value: &proto.PropValue_Ival{Ival: int64(avatar.Exp)},
 			},
-			uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL): {
-				Type:  uint32(constant.PlayerPropertyConst.PROP_BREAK_LEVEL),
+			uint32(constant.PLAYER_PROP_BREAK_LEVEL): {
+				Type:  uint32(constant.PLAYER_PROP_BREAK_LEVEL),
 				Val:   int64(avatar.Promote),
 				Value: &proto.PropValue_Ival{Ival: int64(avatar.Promote)},
 			},
-			uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL): {
-				Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_VAL),
+			uint32(constant.PLAYER_PROP_SATIATION_VAL): {
+				Type:  uint32(constant.PLAYER_PROP_SATIATION_VAL),
 				Val:   int64(avatar.Satiation),
 				Value: &proto.PropValue_Ival{Ival: int64(avatar.Satiation)},
 			},
-			uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME): {
-				Type:  uint32(constant.PlayerPropertyConst.PROP_SATIATION_PENALTY_TIME),
+			uint32(constant.PLAYER_PROP_SATIATION_PENALTY_TIME): {
+				Type:  uint32(constant.PLAYER_PROP_SATIATION_PENALTY_TIME),
 				Val:   int64(avatar.SatiationPenalty),
 				Value: &proto.PropValue_Ival{Ival: int64(avatar.SatiationPenalty)},
 			},
@@ -651,14 +631,14 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 	for _, v := range avatar.FetterList {
 		pbAvatar.FetterInfo.FetterList = append(pbAvatar.FetterInfo.FetterList, &proto.FetterData{
 			FetterId:    v,
-			FetterState: uint32(constant.FetterStateConst.FINISH),
+			FetterState: uint32(constant.FETTER_STATE_FINISH),
 		})
 	}
 	// 解锁全部资料
-	for _, v := range gdconf.CONF.FetterDataAvatarIdMap[int32(avatar.AvatarId)] {
+	for _, v := range gdconf.GetFetterIdListByAvatarId(int32(avatar.AvatarId)) {
 		pbAvatar.FetterInfo.FetterList = append(pbAvatar.FetterInfo.FetterList, &proto.FetterData{
 			FetterId:    uint32(v),
-			FetterState: uint32(constant.FetterStateConst.FINISH),
+			FetterState: uint32(constant.FETTER_STATE_FINISH),
 		})
 	}
 	// 突破等级奖励

@@ -1,25 +1,11 @@
 package constant
 
-var EntityIdTypeConst *EntityIdType
-
-type EntityIdType struct {
-	AVATAR  uint16
-	MONSTER uint16
-	NPC     uint16
-	GADGET  uint16
-	WEAPON  uint16
-	TEAM    uint16
-	MPLEVEL uint16
-}
-
-func InitEntityIdTypeConst() {
-	EntityIdTypeConst = new(EntityIdType)
-
-	EntityIdTypeConst.AVATAR = 0x01
-	EntityIdTypeConst.MONSTER = 0x02
-	EntityIdTypeConst.NPC = 0x03
-	EntityIdTypeConst.GADGET = 0x04
-	EntityIdTypeConst.WEAPON = 0x06
-	EntityIdTypeConst.TEAM = 0x09
-	EntityIdTypeConst.MPLEVEL = 0x0b
-}
+const (
+	ENTITY_ID_TYPE_AVATAR  uint16 = 0x01
+	ENTITY_ID_TYPE_MONSTER uint16 = 0x02
+	ENTITY_ID_TYPE_NPC     uint16 = 0x03
+	ENTITY_ID_TYPE_GADGET  uint16 = 0x04
+	ENTITY_ID_TYPE_WEAPON  uint16 = 0x06
+	ENTITY_ID_TYPE_TEAM    uint16 = 0x09
+	ENTITY_ID_TYPE_MPLEVEL uint16 = 0x0b
+)

@@ -357,8 +357,8 @@ func (g *GCGGame) InitDeckCard(controller *GCGController, cardIdList ...uint32) 
 // GiveCharCard 给予操控者角色卡牌
 func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 	// 读取角色卡牌配置表
-	gcgCharConfig, ok := gdconf.CONF.GCGCharDataMap[int32(charId)]
-	if !ok {
+	gcgCharConfig := gdconf.GetGCGCharDataById(int32(charId))
+	if gcgCharConfig == nil {
 		logger.Error("gcg char config error, charId: %v", charId)
 		return
 	}
@@ -372,10 +372,10 @@ func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 		faceType:     0, // 1为金卡
 		tagList:      gcgCharConfig.TagList,
 		tokenMap: map[uint32]uint32{
-			constant.GCGTokenConst.TOKEN_CUR_HEALTH: uint32(gcgCharConfig.HPBase),     // 血量
-			constant.GCGTokenConst.TOKEN_MAX_HEALTH: uint32(gcgCharConfig.HPBase),     // 最大血量(不确定)
-			constant.GCGTokenConst.TOKEN_CUR_ELEM:   0,                                // 充能
-			constant.GCGTokenConst.TOKEN_MAX_ELEM:   uint32(gcgCharConfig.MaxElemVal), // 充能条
+			constant.GCG_TOKEN_TYPE_CUR_HEALTH: uint32(gcgCharConfig.HPBase),     // 血量
+			constant.GCG_TOKEN_TYPE_MAX_HEALTH: uint32(gcgCharConfig.HPBase),     // 最大血量(不确定)
+			constant.GCG_TOKEN_TYPE_CUR_ELEM:   0,                                // 充能
+			constant.GCG_TOKEN_TYPE_MAX_ELEM:   uint32(gcgCharConfig.MaxElemVal), // 充能条
 		},
 		skillList:      make([]*GCGSkillInfo, 0, len(gcgCharConfig.SkillList)),
 		skillLimitList: []uint32{},
@@ -571,13 +571,13 @@ func (g *GCGGame) ControllerUseSkill(controller *GCGController, skillId uint32, 
 	msgList = append(msgList, g.GCGMsgUseSkill(controller.selectedCharCardGuid, skillId))
 
 	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT, 11, 1))
-	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCGTokenConst.TOKEN_CUR_HEALTH, 6))
+	msgList = append(msgList, g.GCGMsgTokenChange(targetSelectedCharCard.guid, proto.GCGReason_GCG_REASON_EFFECT_DAMAGE, constant.GCG_TOKEN_TYPE_CUR_HEALTH, 6))
 	msgList = append(msgList, g.GCGMsgSkillResult(targetSelectedCharCard.guid, skillId))
 
 	msgList = append(msgList, g.GCGMsgUseSkillEnd(controller.selectedCharCardGuid, skillId))
 
 	// 因为使用技能自身充能+1
-	msgList = append(msgList, g.GCGMsgTokenChange(controller.selectedCharCardGuid, proto.GCGReason_GCG_REASON_ATTACK, constant.GCGTokenConst.TOKEN_CUR_ELEM, 3))
+	msgList = append(msgList, g.GCGMsgTokenChange(controller.selectedCharCardGuid, proto.GCGReason_GCG_REASON_ATTACK, constant.GCG_TOKEN_TYPE_CUR_ELEM, 3))
 	g.AddAllMsgPack(controller.controllerId, proto.GCGActionType_GCG_ACTION_ATTACK, msgList...)
 	g.ChangePhase(proto.GCGPhaseType_GCG_PHASE_MAIN)
 }
@@ -949,8 +949,8 @@ func (g *GCGGame) GCGMsgCostRevise(controller *GCGController) *proto.GCGMessage 
 	// AttackCostList
 	for _, skillInfo := range selectedCharCard.skillList {
 		// 读取卡牌技能配置表
-		gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillInfo.skillId)]
-		if !ok {
+		gcgSkillConfig := gdconf.GetGCGSkillDataById(int32(skillInfo.skillId))
+		if gcgSkillConfig == nil {
 			logger.Error("gcg skill config error, skillId: %v", skillInfo.skillId)
 			return new(proto.GCGMessage)
 		}
@@ -1048,8 +1048,8 @@ func (g *GCGGame) GCGMsgTokenChange(cardGuid uint32, reason proto.GCGReason, tok
 // GCGMsgSkillResult GCG消息技能结果
 func (g *GCGGame) GCGMsgSkillResult(selectedCharCardGuid uint32, skillId uint32) *proto.GCGMessage {
 	// 读取卡牌技能配置表
-	gcgSkillConfig, ok := gdconf.CONF.GCGSkillDataMap[int32(skillId)]
-	if !ok {
+	gcgSkillConfig := gdconf.GetGCGSkillDataById(int32(skillId))
+	if gcgSkillConfig == nil {
 		logger.Error("gcg skill config error, skillId: %v", skillId)
 		return new(proto.GCGMessage)
 	}

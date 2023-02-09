@@ -139,12 +139,12 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			currHp := float32(0)
 			fightProp := target.GetFightProp()
 			if fightProp != nil {
-				currHp = fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)]
+				currHp = fightProp[uint32(constant.FIGHT_PROP_CUR_HP)]
 				currHp -= damage
 				if currHp < 0 {
 					currHp = 0
 				}
-				fightProp[uint32(constant.FightPropertyConst.FIGHT_PROP_CUR_HP)] = currHp
+				fightProp[uint32(constant.FIGHT_PROP_CUR_HP)] = currHp
 			}
 			entityFightPropUpdateNotify := &proto.EntityFightPropUpdateNotify{
 				FightPropMap: fightProp,
@@ -152,7 +152,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
 			if currHp == 0 && target.GetAvatarEntity() == nil {
-				scene.SetEntityLifeState(target, constant.LifeStateConst.LIFE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
+				scene.SetEntityLifeState(target, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(hitInfo)
 			if err != nil {

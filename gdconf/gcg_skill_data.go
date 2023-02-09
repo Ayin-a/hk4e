@@ -2,16 +2,16 @@ package gdconf
 
 import (
 	"fmt"
-	"hk4e/pkg/logger"
 	"os"
+
+	"hk4e/pkg/logger"
 
 	"github.com/hjson/hjson-go/v4"
 
 	"github.com/jszwec/csvutil"
 )
 
-// 卡牌技能配置表
-
+// GCGSkillData 卡牌技能配置表
 type GCGSkillData struct {
 	SkillId    int32  `csv:"SkillId"`              // ID
 	ConfigJson string `csv:"ConfigJson,omitempty"` // 效果config
@@ -108,4 +108,12 @@ func (g *GameDataConfig) loadGCGSkillData() {
 		g.GCGSkillDataMap[gcgSkillData.SkillId] = gcgSkillData
 	}
 	logger.Info("GCGSkillData count: %v", len(g.GCGSkillDataMap))
+}
+
+func GetGCGSkillDataById(skillId int32) *GCGSkillData {
+	return CONF.GCGSkillDataMap[skillId]
+}
+
+func GetGCGSkillDataMap() map[int32]*GCGSkillData {
+	return CONF.GCGSkillDataMap
 }

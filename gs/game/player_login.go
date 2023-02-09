@@ -9,7 +9,6 @@ import (
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -198,19 +197,18 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		StoreType:   proto.StoreType_STORE_PACK,
 		WeightLimit: 30000,
 	}
-	itemDataMapConfig := gdconf.CONF.ItemDataMap
 	for _, weapon := range player.WeaponMap {
 		pbItem := &proto.Item{
 			ItemId: weapon.ItemId,
 			Guid:   weapon.Guid,
 			Detail: nil,
 		}
-		itemData, ok := itemDataMapConfig[int32(weapon.ItemId)]
-		if !ok {
-			logger.Error("config is nil, itemId: %v", weapon.ItemId)
-			return nil
+		itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+		if itemDataConfig == nil {
+			logger.Error("get item data config is nil, itemId: %v", weapon.ItemId)
+			continue
 		}
-		if uint16(itemData.Type) != constant.ItemTypeConst.ITEM_WEAPON {
+		if uint16(itemDataConfig.Type) != constant.ITEM_TYPE_WEAPON {
 			continue
 		}
 		affixMap := make(map[uint32]uint32)
@@ -238,7 +236,12 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 			Guid:   reliquary.Guid,
 			Detail: nil,
 		}
-		if uint16(itemDataMapConfig[int32(reliquary.ItemId)].Type) != constant.ItemTypeConst.ITEM_RELIQUARY {
+		itemDataConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
+		if itemDataConfig == nil {
+			logger.Error("get item data config is nil, itemId: %v", reliquary.ItemId)
+			continue
+		}
+		if uint16(itemDataConfig.Type) != constant.ITEM_TYPE_RELIQUARY {
 			continue
 		}
 		pbItem.Detail = &proto.Item_Equip{
@@ -263,8 +266,12 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 			Guid:   item.Guid,
 			Detail: nil,
 		}
-		itemDataConfig := itemDataMapConfig[int32(item.ItemId)]
-		if itemDataConfig != nil && uint16(itemDataConfig.Type) == constant.ItemTypeConst.ITEM_FURNITURE {
+		itemDataConfig := gdconf.GetItemDataById(int32(item.ItemId))
+		if itemDataConfig == nil {
+			logger.Error("get item data config is nil, itemId: %v", item.ItemId)
+			continue
+		}
+		if itemDataConfig != nil && uint16(itemDataConfig.Type) == constant.ITEM_TYPE_FURNITURE {
 			pbItem.Detail = &proto.Item_Furniture{
 				Furniture: &proto.Furniture{
 					Count: item.Count,
@@ -315,10 +322,9 @@ func (g *GameManager) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify
 	openStateUpdateNotify := &proto.OpenStateUpdateNotify{
 		OpenStateMap: make(map[uint32]uint32),
 	}
-	openStateConstMap := reflection.ConvStructToMap(constant.OpenStateConst)
 	// 先暂时开放全部功能模块
-	for _, v := range openStateConstMap {
-		openStateUpdateNotify.OpenStateMap[uint32(v.(uint16))] = 1
+	for _, v := range constant.ALL_OPEN_STATE {
+		openStateUpdateNotify.OpenStateMap[uint32(v)] = 1
 	}
 	return openStateUpdateNotify
 }
@@ -342,31 +348,17 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.SceneId = 3
 
 	player.PropertiesMap = make(map[uint16]uint32)
-	// 初始化所有属性
-	propList := reflection.ConvStructToMap(constant.PlayerPropertyConst)
-	for fieldName, fieldValue := range propList {
-		// 排除角色相关的属性
-		if fieldName == "PROP_EXP" ||
-			fieldName == "PROP_BREAK_LEVEL" ||
-			fieldName == "PROP_SATIATION_VAL" ||
-			fieldName == "PROP_SATIATION_PENALTY_TIME" ||
-			fieldName == "PROP_LEVEL" {
-			continue
-		}
-		value := fieldValue.(uint16)
-		player.PropertiesMap[value] = 0
-	}
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_LEVEL] = 1
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_WORLD_LEVEL] = 0
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_IS_SPRING_AUTO_USE] = 1
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_SPRING_AUTO_USE_PERCENT] = 100
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_IS_FLYABLE] = 1
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_IS_TRANSFERABLE] = 1
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_MAX_STAMINA] = 24000
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_CUR_PERSIST_STAMINA] = 24000
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_RESIN] = 160
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_PLAYER_MP_SETTING_TYPE] = 2
-	player.PropertiesMap[constant.PlayerPropertyConst.PROP_IS_MP_MODE_AVAILABLE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL] = 0
+	player.PropertiesMap[constant.PLAYER_PROP_IS_SPRING_AUTO_USE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_SPRING_AUTO_USE_PERCENT] = 100
+	player.PropertiesMap[constant.PLAYER_PROP_IS_FLYABLE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_IS_TRANSFERABLE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA] = 24000
+	player.PropertiesMap[constant.PLAYER_PROP_CUR_PERSIST_STAMINA] = 24000
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_RESIN] = 160
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE] = 2
+	player.PropertiesMap[constant.PLAYER_PROP_IS_MP_MODE_AVAILABLE] = 1
 
 	player.FlyCloakList = make([]uint32, 0)
 	player.FlyCloakList = append(player.FlyCloakList, 140001)
@@ -411,8 +403,8 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	// 添加选定的主角
 	player.AddAvatar(mainCharAvatarId)
 	// 添加初始武器
-	avatarDataConfig, ok := gdconf.CONF.AvatarDataMap[int32(mainCharAvatarId)]
-	if !ok {
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(mainCharAvatarId))
+	if avatarDataConfig == nil {
 		logger.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
 		return nil
 	}

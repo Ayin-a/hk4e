@@ -1,19 +1,8 @@
 package constant
 
-var FetterStateConst *FetterState
-
-type FetterState struct {
-	NONE     uint16
-	NOT_OPEN uint16
-	OPEN     uint16
-	FINISH   uint16
-}
-
-func InitFetterStateConst() {
-	FetterStateConst = new(FetterState)
-
-	FetterStateConst.NONE = 0
-	FetterStateConst.NOT_OPEN = 1
-	FetterStateConst.OPEN = 1
-	FetterStateConst.FINISH = 3
-}
+const (
+	FETTER_STATE_NONE     uint16 = 0
+	FETTER_STATE_NOT_OPEN uint16 = 1
+	FETTER_STATE_OPEN     uint16 = 1
+	FETTER_STATE_FINISH   uint16 = 3
+)

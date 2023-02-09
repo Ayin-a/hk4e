@@ -10,8 +10,7 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-// 角色卡牌配置表
-
+// GCGCharData 角色卡牌配置表
 type GCGCharData struct {
 	CharId       int32  `csv:"CharId"`                 // ID
 	TagId1       int32  `csv:"TagId1,omitempty"`       // 卡牌标签列表1
@@ -63,4 +62,12 @@ func (g *GameDataConfig) loadGCGCharData() {
 		g.GCGCharDataMap[gcgCharData.CharId] = gcgCharData
 	}
 	logger.Info("GCGCharData count: %v", len(g.GCGCharDataMap))
+}
+
+func GetGCGCharDataById(charId int32) *GCGCharData {
+	return CONF.GCGCharDataMap[charId]
+}
+
+func GetGCGCharDataMap() map[int32]*GCGCharData {
+	return CONF.GCGCharDataMap
 }

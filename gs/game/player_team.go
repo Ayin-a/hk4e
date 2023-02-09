@@ -244,28 +244,28 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			sceneTeamAvatar.SceneAvatarInfo = g.PacketSceneAvatarInfo(worldPlayerScene, worldPlayer, worldAvatar.GetAvatarId())
 		}
 		// add AbilityControlBlock
-		avatarDataConfig := gdconf.CONF.AvatarDataMap[int32(worldAvatar.GetAvatarId())]
 		acb := sceneTeamAvatar.AbilityControlBlock
 		embryoId := 0
 		// add avatar abilities
+		avatarDataConfig := gdconf.GetAvatarDataById(int32(worldAvatar.GetAvatarId()))
 		if avatarDataConfig != nil {
 			for _, abilityId := range avatarDataConfig.AbilityHashCodeList {
 				embryoId++
 				emb := &proto.AbilityEmbryo{
 					AbilityId:               uint32(embryoId),
 					AbilityNameHash:         uint32(abilityId),
-					AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+					AbilityOverrideNameHash: uint32(constant.DEFAULT_ABILITY_NAME),
 				}
 				acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 			}
 		}
 		// add default abilities
-		for _, abilityId := range constant.GameConstantConst.DEFAULT_ABILITY_HASHES {
+		for _, abilityId := range constant.DEFAULT_ABILITY_HASHES {
 			embryoId++
 			emb := &proto.AbilityEmbryo{
 				AbilityId:               uint32(embryoId),
 				AbilityNameHash:         uint32(abilityId),
-				AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+				AbilityOverrideNameHash: uint32(constant.DEFAULT_ABILITY_NAME),
 			}
 			acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 		}
@@ -280,14 +280,14 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 		//	acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 		// }
 		// add skill depot abilities
-		skillDepot := gdconf.CONF.AvatarSkillDepotDataMap[int32(worldPlayerAvatar.SkillDepotId)]
+		skillDepot := gdconf.GetAvatarSkillDepotDataById(int32(worldPlayerAvatar.SkillDepotId))
 		if skillDepot != nil && len(skillDepot.AbilityHashCodeList) != 0 {
 			for _, id := range skillDepot.AbilityHashCodeList {
 				embryoId++
 				emb := &proto.AbilityEmbryo{
 					AbilityId:               uint32(embryoId),
 					AbilityNameHash:         uint32(id),
-					AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+					AbilityOverrideNameHash: uint32(constant.DEFAULT_ABILITY_NAME),
 				}
 				acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 			}
@@ -298,7 +298,7 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			emb := &proto.AbilityEmbryo{
 				AbilityId:               uint32(embryoId),
 				AbilityNameHash:         uint32(endec.Hk4eAbilityHashCode(skill)),
-				AbilityOverrideNameHash: uint32(constant.GameConstantConst.DEFAULT_ABILITY_NAME),
+				AbilityOverrideNameHash: uint32(constant.DEFAULT_ABILITY_NAME),
 			}
 			acb.AbilityEmbryoList = append(acb.AbilityEmbryoList, emb)
 		}

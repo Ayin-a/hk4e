@@ -15,12 +15,12 @@ type UserItem struct {
 
 func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	allItemDataConfig := make(map[int32]*gdconf.ItemData)
-	for itemId, itemData := range gdconf.CONF.ItemDataMap {
-		if uint16(itemData.Type) == constant.ItemTypeConst.ITEM_WEAPON {
+	for itemId, itemData := range gdconf.GetItemDataMap() {
+		if uint16(itemData.Type) == constant.ITEM_TYPE_WEAPON {
 			// 排除武器
 			continue
 		}
-		if uint16(itemData.Type) == constant.ItemTypeConst.ITEM_RELIQUARY {
+		if uint16(itemData.Type) == constant.ITEM_TYPE_RELIQUARY {
 			// 排除圣遗物
 			continue
 		}
@@ -61,10 +61,10 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 	for _, userItem := range itemList {
 		// 物品为虚拟物品则另外处理
 		switch userItem.ItemId {
-		case constant.ItemConstantConst.RESIN, constant.ItemConstantConst.LEGENDARY_KEY, constant.ItemConstantConst.HCOIN,
-			constant.ItemConstantConst.SCOIN, constant.ItemConstantConst.MCOIN, constant.ItemConstantConst.HOME_COIN:
+		case constant.ITEM_ID_RESIN, constant.ITEM_ID_LEGENDARY_KEY, constant.ITEM_ID_HCOIN, constant.ITEM_ID_SCOIN,
+			constant.ITEM_ID_MCOIN, constant.ITEM_ID_HOME_COIN:
 			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
-			prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[userItem.ItemId]
+			prop, ok := constant.VIRTUAL_ITEM_PROP[userItem.ItemId]
 			if !ok {
 				continue
 			}
@@ -78,7 +78,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 					Ival: int64(player.PropertiesMap[prop]),
 				},
 			}
-		case constant.ItemConstantConst.PLAYER_EXP:
+		case constant.ITEM_ID_PLAYER_EXP:
 			// 冒险阅历
 			g.AddUserPlayerExp(userId, userItem.ChangeCount)
 		default:
@@ -110,7 +110,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 
 	if isHint {
 		if hintReason == 0 {
-			hintReason = constant.ActionReasonConst.SubfieldDrop
+			hintReason = constant.ActionReasonSubfieldDrop
 		}
 		itemAddHintNotify := &proto.ItemAddHintNotify{
 			Reason:   uint32(hintReason),
@@ -139,10 +139,10 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	for _, userItem := range itemList {
 		// 物品为虚拟物品则另外处理
 		switch userItem.ItemId {
-		case constant.ItemConstantConst.RESIN, constant.ItemConstantConst.LEGENDARY_KEY, constant.ItemConstantConst.HCOIN,
-			constant.ItemConstantConst.SCOIN, constant.ItemConstantConst.MCOIN, constant.ItemConstantConst.HOME_COIN:
+		case constant.ITEM_ID_RESIN, constant.ITEM_ID_LEGENDARY_KEY, constant.ITEM_ID_HCOIN, constant.ITEM_ID_SCOIN,
+			constant.ITEM_ID_MCOIN, constant.ITEM_ID_HOME_COIN:
 			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
-			prop, ok := constant.ItemConstantConst.VIRTUAL_ITEM_PROP[userItem.ItemId]
+			prop, ok := constant.VIRTUAL_ITEM_PROP[userItem.ItemId]
 			if !ok {
 				continue
 			}
@@ -160,7 +160,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 					Ival: int64(player.PropertiesMap[prop]),
 				},
 			}
-		case constant.ItemConstantConst.PLAYER_EXP:
+		case constant.ITEM_ID_PLAYER_EXP:
 			// 冒险阅历应该也没人会去扣吧?
 		default:
 			// 普通物品直接扣除

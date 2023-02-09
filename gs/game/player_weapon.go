@@ -136,10 +136,21 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 		return
 	}
+	// 确保获取消耗的摩拉索引不越界
+	if int(weapon.Refinement) >= len(weaponConfig.AwakenCoinCostList) {
+		logger.Error("weapon config cost coin error, itemId: %v", weapon.ItemId)
+		return
+	}
 	// 摩拉数量是否足够
 	if player.GetItemCount(constant.ITEM_ID_SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
 		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+		return
+	}
+	// 一星二星的武器不能精炼
+	if weaponConfig.EquipLevel < 3 {
+		logger.Error("weapon equip level le 3, itemId: %v", weapon.ItemId)
+		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_AWAKEN_LEVEL_MAX)
 		return
 	}
 	// 武器精炼等级是否不超过限制
@@ -172,6 +183,12 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		if foodWeapon.AvatarId != 0 {
 			logger.Error("food weapon has been wear, weaponGuid: %v", req.ItemGuid)
 			g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_EQUIP_HAS_BEEN_WEARED)
+			return
+		}
+		// 确保被精炼武器没有上锁
+		if foodWeapon.Lock {
+			logger.Error("food weapon has been lock, weaponGuid: %v", req.ItemGuid)
+			g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_EQUIP_IS_LOCKED)
 			return
 		}
 		// 消耗作为精炼材料的武器
@@ -583,6 +600,18 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		if !ok {
 			logger.Error("food weapon error, weaponGuid: %v", weaponGuid)
 			g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
+		}
+		// 确保被精炼武器没有被任何角色装备
+		if foodWeapon.AvatarId != 0 {
+			logger.Error("food weapon has been wear, weaponGuid: %v", weaponGuid)
+			g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_EQUIP_HAS_BEEN_WEARED)
+			return
+		}
+		// 确保被精炼武器没有上锁
+		if foodWeapon.Lock {
+			logger.Error("food weapon has been lock, weaponGuid: %v", weaponGuid)
+			g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_EQUIP_IS_LOCKED)
+			return
 		}
 		costWeaponIdList = append(costWeaponIdList, foodWeapon.WeaponId)
 	}

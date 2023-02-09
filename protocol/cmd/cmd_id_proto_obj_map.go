@@ -248,6 +248,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(WeaponPromoteRsp, &proto.WeaponPromoteRsp{})                               // 武器突破响应
 	c.registerMessage(WeaponAwakenReq, &proto.WeaponAwakenReq{})                                 // 武器精炼请求
 	c.registerMessage(WeaponAwakenRsp, &proto.WeaponAwakenRsp{})                                 // 武器精炼响应
+	c.registerMessage(SetEquipLockStateReq, &proto.SetEquipLockStateReq{})                       // 设置装备上锁状态请求
+	c.registerMessage(SetEquipLockStateRsp, &proto.SetEquipLockStateRsp{})                       // 设置装备上锁状态响应
 
 	// 商店
 	c.registerMessage(GetShopmallDataReq, &proto.GetShopmallDataReq{})       // 商店信息请求

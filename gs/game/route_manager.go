@@ -136,6 +136,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.WeaponPromoteReq, GAME_MANAGER.WeaponPromoteReq)
 	r.registerRouter(cmd.WeaponAwakenReq, GAME_MANAGER.WeaponAwakenReq)
 	r.registerRouter(cmd.AvatarPromoteGetRewardReq, GAME_MANAGER.AvatarPromoteGetRewardReq)
+	r.registerRouter(cmd.SetEquipLockStateReq, GAME_MANAGER.SetEquipLockStateReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

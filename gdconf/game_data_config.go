@@ -114,17 +114,17 @@ func (g *GameDataConfig) load() {
 	g.loadSceneData()            // 场景
 	g.loadScenePoint()           // 场景传送点
 	g.loadSceneTagData()         // 场景地图图标
-	g.loadScene()                // 场景详情
-	g.loadWorldAreaData()        // 世界区域
-	g.loadGatherData()           // 采集物
-	g.loadFetterData()           // 角色资料解锁
-	g.loadItemData()             // 统一道具
-	g.loadAvatarLevelData()      // 角色等级
-	g.loadAvatarPromoteData()    // 角色突破
-	g.loadPlayerLevelData()      // 玩家等级
-	g.loadWeaponLevelData()      // 武器等级
-	g.loadWeaponPromoteData()    // 武器突破
-	g.loadRewardData()           // 奖励
+	// g.loadScene()                // 场景详情
+	g.loadWorldAreaData()     // 世界区域
+	g.loadGatherData()        // 采集物
+	g.loadFetterData()        // 角色资料解锁
+	g.loadItemData()          // 统一道具
+	g.loadAvatarLevelData()   // 角色等级
+	g.loadAvatarPromoteData() // 角色突破
+	g.loadPlayerLevelData()   // 玩家等级
+	g.loadWeaponLevelData()   // 武器等级
+	g.loadWeaponPromoteData() // 武器突破
+	g.loadRewardData()        // 奖励
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

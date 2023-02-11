@@ -377,7 +377,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		// 封号通知
 		return loginFailRsp(int32(proto.Retcode_RET_BLACK_UID), true, tokenVerifyRsp.ForbidEndTime)
 	}
-	clientConnNum := atomic.AddInt32(&CLIENT_CONN_NUM, 1)
+	clientConnNum := atomic.LoadInt32(&CLIENT_CONN_NUM)
 	if clientConnNum > MaxClientConnNumLimit {
 		logger.Error("gate conn num limit, uid: %v", uid)
 		return loginFailRsp(int32(proto.Retcode_RET_MAX_PLAYER), false, 0)

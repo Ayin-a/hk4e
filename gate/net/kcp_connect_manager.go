@@ -150,6 +150,7 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 		}
 		conn.SetACKNoDelay(true)
 		conn.SetWriteDelay(false)
+		atomic.AddInt32(&CLIENT_CONN_NUM, 1)
 		logger.Info("client connect, convId: %v", convId)
 		kcpRawSendChan := make(chan *ProtoMsg, 1000)
 		session := &Session{

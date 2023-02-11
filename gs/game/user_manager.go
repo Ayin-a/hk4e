@@ -470,15 +470,25 @@ func (u *UserManager) LoadUserChatMsgFromDbSync(userId uint32) map[uint32][]*mod
 		return chatMsgMap
 	}
 	for _, chatMsg := range chatMsgList {
-		msgList, exist := chatMsgMap[chatMsg.ToUid]
+		otherUid := uint32(0)
+		if chatMsg.Uid == userId {
+			otherUid = chatMsg.ToUid
+		} else if chatMsg.ToUid == userId {
+			otherUid = chatMsg.Uid
+		} else {
+			continue
+		}
+		msgList, exist := chatMsgMap[otherUid]
 		if !exist {
 			msgList = make([]*model.ChatMsg, 0)
 		}
-		if len(msgList) > MaxMsgListLen {
-			continue
-		}
 		msgList = append(msgList, chatMsg)
-		chatMsgMap[chatMsg.ToUid] = msgList
+		chatMsgMap[otherUid] = msgList
+	}
+	for otherUid, msgList := range chatMsgMap {
+		if len(msgList) > MaxMsgListLen {
+			chatMsgMap[otherUid] = msgList[len(msgList)-MaxMsgListLen:]
+		}
 	}
 	return chatMsgMap
 }

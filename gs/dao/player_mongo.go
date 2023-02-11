@@ -246,14 +246,29 @@ func (d *Dao) QueryChatMsgList() ([]*model.ChatMsg, error) {
 
 func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 	db := d.db.Collection("chat_msg")
+	result := make([]*model.ChatMsg, 0)
 	find, err := db.Find(
 		context.TODO(),
-		bson.D{{"ToUid", uid}, {"Uid", uid}},
+		bson.D{{"ToUid", uid}},
 	)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*model.ChatMsg, 0)
+	for find.Next(context.TODO()) {
+		item := new(model.ChatMsg)
+		err = find.Decode(item)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	find, err = db.Find(
+		context.TODO(),
+		bson.D{{"Uid", uid}},
+	)
+	if err != nil {
+		return nil, err
+	}
 	for find.Next(context.TODO()) {
 		item := new(model.ChatMsg)
 		err = find.Decode(item)

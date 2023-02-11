@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"hk4e/common/config"
@@ -148,13 +149,14 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 	}
 }
 
-// 从GS接收消息
+// 接收来自其他服务器的消息
 func (k *KcpConnectManager) sendMsgHandle() {
 	logger.Debug("send msg handle start")
+	// 函数栈内缓存 添加删除事件走chan 避免频繁加锁
 	convSessionMap := make(map[uint64]*Session)
 	userIdConvMap := make(map[uint32]uint64)
+	// 分发到每个连接具体的发送协程
 	sendToClientFn := func(protoMsg *ProtoMsg) {
-		// 分发到每个连接具体的发送协程
 		session := convSessionMap[protoMsg.ConvId]
 		if session == nil {
 			logger.Error("session is nil, convId: %v", protoMsg.ConvId)
@@ -212,6 +214,8 @@ func (k *KcpConnectManager) sendMsgHandle() {
 		}
 		kcpRawSendChan <- protoMsg
 	}
+	// 远程全局顶号注册列表
+	reLoginRemoteKickRegMap := make(map[uint32]chan bool)
 	for {
 		select {
 		case session := <-k.createSessionChan:
@@ -221,6 +225,8 @@ func (k *KcpConnectManager) sendMsgHandle() {
 			delete(convSessionMap, session.conn.GetConv())
 			delete(userIdConvMap, session.userId)
 			close(session.kcpRawSendChan)
+		case remoteKick := <-k.reLoginRemoteKickRegChan:
+			reLoginRemoteKickRegMap[remoteKick.userId] = remoteKick.kickFinishNotifyChan
 		case protoMsg := <-k.localMsgOutput:
 			sendToClientFn(protoMsg)
 		case netMsg := <-k.messageQueue.GetNetMsg():
@@ -268,7 +274,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 					session := convSessionMap[convId]
 					if session == nil {
 						logger.Error("session is nil, convId: %v", convId)
-						return
+						continue
 					}
 					session.gsServerAppId = serverMsg.GameServerAppId
 					session.fightServerAppId = ""
@@ -285,6 +291,22 @@ func (k *KcpConnectManager) sendMsgHandle() {
 						EventId: mq.NormalMsg,
 						GameMsg: gameMsg,
 					})
+				case mq.ServerUserOnlineStateChangeNotify:
+					// 收到GS玩家离线完成通知 唤醒存在的顶号登录流程
+					if serverMsg.IsOnline {
+						k.globalGsOnlineMapLock.Lock()
+						k.globalGsOnlineMap[serverMsg.UserId] = netMsg.OriginServerAppId
+						k.globalGsOnlineMapLock.Unlock()
+					} else {
+						k.globalGsOnlineMapLock.Lock()
+						delete(k.globalGsOnlineMap, serverMsg.UserId)
+						k.globalGsOnlineMapLock.Unlock()
+						kickFinishNotifyChan, exist := reLoginRemoteKickRegMap[serverMsg.UserId]
+						if !exist {
+							continue
+						}
+						kickFinishNotifyChan <- true
+					}
 				}
 			}
 		}
@@ -300,8 +322,13 @@ func (k *KcpConnectManager) getHeadMsg(clientSeq uint32) (headMsg *proto.PacketH
 	return headMsg
 }
 
-func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session *Session) (rsp *proto.GetPlayerTokenRsp) {
-	loginFail := func() {
+type RemoteKick struct {
+	userId               uint32
+	kickFinishNotifyChan chan bool
+}
+
+func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session *Session) *proto.GetPlayerTokenRsp {
+	loginFailClose := func() {
 		k.kcpEventInput <- &KcpEvent{
 			ConvId:       session.conn.GetConv(),
 			EventId:      KcpConnForceClose,
@@ -313,26 +340,26 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		AccountToken: req.AccountToken,
 	}, "")
 	if err != nil {
-		logger.Error("verify token error: %v", err)
-		loginFail()
+		logger.Error("verify token error: %v, account uid: %v", err, req.AccountUid)
+		loginFailClose()
 		return nil
 	}
-	if !tokenVerifyRsp.Valid {
-		logger.Error("token error")
-		loginFail()
-		return nil
-	}
-	// comboToken验证成功
-	if tokenVerifyRsp.Forbid {
-		// 封号通知
-		rsp = new(proto.GetPlayerTokenRsp)
-		rsp.Uid = tokenVerifyRsp.PlayerID
+	uid := tokenVerifyRsp.PlayerID
+	loginFailRsp := func(retCode int32, isForbid bool, forbidEndTime uint32) *proto.GetPlayerTokenRsp {
+		// 关联session信息 不然包发不出去
+		session.userId = uid
+		k.SetSession(session, session.conn.GetConv(), session.userId)
+		k.createSessionChan <- session
+		rsp := new(proto.GetPlayerTokenRsp)
+		rsp.Uid = uid
 		rsp.IsProficientPlayer = true
-		rsp.Retcode = int32(proto.Retcode_RET_BLACK_UID)
-		rsp.Msg = "FORBID_CHEATING_PLUGINS"
-		rsp.BlackUidEndTime = tokenVerifyRsp.ForbidEndTime
-		if rsp.BlackUidEndTime == 0 {
-			rsp.BlackUidEndTime = 2051193600 // 2035-01-01 00:00:00
+		rsp.Retcode = retCode
+		if isForbid {
+			rsp.Msg = "FORBID_CHEATING_PLUGINS"
+			rsp.BlackUidEndTime = forbidEndTime
+			if rsp.BlackUidEndTime == 0 {
+				rsp.BlackUidEndTime = 2051193600 // 2035-01-01 00:00:00
+			}
 		}
 		rsp.RegPlatform = 3
 		rsp.CountryCode = "US"
@@ -341,31 +368,57 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		rsp.ClientIpStr = split[0]
 		return rsp
 	}
-	oldSession := k.GetSessionByUserId(tokenVerifyRsp.PlayerID)
+	if !tokenVerifyRsp.Valid {
+		logger.Error("token error, uid: %v", uid)
+		return loginFailRsp(int32(proto.Retcode_RET_TOKEN_ERROR), false, 0)
+	}
+	// comboToken验证成功
+	if tokenVerifyRsp.Forbid {
+		// 封号通知
+		return loginFailRsp(int32(proto.Retcode_RET_BLACK_UID), true, tokenVerifyRsp.ForbidEndTime)
+	}
+	clientConnNum := atomic.AddInt32(&CLIENT_CONN_NUM, 1)
+	if clientConnNum > MaxClientConnNumLimit {
+		logger.Error("gate conn num limit, uid: %v", uid)
+		return loginFailRsp(int32(proto.Retcode_RET_MAX_PLAYER), false, 0)
+	}
+	oldSession := k.GetSessionByUserId(uid)
 	if oldSession != nil {
 		// 本地顶号
-		kickFinishNotifyChan := make(chan bool)
 		k.kcpEventInput <- &KcpEvent{
-			ConvId:       oldSession.conn.GetConv(),
-			EventId:      KcpConnRelogin,
-			EventMessage: kickFinishNotifyChan,
+			ConvId:  oldSession.conn.GetConv(),
+			EventId: KcpConnRelogin,
+		}
+		kickFinishNotifyChan := make(chan bool)
+		k.reLoginRemoteKickRegChan <- &RemoteKick{
+			userId:               uid,
+			kickFinishNotifyChan: kickFinishNotifyChan,
 		}
 		<-kickFinishNotifyChan
-	} else {
+	}
+	k.globalGsOnlineMapLock.RLock()
+	_, exist := k.globalGsOnlineMap[uid]
+	k.globalGsOnlineMapLock.RUnlock()
+	if exist {
 		// 远程全局顶号
 		connCtrlMsg := new(mq.ConnCtrlMsg)
-		connCtrlMsg.KickUserId = tokenVerifyRsp.PlayerID
+		connCtrlMsg.KickUserId = uid
 		connCtrlMsg.KickReason = kcp.EnetServerRelogin
 		k.messageQueue.SendToAll(&mq.NetMsg{
 			MsgType:     mq.MsgTypeConnCtrl,
 			EventId:     mq.KickPlayerNotify,
 			ConnCtrlMsg: connCtrlMsg,
 		})
-		// TODO 确保旧连接已下线 已通知GS已保存好数据
-		time.Sleep(time.Second)
+		// 注册回调通知
+		kickFinishNotifyChan := make(chan bool)
+		k.reLoginRemoteKickRegChan <- &RemoteKick{
+			userId:               uid,
+			kickFinishNotifyChan: kickFinishNotifyChan,
+		}
+		<-kickFinishNotifyChan
 	}
 	// 关联玩家uid和连接信息
-	session.userId = tokenVerifyRsp.PlayerID
+	session.userId = uid
 	k.SetSession(session, session.conn.GetConv(), session.userId)
 	k.createSessionChan <- session
 	// 绑定各个服务器appid
@@ -373,8 +426,8 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		ServerType: api.GS,
 	})
 	if err != nil {
-		logger.Error("get gs server appid error: %v", err)
-		loginFail()
+		logger.Error("get gs server appid error: %v, uid: %v", err, uid)
+		loginFailClose()
 		return nil
 	}
 	session.gsServerAppId = gsServerAppId.AppId
@@ -382,22 +435,22 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		ServerType: api.FIGHT,
 	})
 	if err != nil {
-		logger.Error("get fight server appid error: %v", err)
+		logger.Error("get fight server appid error: %v, uid: %v", err, uid)
 	}
 	session.fightServerAppId = fightServerAppId.AppId
 	pathfindingServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
 		ServerType: api.PATHFINDING,
 	})
 	if err != nil {
-		logger.Error("get pathfinding server appid error: %v", err)
+		logger.Error("get pathfinding server appid error: %v, uid: %v", err, uid)
 	}
 	session.pathfindingServerAppId = pathfindingServerAppId.AppId
-	logger.Debug("session gs appid: %v", session.gsServerAppId)
-	logger.Debug("session fight appid: %v", session.fightServerAppId)
-	logger.Debug("session pathfinding appid: %v", session.pathfindingServerAppId)
+	logger.Debug("session gs appid: %v, uid: %v", session.gsServerAppId, uid)
+	logger.Debug("session fight appid: %v, uid: %v", session.fightServerAppId, uid)
+	logger.Debug("session pathfinding appid: %v, uid: %v", session.pathfindingServerAppId, uid)
 	// 返回响应
-	rsp = new(proto.GetPlayerTokenRsp)
-	rsp.Uid = tokenVerifyRsp.PlayerID
+	rsp := new(proto.GetPlayerTokenRsp)
+	rsp.Uid = uid
 	rsp.AccountUid = req.AccountUid
 	rsp.Token = req.AccountToken
 	data := make([]byte, 16+32)
@@ -418,66 +471,66 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	serverSeedUint64 := timeRand.Uint64()
 	session.seed = serverSeedUint64
 	if req.GetKeyId() != 0 {
-		logger.Debug("do hk4e 2.8 rsa logic")
+		logger.Debug("do hk4e 2.8 rsa logic, uid: %v", uid)
 		session.useMagicSeed = true
 		keyId := strconv.Itoa(int(req.GetKeyId()))
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]
 		if !exist {
-			logger.Error("can not found key id: %v", keyId)
-			loginFail()
+			logger.Error("can not found key id: %v, uid: %v", keyId, uid)
+			loginFailClose()
 			return nil
 		}
 		pubKey, err := endec.RsaParsePubKeyByPrivKey(encPubPrivKey)
 		if err != nil {
-			logger.Error("parse rsa pub key error: %v", err)
-			loginFail()
+			logger.Error("parse rsa pub key error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		signPrivkey, err := endec.RsaParsePrivKey(k.signRsaKey)
 		if err != nil {
-			logger.Error("parse rsa priv key error: %v", err)
-			loginFail()
+			logger.Error("parse rsa priv key error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		clientSeedBase64 := req.GetClientRandKey()
 		clientSeedEnc, err := base64.StdEncoding.DecodeString(clientSeedBase64)
 		if err != nil {
-			logger.Error("parse client seed base64 error: %v", err)
-			loginFail()
+			logger.Error("parse client seed base64 error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		clientSeed, err := endec.RsaDecrypt(clientSeedEnc, signPrivkey)
 		if err != nil {
-			logger.Error("rsa dec error: %v", err)
-			loginFail()
+			logger.Error("rsa dec error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		clientSeedUint64 := uint64(0)
 		err = binary.Read(bytes.NewReader(clientSeed), binary.BigEndian, &clientSeedUint64)
 		if err != nil {
-			logger.Error("parse client seed to uint64 error: %v", err)
-			loginFail()
+			logger.Error("parse client seed to uint64 error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		seedUint64 := serverSeedUint64 ^ clientSeedUint64
 		seedBuf := new(bytes.Buffer)
 		err = binary.Write(seedBuf, binary.BigEndian, seedUint64)
 		if err != nil {
-			logger.Error("conv seed uint64 to bytes error: %v", err)
-			loginFail()
+			logger.Error("conv seed uint64 to bytes error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		seed := seedBuf.Bytes()
 		seedEnc, err := endec.RsaEncrypt(seed, pubKey)
 		if err != nil {
-			logger.Error("rsa enc error: %v", err)
-			loginFail()
+			logger.Error("rsa enc error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		seedSign, err := endec.RsaSign(seed, signPrivkey)
 		if err != nil {
-			logger.Error("rsa sign error: %v", err)
-			loginFail()
+			logger.Error("rsa sign error: %v, uid: %v", err, uid)
+			loginFailClose()
 			return nil
 		}
 		rsp.KeyId = req.KeyId

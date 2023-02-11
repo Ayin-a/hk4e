@@ -27,12 +27,12 @@ type Avatar struct {
 	FetterLevel         uint8              `bson:"fetterLevel"`      // 好感度等级
 	FetterExp           uint32             `bson:"fetterExp"`        // 好感度经验
 	PromoteRewardMap    map[uint32]bool    `bson:"promoteRewardMap"` // 突破奖励 map[突破等级]是否已被领取
-	Guid                uint64             `bson:"-"`
-	EquipGuidMap        map[uint64]uint64  `bson:"-"`
-	EquipWeapon         *Weapon            `bson:"-"`
-	EquipReliquaryList  []*Reliquary       `bson:"-"`
-	FightPropMap        map[uint32]float32 `bson:"-"`
-	ExtraAbilityEmbryos map[string]bool    `bson:"-"`
+	Guid                uint64             `bson:"-" msgpack:"-"`
+	EquipGuidMap        map[uint64]uint64  `bson:"-" msgpack:"-"`
+	EquipWeapon         *Weapon            `bson:"-" msgpack:"-"`
+	EquipReliquaryList  []*Reliquary       `bson:"-" msgpack:"-"`
+	FightPropMap        map[uint32]float32 `bson:"-" msgpack:"-"`
+	ExtraAbilityEmbryos map[string]bool    `bson:"-" msgpack:"-"`
 }
 
 func (p *Player) InitAllAvatar() {

@@ -85,6 +85,17 @@ func (t *TickManager) onUserTickSecond(userId uint32, now int64) {
 }
 
 func (t *TickManager) onUserTickMinute(userId uint32, now int64) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	if uint32(now/1000)-player.LastKeepaliveTime > 60 {
+		logger.Error("remove keepalive timeout user, uid: %v", userId)
+		GAME_MANAGER.OnUserOffline(userId, &ChangeGsInfo{
+			IsChangeGs: false,
+		})
+	}
 }
 
 // 玩家定时任务常量
@@ -182,15 +193,6 @@ func (t *TickManager) onTickMinute(now int64) {
 			count := random.GetRandomInt32(0, 4)
 			i := int32(0)
 			for itemId := range allItemDataConfig {
-				itemDataConfig, ok := allItemDataConfig[itemId]
-				if !ok {
-					logger.Error("config is nil, itemId: %v", itemId)
-					return
-				}
-				// TODO 3.0.0REL版本中 发送某些无效家具 可能会导致客户端背包家具界面卡死
-				if uint16(itemDataConfig.Type) == constant.ITEM_TYPE_FURNITURE {
-					continue
-				}
 				num := random.GetRandomInt32(1, 9)
 				GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
 				i++

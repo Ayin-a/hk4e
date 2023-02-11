@@ -15,7 +15,7 @@ type Weapon struct {
 	AffixIdList []uint32 `bson:"affixIdList"` // 词缀
 	Refinement  uint8    `bson:"refinement"`  // 精炼等阶
 	AvatarId    uint32   `bson:"avatarId"`    // 装备角色id
-	Guid        uint64   `bson:"-"`
+	Guid        uint64   `bson:"-" msgpack:"-"`
 }
 
 func (p *Player) InitWeapon(weapon *Weapon) {

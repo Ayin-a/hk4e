@@ -61,13 +61,7 @@ func (k *KcpConnectManager) eventHandle() {
 				k.closeAllKcpConn()
 			}
 		case KcpConnRelogin:
-			kickFinishNotifyChan, ok := event.EventMessage.(chan bool)
-			if !ok {
-				logger.Error("event KcpConnRelogin msg type error")
-				continue
-			}
 			k.forceCloseKcpConn(event.ConvId, kcp.EnetServerRelogin)
-			kickFinishNotifyChan <- true
 		}
 	}
 }

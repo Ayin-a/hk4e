@@ -17,9 +17,9 @@ func (m *MessageQueue) getTopic(serverType string, appId string) string {
 
 func (m *MessageQueue) SendToGate(appId string, netMsg *NetMsg) {
 	netMsg.Topic = m.getTopic(api.GATE, appId)
-	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.ServerType = api.GATE
 	netMsg.AppId = appId
+	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType
 	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
@@ -27,9 +27,9 @@ func (m *MessageQueue) SendToGate(appId string, netMsg *NetMsg) {
 
 func (m *MessageQueue) SendToGs(appId string, netMsg *NetMsg) {
 	netMsg.Topic = m.getTopic(api.GS, appId)
-	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.ServerType = api.GS
 	netMsg.AppId = appId
+	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType
 	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
@@ -37,9 +37,9 @@ func (m *MessageQueue) SendToGs(appId string, netMsg *NetMsg) {
 
 func (m *MessageQueue) SendToFight(appId string, netMsg *NetMsg) {
 	netMsg.Topic = m.getTopic(api.FIGHT, appId)
-	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.ServerType = api.FIGHT
 	netMsg.AppId = appId
+	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType
 	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
@@ -47,9 +47,9 @@ func (m *MessageQueue) SendToFight(appId string, netMsg *NetMsg) {
 
 func (m *MessageQueue) SendToPathfinding(appId string, netMsg *NetMsg) {
 	netMsg.Topic = m.getTopic(api.PATHFINDING, appId)
-	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.ServerType = api.PATHFINDING
 	netMsg.AppId = appId
+	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType
 	netMsg.OriginServerAppId = originServerAppId
 	m.netMsgInput <- netMsg
@@ -57,6 +57,7 @@ func (m *MessageQueue) SendToPathfinding(appId string, netMsg *NetMsg) {
 
 func (m *MessageQueue) SendToAll(netMsg *NetMsg) {
 	netMsg.Topic = "ALL_SERVER_HK4E"
+	netMsg.ServerType = "ALL_SERVER_HK4E"
 	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType
 	netMsg.OriginServerAppId = originServerAppId

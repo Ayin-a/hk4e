@@ -185,6 +185,7 @@ func (g *GameManager) gameMainLoop() {
 	tickCost := int64(0)
 	localEventCost := int64(0)
 	commandCost := int64(0)
+	routeCount := int64(0)
 	runtime.LockOSThread()
 	for {
 		// 消耗CPU时间性能统计
@@ -194,7 +195,7 @@ func (g *GameManager) gameMainLoop() {
 			tickCost /= 1e6
 			localEventCost /= 1e6
 			commandCost /= 1e6
-			logger.Info("[GAME MAIN LOOP] cpu time cost detail, routeCost: %vms, tickCost: %vms, localEventCost: %vms, commandCost: %vms",
+			logger.Info("[GAME MAIN LOOP] cpu time cost detail, routeCost: %v ms, tickCost: %v ms, localEventCost: %v ms, commandCost: %v ms",
 				routeCost, tickCost, localEventCost, commandCost)
 			totalCost := routeCost + tickCost + localEventCost + commandCost
 			logger.Info("[GAME MAIN LOOP] cpu time cost percent, routeCost: %v%%, tickCost: %v%%, localEventCost: %v%%, commandCost: %v%%",
@@ -202,15 +203,17 @@ func (g *GameManager) gameMainLoop() {
 				float32(tickCost)/float32(totalCost)*100.0,
 				float32(localEventCost)/float32(totalCost)*100.0,
 				float32(commandCost)/float32(totalCost)*100.0)
-			logger.Info("[GAME MAIN LOOP] total cpu time cost detail, totalCost: %vms",
+			logger.Info("[GAME MAIN LOOP] total cpu time cost detail, totalCost: %v ms",
 				totalCost)
 			logger.Info("[GAME MAIN LOOP] total cpu time cost percent, totalCost: %v%%",
 				float32(totalCost)/float32(intervalTime/1e6)*100.0)
+			logger.Info("[GAME MAIN LOOP] avg route cost: %v ms", float32(routeCost)/float32(routeCount))
 			lastTime = now
 			routeCost = 0
 			tickCost = 0
 			localEventCost = 0
 			commandCost = 0
+			routeCount = 0
 		}
 		select {
 		case netMsg := <-MESSAGE_QUEUE.GetNetMsg():
@@ -219,6 +222,7 @@ func (g *GameManager) gameMainLoop() {
 			ROUTE_MANAGER.RouteHandle(netMsg)
 			end := time.Now().UnixNano()
 			routeCost += end - start
+			routeCount++
 		case <-TICK_MANAGER.GetGlobalTick().C:
 			// 游戏服务器定时帧
 			start := time.Now().UnixNano()
@@ -232,12 +236,12 @@ func (g *GameManager) gameMainLoop() {
 			end := time.Now().UnixNano()
 			localEventCost += end - start
 		case command := <-COMMAND_MANAGER.GetCommandTextInput():
-			// 处理传入的命令(普通玩家 GM命令)
+			// 处理GM命令
 			start := time.Now().UnixNano()
 			COMMAND_MANAGER.HandleCommand(command)
 			end := time.Now().UnixNano()
 			commandCost += end - start
-			logger.Info("run gm cmd cost: %v ns", commandCost)
+			logger.Info("run gm cmd cost: %v ns", end-start)
 		}
 	}
 }

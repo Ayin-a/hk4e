@@ -21,13 +21,17 @@ func (d *Dao) GetRedisPlayerKey(userId uint32) string {
 }
 
 func (d *Dao) GetRedisPlayer(userId uint32) *model.Player {
+	startTime := time.Now().UnixNano()
 	playerDataLz4, err := d.redis.Get(context.TODO(), d.GetRedisPlayerKey(userId)).Result()
 	if err != nil {
 		logger.Error("get player from redis error: %v", err)
 		return nil
 	}
+	endTime := time.Now().UnixNano()
+	costTime := endTime - startTime
+	logger.Debug("get player from redis cost time: %v ns", costTime)
 	// 解压
-	startTime := time.Now().UnixNano()
+	startTime = time.Now().UnixNano()
 	in := bytes.NewReader([]byte(playerDataLz4))
 	out := new(bytes.Buffer)
 	lz4Reader := lz4.NewReader(in)
@@ -37,8 +41,8 @@ func (d *Dao) GetRedisPlayer(userId uint32) *model.Player {
 		return nil
 	}
 	playerData := out.Bytes()
-	endTime := time.Now().UnixNano()
-	costTime := endTime - startTime
+	endTime = time.Now().UnixNano()
+	costTime = endTime - startTime
 	logger.Debug("lz4 decode cost time: %v ns, before len: %v, after len: %v, ratio lz4/raw: %v",
 		costTime, len(playerDataLz4), len(playerData), float64(len(playerDataLz4))/float64(len(playerData)))
 	player := new(model.Player)
@@ -76,11 +80,15 @@ func (d *Dao) SetRedisPlayer(player *model.Player) {
 	costTime := endTime - startTime
 	logger.Debug("lz4 encode cost time: %v ns, before len: %v, after len: %v, ratio lz4/raw: %v",
 		costTime, len(playerData), len(playerDataLz4), float64(len(playerDataLz4))/float64(len(playerData)))
+	startTime = time.Now().UnixNano()
 	err = d.redis.Set(context.TODO(), d.GetRedisPlayerKey(player.PlayerID), playerDataLz4, time.Hour*24*30).Err()
 	if err != nil {
 		logger.Error("set player to redis error: %v", err)
 		return
 	}
+	endTime = time.Now().UnixNano()
+	costTime = endTime - startTime
+	logger.Debug("set player to redis cost time: %v ns", costTime)
 }
 
 func (d *Dao) SetRedisPlayerList(playerList []*model.Player) {

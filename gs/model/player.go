@@ -62,6 +62,7 @@ type Player struct {
 	DbState               int                                      `bson:"-" msgpack:"-"` // 数据库存档状态
 	WorldId               uint32                                   `bson:"-" msgpack:"-"` // 所在的世界id
 	GameObjectGuidCounter uint64                                   `bson:"-" msgpack:"-"` // 游戏对象guid计数器
+	LastKeepaliveTime     uint32                                   `bson:"-" msgpack:"-"` // 上一次保持活跃时间
 	ClientTime            uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端的本地时钟
 	ClientRTT             uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端往返时延
 	GameObjectGuidMap     map[uint64]GameObject                    `bson:"-" msgpack:"-"` // 游戏对象guid映射表

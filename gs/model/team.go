@@ -36,8 +36,8 @@ type TeamInfo struct {
 	TeamList             []*Team         `bson:"teamList"`
 	CurrTeamIndex        uint8           `bson:"currTeamIndex"`
 	CurrAvatarIndex      uint8           `bson:"currAvatarIndex"`
-	TeamResonances       map[uint16]bool `bson:"-"`
-	TeamResonancesConfig map[int32]bool  `bson:"-"`
+	TeamResonances       map[uint16]bool `bson:"-" msgpack:"-"`
+	TeamResonancesConfig map[int32]bool  `bson:"-" msgpack:"-"`
 }
 
 func NewTeamInfo() (r *TeamInfo) {

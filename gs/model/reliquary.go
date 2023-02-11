@@ -15,7 +15,7 @@ type Reliquary struct {
 	AffixIdList []uint32 `bson:"affixIdList"` // 词缀
 	MainPropId  uint32   `bson:"mainPropId"`  // 主词条id
 	AvatarId    uint32   `bson:"avatarId"`    // 装备角色id
-	Guid        uint64   `bson:"-"`
+	Guid        uint64   `bson:"-" msgpack:"-"`
 }
 
 func (p *Player) InitReliquary(reliquary *Reliquary) {

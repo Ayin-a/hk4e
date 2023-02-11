@@ -28,7 +28,7 @@ const (
 	PacketMaxLen           = 343 * 1024 // 最大应用层包长度
 	ConnRecvTimeout        = 30         // 收包超时时间 秒
 	ConnSendTimeout        = 10         // 发包超时时间 秒
-	MaxClientConnNumLimit  = 100        // 最大客户端连接数限制
+	MaxClientConnNumLimit  = 2          // 最大客户端连接数限制
 )
 
 var CLIENT_CONN_NUM int32 = 0 // 当前客户端连接数
@@ -37,14 +37,17 @@ type KcpConnectManager struct {
 	discovery *rpc.DiscoveryClient // node服务器客户端
 	openState bool                 // 网关开放状态
 	// 会话
-	sessionConvIdMap   map[uint64]*Session
-	sessionUserIdMap   map[uint32]*Session
-	sessionMapLock     sync.RWMutex
-	createSessionChan  chan *Session
-	destroySessionChan chan *Session
+	sessionConvIdMap      map[uint64]*Session
+	sessionUserIdMap      map[uint32]*Session
+	sessionMapLock        sync.RWMutex
+	createSessionChan     chan *Session
+	destroySessionChan    chan *Session
+	globalGsOnlineMap     map[uint32]string
+	globalGsOnlineMapLock sync.RWMutex
 	// 连接事件
-	kcpEventInput  chan *KcpEvent
-	kcpEventOutput chan *KcpEvent
+	kcpEventInput            chan *KcpEvent
+	kcpEventOutput           chan *KcpEvent
+	reLoginRemoteKickRegChan chan *RemoteKick
 	// 协议
 	serverCmdProtoMap *cmd.CmdProtoMap
 	clientCmdProtoMap *client_proto.ClientCmdProtoMap
@@ -65,8 +68,10 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.sessionUserIdMap = make(map[uint32]*Session)
 	r.createSessionChan = make(chan *Session, 1000)
 	r.destroySessionChan = make(chan *Session, 1000)
+	r.globalGsOnlineMap = make(map[uint32]string)
 	r.kcpEventInput = make(chan *KcpEvent, 1000)
 	r.kcpEventOutput = make(chan *KcpEvent, 1000)
+	r.reLoginRemoteKickRegChan = make(chan *RemoteKick, 1000)
 	r.serverCmdProtoMap = cmd.NewCmdProtoMap()
 	if config.CONF.Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
@@ -110,8 +115,6 @@ func (k *KcpConnectManager) run() {
 
 func (k *KcpConnectManager) Close() {
 	k.closeAllKcpConn()
-	// 等待所有连接关闭时需要发送的消息发送完毕
-	time.Sleep(time.Second * 3)
 }
 
 func (k *KcpConnectManager) gateNetInfo() {
@@ -143,13 +146,6 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 		if k.openState == false {
 			logger.Error("gate not open, convId: %v", convId)
 			_ = conn.Close()
-			continue
-		}
-		clientConnNum := atomic.AddInt32(&CLIENT_CONN_NUM, 1)
-		if clientConnNum > MaxClientConnNumLimit {
-			logger.Error("gate conn num limit, convId: %v", convId)
-			_ = conn.Close()
-			atomic.AddInt32(&CLIENT_CONN_NUM, -1)
 			continue
 		}
 		conn.SetACKNoDelay(true)

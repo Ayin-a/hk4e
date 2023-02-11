@@ -22,42 +22,42 @@ type TokenVerifyRsp struct {
 }
 
 func (c *Controller) gateTokenVerify(context *gin.Context) {
-	VerifyFail := func() {
+	verifyFail := func(playerID uint32) {
 		context.JSON(http.StatusOK, &TokenVerifyRsp{
 			Valid:         false,
 			Forbid:        false,
 			ForbidEndTime: 0,
-			PlayerID:      0,
+			PlayerID:      playerID,
 		})
 	}
 	tokenVerifyReq := new(TokenVerifyReq)
 	err := context.ShouldBindJSON(tokenVerifyReq)
 	if err != nil {
-		VerifyFail()
+		verifyFail(0)
 		return
 	}
 	logger.Info("gate token verify, req: %v", tokenVerifyReq)
 	accountId, err := strconv.ParseUint(tokenVerifyReq.AccountId, 10, 64)
 	if err != nil {
-		VerifyFail()
+		verifyFail(0)
 		return
 	}
 	account, err := c.dao.QueryAccountByField("accountID", accountId)
 	if err != nil || account == nil {
-		VerifyFail()
+		verifyFail(0)
 		return
 	}
 	if tokenVerifyReq.AccountToken != account.ComboToken {
-		VerifyFail()
+		verifyFail(uint32(account.PlayerID))
 		return
 	}
 	if account.ComboTokenUsed {
-		VerifyFail()
+		verifyFail(uint32(account.PlayerID))
 		return
 	}
 	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboTokenUsed", true)
 	if err != nil {
-		VerifyFail()
+		verifyFail(uint32(account.PlayerID))
 		return
 	}
 	context.JSON(http.StatusOK, &TokenVerifyRsp{

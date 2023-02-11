@@ -5,7 +5,7 @@ import "hk4e/common/constant"
 type Item struct {
 	ItemId uint32 `bson:"itemId"` // 道具id
 	Count  uint32 `bson:"count"`  // 道具数量
-	Guid   uint64 `bson:"-"`
+	Guid   uint64 `bson:"-" msgpack:"-"`
 }
 
 func (p *Player) InitAllItem() {

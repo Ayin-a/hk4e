@@ -105,6 +105,10 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 		}
 	}
 	chatMsg := g.ConvChatInfoToChatMsg(chatInfo)
+
+	// 写入db
+	go USER_MANAGER.SaveUserChatMsgToDbSync(chatMsg)
+
 	// 消息加入自己的队列
 	msgList, exist := player.ChatMsgMap[targetUid]
 	if !exist {
@@ -141,15 +145,10 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 					},
 				},
 			})
-		} else {
-			// 目标玩家全服离线
-			chatMsgMap := map[uint32][]*model.ChatMsg{
-				player.PlayerID: {chatMsg},
-			}
-			go USER_MANAGER.AppendOfflineUserChatMsgToDbSync(targetUid, chatMsgMap)
 		}
 		return
 	}
+
 	// 消息加入目标玩家的队列
 	msgList, exist = targetPlayer.ChatMsgMap[player.PlayerID]
 	if !exist {
@@ -326,6 +325,9 @@ func (g *GameManager) ServerChatMsgNotify(chatMsgInfo *mq.ChatMsgInfo) {
 	msgList, exist := targetPlayer.ChatMsgMap[chatMsgInfo.Uid]
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
+	}
+	if len(msgList) > MaxMsgListLen {
+		msgList = msgList[1:]
 	}
 	msgList = append(msgList, chatMsg)
 	targetPlayer.ChatMsgMap[chatMsgInfo.Uid] = msgList

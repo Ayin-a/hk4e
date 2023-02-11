@@ -1,16 +1,21 @@
 package model
 
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
 const (
 	ChatMsgTypeText = iota
 	ChatMsgTypeIcon
 )
 
 type ChatMsg struct {
-	Time    uint32
-	ToUid   uint32
-	Uid     uint32
-	IsRead  bool
-	MsgType uint8
-	Text    string
-	Icon    uint32
+	ID      primitive.ObjectID `bson:"_id,omitempty"`
+	Time    uint32             `bson:"Time"`
+	ToUid   uint32             `bson:"ToUid"`
+	Uid     uint32             `bson:"Uid"`
+	IsRead  bool               `bson:"IsRead"`
+	MsgType uint8              `bson:"MsgType"`
+	Text    string             `bson:"Text"`
+	Icon    uint32             `bson:"Icon"`
 }

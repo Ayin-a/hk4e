@@ -6,7 +6,6 @@ import (
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/object"
 	"hk4e/protocol/proto"
 
 	"github.com/vmihailenco/msgpack/v5"
@@ -142,8 +141,7 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId stri
 			if player != nil {
 				u.SaveUserToRedisSync(player)
 				u.ChangeUserDbState(player, model.DbNormal)
-				playerDb := u.LoadUserChatMsgFromDbSync(userId)
-				player.ChatMsgMap = playerDb.ChatMsgMap
+				player.ChatMsgMap = u.LoadUserChatMsgFromDbSync(userId)
 			} else {
 				logger.Error("can not find user from db, uid: %v", userId)
 			}
@@ -179,14 +177,9 @@ func (u *UserManager) OfflineUser(player *model.Player, changeGsInfo *ChangeGsIn
 		logger.Error("marshal player data error: %v", err)
 		return
 	}
-	chatMsgMapData, err := object.DeepMarshal(&player.ChatMsgMap)
-	if err != nil {
-		logger.Error("marshal chat msg map error: %v", err)
-		return
-	}
 	endTime := time.Now().UnixNano()
 	costTime := endTime - startTime
-	logger.Info("offline copy player data and chat msg cost time: %v ns", costTime)
+	logger.Info("offline copy player data cost time: %v ns", costTime)
 	go func() {
 		playerCopy := new(model.Player)
 		err := msgpack.Unmarshal(playerData, playerCopy)
@@ -197,16 +190,6 @@ func (u *UserManager) OfflineUser(player *model.Player, changeGsInfo *ChangeGsIn
 		playerCopy.DbState = player.DbState
 		u.SaveUserToDbSync(playerCopy)
 		u.SaveUserToRedisSync(playerCopy)
-		chatMsgMap := make(map[uint32][]*model.ChatMsg)
-		err = object.DeepUnmarshal(&chatMsgMap, chatMsgMapData)
-		if err != nil {
-			logger.Error("unmarshal chat msg map error: %v", err)
-			return
-		}
-		playerDb := new(dao.PlayerDb)
-		playerDb.PlayerID = playerCopy.PlayerID
-		playerDb.ChatMsgMap = chatMsgMap
-		u.SaveUserChatMsgToDbSync(playerDb)
 		LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
 			EventId: UserOfflineSaveToDbFinish,
 			Msg: &PlayerOfflineInfo{
@@ -479,49 +462,33 @@ func (u *UserManager) SaveUserListToDbSync(insertPlayerList []*model.Player, upd
 	logger.Info("save user finish, insert user count: %v, update user count: %v", len(insertPlayerList), len(updatePlayerList))
 }
 
-func (u *UserManager) LoadUserChatMsgFromDbSync(userId uint32) *dao.PlayerDb {
-	playerDb, err := u.dao.QueryPlayerDbByID(userId)
+func (u *UserManager) LoadUserChatMsgFromDbSync(userId uint32) map[uint32][]*model.ChatMsg {
+	chatMsgMap := make(map[uint32][]*model.ChatMsg)
+	chatMsgList, err := u.dao.QueryChatMsgListByUid(userId)
 	if err != nil {
-		logger.Error("query player db error: %v", err)
-		return nil
+		logger.Error("query chat msg list error: %v", err)
+		return chatMsgMap
 	}
-	return playerDb
+	for _, chatMsg := range chatMsgList {
+		msgList, exist := chatMsgMap[chatMsg.ToUid]
+		if !exist {
+			msgList = make([]*model.ChatMsg, 0)
+		}
+		if len(msgList) > MaxMsgListLen {
+			continue
+		}
+		msgList = append(msgList, chatMsg)
+		chatMsgMap[chatMsg.ToUid] = msgList
+	}
+	return chatMsgMap
 }
 
-func (u *UserManager) SaveUserChatMsgToDbSync(playerDb *dao.PlayerDb) {
-	_, err := u.dao.QueryPlayerDbByID(playerDb.PlayerID)
+func (u *UserManager) SaveUserChatMsgToDbSync(chatMsg *model.ChatMsg) {
+	err := u.dao.InsertChatMsg(chatMsg)
 	if err != nil {
-		err := u.dao.InsertPlayerDb(playerDb)
-		if err != nil {
-			logger.Error("insert player db error: %v", err)
-			return
-		}
-	} else {
-		err := u.dao.UpdatePlayerDb(playerDb)
-		if err != nil {
-			logger.Error("update player db error: %v", err)
-			return
-		}
-	}
-}
-
-func (u *UserManager) AppendOfflineUserChatMsgToDbSync(userId uint32, chatMsgMap map[uint32][]*model.ChatMsg) {
-	playerDb := u.LoadUserChatMsgFromDbSync(userId)
-	if playerDb == nil {
+		logger.Error("insert chat msg error: %v", err)
 		return
 	}
-	for uid, msgList := range chatMsgMap {
-		allMsgList, exist := playerDb.ChatMsgMap[uid]
-		if !exist {
-			allMsgList = make([]*model.ChatMsg, 0)
-		}
-		allMsgList = append(allMsgList, msgList...)
-		if len(allMsgList) > MaxMsgListLen {
-			allMsgList = allMsgList[len(allMsgList)-MaxMsgListLen:]
-		}
-		playerDb.ChatMsgMap[uid] = allMsgList
-	}
-	u.SaveUserChatMsgToDbSync(playerDb)
 }
 
 func (u *UserManager) LoadUserFromRedisSync(userId uint32) *model.Player {

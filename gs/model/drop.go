@@ -1,15 +1,15 @@
 package model
 
 type GachaPoolInfo struct {
-	GachaType       uint32 `bson:"gachaType"`       // 卡池类型
-	OrangeTimes     uint32 `bson:"orangeTimes"`     // 5星保底计数
-	PurpleTimes     uint32 `bson:"purpleTimes"`     // 4星保底计数
-	MustGetUpOrange bool   `bson:"mustGetUpOrange"` // 是否5星大保底
-	MustGetUpPurple bool   `bson:"mustGetUpPurple"` // 是否4星大保底
+	GachaType       uint32 // 卡池类型
+	OrangeTimes     uint32 // 5星保底计数
+	PurpleTimes     uint32 // 4星保底计数
+	MustGetUpOrange bool   // 是否5星大保底
+	MustGetUpPurple bool   // 是否4星大保底
 }
 
 type DropInfo struct {
-	GachaPoolInfo map[uint32]*GachaPoolInfo `bson:"gachaPoolInfo"`
+	GachaPoolInfo map[uint32]*GachaPoolInfo
 }
 
 func NewDropInfo() (r *DropInfo) {

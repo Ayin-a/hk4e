@@ -3,8 +3,8 @@ package model
 import "hk4e/common/constant"
 
 type Item struct {
-	ItemId uint32 `bson:"itemId"` // 道具id
-	Count  uint32 `bson:"count"`  // 道具数量
+	ItemId uint32 // 道具id
+	Count  uint32 // 道具数量
 	Guid   uint64 `bson:"-" msgpack:"-"`
 }
 

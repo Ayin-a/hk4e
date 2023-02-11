@@ -6,15 +6,15 @@ import (
 )
 
 type Weapon struct {
-	WeaponId    uint64   `bson:"weaponId"`    // 武器的唯一id
-	ItemId      uint32   `bson:"itemId"`      // 武器的道具id
-	Level       uint8    `bson:"level"`       // 等级
-	Exp         uint32   `bson:"exp"`         // 当前经验值
-	Promote     uint8    `bson:"promote"`     // 突破等阶
-	Lock        bool     `bson:"lock"`        // 锁定状态
-	AffixIdList []uint32 `bson:"affixIdList"` // 词缀
-	Refinement  uint8    `bson:"refinement"`  // 精炼等阶
-	AvatarId    uint32   `bson:"avatarId"`    // 装备角色id
+	WeaponId    uint64   // 武器的唯一id
+	ItemId      uint32   // 武器的道具id
+	Level       uint8    // 等级
+	Exp         uint32   // 当前经验值
+	Promote     uint8    // 突破等阶
+	Lock        bool     // 锁定状态
+	AffixIdList []uint32 // 词缀
+	Refinement  uint8    // 精炼等阶
+	AvatarId    uint32   // 装备角色id
 	Guid        uint64   `bson:"-" msgpack:"-"`
 }
 

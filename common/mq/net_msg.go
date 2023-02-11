@@ -10,17 +10,17 @@ const (
 )
 
 type NetMsg struct {
-	MsgType           uint8        `msgpack:"MsgType"`
-	EventId           uint16       `msgpack:"EventId"`
-	ServerType        string       `msgpack:"-"`
-	AppId             string       `msgpack:"-"`
-	Topic             string       `msgpack:"-"`
-	GameMsg           *GameMsg     `msgpack:"GameMsg"`
-	FightMsg          *FightMsg    `msgpack:"FightMsg"`
-	ConnCtrlMsg       *ConnCtrlMsg `msgpack:"ConnCtrlMsg"`
-	ServerMsg         *ServerMsg   `msgpack:"ServerMsg"`
-	OriginServerType  string       `msgpack:"OriginServerType"`
-	OriginServerAppId string       `msgpack:"OriginServerAppId"`
+	MsgType           uint8
+	EventId           uint16
+	ServerType        string `msgpack:"-"`
+	AppId             string `msgpack:"-"`
+	Topic             string `msgpack:"-"`
+	GameMsg           *GameMsg
+	FightMsg          *FightMsg
+	ConnCtrlMsg       *ConnCtrlMsg
+	ServerMsg         *ServerMsg
+	OriginServerType  string
+	OriginServerAppId string
 }
 
 const (
@@ -28,11 +28,11 @@ const (
 )
 
 type GameMsg struct {
-	UserId             uint32     `msgpack:"UserId"`
-	CmdId              uint16     `msgpack:"CmdId"`
-	ClientSeq          uint32     `msgpack:"ClientSeq"`
+	UserId             uint32
+	CmdId              uint16
+	ClientSeq          uint32
 	PayloadMessage     pb.Message `msgpack:"-"`
-	PayloadMessageData []byte     `msgpack:"PayloadMessageData"`
+	PayloadMessageData []byte
 }
 
 const (
@@ -43,11 +43,11 @@ const (
 )
 
 type ConnCtrlMsg struct {
-	UserId     uint32 `msgpack:"UserId"`
-	ClientRtt  uint32 `msgpack:"ClientRtt"`
-	ClientTime uint32 `msgpack:"ClientTime"`
-	KickUserId uint32 `msgpack:"KickUserId"`
-	KickReason uint32 `msgpack:"KickReason"`
+	UserId     uint32
+	ClientRtt  uint32
+	ClientTime uint32
+	KickUserId uint32
+	KickReason uint32
 }
 
 const (
@@ -58,12 +58,12 @@ const (
 )
 
 type FightMsg struct {
-	FightRoutineId  uint32             `msgpack:"FightRoutineId"`
-	EntityId        uint32             `msgpack:"EntityId"`
-	FightPropMap    map[uint32]float32 `msgpack:"FightPropMap"`
-	Uid             uint32             `msgpack:"Uid"`
-	AvatarGuid      uint64             `msgpack:"AvatarGuid"`
-	GateServerAppId string             `msgpack:"GateServerAppId"`
+	FightRoutineId  uint32
+	EntityId        uint32
+	FightPropMap    map[uint32]float32
+	Uid             uint32
+	AvatarGuid      uint64
+	GateServerAppId string
 }
 
 const (
@@ -77,56 +77,56 @@ const (
 )
 
 type ServerMsg struct {
-	FightServerAppId string         `msgpack:"FightServerAppId"`
-	UserId           uint32         `msgpack:"UserId"`
-	IsOnline         bool           `msgpack:"IsOnline"`
-	GameServerAppId  string         `msgpack:"GameServerAppId"`
-	JoinHostUserId   uint32         `msgpack:"JoinHostUserId"`
-	UserMpInfo       *UserMpInfo    `msgpack:"UserMpInfo"`
-	ChatMsgInfo      *ChatMsgInfo   `msgpack:"ChatMsgInfo"`
-	AddFriendInfo    *AddFriendInfo `msgpack:"AddFriendInfo"`
+	FightServerAppId string
+	UserId           uint32
+	IsOnline         bool
+	GameServerAppId  string
+	JoinHostUserId   uint32
+	UserMpInfo       *UserMpInfo
+	ChatMsgInfo      *ChatMsgInfo
+	AddFriendInfo    *AddFriendInfo
 }
 
 type OriginInfo struct {
-	CmdName string `msgpack:"CmdName"`
-	UserId  uint32 `msgpack:"UserId"`
+	CmdName string
+	UserId  uint32
 }
 
 type UserBaseInfo struct {
-	UserId         uint32 `msgpack:"UserId"`
-	Nickname       string `msgpack:"Nickname"`
-	PlayerLevel    uint32 `msgpack:"PlayerLevel"`
-	MpSettingType  uint8  `msgpack:"MpSettingType"`
-	NameCardId     uint32 `msgpack:"NameCardId"`
-	Signature      string `msgpack:"Signature"`
-	HeadImageId    uint32 `msgpack:"HeadImageId"`
-	WorldPlayerNum uint32 `msgpack:"WorldPlayerNum"`
-	WorldLevel     uint32 `msgpack:"WorldLevel"`
+	UserId         uint32
+	Nickname       string
+	PlayerLevel    uint32
+	MpSettingType  uint8
+	NameCardId     uint32
+	Signature      string
+	HeadImageId    uint32
+	WorldPlayerNum uint32
+	WorldLevel     uint32
 }
 
 type UserMpInfo struct {
-	OriginInfo            *OriginInfo   `msgpack:"OriginInfo"`
-	HostUserId            uint32        `msgpack:"HostUserId"`
-	ApplyUserId           uint32        `msgpack:"ApplyUserId"`
-	ApplyPlayerOnlineInfo *UserBaseInfo `msgpack:"ApplyPlayerOnlineInfo"`
-	ApplyOk               bool          `msgpack:"ApplyOk"`
-	Agreed                bool          `msgpack:"Agreed"`
-	Reason                int32         `msgpack:"Reason"`
-	HostNickname          string        `msgpack:"HostNickname"`
+	OriginInfo            *OriginInfo
+	HostUserId            uint32
+	ApplyUserId           uint32
+	ApplyPlayerOnlineInfo *UserBaseInfo
+	ApplyOk               bool
+	Agreed                bool
+	Reason                int32
+	HostNickname          string
 }
 
 type ChatMsgInfo struct {
-	Time    uint32 `msgpack:"Time"`
-	ToUid   uint32 `msgpack:"ToUid"`
-	Uid     uint32 `msgpack:"Uid"`
-	IsRead  bool   `msgpack:"IsRead"`
-	MsgType uint8  `msgpack:"MsgType"`
-	Text    string `msgpack:"Text"`
-	Icon    uint32 `msgpack:"Icon"`
+	Time    uint32
+	ToUid   uint32
+	Uid     uint32
+	IsRead  bool
+	MsgType uint8
+	Text    string
+	Icon    uint32
 }
 
 type AddFriendInfo struct {
-	OriginInfo            *OriginInfo   `msgpack:"OriginInfo"`
-	TargetUserId          uint32        `msgpack:"TargetUserId"`
-	ApplyPlayerOnlineInfo *UserBaseInfo `msgpack:"ApplyPlayerOnlineInfo"`
+	OriginInfo            *OriginInfo
+	TargetUserId          uint32
+	ApplyPlayerOnlineInfo *UserBaseInfo
 }

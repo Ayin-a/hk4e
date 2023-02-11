@@ -26,36 +26,34 @@ type GameObject interface {
 type Player struct {
 	// 离线数据 请尽量不要定义接口等复杂数据结构
 	ID               primitive.ObjectID    `bson:"_id,omitempty"`
-	PlayerID         uint32                `bson:"playerID"`         // 玩家uid
-	NickName         string                `bson:"nickname"`         // 玩家昵称
-	Signature        string                `bson:"signature"`        // 玩家签名
-	HeadImage        uint32                `bson:"headImage"`        // 玩家头像
-	Birthday         []uint8               `bson:"birthday"`         // 生日
-	NameCard         uint32                `bson:"nameCard"`         // 当前名片
-	NameCardList     []uint32              `bson:"nameCardList"`     // 已解锁名片列表
-	FriendList       map[uint32]bool       `bson:"friendList"`       // 好友uid列表
-	FriendApplyList  map[uint32]bool       `bson:"friendApplyList"`  // 好友申请uid列表
-	OfflineTime      uint32                `bson:"offlineTime"`      // 离线时间点
-	OnlineTime       uint32                `bson:"onlineTime"`       // 上线时间点
-	TotalOnlineTime  uint32                `bson:"totalOnlineTime"`  // 玩家累计在线时长
-	PropertiesMap    map[uint16]uint32     `bson:"propertiesMap"`    // 玩家自身相关的一些属性
-	RegionId         uint32                `bson:"regionId"`         // regionId
-	FlyCloakList     []uint32              `bson:"flyCloakList"`     // 风之翼列表
-	CostumeList      []uint32              `bson:"costumeList"`      // 角色衣装列表
-	SceneId          uint32                `bson:"sceneId"`          // 场景
-	SafePos          *Vector               `bson:"safePos"`          // 玩家在陆地时的坐标
-	Pos              *Vector               `bson:"pos"`              // 玩家坐标
-	Rot              *Vector               `bson:"rot"`              // 玩家朝向
-	ItemMap          map[uint32]*Item      `bson:"itemMap"`          // 玩家统一大背包仓库
-	WeaponMap        map[uint64]*Weapon    `bson:"weaponMap"`        // 玩家武器背包
-	ReliquaryMap     map[uint64]*Reliquary `bson:"reliquaryMap"`     // 玩家圣遗物背包
-	TeamConfig       *TeamInfo             `bson:"teamConfig"`       // 队伍配置
-	AvatarMap        map[uint32]*Avatar    `bson:"avatarMap"`        // 角色信息
-	DropInfo         *DropInfo             `bson:"dropInfo"`         // 掉落信息
-	MainCharAvatarId uint32                `bson:"mainCharAvatarId"` // 主角id
-	ChatMsgMap       map[uint32][]*ChatMsg `bson:"chatMsgMap"`       // 聊天信息
-	GCGInfo          *GCGInfo              `bson:"gcgInfo"`          // 七圣召唤信息
-	IsGM             uint8                 `bson:"isGM"`             // 管理员权限等级
+	PlayerID         uint32                `bson:"PlayerID"` // 玩家uid
+	NickName         string                // 玩家昵称
+	Signature        string                // 玩家签名
+	HeadImage        uint32                // 玩家头像
+	Birthday         []uint8               // 生日
+	NameCard         uint32                // 当前名片
+	NameCardList     []uint32              // 已解锁名片列表
+	FriendList       map[uint32]bool       // 好友uid列表
+	FriendApplyList  map[uint32]bool       // 好友申请uid列表
+	OfflineTime      uint32                // 离线时间点
+	OnlineTime       uint32                // 上线时间点
+	TotalOnlineTime  uint32                // 玩家累计在线时长
+	PropertiesMap    map[uint16]uint32     // 玩家自身相关的一些属性
+	FlyCloakList     []uint32              // 风之翼列表
+	CostumeList      []uint32              // 角色衣装列表
+	SceneId          uint32                // 场景
+	SafePos          *Vector               // 玩家在陆地时的坐标
+	Pos              *Vector               // 玩家坐标
+	Rot              *Vector               // 玩家朝向
+	ItemMap          map[uint32]*Item      // 玩家统一大背包仓库
+	WeaponMap        map[uint64]*Weapon    // 玩家武器背包
+	ReliquaryMap     map[uint64]*Reliquary // 玩家圣遗物背包
+	TeamConfig       *TeamInfo             // 队伍配置
+	AvatarMap        map[uint32]*Avatar    // 角色信息
+	DropInfo         *DropInfo             // 掉落信息
+	MainCharAvatarId uint32                // 主角id
+	GCGInfo          *GCGInfo              // 七圣召唤信息
+	IsGM             uint8                 // 管理员权限等级
 	// 在线数据 请随意 记得加忽略字段的tag
 	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
 	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌
@@ -79,6 +77,8 @@ type Player struct {
 	GateAppId             string                                   `bson:"-" msgpack:"-"` // 网关服务器的appid
 	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
 	GCGCurGameGuid        uint32                                   `bson:"-" msgpack:"-"` // GCG玩家所在的游戏guid
+	// 特殊数据
+	ChatMsgMap map[uint32][]*ChatMsg `bson:"-" msgpack:"-"` // 聊天信息 数据量偏大 只从db读写 不保存到redis
 }
 
 func (p *Player) GetNextGameObjectGuid() uint64 {

@@ -25,6 +25,23 @@ func DeepCopy(dst, src any) error {
 	return nil
 }
 
+func DeepMarshal(src any) ([]byte, error) {
+	var buf bytes.Buffer
+	err := gob.NewEncoder(&buf).Encode(src)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func DeepUnmarshal(dst any, data []byte) error {
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dst)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func CopyProtoBufSameField(dst, src pb.Message) ([]string, error) {
 	data, err := protojson.Marshal(src)
 	if err != nil {

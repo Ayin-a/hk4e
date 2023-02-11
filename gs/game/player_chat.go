@@ -12,6 +12,10 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+const (
+	MaxMsgListLen = 1000 // 与某人的最大聊天记录条数
+)
+
 func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("user pull recent chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PullRecentChatReq)
@@ -94,7 +98,7 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 		chatInfo.Content = &proto.ChatInfo_Text{
 			Text: content.(string),
 		}
-	case int, int32, uint32:
+	case uint32:
 		// 图标消息
 		chatInfo.Content = &proto.ChatInfo_Icon{
 			Icon: content.(uint32),
@@ -105,6 +109,9 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 	msgList, exist := player.ChatMsgMap[targetUid]
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
+	}
+	if len(msgList) > MaxMsgListLen {
+		msgList = msgList[1:]
 	}
 	msgList = append(msgList, chatMsg)
 	player.ChatMsgMap[targetUid] = msgList
@@ -136,7 +143,10 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 			})
 		} else {
 			// 目标玩家全服离线
-			// TODO 接入redis直接同步写入数据
+			chatMsgMap := map[uint32][]*model.ChatMsg{
+				player.PlayerID: {chatMsg},
+			}
+			go USER_MANAGER.AppendOfflineUserChatMsgToDbSync(targetUid, chatMsgMap)
 		}
 		return
 	}
@@ -144,6 +154,9 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 	msgList, exist = targetPlayer.ChatMsgMap[player.PlayerID]
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
+	}
+	if len(msgList) > MaxMsgListLen {
+		msgList = msgList[1:]
 	}
 	msgList = append(msgList, chatMsg)
 	targetPlayer.ChatMsgMap[player.PlayerID] = msgList
@@ -167,7 +180,8 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	switch content.(type) {
 	case *proto.PrivateChatReq_Text:
 		text := content.(*proto.PrivateChatReq_Text).Text
-		if len(text) == 0 {
+		if len(text) == 0 || len(text) > 80 {
+			g.SendError(cmd.PrivateChatRsp, player, &proto.PrivateChatRsp{}, proto.Retcode_RET_PRIVATE_CHAT_CONTENT_TOO_LONG)
 			return
 		}
 		// 发送私聊文本消息

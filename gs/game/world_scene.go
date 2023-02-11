@@ -101,7 +101,6 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FIGHT_PROP_CUR_HP))
 		}
 
-		// PacketAvatarLifeStateChangeNotify
 		avatarLifeStateChangeNotify := &proto.AvatarLifeStateChangeNotify{
 			LifeState:       uint32(lifeState),
 			AttackTag:       "",
@@ -111,9 +110,7 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			SourceEntityId:  0,
 			AvatarGuid:      avatar.Guid,
 		}
-		for _, p := range s.playerMap {
-			GAME_MANAGER.SendMsg(cmd.AvatarLifeStateChangeNotify, p.PlayerID, p.ClientSeq, avatarLifeStateChangeNotify)
-		}
+		GAME_MANAGER.SendToWorldA(s.world, cmd.AvatarLifeStateChangeNotify, 0, avatarLifeStateChangeNotify)
 	} else {
 		// 设置存活状态
 		entity.lifeState = lifeState
@@ -124,7 +121,6 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FIGHT_PROP_CUR_HP))
 		}
 
-		// PacketLifeStateChangeNotify
 		lifeStateChangeNotify := &proto.LifeStateChangeNotify{
 			EntityId:        entity.id,
 			AttackTag:       "",
@@ -133,9 +129,7 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			LifeState:       uint32(lifeState),
 			SourceEntityId:  0,
 		}
-		for _, p := range s.playerMap {
-			GAME_MANAGER.SendMsg(cmd.LifeStateChangeNotify, p.PlayerID, p.ClientSeq, lifeStateChangeNotify)
-		}
+		GAME_MANAGER.SendToWorldA(s.world, cmd.LifeStateChangeNotify, 0, lifeStateChangeNotify)
 
 		// 删除实体
 		s.DestroyEntity(entity.id)
@@ -159,9 +153,8 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
-		// fightProp:           player.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
-		// level:               0, // 使用角色结构的数据
+		fightProp:           player.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
+		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
 			avatarId: avatarId,

@@ -149,13 +149,13 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.GCGLogin(player) // 发送GCG登录相关的通知包
 	playerLoginRsp := &proto.PlayerLoginRsp{
 		IsUseAbilityHash: true,
-		AbilityHashCode:  -228935105,
+		AbilityHashCode:  0,
 		GameBiz:          "hk4e_cn",
 		IsScOpen:         false,
 		RegisterCps:      "taptap",
 		CountryCode:      "CN",
 		Birthday:         "2000-01-01",
-		TotalTickTime:    1185941.871788,
+		TotalTickTime:    0.0,
 	}
 	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
 }
@@ -165,7 +165,7 @@ func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.Player
 		NickName:          player.NickName,
 		ServerTime:        uint64(time.Now().UnixMilli()),
 		IsFirstLoginToday: true,
-		RegionId:          player.RegionId,
+		RegionId:          1,
 		PropMap:           make(map[uint32]*proto.PropValue),
 	}
 	for k, v := range player.PropertiesMap {
@@ -344,7 +344,6 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.FriendList = make(map[uint32]bool)
 	player.FriendApplyList = make(map[uint32]bool)
 
-	player.RegionId = 1
 	player.SceneId = 3
 
 	player.PropertiesMap = make(map[uint16]uint32)
@@ -397,7 +396,6 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.AvatarMap = make(map[uint32]*model.Avatar)
 	player.GameObjectGuidMap = make(map[uint64]model.GameObject)
 	player.DropInfo = model.NewDropInfo()
-	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
 	player.GCGInfo = model.NewGCGInfo()
 
 	// 添加选定的主角
@@ -417,6 +415,8 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 
 	player.TeamConfig = model.NewTeamInfo()
 	player.TeamConfig.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
+
+	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
 
 	return player
 }

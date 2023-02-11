@@ -3,9 +3,9 @@ package model
 import "math"
 
 type Vector struct {
-	X float64 `bson:"x"`
-	Y float64 `bson:"y"`
-	Z float64 `bson:"z"`
+	X float64
+	Y float64
+	Z float64
 }
 
 // Distance 两坐标之间的距离

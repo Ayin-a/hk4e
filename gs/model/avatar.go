@@ -9,24 +9,24 @@ import (
 )
 
 type Avatar struct {
-	AvatarId            uint32             `bson:"avatarId"`         // 角色id
-	LifeState           uint16             `bson:"lifeState"`        // 存活状态
-	Level               uint8              `bson:"level"`            // 等级
-	Exp                 uint32             `bson:"exp"`              // 经验值
-	Promote             uint8              `bson:"promote"`          // 突破等阶
-	Satiation           uint32             `bson:"satiation"`        // 饱食度
-	SatiationPenalty    uint32             `bson:"satiationPenalty"` // 饱食度溢出
-	CurrHP              float64            `bson:"currHP"`           // 当前生命值
-	CurrEnergy          float64            `bson:"currEnergy"`       // 当前元素能量值
-	FetterList          []uint32           `bson:"fetterList"`       // 资料解锁条目
-	SkillLevelMap       map[uint32]uint32  `bson:"skillLevelMap"`    // 技能等级数据
-	SkillDepotId        uint32             `bson:"skillDepotId"`     // 技能库id
-	FlyCloak            uint32             `bson:"flyCloak"`         // 当前风之翼
-	Costume             uint32             `bson:"costume"`          // 当前衣装
-	BornTime            int64              `bson:"bornTime"`         // 获得时间
-	FetterLevel         uint8              `bson:"fetterLevel"`      // 好感度等级
-	FetterExp           uint32             `bson:"fetterExp"`        // 好感度经验
-	PromoteRewardMap    map[uint32]bool    `bson:"promoteRewardMap"` // 突破奖励 map[突破等级]是否已被领取
+	AvatarId            uint32             // 角色id
+	LifeState           uint16             // 存活状态
+	Level               uint8              // 等级
+	Exp                 uint32             // 经验值
+	Promote             uint8              // 突破等阶
+	Satiation           uint32             // 饱食度
+	SatiationPenalty    uint32             // 饱食度溢出
+	CurrHP              float64            // 当前生命值
+	CurrEnergy          float64            // 当前元素能量值
+	FetterList          []uint32           // 资料解锁条目
+	SkillLevelMap       map[uint32]uint32  // 技能等级数据
+	SkillDepotId        uint32             // 技能库id
+	FlyCloak            uint32             // 当前风之翼
+	Costume             uint32             // 当前衣装
+	BornTime            int64              // 获得时间
+	FetterLevel         uint8              // 好感度等级
+	FetterExp           uint32             // 好感度经验
+	PromoteRewardMap    map[uint32]bool    // 突破奖励 map[突破等级]是否已被领取
 	Guid                uint64             `bson:"-" msgpack:"-"`
 	EquipGuidMap        map[uint64]uint64  `bson:"-" msgpack:"-"`
 	EquipWeapon         *Weapon            `bson:"-" msgpack:"-"`

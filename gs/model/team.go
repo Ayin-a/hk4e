@@ -7,8 +7,8 @@ import (
 )
 
 type Team struct {
-	Name         string   `bson:"name"`
-	AvatarIdList []uint32 `bson:"avatarIdList"`
+	Name         string
+	AvatarIdList []uint32
 }
 
 func (t *Team) GetAvatarIdList() []uint32 {
@@ -33,9 +33,9 @@ func (t *Team) SetAvatarIdList(avatarIdList []uint32) {
 }
 
 type TeamInfo struct {
-	TeamList             []*Team         `bson:"teamList"`
-	CurrTeamIndex        uint8           `bson:"currTeamIndex"`
-	CurrAvatarIndex      uint8           `bson:"currAvatarIndex"`
+	TeamList             []*Team
+	CurrTeamIndex        uint8
+	CurrAvatarIndex      uint8
 	TeamResonances       map[uint16]bool `bson:"-" msgpack:"-"`
 	TeamResonancesConfig map[int32]bool  `bson:"-" msgpack:"-"`
 }

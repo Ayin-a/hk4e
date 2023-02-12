@@ -39,6 +39,15 @@ func (c *CommandManager) GMAddUserWeapon(userId, itemId, itemCount uint32) {
 	}
 }
 
+// GMAddUserReliquary 给予玩家圣遗物
+func (c *CommandManager) GMAddUserReliquary(userId, itemId, itemCount uint32) {
+	// 圣遗物数量
+	for i := uint32(0); i < itemCount; i++ {
+		// 给予武器
+		GAME_MANAGER.AddUserReliquary(userId, itemId)
+	}
+}
+
 // GMAddUserAvatar 给予玩家角色
 func (c *CommandManager) GMAddUserAvatar(userId, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
@@ -72,6 +81,13 @@ func (c *CommandManager) GMAddUserAllItem(userId, itemCount uint32) {
 func (c *CommandManager) GMAddUserAllWeapon(userId, itemCount uint32) {
 	for itemId := range GAME_MANAGER.GetAllWeaponDataConfig() {
 		c.GMAddUserWeapon(userId, uint32(itemId), itemCount)
+	}
+}
+
+// GMAddUserAllReliquary 给予玩家所有圣遗物
+func (c *CommandManager) GMAddUserAllReliquary(userId, itemCount uint32) {
+	for itemId := range GAME_MANAGER.GetAllReliquaryDataConfig() {
+		c.GMAddUserReliquary(userId, uint32(itemId), itemCount)
 	}
 }
 

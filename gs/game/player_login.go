@@ -254,7 +254,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 						Exp:              reliquary.Exp,
 						PromoteLevel:     uint32(reliquary.Promote),
 						MainPropId:       reliquary.MainPropId,
-						AppendPropIdList: reliquary.AffixIdList,
+						AppendPropIdList: reliquary.AppendPropIdList,
 					},
 				},
 				IsLocked: reliquary.Lock,
@@ -412,8 +412,6 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.AddWeapon(uint32(avatarDataConfig.InitialWeapon), weaponId)
 	// 角色装上初始武器
 	player.WearWeapon(mainCharAvatarId, weaponId)
-
-	player.AddReliquary(24825, uint64(g.snowflake.GenId()), 15007)
 
 	player.TeamConfig = model.NewTeamInfo()
 	player.TeamConfig.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})

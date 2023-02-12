@@ -215,7 +215,7 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 		equipIdList := make([]uint32, 0)
 		weapon := worldPlayerAvatar.EquipWeapon
 		equipIdList = append(equipIdList, weapon.ItemId)
-		for _, reliquary := range worldPlayerAvatar.EquipReliquaryList {
+		for _, reliquary := range worldPlayerAvatar.EquipReliquaryMap {
 			equipIdList = append(equipIdList, reliquary.ItemId)
 		}
 		sceneTeamAvatar := &proto.SceneTeamAvatar{

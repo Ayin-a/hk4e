@@ -873,33 +873,46 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 }
 
 func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
-	equipIdList := make([]uint32, 0)
-	weapon := player.AvatarMap[avatarId].EquipWeapon
-	equipIdList = append(equipIdList, weapon.ItemId)
-	for _, reliquary := range player.AvatarMap[avatarId].EquipReliquaryList {
+	avatar, ok := player.AvatarMap[avatarId]
+	if !ok {
+		logger.Error("avatar error, avatarId: %v", avatarId)
+		return new(proto.SceneAvatarInfo)
+	}
+	equipIdList := make([]uint32, len(avatar.EquipReliquaryMap)+1)
+	for _, reliquary := range avatar.EquipReliquaryMap {
 		equipIdList = append(equipIdList, reliquary.ItemId)
+	}
+	equipIdList = append(equipIdList, avatar.EquipWeapon.ItemId)
+	reliquaryList := make([]*proto.SceneReliquaryInfo, 0, len(avatar.EquipReliquaryMap))
+	for _, reliquary := range avatar.EquipReliquaryMap {
+		reliquaryList = append(reliquaryList, &proto.SceneReliquaryInfo{
+			ItemId:       reliquary.ItemId,
+			Guid:         reliquary.Guid,
+			Level:        uint32(reliquary.Level),
+			PromoteLevel: uint32(reliquary.Promote),
+		})
 	}
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	sceneAvatarInfo := &proto.SceneAvatarInfo{
 		Uid:          player.PlayerID,
 		AvatarId:     avatarId,
-		Guid:         player.AvatarMap[avatarId].Guid,
+		Guid:         avatar.Guid,
 		PeerId:       world.GetPlayerPeerId(player),
 		EquipIdList:  equipIdList,
-		SkillDepotId: player.AvatarMap[avatarId].SkillDepotId,
+		SkillDepotId: avatar.SkillDepotId,
 		Weapon: &proto.SceneWeaponInfo{
 			EntityId:    scene.GetWorld().GetPlayerWorldAvatarWeaponEntityId(player, avatarId),
-			GadgetId:    uint32(gdconf.GetItemDataById(int32(weapon.ItemId)).GadgetId),
-			ItemId:      weapon.ItemId,
-			Guid:        weapon.Guid,
-			Level:       uint32(weapon.Level),
+			GadgetId:    uint32(gdconf.GetItemDataById(int32(avatar.EquipWeapon.ItemId)).GadgetId),
+			ItemId:      avatar.EquipWeapon.ItemId,
+			Guid:        avatar.EquipWeapon.Guid,
+			Level:       uint32(avatar.EquipWeapon.Level),
 			AbilityInfo: new(proto.AbilitySyncStateInfo),
 		},
-		ReliquaryList:     nil,
-		SkillLevelMap:     player.AvatarMap[avatarId].SkillLevelMap,
-		WearingFlycloakId: player.AvatarMap[avatarId].FlyCloak,
-		CostumeId:         player.AvatarMap[avatarId].Costume,
-		BornTime:          uint32(player.AvatarMap[avatarId].BornTime),
+		ReliquaryList:     reliquaryList,
+		SkillLevelMap:     avatar.SkillLevelMap,
+		WearingFlycloakId: avatar.FlyCloak,
+		CostumeId:         avatar.Costume,
+		BornTime:          uint32(avatar.BornTime),
 		TeamResonanceList: make([]uint32, 0),
 	}
 	// for id := range player.TeamConfig.TeamResonances {

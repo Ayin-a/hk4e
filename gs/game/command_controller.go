@@ -143,7 +143,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 	// 判断是否填写必备参数
 	if cmd.Args["i"] == "" {
-		c.SendMessage(player, "参数不足，正确用法：/%v [-u <UID>] [-c <数量>] -i <物品ID|武器ID|角色ID/item/weapon/avatar/all>。", cmd.Name)
+		c.SendMessage(player, "参数不足，正确用法：/%v [-u <UID>] [-c <数量>] -i <物品ID|武器ID|圣遗物ID|角色ID/item/weapon/reliquary/avatar/all>。", cmd.Name)
 		return
 	}
 
@@ -179,13 +179,13 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 			}
 		case "i":
 			switch v {
-			case "all", "item", "avatar", "weapon":
+			case "all", "item", "avatar", "weapon", "reliquary":
 				// 将模式修改为参数的值
 				mode = v
 			default:
 				var id uint64
 				if id, err = strconv.ParseUint(v, 10, 32); err != nil {
-					c.SendMessage(player, "参数 -%v 有误，允许内容: <item | weapon | avatar | all>。", k)
+					c.SendMessage(player, "参数 -%v 有误，允许内容: <item | weapon | reliquary | avatar | all>。", k)
 					return
 				}
 				itemId = uint32(id)
@@ -209,7 +209,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		if ok {
 			// 给予玩家物品
 			c.GMAddUserItem(target.PlayerID, itemId, count)
-			c.SendMessage(player, "已给予玩家 UID：%v, 物品ID: %v*数量: %v。", target.PlayerID, itemId, count)
+			c.SendMessage(player, "已给予玩家 UID：%v, 物品ID: %v 数量: %v。", target.PlayerID, itemId, count)
 			return
 		}
 		// 判断是否为武器
@@ -217,16 +217,25 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		if ok {
 			// 给予玩家武器
 			c.GMAddUserWeapon(target.PlayerID, itemId, count)
-			c.SendMessage(player, "已给予玩家 UID：%v, 武器ID：%v*数量：%v。", target.PlayerID, itemId, count)
+			c.SendMessage(player, "已给予玩家 UID：%v, 武器ID：%v 数量：%v。", target.PlayerID, itemId, count)
+			return
+
+		}
+		// 判断是否为圣遗物
+		_, ok = GAME_MANAGER.GetAllReliquaryDataConfig()[int32(itemId)]
+		if ok {
+			// 给予玩家圣遗物
+			c.GMAddUserReliquary(target.PlayerID, itemId, count)
+			c.SendMessage(player, "已给予玩家 UID：%v, 圣遗物ID：%v 数量：%v。", target.PlayerID, itemId, count)
 			return
 
 		}
 		// 判断是否为角色
 		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(itemId)]
 		if ok {
-			// 给予玩家武器
+			// 给予玩家角色
 			c.GMAddUserAvatar(target.PlayerID, itemId)
-			c.SendMessage(player, "已给予玩家 UID：%v, 角色ID：%v*数量：%v。", target.PlayerID, itemId, count)
+			c.SendMessage(player, "已给予玩家 UID：%v, 角色ID：%v 数量：%v。", target.PlayerID, itemId, count)
 			return
 		}
 		// 都执行到这里那肯定是都不匹配
@@ -234,11 +243,15 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	case "item":
 		// 给予玩家所有物品
 		c.GMAddUserAllItem(target.PlayerID, count)
-		c.SendMessage(player, "已给予玩家 UID：%v, 所有物品*%v。", target.PlayerID, count)
+		c.SendMessage(player, "已给予玩家 UID：%v, 所有物品 数量：%v。", target.PlayerID, count)
 	case "weapon":
 		// 给予玩家所有武器
 		c.GMAddUserAllWeapon(target.PlayerID, count)
-		c.SendMessage(player, "已给予玩家 UID：%v, 所有武器*%v。", target.PlayerID, count)
+		c.SendMessage(player, "已给予玩家 UID：%v, 所有武器 数量：%v。", target.PlayerID, count)
+	case "reliquary":
+		// 给予玩家所有圣遗物
+		c.GMAddUserAllReliquary(target.PlayerID, count)
+		c.SendMessage(player, "已给予玩家 UID：%v, 所有圣遗物 数量：%v。", target.PlayerID, count)
 	case "avatar":
 		// 给予玩家所有角色
 		c.GMAddUserAllAvatar(target.PlayerID)

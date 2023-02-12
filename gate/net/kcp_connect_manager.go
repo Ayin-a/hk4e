@@ -23,12 +23,12 @@ import (
 
 const (
 	ConnSynPacketFreqLimit = 100        // 连接建立握手包每秒发包频率限制
-	RecvPacketFreqLimit    = 100        // 客户端上行每秒发包频率限制
+	RecvPacketFreqLimit    = 200        // 客户端上行每秒发包频率限制
 	SendPacketFreqLimit    = 1000       // 服务器下行每秒发包频率限制
 	PacketMaxLen           = 343 * 1024 // 最大应用层包长度
 	ConnRecvTimeout        = 30         // 收包超时时间 秒
 	ConnSendTimeout        = 10         // 发包超时时间 秒
-	MaxClientConnNumLimit  = 2          // 最大客户端连接数限制
+	MaxClientConnNumLimit  = 1000       // 最大客户端连接数限制
 )
 
 var CLIENT_CONN_NUM int32 = 0 // 当前客户端连接数

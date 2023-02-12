@@ -269,7 +269,7 @@ func (g *GameManager) AskAddFriendReq(player *model.Player, payloadMsg pb.Messag
 			})
 		} else {
 			// 全服离线玩家
-			targetPlayer, _, _ := USER_MANAGER.LoadGlobalPlayer(targetUid)
+			targetPlayer := USER_MANAGER.LoadTempOfflineUser(targetUid, true)
 			if targetPlayer == nil {
 				logger.Error("apply add friend target player is nil, uid: %v", targetUid)
 				return
@@ -362,7 +362,7 @@ func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Messa
 				})
 			} else {
 				// 全服离线玩家
-				targetPlayer, _, _ := USER_MANAGER.LoadGlobalPlayer(targetUid)
+				targetPlayer := USER_MANAGER.LoadTempOfflineUser(targetUid, true)
 				if targetPlayer == nil {
 					logger.Error("apply add friend target player is nil, uid: %v", targetUid)
 					return

@@ -15,8 +15,8 @@ import (
 
 const (
 	ENTITY_NUM_UNLIMIT        = false // 是否不限制场景内实体数量
-	ENTITY_MAX_SEND_NUM       = 200   // 场景内最大实体数量
-	MAX_MULTIPLAYER_WORLD_NUM = 2     // 本服务器最大多人世界数量
+	ENTITY_MAX_SEND_NUM       = 300   // 场景内最大实体数量
+	MAX_MULTIPLAYER_WORLD_NUM = 10    // 本服务器最大多人世界数量
 )
 
 type WorldManager struct {

@@ -263,10 +263,18 @@ func (g *GameManager) Close() {
 		Msg:     saveUserIdList,
 	}
 	<-EXIT_SAVE_FIN_CHAN
-	// 单纯的告诉网关下线玩家
+	// 告诉网关下线玩家并全服广播玩家离线
 	userList := USER_MANAGER.GetAllOnlineUserList()
 	for _, player := range userList {
 		g.KickPlayer(player.PlayerID, kcp.EnetServerShutdown)
+		MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
+			MsgType: mq.MsgTypeServer,
+			EventId: mq.ServerUserOnlineStateChangeNotify,
+			ServerMsg: &mq.ServerMsg{
+				UserId:   player.PlayerID,
+				IsOnline: false,
+			},
+		})
 	}
 	time.Sleep(time.Second)
 }

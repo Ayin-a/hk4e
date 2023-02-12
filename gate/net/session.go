@@ -295,7 +295,9 @@ func (k *KcpConnectManager) sendMsgHandle() {
 						GameMsg: gameMsg,
 					})
 				case mq.ServerUserOnlineStateChangeNotify:
-					// 收到GS玩家离线完成通知 唤醒存在的顶号登录流程
+					// 收到GS玩家离线完成通知
+					logger.Debug("global player online state change, uid: %v, online: %v, gs appid: %v",
+						serverMsg.UserId, serverMsg.IsOnline, netMsg.OriginServerAppId)
 					if serverMsg.IsOnline {
 						k.globalGsOnlineMapLock.Lock()
 						k.globalGsOnlineMap[serverMsg.UserId] = netMsg.OriginServerAppId
@@ -308,6 +310,8 @@ func (k *KcpConnectManager) sendMsgHandle() {
 						if !exist {
 							continue
 						}
+						// 唤醒存在的顶号登录流程
+						logger.Info("awake interrupt login, uid: %v", serverMsg.UserId)
 						kickFinishNotifyChan <- true
 					}
 				}
@@ -400,6 +404,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			userId:               uid,
 			kickFinishNotifyChan: kickFinishNotifyChan,
 		}
+		logger.Info("run local interrupt login wait, uid: %v", uid)
 		<-kickFinishNotifyChan
 	}
 	k.globalGsOnlineMapLock.RLock()
@@ -421,6 +426,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			userId:               uid,
 			kickFinishNotifyChan: kickFinishNotifyChan,
 		}
+		logger.Info("run global interrupt login wait, uid: %v", uid)
 		<-kickFinishNotifyChan
 	}
 	// 关联玩家uid和连接信息

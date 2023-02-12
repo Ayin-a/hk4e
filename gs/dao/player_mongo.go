@@ -249,22 +249,7 @@ func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 	result := make([]*model.ChatMsg, 0)
 	find, err := db.Find(
 		context.TODO(),
-		bson.D{{"ToUid", uid}},
-	)
-	if err != nil {
-		return nil, err
-	}
-	for find.Next(context.TODO()) {
-		item := new(model.ChatMsg)
-		err = find.Decode(item)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, item)
-	}
-	find, err = db.Find(
-		context.TODO(),
-		bson.D{{"Uid", uid}},
+		bson.D{{"$or", []bson.D{{{"ToUid", uid}}, {{"Uid", uid}}}}},
 	)
 	if err != nil {
 		return nil, err
@@ -282,7 +267,7 @@ func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 
 func (d *Dao) ReadAndUpdateChatMsgByUid(uid uint32, targetUid uint32) error {
 	db := d.db.Collection("chat_msg")
-	_, err := db.UpdateOne(
+	_, err := db.UpdateMany(
 		context.TODO(),
 		bson.D{{"ToUid", uid}, {"Uid", targetUid}},
 		bson.D{{"$set", bson.D{{"IsRead", true}}}},
@@ -290,7 +275,7 @@ func (d *Dao) ReadAndUpdateChatMsgByUid(uid uint32, targetUid uint32) error {
 	if err != nil {
 		return err
 	}
-	_, err = db.UpdateOne(
+	_, err = db.UpdateMany(
 		context.TODO(),
 		bson.D{{"Uid", uid}, {"ToUid", targetUid}},
 		bson.D{{"$set", bson.D{{"IsRead", true}}}},

@@ -268,7 +268,7 @@ func (u *UserManager) SetRemoteUserOnlineState(userId uint32, isOnline bool, app
 	}
 }
 
-// GetRemoteOnlineUserList 获取指定数量的远程在线玩家
+// GetRemoteOnlineUserList 获取指定数量的远程在线玩家 玩家数据只读禁止修改
 func (u *UserManager) GetRemoteOnlineUserList(total int) map[uint32]*model.Player {
 	if total > 50 {
 		return nil
@@ -276,7 +276,7 @@ func (u *UserManager) GetRemoteOnlineUserList(total int) map[uint32]*model.Playe
 	onlinePlayerMap := make(map[uint32]*model.Player)
 	count := 0
 	for userId := range u.remotePlayerMap {
-		player := u.LoadTempOfflineUser(userId)
+		player := u.LoadTempOfflineUser(userId, false)
 		if player == nil {
 			continue
 		}
@@ -289,7 +289,7 @@ func (u *UserManager) GetRemoteOnlineUserList(total int) map[uint32]*model.Playe
 	return onlinePlayerMap
 }
 
-// LoadGlobalPlayer 加载并返回一个全服玩家及其在线状态
+// LoadGlobalPlayer 加载并返回一个全服玩家及其在线状态 玩家数据只读禁止修改
 // 参见LoadTempOfflineUser说明
 func (u *UserManager) LoadGlobalPlayer(userId uint32) (player *model.Player, online bool, remote bool) {
 	online = u.GetUserOnlineState(userId)
@@ -304,14 +304,14 @@ func (u *UserManager) LoadGlobalPlayer(userId uint32) (player *model.Player, onl
 	if online {
 		if remote {
 			// 远程在线玩家 为了简化实现流程 直接加载数据库临时档
-			player = u.LoadTempOfflineUser(userId)
+			player = u.LoadTempOfflineUser(userId, false)
 		} else {
 			// 本地在线玩家
 			player = u.GetOnlineUser(userId)
 		}
 	} else {
 		// 全服离线玩家
-		player = u.LoadTempOfflineUser(userId)
+		player = u.LoadTempOfflineUser(userId, false)
 	}
 	return player, online, remote
 }
@@ -320,11 +320,19 @@ func (u *UserManager) LoadGlobalPlayer(userId uint32) (player *model.Player, onl
 
 // LoadTempOfflineUser 加载临时离线玩家
 // 正常情况速度较快可以同步阻塞调用
-func (u *UserManager) LoadTempOfflineUser(userId uint32) *model.Player {
+func (u *UserManager) LoadTempOfflineUser(userId uint32, lock bool) *model.Player {
 	player := u.GetOnlineUser(userId)
 	if player != nil && player.Online {
 		logger.Error("not allow get a online player as offline player, uid: %v", userId)
 		return nil
+	}
+	if lock {
+		// 加离线玩家数据分布式锁
+		ok := u.dao.DistLockSync(userId)
+		if !ok {
+			logger.Error("lock redis offline player data error, uid: %v", userId)
+			return nil
+		}
 	}
 	player = u.LoadUserFromRedisSync(userId)
 	if player == nil {
@@ -349,10 +357,12 @@ func (u *UserManager) LoadTempOfflineUser(userId uint32) *model.Player {
 }
 
 // SaveTempOfflineUser 保存临时离线玩家
-// 如果在调用LoadTempOfflineUser后修改了离线玩家数据 则必须立即调用此函数回写
+// 如果调用LoadTempOfflineUser获取了离线玩家数据 则必须在逻辑完成后立即调用此函数回写并解锁
 func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 	// 主协程同步写入redis
 	u.SaveUserToRedisSync(player)
+	// 解离线玩家数据分布式锁
+	u.dao.DistUnlock(player.PlayerID)
 	// 另一个协程异步的写回db
 	playerData, err := msgpack.Marshal(player)
 	if err != nil {

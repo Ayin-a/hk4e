@@ -114,7 +114,7 @@ func (g *GameDataConfig) load() {
 	g.loadSceneData()            // 场景
 	g.loadScenePoint()           // 场景传送点
 	g.loadSceneTagData()         // 场景地图图标
-	g.loadScene()                // 场景详情
+	g.loadSceneDetail()          // 场景详情LUA配置数据
 	g.loadWorldAreaData()        // 世界区域
 	g.loadGatherData()           // 采集物
 	g.loadFetterData()           // 角色资料解锁

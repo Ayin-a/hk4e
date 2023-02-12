@@ -341,6 +341,7 @@ func (m *MessageQueue) gateTcpMqConn(gateServerConnAddrMap map[string]bool) {
 		_, exist := gateServerConnAddrMap[gateServerAddr]
 		// GATE连接已存在
 		if exist {
+			logger.Info("gate tcp mq conn already exist addr: %v", gateServerAddr)
 			continue
 		}
 		addr, err := net.ResolveTCPAddr("tcp4", gateServerAddr)

@@ -131,7 +131,7 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 	block.groupMapLoadLock.Unlock()
 }
 
-func (g *GameDataConfig) loadScene() {
+func (g *GameDataConfig) loadSceneDetail() {
 	g.SceneDetailMap = make(map[int32]*SceneDetail)
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	for _, sceneData := range g.SceneDataMap {

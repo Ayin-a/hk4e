@@ -14,12 +14,20 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+// RedisPlayerKeyPrefix key前缀
 const RedisPlayerKeyPrefix = "HK4E"
 
+// GetRedisPlayerKey 获取玩家数据key
 func (d *Dao) GetRedisPlayerKey(userId uint32) string {
 	return RedisPlayerKeyPrefix + ":USER:" + strconv.Itoa(int(userId))
 }
 
+// GetRedisPlayerLockKey 获取玩家分布式锁key
+func (d *Dao) GetRedisPlayerLockKey(userId uint32) string {
+	return RedisPlayerKeyPrefix + ":USER_LOCK:" + strconv.Itoa(int(userId))
+}
+
+// GetRedisPlayer 获取玩家数据
 func (d *Dao) GetRedisPlayer(userId uint32) *model.Player {
 	startTime := time.Now().UnixNano()
 	playerDataLz4, err := d.redis.Get(context.TODO(), d.GetRedisPlayerKey(userId)).Result()
@@ -54,6 +62,7 @@ func (d *Dao) GetRedisPlayer(userId uint32) *model.Player {
 	return player
 }
 
+// SetRedisPlayer 写入玩家数据
 func (d *Dao) SetRedisPlayer(player *model.Player) {
 	playerData, err := msgpack.Marshal(player)
 	if err != nil {
@@ -91,9 +100,63 @@ func (d *Dao) SetRedisPlayer(player *model.Player) {
 	logger.Debug("set player to redis cost time: %v ns", costTime)
 }
 
+// SetRedisPlayerList 批量写入玩家数据
 func (d *Dao) SetRedisPlayerList(playerList []*model.Player) {
 	// TODO 换成redis批量命令执行
 	for _, player := range playerList {
 		d.SetRedisPlayer(player)
+	}
+}
+
+// 基于redis的玩家离线数据分布式锁实现
+
+const (
+	MaxLockAliveTime  = 10000 // 单个锁的最大存活时间 毫秒
+	LockRetryWaitTime = 50    // 同步加锁重试间隔时间 毫秒
+	MaxLockRetryTimes = 2     // 同步加锁最大重试次数
+)
+
+// DistLock 加锁并返回是否成功
+func (d *Dao) DistLock(userId uint32) bool {
+	result, err := d.redis.SetNX(context.TODO(),
+		d.GetRedisPlayerLockKey(userId),
+		time.Now().UnixMilli(),
+		time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+	if err != nil {
+		logger.Error("redis lock setnx error: %v", err)
+		return false
+	}
+	return result
+}
+
+// DistLockSync 加锁同步阻塞直到成功或超时
+func (d *Dao) DistLockSync(userId uint32) bool {
+	for i := 0; i < MaxLockRetryTimes; i++ {
+		result, err := d.redis.SetNX(context.TODO(),
+			d.GetRedisPlayerLockKey(userId),
+			time.Now().UnixMilli(),
+			time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+		if err != nil {
+			logger.Error("redis lock setnx error: %v", err)
+			return false
+		}
+		if result == true {
+			break
+		}
+		time.Sleep(time.Millisecond * time.Duration(LockRetryWaitTime))
+	}
+	return true
+}
+
+// DistUnlock 解锁
+func (d *Dao) DistUnlock(userId uint32) {
+	result, err := d.redis.Del(context.TODO(), d.GetRedisPlayerLockKey(userId)).Result()
+	if err != nil {
+		logger.Error("redis lock del error: %v", err)
+		return
+	}
+	if result == 0 {
+		logger.Error("redis lock del result is fail")
+		return
 	}
 }

@@ -442,7 +442,7 @@ func (u *UserManager) SaveUserToDbSync(player *model.Player) {
 			logger.Error("insert player error: %v", err)
 			return
 		}
-	} else if player.DbState == model.DbNormal {
+	} else if player.DbState == model.DbNormal || player.DbState == model.DbDelete {
 		err := u.dao.UpdatePlayer(player)
 		if err != nil {
 			logger.Error("update player error: %v", err)

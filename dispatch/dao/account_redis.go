@@ -8,26 +8,26 @@ const RedisPlayerKeyPrefix = "HK4E"
 
 const (
 	AccountIdRedisKey          = "AccountId"
-	AccountIdBegin      uint64 = 10000
+	AccountIdBegin      uint32 = 10000
 	YuanShenUidRedisKey        = "YuanShenUid"
-	YuanShenUidBegin    uint64 = 100000000
+	YuanShenUidBegin    uint32 = 100000000
 )
 
-func (d *Dao) GetNextAccountId() (uint64, error) {
+func (d *Dao) GetNextAccountId() (uint32, error) {
 	return d.redisInc(RedisPlayerKeyPrefix + ":" + AccountIdRedisKey)
 }
 
-func (d *Dao) GetNextYuanShenUid() (uint64, error) {
+func (d *Dao) GetNextYuanShenUid() (uint32, error) {
 	return d.redisInc(RedisPlayerKeyPrefix + ":" + YuanShenUidRedisKey)
 }
 
-func (d *Dao) redisInc(keyName string) (uint64, error) {
+func (d *Dao) redisInc(keyName string) (uint32, error) {
 	exist, err := d.redis.Exists(context.TODO(), keyName).Result()
 	if err != nil {
 		return 0, err
 	}
 	if exist == 0 {
-		var value uint64 = 0
+		var value uint32 = 0
 		if keyName == RedisPlayerKeyPrefix+":"+AccountIdRedisKey {
 			value = AccountIdBegin
 		} else if keyName == RedisPlayerKeyPrefix+":"+YuanShenUidRedisKey {
@@ -42,5 +42,5 @@ func (d *Dao) redisInc(keyName string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return uint64(id), nil
+	return uint32(id), nil
 }

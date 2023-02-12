@@ -42,29 +42,29 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		verifyFail(0)
 		return
 	}
-	account, err := c.dao.QueryAccountByField("accountID", accountId)
+	account, err := c.dao.QueryAccountByField("AccountID", accountId)
 	if err != nil || account == nil {
 		verifyFail(0)
 		return
 	}
 	if tokenVerifyReq.AccountToken != account.ComboToken {
-		verifyFail(uint32(account.PlayerID))
+		verifyFail(account.PlayerID)
 		return
 	}
 	if account.ComboTokenUsed {
-		verifyFail(uint32(account.PlayerID))
+		verifyFail(account.PlayerID)
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboTokenUsed", true)
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboTokenUsed", true)
 	if err != nil {
-		verifyFail(uint32(account.PlayerID))
+		verifyFail(account.PlayerID)
 		return
 	}
 	context.JSON(http.StatusOK, &TokenVerifyRsp{
 		Valid:         true,
 		Forbid:        account.Forbid,
-		ForbidEndTime: uint32(account.ForbidEndTime),
-		PlayerID:      uint32(account.PlayerID),
+		ForbidEndTime: account.ForbidEndTime,
+		PlayerID:      account.PlayerID,
 	})
 }
 
@@ -85,7 +85,7 @@ func (c *Controller) gateTokenReset(context *gin.Context) {
 		})
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("playerID", req.PlayerId, "comboTokenUsed", false)
+	_, err = c.dao.UpdateAccountFieldByFieldName("PlayerID", req.PlayerId, "ComboTokenUsed", false)
 	if err != nil {
 		context.JSON(http.StatusOK, &TokenResetRsp{
 			Result: false,

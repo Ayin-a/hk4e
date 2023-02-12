@@ -132,12 +132,13 @@ type PlayerLoginInfo struct {
 // OnlineUser 玩家上线
 func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId string) (*model.Player, bool) {
 	player, exist := u.playerMap[userId]
-	if exist {
-		u.ChangeUserDbState(player, model.DbNormal)
-		return player, false
-	} else {
+	if userId > PlayerBaseUid {
+		// 每次玩家上线必须从数据库加载最新的档 如果之前存在于内存则删掉
+		if exist {
+			u.DeleteUser(userId)
+		}
 		go func() {
-			player = u.LoadUserFromDbSync(userId)
+			player := u.LoadUserFromDbSync(userId)
 			if player != nil {
 				u.SaveUserToRedisSync(player)
 				u.ChangeUserDbState(player, model.DbNormal)
@@ -155,7 +156,9 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId stri
 				},
 			}
 		}()
-		return nil, true
+		return nil, false
+	} else {
+		return player, true
 	}
 }
 
@@ -325,8 +328,8 @@ func (u *UserManager) LoadTempOfflineUser(userId uint32) *model.Player {
 	if player == nil {
 		// 玩家可能不存在于redis 尝试从db查询出来然后写入redis
 		// 大多数情况下活跃玩家都在redis 所以不会走到下面
-		// TODO 布隆过滤器防止恶意攻击造成redis缓存穿透
-		if userId < 100000000 || userId > 200000000 {
+		// TODO 防止恶意攻击造成redis缓存穿透
+		if userId < PlayerBaseUid || userId > MaxPlayerBaseUid {
 			logger.Error("try to load a not exist uid, uid: %v", userId)
 			return nil
 		}
@@ -487,8 +490,12 @@ func (u *UserManager) LoadUserChatMsgFromDbSync(userId uint32) map[uint32][]*mod
 	}
 	for otherUid, msgList := range chatMsgMap {
 		if len(msgList) > MaxMsgListLen {
-			chatMsgMap[otherUid] = msgList[len(msgList)-MaxMsgListLen:]
+			msgList = msgList[len(msgList)-MaxMsgListLen:]
 		}
+		for index, chatMsg := range msgList {
+			chatMsg.Sequence = uint32(index) + 101
+		}
+		chatMsgMap[otherUid] = msgList
 	}
 	return chatMsgMap
 }
@@ -497,6 +504,14 @@ func (u *UserManager) SaveUserChatMsgToDbSync(chatMsg *model.ChatMsg) {
 	err := u.dao.InsertChatMsg(chatMsg)
 	if err != nil {
 		logger.Error("insert chat msg error: %v", err)
+		return
+	}
+}
+
+func (u *UserManager) ReadAndUpdateUserChatMsgToDbSync(uid uint32, targetUid uint32) {
+	err := u.dao.ReadAndUpdateChatMsgByUid(uid, targetUid)
+	if err != nil {
+		logger.Error("read chat msg error: %v", err)
 		return
 	}
 }

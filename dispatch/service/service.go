@@ -11,7 +11,7 @@ type Service struct {
 // UserPasswordChange 用户密码改变
 func (s *Service) UserPasswordChange(uid uint32) bool {
 	// http登录态失效
-	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "tokenCreateTime", 0)
+	_, err := s.dao.UpdateAccountFieldByFieldName("PlayerID", uid, "TokenCreateTime", 0)
 	if err != nil {
 		return false
 	}
@@ -22,11 +22,11 @@ func (s *Service) UserPasswordChange(uid uint32) bool {
 // ForbidUser 封号
 func (s *Service) ForbidUser(uid uint32, forbidEndTime uint64) bool {
 	// 写入账号封禁信息
-	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbid", true)
+	_, err := s.dao.UpdateAccountFieldByFieldName("PlayerID", uid, "Forbid", true)
 	if err != nil {
 		return false
 	}
-	_, err = s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbidEndTime", forbidEndTime)
+	_, err = s.dao.UpdateAccountFieldByFieldName("PlayerID", uid, "ForbidEndTime", forbidEndTime)
 	if err != nil {
 		return false
 	}
@@ -37,7 +37,7 @@ func (s *Service) ForbidUser(uid uint32, forbidEndTime uint64) bool {
 // UnForbidUser 解封
 func (s *Service) UnForbidUser(uid uint32) bool {
 	// 解除账号封禁
-	_, err := s.dao.UpdateAccountFieldByFieldName("playerID", uid, "forbid", false)
+	_, err := s.dao.UpdateAccountFieldByFieldName("PlayerID", uid, "Forbid", false)
 	if err != nil {
 		return false
 	}

@@ -6,19 +6,19 @@ import (
 
 type ClientLog struct {
 	ID              primitive.ObjectID `json:"-" bson:"_id,omitempty"`
-	Auid            string             `json:"auid" bson:"auid"`
-	ClientIp        string             `json:"clientIp" bson:"clientIp"`
-	CpuInfo         string             `json:"cpuInfo" bson:"cpuInfo"`
-	DeviceModel     string             `json:"deviceModel" bson:"deviceModel"`
-	DeviceName      string             `json:"deviceName" bson:"deviceName"`
-	GpuInfo         string             `json:"gpuInfo" bson:"gpuInfo"`
-	Guid            string             `json:"guid" bson:"guid"`
-	LogStr          string             `json:"logStr" bson:"logStr"`
-	LogType         string             `json:"logType" bson:"logType"`
-	OperatingSystem string             `json:"operatingSystem" bson:"operatingSystem"`
-	StackTrace      string             `json:"stackTrace" bson:"stackTrace"`
-	Time            string             `json:"time" bson:"time"`
-	Uid             uint64             `json:"uid" bson:"uid"`
-	UserName        string             `json:"userName" bson:"userName"`
-	Version         string             `json:"version" bson:"version"`
+	Auid            string             `json:"auid" bson:"Auid"`
+	ClientIp        string             `json:"clientIp" bson:"ClientIp"`
+	CpuInfo         string             `json:"cpuInfo" bson:"CpuInfo"`
+	DeviceModel     string             `json:"deviceModel" bson:"DeviceModel"`
+	DeviceName      string             `json:"deviceName" bson:"DeviceName"`
+	GpuInfo         string             `json:"gpuInfo" bson:"GpuInfo"`
+	Guid            string             `json:"guid" bson:"Guid"`
+	LogStr          string             `json:"logStr" bson:"LogStr"`
+	LogType         string             `json:"logType" bson:"LogType"`
+	OperatingSystem string             `json:"operatingSystem" bson:"OperatingSystem"`
+	StackTrace      string             `json:"stackTrace" bson:"StackTrace"`
+	Time            string             `json:"time" bson:"Time"`
+	Uid             uint64             `json:"uid" bson:"Uid"`
+	UserName        string             `json:"userName" bson:"UserName"`
+	Version         string             `json:"version" bson:"Version"`
 }

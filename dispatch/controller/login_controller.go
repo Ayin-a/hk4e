@@ -92,8 +92,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	// TODO SDK账号登陆
-	account, err := c.dao.QueryAccountByField("username", username)
+	account, err := c.dao.QueryAccountByField("Username", username)
 	if err != nil {
 		logger.Error("query account from db error: %v", err)
 		return
@@ -141,14 +140,14 @@ func (c *Controller) apiLogin(context *gin.Context) {
 	}
 	// 生成新的token
 	account.Token = base64.StdEncoding.EncodeToString(random.GetRandomByte(24))
-	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "token", account.Token)
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "Token", account.Token)
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-4"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "tokenCreateTime", time.Now().UnixMilli())
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "TokenCreateTime", time.Now().UnixMilli())
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-5"
@@ -174,7 +173,7 @@ func (c *Controller) apiVerify(context *gin.Context) {
 		logger.Error("parse uid error: %v", err)
 		return
 	}
-	account, err := c.dao.QueryAccountByField("accountID", uid)
+	account, err := c.dao.QueryAccountByField("AccountID", uid)
 	if err != nil {
 		logger.Error("query account from db error: %v", err)
 		return
@@ -223,7 +222,7 @@ func (c *Controller) v2Login(context *gin.Context) {
 		return
 	}
 	responseData := api.NewComboTokenRsp()
-	account, err := c.dao.QueryAccountByField("accountID", uid)
+	account, err := c.dao.QueryAccountByField("AccountID", uid)
 	if account == nil || account.Token != loginData.Token {
 		responseData.Retcode = -201
 		responseData.Message = "token错误"
@@ -232,14 +231,14 @@ func (c *Controller) v2Login(context *gin.Context) {
 	}
 	// 生成新的comboToken
 	account.ComboToken = random.GetRandomByteHexStr(20)
-	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboToken", account.ComboToken)
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboToken", account.ComboToken)
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-1"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("accountID", account.AccountID, "comboTokenUsed", false)
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboTokenUsed", false)
 	if err != nil {
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-2"

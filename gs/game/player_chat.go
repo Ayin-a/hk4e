@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MaxMsgListLen = 1000 // 与某人的最大聊天记录条数
+	MaxMsgListLen = 100 // 与某人的最大聊天记录条数
 )
 
 func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Message) {
@@ -84,9 +84,9 @@ func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 
 // SendPrivateChat 发送私聊文本消息给玩家
 func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, content any) {
-	chatInfo := &proto.ChatInfo{
+	chatMsg := &model.ChatMsg{
+		Sequence: 0,
 		Time:     uint32(time.Now().Unix()),
-		Sequence: 101,
 		ToUid:    targetUid,
 		Uid:      player.PlayerID,
 		IsRead:   false,
@@ -95,30 +95,33 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 	switch content.(type) {
 	case string:
 		// 文本消息
-		chatInfo.Content = &proto.ChatInfo_Text{
-			Text: content.(string),
-		}
+		chatMsg.MsgType = model.ChatMsgTypeText
+		chatMsg.Text = content.(string)
 	case uint32:
 		// 图标消息
-		chatInfo.Content = &proto.ChatInfo_Icon{
-			Icon: content.(uint32),
-		}
+		chatMsg.MsgType = model.ChatMsgTypeIcon
+		chatMsg.Icon = content.(uint32)
 	}
-	chatMsg := g.ConvChatInfoToChatMsg(chatInfo)
 
 	// 写入db
 	go USER_MANAGER.SaveUserChatMsgToDbSync(chatMsg)
 
 	// 消息加入自己的队列
 	msgList, exist := player.ChatMsgMap[targetUid]
+	// 处理序号
 	if !exist {
 		msgList = make([]*model.ChatMsg, 0)
+		chatMsg.Sequence = 101
+	} else {
+		chatMsg.Sequence = uint32(len(msgList)) + 101
 	}
 	if len(msgList) > MaxMsgListLen {
 		msgList = msgList[1:]
 	}
 	msgList = append(msgList, chatMsg)
 	player.ChatMsgMap[targetUid] = msgList
+
+	chatInfo := g.ConvChatMsgToChatInfo(chatMsg)
 
 	privateChatNotify := &proto.PrivateChatNotify{
 		ChatInfo: chatInfo,
@@ -213,6 +216,9 @@ func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 	}
 	player.ChatMsgMap[targetUid] = msgList
 
+	// 更新db
+	go USER_MANAGER.ReadAndUpdateUserChatMsgToDbSync(player.PlayerID, targetUid)
+
 	g.SendMsg(cmd.ReadPrivateChatRsp, player.PlayerID, player.ClientSeq, new(proto.ReadPrivateChatRsp))
 }
 
@@ -261,13 +267,14 @@ func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message)
 
 func (g *GameManager) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *model.ChatMsg) {
 	chatMsg = &model.ChatMsg{
-		Time:    chatInfo.Time,
-		ToUid:   chatInfo.ToUid,
-		Uid:     chatInfo.Uid,
-		IsRead:  chatInfo.IsRead,
-		MsgType: 0,
-		Text:    "",
-		Icon:    0,
+		Sequence: chatInfo.Sequence,
+		Time:     chatInfo.Time,
+		ToUid:    chatInfo.ToUid,
+		Uid:      chatInfo.Uid,
+		IsRead:   chatInfo.IsRead,
+		MsgType:  0,
+		Text:     "",
+		Icon:     0,
 	}
 	switch chatInfo.Content.(type) {
 	case *proto.ChatInfo_Text:
@@ -284,7 +291,7 @@ func (g *GameManager) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *
 func (g *GameManager) ConvChatMsgToChatInfo(chatMsg *model.ChatMsg) (chatInfo *proto.ChatInfo) {
 	chatInfo = &proto.ChatInfo{
 		Time:     chatMsg.Time,
-		Sequence: 0,
+		Sequence: chatMsg.Sequence,
 		ToUid:    chatMsg.ToUid,
 		Uid:      chatMsg.Uid,
 		IsRead:   chatMsg.IsRead,

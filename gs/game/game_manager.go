@@ -24,12 +24,14 @@ import (
 )
 
 const (
-	AiBaseUid      = 10000
-	AiName         = "GM"
-	AiSign         = "快捷指令"
-	BigWorldAiUid  = 100
-	BigWorldAiName = "小可爱"
-	BigWorldAiSign = "UnKownOwO"
+	PlayerBaseUid    = 100000000
+	MaxPlayerBaseUid = 200000000
+	AiBaseUid        = 10000
+	AiName           = "GM"
+	AiSign           = "快捷指令"
+	BigWorldAiUid    = 100
+	BigWorldAiName   = "小可爱"
+	BigWorldAiSign   = "UnKownOwO"
 )
 
 var GAME_MANAGER *GameManager = nil
@@ -271,7 +273,7 @@ func (g *GameManager) Close() {
 
 // SendMsgToGate 发送消息给客户端 指定网关
 func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
-	if userId < 100000000 {
+	if userId < PlayerBaseUid {
 		return
 	}
 	if payloadMsg == nil {
@@ -293,7 +295,7 @@ func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint3
 
 // SendMsg 发送消息给客户端
 func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
-	if userId < 100000000 {
+	if userId < PlayerBaseUid {
 		return
 	}
 	if payloadMsg == nil {

@@ -74,7 +74,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		startTime := time.Now().UnixNano()
 		playerList := make(PlayerLastSaveTimeSortList, 0)
 		for _, player := range USER_MANAGER.playerMap {
-			if player.PlayerID < 100000000 {
+			if player.PlayerID < PlayerBaseUid {
 				continue
 			}
 			playerList = append(playerList, player)

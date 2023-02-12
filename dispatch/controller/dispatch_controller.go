@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (c *Controller) query_security_file(context *gin.Context) {
+func (c *Controller) querySecurityFile(context *gin.Context) {
 	// 很早以前2.6.0版本的时候抓包为了完美还原写的 不清楚有没有副作用暂时不要了
 	return
 	file, err := os.ReadFile("static/security_file")
@@ -30,7 +30,7 @@ func (c *Controller) query_security_file(context *gin.Context) {
 	_, _ = context.Writer.WriteString(string(file))
 }
 
-func (c *Controller) query_region_list(context *gin.Context) {
+func (c *Controller) queryRegionList(context *gin.Context) {
 	context.Header("Content-type", "text/html; charset=UTF-8")
 	regionListBase64 := region.GetRegionListBase64(c.ec2b)
 	_, _ = context.Writer.WriteString(regionListBase64)
@@ -66,7 +66,7 @@ func (c *Controller) getClientVersionByName(versionName string) (int, string) {
 	return version, strconv.Itoa(version)
 }
 
-func (c *Controller) query_cur_region(context *gin.Context) {
+func (c *Controller) queryCurRegion(context *gin.Context) {
 	rspError := func() {
 		rspContentError := "CAESGE5vdCBGb3VuZCB2ZXJzaW9uIGNvbmZpZw=="
 		rspSignError := "TW9yZSBsb3ZlIGZvciBVQSBQYXRjaCBwbGF5ZXJz"

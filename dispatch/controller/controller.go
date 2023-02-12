@@ -47,9 +47,7 @@ func NewController(dao *dao.Dao, discovery *rpc.DiscoveryClient) (r *Controller)
 
 func (c *Controller) authorize() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		// TODO auth token或其他验证方式
-		ok := true
-		if ok {
+		if context.Query("key") == "flswld" {
 			context.Next()
 			return
 		}
@@ -80,10 +78,10 @@ func (c *Controller) registerRouter() {
 	{
 		// 调度
 		// dispatchosglobal.yuanshen.com
-		engine.GET("/query_security_file", c.query_security_file)
-		engine.GET("/query_region_list", c.query_region_list)
+		engine.GET("/query_security_file", c.querySecurityFile)
+		engine.GET("/query_region_list", c.queryRegionList)
 		// osusadispatch.yuanshen.com
-		engine.GET("/query_cur_region", c.query_cur_region)
+		engine.GET("/query_cur_region", c.queryCurRegion)
 	}
 	{
 		// 登录

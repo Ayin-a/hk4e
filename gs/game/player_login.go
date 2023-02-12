@@ -26,13 +26,17 @@ func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gate
 	logger.Info("user reg req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("reg data: %v", req)
+	if userId < PlayerBaseUid {
+		logger.Error("uid can not less than player base uid, reg req uid: %v", userId)
+		return
+	}
 	g.OnReg(userId, clientSeq, gateAppId, req)
 }
 
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string) {
 	logger.Info("user login, uid: %v", userId)
-	player, asyncWait := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
-	if !asyncWait {
+	player, isRobot := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
+	if isRobot {
 		g.OnLoginOk(userId, player, clientSeq, gateAppId)
 	}
 }
@@ -64,7 +68,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
 	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
-	if userId < 100000000 {
+	if userId < PlayerBaseUid {
 		return
 	}
 
@@ -98,7 +102,7 @@ func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, p
 
 func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32, gateAppId string) {
 	if exist {
-		logger.Error("recv reg req, but user is already exist, userId: %v", userId)
+		logger.Error("recv reg req, but user is already exist, uid: %v", userId)
 		return
 	}
 
@@ -124,7 +128,7 @@ func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	logger.Info("user offline, uid: %v", userId)
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
-		logger.Error("player is nil, userId: %v", userId)
+		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	TICK_MANAGER.DestroyUserGlobalTick(userId)

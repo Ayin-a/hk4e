@@ -279,3 +279,24 @@ func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 	}
 	return result, nil
 }
+
+func (d *Dao) ReadAndUpdateChatMsgByUid(uid uint32, targetUid uint32) error {
+	db := d.db.Collection("chat_msg")
+	_, err := db.UpdateOne(
+		context.TODO(),
+		bson.D{{"ToUid", uid}, {"Uid", targetUid}},
+		bson.D{{"$set", bson.D{{"IsRead", true}}}},
+	)
+	if err != nil {
+		return err
+	}
+	_, err = db.UpdateOne(
+		context.TODO(),
+		bson.D{{"Uid", uid}, {"ToUid", targetUid}},
+		bson.D{{"$set", bson.D{{"IsRead", true}}}},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}

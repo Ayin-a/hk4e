@@ -203,7 +203,7 @@ func (w *WorldManager) IsAiWorld(world *World) bool {
 }
 
 func (w *WorldManager) IsRobotWorld(world *World) bool {
-	return world.owner.PlayerID < 100000000
+	return world.owner.PlayerID < PlayerBaseUid
 }
 
 func (w *WorldManager) IsBigWorld(world *World) bool {

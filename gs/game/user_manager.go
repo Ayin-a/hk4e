@@ -133,8 +133,9 @@ type PlayerLoginInfo struct {
 func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId string) (*model.Player, bool) {
 	player, exist := u.playerMap[userId]
 	if userId > PlayerBaseUid {
-		// 每次玩家上线必须从数据库加载最新的档 如果之前存在于内存则删掉
+		// 正常登录
 		if exist {
+			// 每次玩家上线必须从数据库加载最新的档 如果之前存在于内存则删掉
 			u.DeleteUser(userId)
 		}
 		go func() {
@@ -158,6 +159,7 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId stri
 		}()
 		return nil, false
 	} else {
+		// 机器人
 		return player, true
 	}
 }

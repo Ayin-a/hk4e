@@ -19,7 +19,7 @@ func (g *GameManager) PlayerLoginReq(userId uint32, clientSeq uint32, gateAppId 
 	logger.Info("user login req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.PlayerLoginReq)
 	logger.Debug("login data: %v", req)
-	g.OnLogin(userId, clientSeq, gateAppId)
+	g.OnLogin(userId, clientSeq, gateAppId, false, nil)
 }
 
 func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
@@ -33,8 +33,12 @@ func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gate
 	g.OnReg(userId, clientSeq, gateAppId, req)
 }
 
-func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string) {
+func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string, isReg bool, regPlayer *model.Player) {
 	logger.Info("user login, uid: %v", userId)
+	if isReg {
+		g.OnLoginOk(userId, regPlayer, clientSeq, gateAppId)
+		return
+	}
 	player, isRobot := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
 	if isRobot {
 		g.OnLoginOk(userId, player, clientSeq, gateAppId)
@@ -46,9 +50,9 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
 	}
+
 	player.OnlineTime = uint32(time.Now().UnixMilli())
 	player.Online = true
-
 	player.GateAppId = gateAppId
 
 	// 初始化
@@ -58,7 +62,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.Pos.X = player.SafePos.X
 	player.Pos.Y = player.SafePos.Y
 	player.Pos.Z = player.SafePos.Z
-
 	if player.SceneId > 100 {
 		player.SceneId = 3
 		player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
@@ -93,7 +96,6 @@ func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, p
 	logger.Debug("user reg, uid: %v", userId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
-
 	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq, gateAppId)
 	if !asyncWait {
 		g.OnRegOk(exist, req, userId, clientSeq, gateAppId)
@@ -105,23 +107,20 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 		logger.Error("recv reg req, but user is already exist, uid: %v", userId)
 		return
 	}
-
 	nickName := req.NickName
 	mainCharAvatarId := req.GetAvatarId()
 	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
 		logger.Error("invalid main char avatar id: %v", mainCharAvatarId)
 		return
 	}
-
 	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	USER_MANAGER.AddUser(player)
-
 	g.SendMsgToGate(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
-	g.OnLogin(userId, clientSeq, gateAppId)
+	g.OnLogin(userId, clientSeq, gateAppId, true, player)
 }
 
 func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
@@ -140,7 +139,6 @@ func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	player.Online = false
 	player.TotalOnlineTime += uint32(time.Now().UnixMilli()) - player.OnlineTime
 	USER_MANAGER.OfflineUser(player, changeGsInfo)
-
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, -1)
 }
 

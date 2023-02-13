@@ -271,7 +271,7 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 	avatarSkillDataConfig := gdconf.GetAvatarSkillDataById(int32(skillId))
 
 	// 配置表确保存在技能开始对应的耐力消耗
-	if avatarSkillDataConfig != nil {
+	if avatarSkillDataConfig != nil && avatarSkillDataConfig.CostStamina != 0 {
 		// 距离上次处理技能开始耐力消耗过去的时间
 		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillStartTime
 		// 上次触发的技能相同则每400ms触发一次消耗
@@ -281,8 +281,6 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 			g.UpdatePlayerStamina(player, avatarSkillDataConfig.CostStamina)
 			staminaInfo.LastSkillStartTime = time.Now().UnixMilli()
 		}
-	} else {
-		// logger.Debug("skill start cost error, cost: %v", costStamina)
 	}
 
 	// 记录最后释放的技能
@@ -364,6 +362,10 @@ func (g *GameManager) GetChangeStamina(curStamina int32, maxStamina int32, stami
 
 // UpdateVehicleStamina 更新载具耐力
 func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity, staminaCost int32) {
+	// 耐力消耗为0代表不更改 仍然执行后面的话会导致回复出问题
+	if staminaCost == 0 {
+		return
+	}
 	staminaInfo := player.StaminaInfo
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {
@@ -406,6 +408,10 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 
 // UpdatePlayerStamina 更新玩家耐力
 func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int32) {
+	// 耐力消耗为0代表不更改 仍然执行后面的话会导致回复出问题
+	if staminaCost == 0 {
+		return
+	}
 	staminaInfo := player.StaminaInfo
 	// 添加的耐力大于0为恢复
 	if staminaCost > 0 {

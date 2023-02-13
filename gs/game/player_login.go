@@ -185,11 +185,11 @@ func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNoti
 	storeWeightLimitNotify := &proto.StoreWeightLimitNotify{
 		StoreType: proto.StoreType_STORE_PACK,
 		// 背包容量限制
-		WeightLimit:         30000,
-		WeaponCountLimit:    2000,
-		ReliquaryCountLimit: 1500,
-		MaterialCountLimit:  2000,
-		FurnitureCountLimit: 2000,
+		WeightLimit:         constant.STORE_PACK_LIMIT_WEIGHT,
+		WeaponCountLimit:    constant.STORE_PACK_LIMIT_WEAPON,
+		ReliquaryCountLimit: constant.STORE_PACK_LIMIT_RELIQUARY,
+		MaterialCountLimit:  constant.STORE_PACK_LIMIT_MATERIAL,
+		FurnitureCountLimit: constant.STORE_PACK_LIMIT_FURNITURE,
 	}
 	return storeWeightLimitNotify
 }
@@ -197,14 +197,10 @@ func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNoti
 func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
 	playerStoreNotify := &proto.PlayerStoreNotify{
 		StoreType:   proto.StoreType_STORE_PACK,
-		WeightLimit: 30000,
+		WeightLimit: constant.STORE_PACK_LIMIT_WEIGHT,
+		ItemList:    make([]*proto.Item, 0, len(player.WeaponMap)+len(player.ReliquaryMap)+len(player.ItemMap)),
 	}
 	for _, weapon := range player.WeaponMap {
-		pbItem := &proto.Item{
-			ItemId: weapon.ItemId,
-			Guid:   weapon.Guid,
-			Detail: nil,
-		}
 		itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", weapon.ItemId)
@@ -217,27 +213,26 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		for _, affixId := range weapon.AffixIdList {
 			affixMap[affixId] = uint32(weapon.Refinement)
 		}
-		pbItem.Detail = &proto.Item_Equip{
-			Equip: &proto.Equip{
-				Detail: &proto.Equip_Weapon{
-					Weapon: &proto.Weapon{
-						Level:        uint32(weapon.Level),
-						Exp:          weapon.Exp,
-						PromoteLevel: uint32(weapon.Promote),
-						AffixMap:     affixMap,
+		pbItem := &proto.Item{
+			ItemId: weapon.ItemId,
+			Guid:   weapon.Guid,
+			Detail: &proto.Item_Equip{
+				Equip: &proto.Equip{
+					Detail: &proto.Equip_Weapon{
+						Weapon: &proto.Weapon{
+							Level:        uint32(weapon.Level),
+							Exp:          weapon.Exp,
+							PromoteLevel: uint32(weapon.Promote),
+							AffixMap:     affixMap,
+						},
 					},
+					IsLocked: weapon.Lock,
 				},
-				IsLocked: weapon.Lock,
 			},
 		}
 		playerStoreNotify.ItemList = append(playerStoreNotify.ItemList, pbItem)
 	}
 	for _, reliquary := range player.ReliquaryMap {
-		pbItem := &proto.Item{
-			ItemId: reliquary.ItemId,
-			Guid:   reliquary.Guid,
-			Detail: nil,
-		}
 		itemDataConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", reliquary.ItemId)
@@ -246,32 +241,36 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		if uint16(itemDataConfig.Type) != constant.ITEM_TYPE_RELIQUARY {
 			continue
 		}
-		pbItem.Detail = &proto.Item_Equip{
-			Equip: &proto.Equip{
-				Detail: &proto.Equip_Reliquary{
-					Reliquary: &proto.Reliquary{
-						Level:            uint32(reliquary.Level),
-						Exp:              reliquary.Exp,
-						PromoteLevel:     uint32(reliquary.Promote),
-						MainPropId:       reliquary.MainPropId,
-						AppendPropIdList: reliquary.AppendPropIdList,
+		pbItem := &proto.Item{
+			ItemId: reliquary.ItemId,
+			Guid:   reliquary.Guid,
+			Detail: &proto.Item_Equip{
+				Equip: &proto.Equip{
+					Detail: &proto.Equip_Reliquary{
+						Reliquary: &proto.Reliquary{
+							Level:            uint32(reliquary.Level),
+							Exp:              reliquary.Exp,
+							PromoteLevel:     uint32(reliquary.Promote),
+							MainPropId:       reliquary.MainPropId,
+							AppendPropIdList: reliquary.AppendPropIdList,
+						},
 					},
+					IsLocked: reliquary.Lock,
 				},
-				IsLocked: reliquary.Lock,
 			},
 		}
 		playerStoreNotify.ItemList = append(playerStoreNotify.ItemList, pbItem)
 	}
 	for _, item := range player.ItemMap {
-		pbItem := &proto.Item{
-			ItemId: item.ItemId,
-			Guid:   item.Guid,
-			Detail: nil,
-		}
 		itemDataConfig := gdconf.GetItemDataById(int32(item.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", item.ItemId)
 			continue
+		}
+		pbItem := &proto.Item{
+			ItemId: item.ItemId,
+			Guid:   item.Guid,
+			Detail: nil,
 		}
 		if itemDataConfig != nil && uint16(itemDataConfig.Type) == constant.ITEM_TYPE_FURNITURE {
 			pbItem.Detail = &proto.Item_Furniture{

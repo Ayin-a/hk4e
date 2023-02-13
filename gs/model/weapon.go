@@ -1,6 +1,7 @@
 package model
 
 import (
+	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 )
@@ -57,6 +58,15 @@ func (p *Player) GetWeapon(weaponId uint64) *Weapon {
 }
 
 func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
+	// 校验背包武器容量
+	if len(p.WeaponMap) > constant.STORE_PACK_LIMIT_WEAPON {
+		return
+	}
+	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+	if itemDataConfig == nil {
+		logger.Error("weapon config is nil, itemId: %v", itemId)
+		return
+	}
 	weapon := &Weapon{
 		WeaponId:    weaponId,
 		ItemId:      itemId,
@@ -67,11 +77,6 @@ func (p *Player) AddWeapon(itemId uint32, weaponId uint64) {
 		AffixIdList: make([]uint32, 0),
 		Refinement:  0,
 		Guid:        0,
-	}
-	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
-	if itemDataConfig == nil {
-		logger.Error("weapon config is nil, itemId: %v", itemId)
-		return
 	}
 	for _, skillAffix := range itemDataConfig.SkillAffix {
 		weapon.AffixIdList = append(weapon.AffixIdList, uint32(skillAffix))

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 )
@@ -63,6 +64,15 @@ func (p *Player) GetReliquary(reliquaryId uint64) *Reliquary {
 }
 
 func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint32) {
+	// 校验背包圣遗物容量
+	if len(p.ReliquaryMap) > constant.STORE_PACK_LIMIT_RELIQUARY {
+		return
+	}
+	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+	if itemDataConfig == nil {
+		logger.Error("reliquary config is nil, itemId: %v", itemId)
+		return
+	}
 	reliquary := &Reliquary{
 		ReliquaryId:      reliquaryId,
 		ItemId:           itemId,
@@ -74,11 +84,6 @@ func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint
 		MainPropId:       mainPropId,
 		AvatarId:         0,
 		Guid:             0,
-	}
-	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
-	if itemDataConfig == nil {
-		logger.Error("reliquary config is nil, itemId: %v", itemId)
-		return
 	}
 	_ = itemDataConfig
 	p.InitReliquary(reliquary)

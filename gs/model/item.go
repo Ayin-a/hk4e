@@ -62,6 +62,11 @@ func (p *Player) GetItemCount(itemId uint32) uint32 {
 func (p *Player) AddItem(itemId uint32, count uint32) {
 	itemInfo := p.ItemMap[itemId]
 	if itemInfo == nil {
+		// 该物品为新物品时校验背包物品容量
+		// 目前物品包括材料和家具
+		if len(p.ItemMap) > constant.STORE_PACK_LIMIT_MATERIAL+constant.STORE_PACK_LIMIT_FURNITURE {
+			return
+		}
 		itemInfo = &Item{
 			ItemId: itemId,
 			Count:  0,

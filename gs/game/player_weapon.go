@@ -148,14 +148,14 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 一星二星的武器不能精炼
-	if weaponConfig.EquipLevel < 3 {
+	if weaponConfig.EquipLevel < constant.WEAPON_AWAKEN_MIN_EQUIPLEVEL {
 		logger.Error("weapon equip level le 3, itemId: %v", weapon.ItemId)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_AWAKEN_LEVEL_MAX)
 		return
 	}
 	// 武器精炼等级是否不超过限制
 	// 暂时精炼等级是写死的 应该最大精炼等级就是5级
-	if weapon.Refinement >= 4 {
+	if weapon.Refinement+1 >= constant.WEAPON_AWAKEN_MAX_REFINEMENT {
 		logger.Error("weapon refinement ge 4, refinement: %v", weapon.Refinement)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_AWAKEN_LEVEL_MAX)
 		return

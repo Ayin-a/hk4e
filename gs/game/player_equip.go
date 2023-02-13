@@ -68,6 +68,8 @@ func (g *GameManager) TakeoffEquipReq(player *model.Player, payloadMsg pb.Messag
 	}
 	// 卸下圣遗物
 	player.TakeOffReliquary(avatar.AvatarId, reliquary.ReliquaryId)
+	// 角色更新面板
+	g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	// 更新玩家装备
 	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
 		AvatarGuid: avatar.Guid,
@@ -113,6 +115,8 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
 		return
 	}
+	// 角色更新面板
+	g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 
 	wearEquipRsp := &proto.WearEquipRsp{
 		AvatarGuid: req.AvatarGuid,

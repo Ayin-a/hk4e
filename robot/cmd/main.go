@@ -24,14 +24,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	engine.RunEngine([]int{0, 1, 2, 3}, 1, "0.0.0.0")
+	engine.RunEngine([]int{0, 1, 2, 3}, 4, 1, "0.0.0.0")
 
 	time.Sleep(time.Second * 30)
 
-	session := net.NewSession("192.168.199.233:22222", []byte{0x00})
+	session := net.NewSession("192.168.199.233:22222", make([]byte, 4096))
 	go func() {
 		protoMsg := <-session.RecvChan
-		logger.Debug("%v", protoMsg)
+		logger.Debug("protoMsg: %v", protoMsg)
 	}()
 	go func() {
 		session.SendChan <- &hk4egatenet.ProtoMsg{

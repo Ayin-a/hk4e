@@ -63,7 +63,7 @@ func (s *Session) recvHandle() {
 		kcpMsgList := make([]*hk4egatenet.KcpMsg, 0)
 		hk4egatenet.DecodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, s.xorKey)
 		for _, v := range kcpMsgList {
-			protoMsgList := hk4egatenet.ProtoDecode(v, nil, nil)
+			protoMsgList := hk4egatenet.ProtoDecode(v, cmd.NewCmdProtoMap(), nil)
 			for _, vv := range protoMsgList {
 				s.RecvChan <- vv
 				if s.changeXorKeyFin == false && vv.CmdId == cmd.GetPlayerTokenRsp {

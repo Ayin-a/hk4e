@@ -51,7 +51,7 @@ require github.com/yuin/gopher-lua v1.0.0
 require github.com/pierrec/lz4/v4 v4.1.17
 
 // dpdk-go
-require github.com/FlourishingWorld/dpdk-go v1.0.1
+require github.com/FlourishingWorld/dpdk-go v0.0.0-20230213165129-6c5bc55b1f63
 
 require (
 	github.com/pkg/errors v0.9.1

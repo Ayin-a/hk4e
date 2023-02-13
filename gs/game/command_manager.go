@@ -105,18 +105,25 @@ func (c *CommandManager) IsCommand(cmdName string) bool {
 	return false
 }
 
-// InputCommand 输入要处理的命令
-func (c *CommandManager) InputCommand(executor any, text string) {
+// PlayerInputCommand 玩家输入要处理的命令
+func (c *CommandManager) PlayerInputCommand(player *model.Player, targetUid uint32, text string) {
 	// 机器人不会读命令所以写到了 PrivateChatReq
 
-	// 确保消息文本为 / 开头
-	// 如果不为这个开头那接下来就毫无意义
-	if strings.HasPrefix(text, "/") {
-		logger.Debug("input command, uid: %v text: %v", c.GetExecutorId(executor), text)
-
-		// 输入的命令将在其他协程中处理
-		c.commandTextInput <- &CommandMessage{Executor: executor, Text: text}
+	// 确保私聊的目标是处理命令的机器人
+	if targetUid != c.system.PlayerID {
+		return
 	}
+	// 输入命令进行处理
+	c.InputCommand(player, text)
+}
+
+// InputCommand 输入要处理的命令
+func (c *CommandManager) InputCommand(executor any, text string) {
+	// 留着这个主要还是为了万一以后要对接要别的地方
+	logger.Debug("input command, uid: %v text: %v", c.GetExecutorId(executor), text)
+
+	// 输入的命令将在其他协程中处理
+	c.commandTextInput <- &CommandMessage{Executor: executor, Text: text}
 }
 
 // HandleCommand 处理命令
@@ -124,9 +131,9 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 	executor := cmd.Executor
 
-	// 将开头的 / 去掉 并 分割出命令的每个参数
+	// 分割出命令的每个参数
 	// 不区分命令的大小写 统一转为小写
-	cmdSplit := strings.Split(strings.ToLower(cmd.Text[1:]), " -")
+	cmdSplit := strings.Split(strings.ToLower(cmd.Text), " --")
 
 	// 分割出来啥也没有可能是个空的字符串
 	// 此时将会返回的命令名和命令参数都为空
@@ -149,7 +156,7 @@ func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 
 		// 分割出来的参数只有一个那肯定不是键值对
 		if len(cmdArg) < 2 {
-			c.SendMessage(executor, "格式错误，用法: /%v -[参数名] [参数]。", cmd.Name)
+			c.SendMessage(executor, "格式错误，用法: %v --[参数名] [参数]。", cmd.Name)
 			return
 		}
 
@@ -189,7 +196,7 @@ func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 	cmdFunc, ok := c.commandFuncRouter[cmd.Name]
 	if !ok {
 		// 玩家可能会执行一些没有的命令仅做调试输出
-		c.SendMessage(executor, "命令不存在，输入 /help 查看帮助。")
+		c.SendMessage(executor, "命令不存在，输入 help 查看帮助。")
 		return
 	}
 	// 判断命令权限是否注册
@@ -219,9 +226,9 @@ func (c *CommandManager) SendMessage(executor any, msg string, param ...any) {
 		// 玩家类型
 		player := executor.(*model.Player)
 		GAME_MANAGER.SendPrivateChat(c.system, player.PlayerID, fmt.Sprintf(msg, param...))
-	case string:
-		// GM接口等
-		// str := executor.(string)
+	// case string:
+	// GM接口等
+	// str := executor.(string)
 	default:
 		// 无效的类型报错
 		logger.Error("command executor type error, type: %T", executor)
@@ -236,9 +243,9 @@ func (c *CommandManager) GetExecutorId(executor any) uint32 {
 		// 玩家类型
 		player := executor.(*model.Player)
 		return player.PlayerID
-	case string:
-		// GM接口等
-		// return 123
+	// case string:
+	// GM接口等
+	// return 123
 	default:
 		// 无效的类型报错
 		logger.Error("command executor type error, type: %T", executor)

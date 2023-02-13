@@ -48,6 +48,7 @@ func (p *Player) InitAvatar(avatar *Avatar) {
 	avatar.Guid = p.GetNextGameObjectGuid()
 	p.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
 	avatar.EquipGuidMap = make(map[uint64]uint64)
+	avatar.EquipReliquaryMap = make(map[uint8]*Reliquary)
 	p.AvatarMap[avatar.AvatarId] = avatar
 	return
 }

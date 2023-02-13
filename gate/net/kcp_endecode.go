@@ -32,13 +32,13 @@ type KcpMsg struct {
 	ProtoData []byte
 }
 
-func (k *KcpConnectManager) decodeBinToPayload(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg, xorKey []byte) {
+func DecodeBinToPayload(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg, xorKey []byte) {
 	// xor解密
 	endec.Xor(data, xorKey)
-	k.decodeLoop(data, dataBuf, convId, kcpMsgList)
+	DecodeLoop(data, dataBuf, convId, kcpMsgList)
 }
 
-func (k *KcpConnectManager) decodeLoop(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg) {
+func DecodeLoop(data []byte, dataBuf *[]byte, convId uint64, kcpMsgList *[]*KcpMsg) {
 	if len(*dataBuf) != 0 {
 		// 取出之前的缓冲区数据
 		data = append(*dataBuf, data...)
@@ -93,11 +93,11 @@ func (k *KcpConnectManager) decodeLoop(data []byte, dataBuf *[]byte, convId uint
 	*kcpMsgList = append(*kcpMsgList, kcpMsg)
 	// 递归解析
 	if haveMorePacket {
-		k.decodeLoop(data[packetLen:], dataBuf, convId, kcpMsgList)
+		DecodeLoop(data[packetLen:], dataBuf, convId, kcpMsgList)
 	}
 }
 
-func (k *KcpConnectManager) encodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (bin []byte) {
+func EncodePayloadToBin(kcpMsg *KcpMsg, xorKey []byte) (bin []byte) {
 	if kcpMsg.HeadData == nil {
 		kcpMsg.HeadData = make([]byte, 0)
 	}

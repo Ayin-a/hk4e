@@ -317,9 +317,9 @@ func (k *KcpConnectManager) recvHandle(session *Session) {
 		}
 		recvData := recvBuf[:recvLen]
 		kcpMsgList := make([]*KcpMsg, 0)
-		k.decodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, session.xorKey)
+		DecodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, session.xorKey)
 		for _, v := range kcpMsgList {
-			protoMsgList := k.protoDecode(v)
+			protoMsgList := ProtoDecode(v, k.serverCmdProtoMap, k.clientCmdProtoMap)
 			for _, vv := range protoMsgList {
 				k.recvMsgHandle(vv, session)
 			}
@@ -341,12 +341,12 @@ func (k *KcpConnectManager) sendHandle(session *Session) {
 			k.closeKcpConn(session, kcp.EnetServerKick)
 			break
 		}
-		kcpMsg := k.protoEncode(protoMsg)
+		kcpMsg := ProtoEncode(protoMsg, k.serverCmdProtoMap, k.clientCmdProtoMap)
 		if kcpMsg == nil {
 			logger.Error("decode kcp msg is nil, convId: %v", convId)
 			continue
 		}
-		bin := k.encodePayloadToBin(kcpMsg, session.xorKey)
+		bin := EncodePayloadToBin(kcpMsg, session.xorKey)
 		_ = conn.SetWriteDeadline(time.Now().Add(time.Second * ConnSendTimeout))
 		_, err := conn.Write(bin)
 		if err != nil {

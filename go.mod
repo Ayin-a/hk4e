@@ -5,14 +5,6 @@ go 1.18
 // toml
 require github.com/BurntSushi/toml v0.3.1
 
-// kcp
-require (
-	github.com/pkg/errors v0.9.1
-	github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37
-	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be
-	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9
-)
-
 // protobuf
 require google.golang.org/protobuf v1.28.0
 
@@ -58,7 +50,14 @@ require github.com/yuin/gopher-lua v1.0.0
 // lz4
 require github.com/pierrec/lz4/v4 v4.1.17
 
-require golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
+// dpdk-go
+require github.com/FlourishingWorld/dpdk-go v1.0.1
+
+require (
+	github.com/pkg/errors v0.9.1
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -88,6 +87,7 @@ require (
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

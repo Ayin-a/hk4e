@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"hk4e/common/config"
+	"hk4e/gate/client_proto"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
 	"hk4e/protocol/cmd"
@@ -24,17 +25,18 @@ type ProtoMessage struct {
 	message pb.Message
 }
 
-func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMsg) {
+func ProtoDecode(kcpMsg *KcpMsg,
+	serverCmdProtoMap *cmd.CmdProtoMap, clientCmdProtoMap *client_proto.ClientCmdProtoMap) (protoMsgList []*ProtoMsg) {
 	protoMsgList = make([]*ProtoMsg, 0)
 	if config.CONF.Hk4e.ClientProtoProxyEnable {
 		clientCmdId := kcpMsg.CmdId
 		clientProtoData := kcpMsg.ProtoData
-		cmdName := k.clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
+		cmdName := clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
 		if cmdName == "" {
 			logger.Error("get cmdName is nil, clientCmdId: %v", clientCmdId)
 			return protoMsgList
 		}
-		clientProtoObj := k.getClientProtoObjByName(cmdName)
+		clientProtoObj := GetClientProtoObjByName(cmdName, clientCmdProtoMap)
 		if clientProtoObj == nil {
 			logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
 			return protoMsgList
@@ -44,12 +46,12 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 			logger.Error("unmarshal client proto error: %v", err)
 			return protoMsgList
 		}
-		serverCmdId := k.serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
+		serverCmdId := serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
 		if serverCmdId == 0 {
 			logger.Error("get server cmdId is nil, cmdName: %v", cmdName)
 			return protoMsgList
 		}
-		serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
+		serverProtoObj := serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
 		if serverProtoObj == nil {
 			logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
 			return protoMsgList
@@ -87,7 +89,7 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 	}
 	// payload msg
 	protoMessageList := make([]*ProtoMessage, 0)
-	k.protoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList)
+	ProtoDecodePayloadLoop(kcpMsg.CmdId, kcpMsg.ProtoData, &protoMessageList, serverCmdProtoMap, clientCmdProtoMap)
 	if len(protoMessageList) == 0 {
 		logger.Error("decode proto object is nil")
 		return protoMsgList
@@ -106,7 +108,8 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 			if msg.PayloadMessage != nil {
 				cmdName = string(msg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 			}
-			logger.Debug("[RECV UNION CMD], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", msg.CmdId, cmdName, msg.ConvId, msg.HeadMessage)
+			logger.Debug("[RECV UNION CMD], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v",
+				msg.CmdId, cmdName, msg.ConvId, msg.HeadMessage)
 		}
 	} else {
 		protoMsg.PayloadMessage = protoMessageList[0].message
@@ -115,13 +118,15 @@ func (k *KcpConnectManager) protoDecode(kcpMsg *KcpMsg) (protoMsgList []*ProtoMs
 		if protoMsg.PayloadMessage != nil {
 			cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 		}
-		logger.Debug("[RECV], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
+		logger.Debug("[RECV], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v",
+			protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	}
 	return protoMsgList
 }
 
-func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage) {
-	protoObj := k.decodePayloadToProto(cmdId, protoData)
+func ProtoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]*ProtoMessage,
+	serverCmdProtoMap *cmd.CmdProtoMap, clientCmdProtoMap *client_proto.ClientCmdProtoMap) {
+	protoObj := DecodePayloadToProto(cmdId, protoData, serverCmdProtoMap)
 	if protoObj == nil {
 		logger.Error("decode proto object is nil")
 		return
@@ -137,12 +142,12 @@ func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byt
 			if config.CONF.Hk4e.ClientProtoProxyEnable {
 				clientCmdId := uint16(unionCmd.MessageId)
 				clientProtoData := unionCmd.Body
-				cmdName := k.clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
+				cmdName := clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
 				if cmdName == "" {
 					logger.Error("get cmdName is nil, clientCmdId: %v", clientCmdId)
 					continue
 				}
-				clientProtoObj := k.getClientProtoObjByName(cmdName)
+				clientProtoObj := GetClientProtoObjByName(cmdName, clientCmdProtoMap)
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
 					continue
@@ -152,12 +157,12 @@ func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byt
 					logger.Error("unmarshal client proto error: %v", err)
 					continue
 				}
-				serverCmdId := k.serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
+				serverCmdId := serverCmdProtoMap.GetCmdIdByCmdName(cmdName)
 				if serverCmdId == 0 {
 					logger.Error("get server cmdId is nil, cmdName: %v", cmdName)
 					continue
 				}
-				serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
+				serverProtoObj := serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
 				if serverProtoObj == nil {
 					logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
 					continue
@@ -178,7 +183,8 @@ func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byt
 				unionCmd.MessageId = uint32(serverCmdId)
 				unionCmd.Body = serverProtoData
 			}
-			k.protoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList)
+			ProtoDecodePayloadLoop(uint16(unionCmd.MessageId), unionCmd.Body, protoMessageList,
+				serverCmdProtoMap, clientCmdProtoMap)
 		}
 	}
 	*protoMessageList = append(*protoMessageList, &ProtoMessage{
@@ -187,12 +193,14 @@ func (k *KcpConnectManager) protoDecodePayloadLoop(cmdId uint16, protoData []byt
 	})
 }
 
-func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
+func ProtoEncode(protoMsg *ProtoMsg,
+	serverCmdProtoMap *cmd.CmdProtoMap, clientCmdProtoMap *client_proto.ClientCmdProtoMap) (kcpMsg *KcpMsg) {
 	cmdName := ""
 	if protoMsg.PayloadMessage != nil {
 		cmdName = string(protoMsg.PayloadMessage.ProtoReflect().Descriptor().FullName())
 	}
-	logger.Debug("[SEND], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v", protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
+	logger.Debug("[SEND], cmdId: %v, cmdName: %v, convId: %v, headMsg: %v",
+		protoMsg.CmdId, cmdName, protoMsg.ConvId, protoMsg.HeadMessage)
 	kcpMsg = new(KcpMsg)
 	kcpMsg.ConvId = protoMsg.ConvId
 	kcpMsg.CmdId = protoMsg.CmdId
@@ -209,13 +217,14 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	}
 	// payload msg
 	if protoMsg.PayloadMessage != nil {
-		cmdId, protoData := k.encodeProtoToPayload(protoMsg.PayloadMessage)
+		cmdId, protoData := EncodeProtoToPayload(protoMsg.PayloadMessage, serverCmdProtoMap)
 		if cmdId == 0 || protoData == nil {
 			logger.Error("encode proto data is nil")
 			return nil
 		}
 		if cmdId != 65535 && cmdId != protoMsg.CmdId {
-			logger.Error("cmd id is not match with proto obj, src cmd id: %v, found cmd id: %v", protoMsg.CmdId, cmdId)
+			logger.Error("cmd id is not match with proto obj, src cmd id: %v, found cmd id: %v",
+				protoMsg.CmdId, cmdId)
 			return nil
 		}
 		kcpMsg.ProtoData = protoData
@@ -225,7 +234,7 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	if config.CONF.Hk4e.ClientProtoProxyEnable {
 		serverCmdId := kcpMsg.CmdId
 		serverProtoData := kcpMsg.ProtoData
-		serverProtoObj := k.serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
+		serverProtoObj := serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)
 		if serverProtoObj == nil {
 			logger.Error("get server proto obj is nil, serverCmdId: %v", serverCmdId)
 			return nil
@@ -235,12 +244,12 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 			logger.Error("unmarshal server proto error: %v", err)
 			return nil
 		}
-		cmdName := k.serverCmdProtoMap.GetCmdNameByCmdId(serverCmdId)
+		cmdName := serverCmdProtoMap.GetCmdNameByCmdId(serverCmdId)
 		if cmdName == "" {
 			logger.Error("get cmdName is nil, serverCmdId: %v", serverCmdId)
 			return nil
 		}
-		clientProtoObj := k.getClientProtoObjByName(cmdName)
+		clientProtoObj := GetClientProtoObjByName(cmdName, clientCmdProtoMap)
 		if clientProtoObj == nil {
 			logger.Error("get client proto obj is nil, cmdName: %v", cmdName)
 			return nil
@@ -258,7 +267,7 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 			logger.Error("marshal client proto error: %v", err)
 			return nil
 		}
-		clientCmdId := k.clientCmdProtoMap.GetClientCmdIdByCmdName(cmdName)
+		clientCmdId := clientCmdProtoMap.GetClientCmdIdByCmdName(cmdName)
 		if clientCmdId == 0 {
 			logger.Error("get client cmdId is nil, cmdName: %v", cmdName)
 			return nil
@@ -269,8 +278,8 @@ func (k *KcpConnectManager) protoEncode(protoMsg *ProtoMsg) (kcpMsg *KcpMsg) {
 	return kcpMsg
 }
 
-func (k *KcpConnectManager) decodePayloadToProto(cmdId uint16, protoData []byte) (protoObj pb.Message) {
-	protoObj = k.serverCmdProtoMap.GetProtoObjByCmdId(cmdId)
+func DecodePayloadToProto(cmdId uint16, protoData []byte, serverCmdProtoMap *cmd.CmdProtoMap) (protoObj pb.Message) {
+	protoObj = serverCmdProtoMap.GetProtoObjByCmdId(cmdId)
 	if protoObj == nil {
 		logger.Error("get new proto object is nil")
 		return nil
@@ -283,8 +292,8 @@ func (k *KcpConnectManager) decodePayloadToProto(cmdId uint16, protoData []byte)
 	return protoObj
 }
 
-func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uint16, protoData []byte) {
-	cmdId = k.serverCmdProtoMap.GetCmdIdByProtoObj(protoObj)
+func EncodeProtoToPayload(protoObj pb.Message, serverCmdProtoMap *cmd.CmdProtoMap) (cmdId uint16, protoData []byte) {
+	cmdId = serverCmdProtoMap.GetCmdIdByProtoObj(protoObj)
 	var err error = nil
 	protoData, err = pb.Marshal(protoObj)
 	if err != nil {
@@ -294,8 +303,8 @@ func (k *KcpConnectManager) encodeProtoToPayload(protoObj pb.Message) (cmdId uin
 	return cmdId, protoData
 }
 
-func (k *KcpConnectManager) getClientProtoObjByName(protoObjName string) pb.Message {
-	fn := k.clientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
+func GetClientProtoObjByName(protoObjName string, clientCmdProtoMap *client_proto.ClientCmdProtoMap) pb.Message {
+	fn := clientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()
 	if obj == nil {

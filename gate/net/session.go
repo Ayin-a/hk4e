@@ -482,10 +482,10 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	timeRand := random.GetTimeRand()
 	serverSeedUint64 := timeRand.Uint64()
 	session.seed = serverSeedUint64
-	if req.GetKeyId() != 0 {
+	if req.KeyId != 0 {
 		logger.Debug("do hk4e 2.8 rsa logic, uid: %v", uid)
 		session.useMagicSeed = true
-		keyId := strconv.Itoa(int(req.GetKeyId()))
+		keyId := strconv.Itoa(int(req.KeyId))
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]
 		if !exist {
 			logger.Error("can not found key id: %v, uid: %v", keyId, uid)
@@ -504,7 +504,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			loginFailClose()
 			return nil
 		}
-		clientSeedBase64 := req.GetClientRandKey()
+		clientSeedBase64 := req.ClientRandKey
 		clientSeedEnc, err := base64.StdEncoding.DecodeString(clientSeedBase64)
 		if err != nil {
 			logger.Error("parse client seed base64 error: %v, uid: %v", err, uid)

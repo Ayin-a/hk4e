@@ -922,7 +922,8 @@ func DialWithOptions(raddr string) (*UDPSession, error) {
 		return nil, err
 	}
 	if addr.String() != raddr {
-		return nil, errors.New("recv packet remote addr not match")
+		// TODO 本质是为了安全考虑 但是用域名连接会出现这种情况看之后找个方法解决一下
+		// return nil, errors.New("recv packet remote addr not match")
 	}
 	udpPayload := buf[:n]
 	connType, enetType, conv, err := ParseEnet(udpPayload)

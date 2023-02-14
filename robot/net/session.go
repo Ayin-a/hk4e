@@ -1,6 +1,7 @@
 package net
 
 import (
+	"strconv"
 	"time"
 
 	hk4egatenet "hk4e/gate/net"
@@ -21,8 +22,8 @@ type Session struct {
 	useMagicSeed    bool
 }
 
-func NewSession(gateAddr string, dispatchKey []byte) (r *Session) {
-	conn, err := kcp.DialWithOptions(gateAddr, "0.0.0.0:30000")
+func NewSession(gateAddr string, dispatchKey []byte, localPort int) (r *Session) {
+	conn, err := kcp.DialWithOptions(gateAddr, "0.0.0.0:"+strconv.Itoa(localPort))
 	if err != nil {
 		logger.Error("kcp client conn to server error: %v", err)
 		return
@@ -92,7 +93,7 @@ func (s *Session) sendHandle() {
 			_ = conn.Close()
 			break
 		}
-		kcpMsg := hk4egatenet.ProtoEncode(protoMsg, nil, nil)
+		kcpMsg := hk4egatenet.ProtoEncode(protoMsg, cmd.NewCmdProtoMap(), nil)
 		if kcpMsg == nil {
 			logger.Error("decode kcp msg is nil, convId: %v", convId)
 			continue

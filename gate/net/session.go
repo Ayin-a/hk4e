@@ -190,7 +190,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 				ServerMsg: serverMsg,
 			})
 		} else if protoMsg.CmdId == cmd.ClientReconnectNotify {
-			tokenResetRsp, err := httpclient.Post[controller.TokenResetRsp](
+			tokenResetRsp, err := httpclient.PostJson[controller.TokenResetRsp](
 				config.CONF.Hk4e.LoginSdkUrl+"/gate/token/reset?key=flswld",
 				&controller.TokenResetReq{
 					PlayerId: session.userId,
@@ -342,7 +342,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			EventMessage: uint32(kcp.EnetLoginUnfinished),
 		}
 	}
-	tokenVerifyRsp, err := httpclient.Post[controller.TokenVerifyRsp](
+	tokenVerifyRsp, err := httpclient.PostJson[controller.TokenVerifyRsp](
 		config.CONF.Hk4e.LoginSdkUrl+"/gate/token/verify?key=flswld",
 		&controller.TokenVerifyReq{
 			AccountId:    req.AccountUid,

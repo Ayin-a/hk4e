@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+	"hk4e/robot/login"
 	"hk4e/robot/net"
 
 	"github.com/FlourishingWorld/dpdk-go/engine"
@@ -28,7 +30,16 @@ func main() {
 
 	time.Sleep(time.Second * 30)
 
-	session := net.NewSession("192.168.199.233:22222", make([]byte, 4096))
+	dispatchInfo, err := login.GetDispatchInfo("https://hk4e.flswld.com", "?version=OSRELWin3.2.0")
+	if err != nil {
+		panic(err)
+	}
+	accountInfo, err := login.AccountLogin("https://hk4e.flswld.com", "flswld", "123456")
+	if err != nil {
+		panic(err)
+	}
+	gateAddr := dispatchInfo.GateIp + strconv.Itoa(int(dispatchInfo.GatePort))
+	session := net.NewSession(gateAddr, dispatchInfo.DispatchKey, 30000)
 	go func() {
 		protoMsg := <-session.RecvChan
 		logger.Debug("protoMsg: %v", protoMsg)
@@ -42,9 +53,9 @@ func main() {
 				SentMs:           uint64(time.Now().UnixMilli()),
 			},
 			PayloadMessage: &proto.GetPlayerTokenReq{
-				AccountToken:  "xxxxxx",
-				AccountUid:    "10001",
-				KeyId:         0,
+				AccountToken:  accountInfo.ComboToken,
+				AccountUid:    strconv.Itoa(int(accountInfo.AccountId)),
+				KeyId:         5,
 				ClientRandKey: "",
 			},
 		}

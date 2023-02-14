@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -15,17 +16,17 @@ func init() {
 		Transport: &http.Transport{
 			DisableKeepAlives: true,
 		},
-		Timeout: time.Second * 60,
+		Timeout: time.Second * 10,
 	}
 }
 
-func Get[T any](url string, token string) (*T, error) {
+func GetJson[T any](url string, authToken string) (*T, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+token)
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken)
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -44,7 +45,27 @@ func Get[T any](url string, token string) (*T, error) {
 	return responseData, nil
 }
 
-func Post[T any](url string, body any, token string) (*T, error) {
+func GetRaw(url string, authToken string) (string, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	}
+	rsp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	data, err := io.ReadAll(rsp.Body)
+	_ = rsp.Body.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func PostJson[T any](url string, body any, authToken string) (*T, error) {
 	reqData, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -54,8 +75,8 @@ func Post[T any](url string, body any, token string) (*T, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+token)
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken)
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -72,4 +93,25 @@ func Post[T any](url string, body any, token string) (*T, error) {
 		return nil, err
 	}
 	return responseData, nil
+}
+
+func PostRaw(url string, body string, authToken string) (string, error) {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	}
+	rsp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	rspData, err := io.ReadAll(rsp.Body)
+	_ = rsp.Body.Close()
+	if err != nil {
+		return "", err
+	}
+	return string(rspData), nil
 }

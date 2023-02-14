@@ -1,6 +1,7 @@
 package game
 
 import (
+	"hk4e/gdconf"
 	"strconv"
 	"strings"
 
@@ -11,8 +12,8 @@ import (
 func (c *CommandManager) HelpCommand(cmd *CommandMessage) {
 	c.SendMessage(cmd.Executor,
 		"========== 帮助 / Help ==========\n\n"+
-			"传送：/tp [-u <UID>] [-s <场景ID>] -x <坐标X> -y <坐标Y> -z <坐标Z>\n\n"+
-			"给予：/give [-u <UID>] [-c <数量>] -i <物品ID|武器ID|角色ID/item/weapon/avatar/all>\n",
+			"传送：tp [--u <UID>] [--s <场景ID>] {--t <目标UID> | --x <坐标X> | --y <坐标Y> | --z <坐标Z>}\n\n"+
+			"给予：give [--u <UID>] [--c <数量>] --i <ID / 物品 / 武器 / 圣遗物 / 角色 / 时装 / 风之翼 / 全部>\n",
 	)
 }
 
@@ -76,7 +77,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 						sceneId = player.SceneId
 					}
 				} else {
-					c.SendMessage(cmd.Executor, "玩家不在线，UID: %v。", v)
+					c.SendMessage(cmd.Executor, "玩家不在线，UID：%v。", v)
 					return
 				}
 			}
@@ -94,7 +95,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 					// 目标玩家属于非本地玩家
 					if !USER_MANAGER.GetRemoteUserOnlineState(uint32(uid)) {
 						// 全服不存在该在线玩家
-						c.SendMessage(cmd.Executor, "目标玩家不在线，UID: %v。", v)
+						c.SendMessage(cmd.Executor, "目标玩家不在线，UID：%v。", v)
 						return
 					}
 				}
@@ -182,7 +183,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 }
 
 // GiveCommand 给予物品命令
-// give [--u <userId>] [--c <count>] --i <物品ID/item/weapon/reliquary/avatar/all>
+// give [--u <userId>] [--c <count>] --i <id/item/weapon/reliquary/avatar/costume/flycloak/all>
 func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	// 执行者如果不是玩家则必须输入UID
 	player, ok := cmd.Executor.(*model.Player)
@@ -193,13 +194,13 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 	// 判断是否填写必备参数
 	if cmd.Args["i"] == "" {
-		c.SendMessage(cmd.Executor, "参数不足，正确用法：%v [--u <UID>] [--c <数量>] --i <物品ID / item / weapon / reliquary / avatar / all>。", cmd.Name)
+		c.SendMessage(cmd.Executor, "参数不足，正确用法：%v [--u <UID>] [--c <数量>] --i <ID / 物品 / 武器 / 圣遗物 / 角色 / 时装 / 风之翼 / 全部>。", cmd.Name)
 		return
 	}
 
 	// 初始值
-	count := uint32(1)  // 数量
-	itemId := uint32(0) // 物品Id
+	count := uint32(1) // 数量
+	id := uint32(0)    // id
 	// 给予物品的模式
 	// once 单个 / all 所有物品
 	// item 物品 / weapon 武器
@@ -217,7 +218,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 				if user := USER_MANAGER.GetOnlineUser(uint32(uid)); user != nil {
 					player = user
 				} else {
-					c.SendMessage(cmd.Executor, "目标玩家不在线，UID: %v。", v)
+					c.SendMessage(cmd.Executor, "目标玩家不在线，UID：%v。", v)
 					return
 				}
 			}
@@ -228,16 +229,16 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 			}
 		case "i":
 			switch v {
-			case "all", "item", "avatar", "weapon", "reliquary":
+			case "item", "物品", "weapon", "武器", "reliquary", "圣遗物", "avatar", "角色", "costume", "时装", "flycloak", "风之翼", "all", "全部":
 				// 将模式修改为参数的值
 				mode = v
 			default:
-				var id uint64
-				if id, err = strconv.ParseUint(v, 10, 32); err != nil {
-					c.SendMessage(cmd.Executor, "参数 --%v 有误，允许内容: <物品ID / item / weapon / reliquary / avatar / all>。", k)
+				var tempId uint64
+				if tempId, err = strconv.ParseUint(v, 10, 32); err != nil {
+					c.SendMessage(cmd.Executor, "参数 --%v 有误，允许内容：<ID / 物品 / 武器 / 圣遗物 / 角色 / 时装 / 风之翼 / 内容>。", k)
 					return
 				}
-				itemId = uint32(id)
+				id = uint32(tempId)
 			}
 		default:
 			c.SendMessage(cmd.Executor, "参数 --%v 冗余。", k)
@@ -254,58 +255,80 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	switch mode {
 	case "once":
 		// 判断是否为物品
-		_, ok := GAME_MANAGER.GetAllItemDataConfig()[int32(itemId)]
+		_, ok := GAME_MANAGER.GetAllItemDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家物品
-			c.GMAddUserItem(player.PlayerID, itemId, count)
-			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 物品ID: %v 数量: %v。", player.PlayerID, itemId, count)
+			c.GMAddUserItem(player.PlayerID, id, count)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
 		// 判断是否为武器
-		_, ok = GAME_MANAGER.GetAllWeaponDataConfig()[int32(itemId)]
+		_, ok = GAME_MANAGER.GetAllWeaponDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家武器
-			c.GMAddUserWeapon(player.PlayerID, itemId, count)
-			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 武器ID：%v 数量：%v。", player.PlayerID, itemId, count)
+			c.GMAddUserWeapon(player.PlayerID, id, count)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 武器 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 
 		}
 		// 判断是否为圣遗物
-		_, ok = GAME_MANAGER.GetAllReliquaryDataConfig()[int32(itemId)]
+		_, ok = GAME_MANAGER.GetAllReliquaryDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家圣遗物
-			c.GMAddUserReliquary(player.PlayerID, itemId, count)
-			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 圣遗物ID：%v 数量：%v。", player.PlayerID, itemId, count)
+			c.GMAddUserReliquary(player.PlayerID, id, count)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 圣遗物 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 
 		}
 		// 判断是否为角色
-		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(itemId)]
+		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家角色
-			c.GMAddUserAvatar(player.PlayerID, itemId)
-			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 角色ID：%v 数量：%v。", player.PlayerID, itemId, count)
+			c.GMAddUserAvatar(player.PlayerID, id)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 角色ID：%v 数量：%v。", player.PlayerID, id, count)
+			return
+		}
+		// 判断是否为时装
+		if gdconf.GetAvatarCostumeDataById(int32(id)) != nil {
+			// 给予玩家角色
+			c.GMAddUserCostume(player.PlayerID, id)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 时装ID：%v 数量：%v。", player.PlayerID, id, count)
+			return
+		}
+		// 判断是否为风之翼
+		if gdconf.GetAvatarFlycloakDataById(int32(id)) != nil {
+			// 给予玩家角色
+			c.GMAddUserFlycloak(player.PlayerID, id)
+			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 风之翼ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
 		// 都执行到这里那肯定是都不匹配
-		c.SendMessage(cmd.Executor, "物品ID：%v 不存在。", itemId)
-	case "item":
+		c.SendMessage(cmd.Executor, "ID：%v 不存在。", id)
+	case "item", "物品":
 		// 给予玩家所有物品
 		c.GMAddUserAllItem(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有物品 数量：%v。", player.PlayerID, count)
-	case "weapon":
+	case "weapon", "武器":
 		// 给予玩家所有武器
 		c.GMAddUserAllWeapon(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有武器 数量：%v。", player.PlayerID, count)
-	case "reliquary":
+	case "reliquary", "圣遗物":
 		// 给予玩家所有圣遗物
 		c.GMAddUserAllReliquary(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有圣遗物 数量：%v。", player.PlayerID, count)
-	case "avatar":
+	case "avatar", "角色":
 		// 给予玩家所有角色
 		c.GMAddUserAllAvatar(player.PlayerID)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有角色。", player.PlayerID)
-	case "all":
+	case "costume", "时装":
+		// 给予玩家所有角色
+		c.GMAddUserAllCostume(player.PlayerID)
+		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有时装。", player.PlayerID)
+	case "flycloak", "风之翼":
+		// 给予玩家所有角色
+		c.GMAddUserAllFlycloak(player.PlayerID)
+		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有风之翼。", player.PlayerID)
+	case "all", "全部":
 		// 给予玩家所有内容
 		c.GMAddUserAllEvery(player.PlayerID, count, count) // TODO 武器额外获取数量
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有内容。", player.PlayerID)

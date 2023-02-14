@@ -361,31 +361,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.PropertiesMap[constant.PLAYER_PROP_IS_MP_MODE_AVAILABLE] = 1
 
 	player.FlyCloakList = make([]uint32, 0)
-	player.FlyCloakList = append(player.FlyCloakList, 140001)
-	player.FlyCloakList = append(player.FlyCloakList, 140002)
-	player.FlyCloakList = append(player.FlyCloakList, 140003)
-	player.FlyCloakList = append(player.FlyCloakList, 140004)
-	player.FlyCloakList = append(player.FlyCloakList, 140005)
-	player.FlyCloakList = append(player.FlyCloakList, 140006)
-	player.FlyCloakList = append(player.FlyCloakList, 140007)
-	player.FlyCloakList = append(player.FlyCloakList, 140008)
-	player.FlyCloakList = append(player.FlyCloakList, 140009)
-	player.FlyCloakList = append(player.FlyCloakList, 140010)
-
 	player.CostumeList = make([]uint32, 0)
-	player.CostumeList = append(player.CostumeList, 200301)
-	player.CostumeList = append(player.CostumeList, 201401)
-	player.CostumeList = append(player.CostumeList, 202701)
-	player.CostumeList = append(player.CostumeList, 204201)
-	player.CostumeList = append(player.CostumeList, 200302)
-	player.CostumeList = append(player.CostumeList, 202101)
-	player.CostumeList = append(player.CostumeList, 204101)
-	player.CostumeList = append(player.CostumeList, 204501)
-	player.CostumeList = append(player.CostumeList, 201601)
-	player.CostumeList = append(player.CostumeList, 203101)
-	player.CostumeList = append(player.CostumeList, 200201)
-	player.CostumeList = append(player.CostumeList, 200601)
-	player.CostumeList = append(player.CostumeList, 208201)
 
 	player.SafePos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 	player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}

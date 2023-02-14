@@ -149,30 +149,30 @@ func (g *GameManager) WearUserAvatarReliquary(userId uint32, avatarId uint32, re
 		return
 	}
 	// 角色已装备的圣遗物
-	avatarCurReliquary, ok := avatar.EquipReliquaryMap[uint8(reliquaryConfig.ReliquaryType)]
-	if ok {
-		if reliquary.AvatarId != 0 {
-			// 圣遗物在别的角色身上
-			targetReliquaryAvatar, ok := player.AvatarMap[reliquary.AvatarId]
-			if !ok {
-				logger.Error("avatar error, avatarId: %v", reliquary.AvatarId)
-				return
-			}
+	avatarCurReliquary := avatar.EquipReliquaryMap[uint8(reliquaryConfig.ReliquaryType)]
+	if reliquary.AvatarId != 0 {
+		// 圣遗物在别的角色身上
+		targetReliquaryAvatar, ok := player.AvatarMap[reliquary.AvatarId]
+		if !ok {
+			logger.Error("avatar error, avatarId: %v", reliquary.AvatarId)
+			return
+		}
+		// 确保目前角色已装备圣遗物
+		if avatarCurReliquary != nil {
 			// 卸下角色已装备的圣遗物
 			player.TakeOffReliquary(avatarId, avatarCurReliquary.ReliquaryId)
-
-			// 将目标圣遗物的角色卸下圣遗物
-			player.TakeOffReliquary(targetReliquaryAvatar.AvatarId, reliquary.ReliquaryId)
 			// 将目标圣遗物的角色装备当前角色曾装备的圣遗物
 			player.WearReliquary(targetReliquaryAvatar.AvatarId, avatarCurReliquary.ReliquaryId)
-
-			// 更新目标圣遗物角色的装备
-			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(targetReliquaryAvatar, avatarCurReliquary)
-			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
-		} else {
-			// 角色当前有圣遗物则卸下
-			player.TakeOffReliquary(avatarId, avatarCurReliquary.ReliquaryId)
 		}
+		// 将目标圣遗物的角色卸下圣遗物
+		player.TakeOffReliquary(targetReliquaryAvatar.AvatarId, reliquary.ReliquaryId)
+
+		// 更新目标圣遗物角色的装备
+		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(targetReliquaryAvatar, targetReliquaryAvatar.EquipReliquaryMap[uint8(reliquaryConfig.ReliquaryType)])
+		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
+	} else {
+		// 角色当前有圣遗物则卸下
+		player.TakeOffReliquary(avatarId, avatarCurReliquary.ReliquaryId)
 	}
 	// 角色装备圣遗物
 	player.WearReliquary(avatarId, reliquaryId)
@@ -206,6 +206,7 @@ func (g *GameManager) WearUserAvatarWeapon(userId uint32, avatarId uint32, weapo
 	}
 	// 角色已装备的武器
 	avatarCurWeapon := avatar.EquipWeapon
+	// 武器需要确保双方都装备才能替换不然会出问题
 	if avatarCurWeapon != nil {
 		if weapon.AvatarId != 0 {
 			// 武器在别的角色身上
@@ -216,11 +217,10 @@ func (g *GameManager) WearUserAvatarWeapon(userId uint32, avatarId uint32, weapo
 			}
 			// 卸下角色已装备的武器
 			player.TakeOffWeapon(avatarId, avatarCurWeapon.WeaponId)
-
-			// 将目标武器的角色卸下武器
-			player.TakeOffWeapon(targetWeaponAvatar.AvatarId, weapon.WeaponId)
 			// 将目标武器的角色装备当前角色曾装备的武器
 			player.WearWeapon(targetWeaponAvatar.AvatarId, avatarCurWeapon.WeaponId)
+			// 将目标武器的角色卸下武器
+			player.TakeOffWeapon(targetWeaponAvatar.AvatarId, weapon.WeaponId)
 
 			// 更新目标武器角色的装备
 			weaponEntityId := uint32(0)
@@ -228,7 +228,7 @@ func (g *GameManager) WearUserAvatarWeapon(userId uint32, avatarId uint32, weapo
 			if worldAvatar != nil {
 				weaponEntityId = worldAvatar.GetWeaponEntityId()
 			}
-			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByWeapon(targetWeaponAvatar, avatarCurWeapon, weaponEntityId)
+			avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByWeapon(targetWeaponAvatar, targetWeaponAvatar.EquipWeapon, weaponEntityId)
 			g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 		} else {
 			// 角色当前有武器则卸下

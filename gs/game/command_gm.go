@@ -2,6 +2,7 @@ package game
 
 import (
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 )
@@ -43,22 +44,29 @@ func (c *CommandManager) GMAddUserWeapon(userId, itemId, itemCount uint32) {
 func (c *CommandManager) GMAddUserReliquary(userId, itemId, itemCount uint32) {
 	// 圣遗物数量
 	for i := uint32(0); i < itemCount; i++ {
-		// 给予武器
+		// 给予圣遗物
 		GAME_MANAGER.AddUserReliquary(userId, itemId)
 	}
 }
 
 // GMAddUserAvatar 给予玩家角色
 func (c *CommandManager) GMAddUserAvatar(userId, avatarId uint32) {
-	player := USER_MANAGER.GetOnlineUser(userId)
-	if player == nil {
-		logger.Error("player is nil, uid: %v", userId)
-		return
-	}
 	// 添加角色
 	GAME_MANAGER.AddUserAvatar(userId, avatarId)
 	// TODO 设置角色 等以后做到角色升级之类的再说
 	// avatar := player.AvatarMap[avatarId]
+}
+
+// GMAddUserCostume 给予玩家时装
+func (c *CommandManager) GMAddUserCostume(userId, costumeId uint32) {
+	// 添加时装
+	GAME_MANAGER.AddUserCostume(userId, costumeId)
+}
+
+// GMAddUserFlycloak 给予玩家风之翼
+func (c *CommandManager) GMAddUserFlycloak(userId, flycloakId uint32) {
+	// 添加风之翼
+	GAME_MANAGER.AddUserFlycloak(userId, flycloakId)
 }
 
 // GMAddUserAllItem 给予玩家所有物品
@@ -98,12 +106,32 @@ func (c *CommandManager) GMAddUserAllAvatar(userId uint32) {
 	}
 }
 
+// GMAddUserAllCostume 给予玩家所有时装
+func (c *CommandManager) GMAddUserAllCostume(userId uint32) {
+	for costumeId := range gdconf.GetAvatarCostumeDataMap() {
+		c.GMAddUserCostume(userId, uint32(costumeId))
+	}
+}
+
+// GMAddUserAllFlycloak 给予玩家所有风之翼
+func (c *CommandManager) GMAddUserAllFlycloak(userId uint32) {
+	for flycloakId := range gdconf.GetAvatarFlycloakDataMap() {
+		c.GMAddUserFlycloak(userId, uint32(flycloakId))
+	}
+}
+
 // GMAddUserAllEvery 给予玩家所有内容
 func (c *CommandManager) GMAddUserAllEvery(userId uint32, itemCount uint32, weaponCount uint32) {
 	// 给予玩家所有物品
 	c.GMAddUserAllItem(userId, itemCount)
 	// 给予玩家所有武器
 	c.GMAddUserAllWeapon(userId, itemCount)
+	// 给予玩家所有圣遗物
+	c.GMAddUserAllReliquary(userId, itemCount)
 	// 给予玩家所有角色
 	c.GMAddUserAllAvatar(userId)
+	// 给予玩家所有时装
+	c.GMAddUserAllCostume(userId)
+	// 给予玩家所有风之翼
+	c.GMAddUserAllFlycloak(userId)
 }

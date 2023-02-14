@@ -214,12 +214,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	// 角色
 	c.registerMessage(AvatarDataNotify, &proto.AvatarDataNotify{})                       // 角色信息通知
 	c.registerMessage(AvatarAddNotify, &proto.AvatarAddNotify{})                         // 角色新增通知
-	c.registerMessage(AvatarChangeCostumeReq, &proto.AvatarChangeCostumeReq{})           // 角色换装请求
-	c.registerMessage(AvatarChangeCostumeRsp, &proto.AvatarChangeCostumeRsp{})           // 角色换装响应
-	c.registerMessage(AvatarChangeCostumeNotify, &proto.AvatarChangeCostumeNotify{})     // 角色换装通知
-	c.registerMessage(AvatarWearFlycloakReq, &proto.AvatarWearFlycloakReq{})             // 角色换风之翼请求
-	c.registerMessage(AvatarWearFlycloakRsp, &proto.AvatarWearFlycloakRsp{})             // 角色换风之翼响应
-	c.registerMessage(AvatarFlycloakChangeNotify, &proto.AvatarFlycloakChangeNotify{})   // 角色换风之翼通知
 	c.registerMessage(AvatarLifeStateChangeNotify, &proto.AvatarLifeStateChangeNotify{}) // 角色存活状态改变通知
 	c.registerMessage(AvatarUpgradeReq, &proto.AvatarUpgradeReq{})                       // 角色升级请求
 	c.registerMessage(AvatarUpgradeRsp, &proto.AvatarUpgradeRsp{})                       // 角色升级通知
@@ -228,6 +222,18 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(AvatarPromoteRsp, &proto.AvatarPromoteRsp{})                       // 角色突破响应
 	c.registerMessage(AvatarPromoteGetRewardReq, &proto.AvatarPromoteGetRewardReq{})     // 角色突破获取奖励请求
 	c.registerMessage(AvatarPromoteGetRewardRsp, &proto.AvatarPromoteGetRewardRsp{})     // 角色突破获取奖励响应
+
+	// 时装
+	c.registerMessage(AvatarChangeCostumeReq, &proto.AvatarChangeCostumeReq{})       // 角色换装请求
+	c.registerMessage(AvatarChangeCostumeRsp, &proto.AvatarChangeCostumeRsp{})       // 角色换装响应
+	c.registerMessage(AvatarChangeCostumeNotify, &proto.AvatarChangeCostumeNotify{}) // 角色换装通知
+	c.registerMessage(AvatarGainCostumeNotify, &proto.AvatarGainCostumeNotify{})     // 角色获得时装通知
+
+	// 风之翼
+	c.registerMessage(AvatarWearFlycloakReq, &proto.AvatarWearFlycloakReq{})           // 角色换风之翼请求
+	c.registerMessage(AvatarWearFlycloakRsp, &proto.AvatarWearFlycloakRsp{})           // 角色换风之翼响应
+	c.registerMessage(AvatarFlycloakChangeNotify, &proto.AvatarFlycloakChangeNotify{}) // 角色换风之翼通知
+	c.registerMessage(AvatarGainFlycloakNotify, &proto.AvatarGainFlycloakNotify{})     // 角色获得风之翼通知
 
 	// 背包与道具
 	c.registerMessage(PlayerStoreNotify, &proto.PlayerStoreNotify{})           // 玩家背包数据通知

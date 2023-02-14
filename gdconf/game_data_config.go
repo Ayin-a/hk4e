@@ -46,6 +46,8 @@ type GameDataConfig struct {
 	WeaponLevelDataMap      map[int32]*WeaponLevelData             // 武器等级
 	WeaponPromoteDataMap    map[int32]map[int32]*WeaponPromoteData // 角色突破
 	RewardDataMap           map[int32]*RewardData                  // 奖励
+	AvatarCostumeDataMap    map[int32]*AvatarCostumeData           // 角色时装
+	AvatarFlycloakDataMap   map[int32]*AvatarFlycloakData          // 角色风之翼
 }
 
 func InitGameDataConfig() {
@@ -125,6 +127,8 @@ func (g *GameDataConfig) load() {
 	g.loadWeaponLevelData()      // 武器等级
 	g.loadWeaponPromoteData()    // 武器突破
 	g.loadRewardData()           // 奖励
+	g.loadAvatarCostumeData()    // 角色时装
+	g.loadAvatarFlycloakData()   // 角色风之翼
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

@@ -15,12 +15,12 @@ func (l *Listener) monitor() {
 	l.defaultMonitor()
 }
 
-func (l *Listener) SendEnetNotifyToClient(enet *Enet) {
-	l.defaultSendEnetNotifyToClient(enet)
+func (l *Listener) SendEnetNotifyToPeer(enet *Enet) {
+	l.defaultSendEnetNotifyToPeer(enet)
 }
 
-func (s *UDPSession) SendEnetNotify(enet *Enet) {
-	s.defaultSendEnetNotify(enet)
+func (s *UDPSession) SendEnetNotifyToPeer(enet *Enet) {
+	s.defaultSendEnetNotifyToPeer(enet)
 }
 
 func (s *UDPSession) tx(txqueue []ipv4.Message) {

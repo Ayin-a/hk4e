@@ -143,7 +143,9 @@ func AccountLogin(url string, account string, password string) (*AccountInfo, er
 		return nil, err
 	}
 	comboTokenReq := &api.ComboTokenReq{
-		Data: string(loginTokenDataJson),
+		AppID:     4,
+		ChannelID: 1,
+		Data:      string(loginTokenDataJson),
 	}
 	logger.Info("http post url: %v", url+"/hk4e_global/combo/granter/login/v2/login")
 	comboTokenRsp, err := httpclient.PostJson[api.ComboTokenRsp](url+"/hk4e_global/combo/granter/login/v2/login", comboTokenReq, "")

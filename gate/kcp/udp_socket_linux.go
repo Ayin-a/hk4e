@@ -4,8 +4,6 @@
 package kcp
 
 import (
-	"bytes"
-	"encoding/binary"
 	"net"
 	"os"
 	"sync/atomic"
@@ -14,6 +12,15 @@ import (
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 )
+
+const (
+	batchSize = 16
+)
+
+type batchConn interface {
+	WriteBatch(ms []ipv4.Message, flags int) (int, error)
+	ReadBatch(ms []ipv4.Message, flags int) (int, error)
+}
 
 // the read loop for a client session
 func (s *UDPSession) readLoop() {
@@ -39,13 +46,25 @@ func (s *UDPSession) readLoop() {
 				if src == "" { // set source address if nil
 					src = msg.Addr.String()
 				} else if msg.Addr.String() != src {
-					// atomic.AddUint64(&DefaultSnmp.InErrs, 1)
-					// continue
 					s.remote = msg.Addr
 					src = msg.Addr.String()
 				}
 
 				udpPayload := msg.Buffers[0][:msg.N]
+
+				if msg.N == 20 {
+					connType, _, conv, err := ParseEnet(udpPayload)
+					if err != nil {
+						continue
+					}
+					if conv != s.GetConv() {
+						continue
+					}
+					if connType == ConnEnetFin {
+						s.Close()
+						continue
+					}
+				}
 
 				// source and size has validated
 				s.packetInput(udpPayload)
@@ -101,27 +120,13 @@ func (l *Listener) monitor() {
 				udpPayload := msg.Buffers[0][:msg.N]
 				var convId uint64 = 0
 				if msg.N == 20 {
-					// 原神KCP的Enet协议
-					// 提取convId
-					convId += uint64(udpPayload[4]) << 24
-					convId += uint64(udpPayload[5]) << 16
-					convId += uint64(udpPayload[6]) << 8
-					convId += uint64(udpPayload[7]) << 0
-					convId += uint64(udpPayload[8]) << 56
-					convId += uint64(udpPayload[9]) << 48
-					convId += uint64(udpPayload[10]) << 40
-					convId += uint64(udpPayload[11]) << 32
-					// 提取Enet协议头部和尾部幻数
-					udpPayloadEnetHead := udpPayload[:4]
-					udpPayloadEnetTail := udpPayload[len(udpPayload)-4:]
-					// 提取Enet协议类型
-					enetTypeData := udpPayload[12:16]
-					enetTypeDataBuffer := bytes.NewBuffer(enetTypeData)
-					var enetType uint32
-					_ = binary.Read(enetTypeDataBuffer, binary.BigEndian, &enetType)
-					equalHead := bytes.Compare(udpPayloadEnetHead, MagicEnetSynHead)
-					equalTail := bytes.Compare(udpPayloadEnetTail, MagicEnetSynTail)
-					if equalHead == 0 && equalTail == 0 {
+					connType, enetType, conv, err := ParseEnet(udpPayload)
+					if err != nil {
+						continue
+					}
+					convId = conv
+					switch connType {
+					case ConnEnetSyn:
 						// 客户端前置握手获取conv
 						l.EnetNotify <- &Enet{
 							Addr:     msg.Addr.String(),
@@ -129,11 +134,7 @@ func (l *Listener) monitor() {
 							ConnType: ConnEnetSyn,
 							EnetType: enetType,
 						}
-						continue
-					}
-					equalHead = bytes.Compare(udpPayloadEnetHead, MagicEnetEstHead)
-					equalTail = bytes.Compare(udpPayloadEnetTail, MagicEnetEstTail)
-					if equalHead == 0 && equalTail == 0 {
+					case ConnEnetEst:
 						// 连接建立
 						l.EnetNotify <- &Enet{
 							Addr:     msg.Addr.String(),
@@ -141,11 +142,7 @@ func (l *Listener) monitor() {
 							ConnType: ConnEnetEst,
 							EnetType: enetType,
 						}
-						continue
-					}
-					equalHead = bytes.Compare(udpPayloadEnetHead, MagicEnetFinHead)
-					equalTail = bytes.Compare(udpPayloadEnetTail, MagicEnetFinTail)
-					if equalHead == 0 && equalTail == 0 {
+					case ConnEnetFin:
 						// 连接断开
 						l.EnetNotify <- &Enet{
 							Addr:     msg.Addr.String(),
@@ -153,6 +150,7 @@ func (l *Listener) monitor() {
 							ConnType: ConnEnetFin,
 							EnetType: enetType,
 						}
+					default:
 						continue
 					}
 				} else {
@@ -200,55 +198,6 @@ func (l *Listener) monitor() {
 	}
 }
 
-func (l *Listener) SendEnetNotifyToClient(enet *Enet) {
-	var xconn batchConn
-	_, ok := l.conn.(*net.UDPConn)
-	if !ok {
-		return
-	}
-	localAddr, err := net.ResolveUDPAddr("udp", l.conn.LocalAddr().String())
-	if err != nil {
-		return
-	}
-	if localAddr.IP.To4() != nil {
-		xconn = ipv4.NewPacketConn(l.conn)
-	} else {
-		xconn = ipv6.NewPacketConn(l.conn)
-	}
-
-	// default version
-	if xconn == nil {
-		l.defaultSendEnetNotifyToClient(enet)
-		return
-	}
-
-	remoteAddr, err := net.ResolveUDPAddr("udp", enet.Addr)
-	if err != nil {
-		return
-	}
-
-	data := buildEnet(enet.ConnType, enet.EnetType, enet.ConvId)
-	if data == nil {
-		return
-	}
-
-	_, _ = xconn.WriteBatch([]ipv4.Message{{
-		Buffers: [][]byte{data},
-		Addr:    remoteAddr,
-	}}, 0)
-}
-
-func (s *UDPSession) SendEnetNotify(enet *Enet) {
-	data := buildEnet(enet.ConnType, enet.EnetType, s.GetConv())
-	if data == nil {
-		return
-	}
-	s.tx([]ipv4.Message{{
-		Buffers: [][]byte{data},
-		Addr:    s.remote,
-	}})
-}
-
 func (s *UDPSession) tx(txqueue []ipv4.Message) {
 	// default version
 	if s.xconn == nil || s.xconnWriteError != nil {
@@ -286,4 +235,53 @@ func (s *UDPSession) tx(txqueue []ipv4.Message) {
 
 	atomic.AddUint64(&DefaultSnmp.OutPkts, uint64(npkts))
 	atomic.AddUint64(&DefaultSnmp.OutBytes, uint64(nbytes))
+}
+
+func (l *Listener) SendEnetNotifyToPeer(enet *Enet) {
+	var xconn batchConn
+	_, ok := l.conn.(*net.UDPConn)
+	if !ok {
+		return
+	}
+	localAddr, err := net.ResolveUDPAddr("udp", l.conn.LocalAddr().String())
+	if err != nil {
+		return
+	}
+	if localAddr.IP.To4() != nil {
+		xconn = ipv4.NewPacketConn(l.conn)
+	} else {
+		xconn = ipv6.NewPacketConn(l.conn)
+	}
+
+	// default version
+	if xconn == nil {
+		l.defaultSendEnetNotifyToPeer(enet)
+		return
+	}
+
+	remoteAddr, err := net.ResolveUDPAddr("udp", enet.Addr)
+	if err != nil {
+		return
+	}
+
+	data := BuildEnet(enet.ConnType, enet.EnetType, enet.ConvId)
+	if data == nil {
+		return
+	}
+
+	_, _ = xconn.WriteBatch([]ipv4.Message{{
+		Buffers: [][]byte{data},
+		Addr:    remoteAddr,
+	}}, 0)
+}
+
+func (s *UDPSession) SendEnetNotifyToPeer(enet *Enet) {
+	data := BuildEnet(enet.ConnType, enet.EnetType, s.GetConv())
+	if data == nil {
+		return
+	}
+	s.tx([]ipv4.Message{{
+		Buffers: [][]byte{data},
+		Addr:    s.remote,
+	}})
 }

@@ -238,7 +238,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 					break
 				}
 			}
-			listener.SendEnetNotifyToClient(&kcp.Enet{
+			listener.SendEnetNotifyToPeer(&kcp.Enet{
 				Addr:     enetNotify.Addr,
 				ConvId:   conv,
 				ConnType: kcp.ConnEnetEst,
@@ -251,7 +251,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 				logger.Error("session not exist, conv: %v", enetNotify.ConvId)
 				continue
 			}
-			session.conn.SendEnetNotify(&kcp.Enet{
+			session.conn.SendEnetNotifyToPeer(&kcp.Enet{
 				ConnType: kcp.ConnEnetFin,
 				EnetType: enetNotify.EnetType,
 			})
@@ -404,7 +404,7 @@ func (k *KcpConnectManager) closeKcpConn(session *Session, enetType uint32) {
 	// 关闭连接
 	err := conn.Close()
 	if err == nil {
-		conn.SendEnetNotify(&kcp.Enet{
+		conn.SendEnetNotifyToPeer(&kcp.Enet{
 			ConnType: kcp.ConnEnetFin,
 			EnetType: enetType,
 		})

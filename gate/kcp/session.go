@@ -10,7 +10,6 @@ package kcp
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"io"
 	"net"
 	"sync"
@@ -64,16 +63,11 @@ type (
 		ownConn bool           // true if we created conn internally, false if provided by caller
 		kcp     *KCP           // KCP ARQ protocol
 		l       *Listener      // pointing to the Listener object if it's been accepted by a Listener
-		// block   BlockCrypt     // block encryption object
 
 		// kcp receiving is based on packets
 		// recvbuf turns packets into stream
 		recvbuf []byte
 		bufptr  []byte
-
-		// // FEC codec
-		// fecDecoder *fecDecoder
-		// fecEncoder *fecEncoder
 
 		// settings
 		remote     net.Addr  // remote peer address
@@ -97,9 +91,6 @@ type (
 		chSocketWriteError   chan struct{}
 		socketReadErrorOnce  sync.Once
 		socketWriteErrorOnce sync.Once
-
-		// // nonce generator
-		// nonce Entropy
 
 		// packets waiting to be sent on wire
 		txqueue         []ipv4.Message
@@ -126,8 +117,6 @@ type (
 func newUDPSession(conv uint64, l *Listener, conn net.PacketConn, ownConn bool, remote net.Addr) *UDPSession {
 	sess := new(UDPSession)
 	sess.die = make(chan struct{})
-	// sess.nonce = new(nonceAES128)
-	// sess.nonce.Init()
 	sess.chReadEvent = make(chan struct{}, 1)
 	sess.chWriteEvent = make(chan struct{}, 1)
 	sess.chSocketReadError = make(chan struct{})
@@ -136,7 +125,6 @@ func newUDPSession(conv uint64, l *Listener, conn net.PacketConn, ownConn bool, 
 	sess.conn = conn
 	sess.ownConn = ownConn
 	sess.l = l
-	// sess.block = block
 	sess.recvbuf = make([]byte, mtuLimit)
 
 	// cast to writebatch conn
@@ -150,22 +138,6 @@ func newUDPSession(conv uint64, l *Listener, conn net.PacketConn, ownConn bool, 
 			}
 		}
 	}
-
-	// // FEC codec initialization
-	// sess.fecDecoder = newFECDecoder(dataShards, parityShards)
-	// if sess.block != nil {
-	// 	sess.fecEncoder = newFECEncoder(dataShards, parityShards, cryptHeaderSize)
-	// } else {
-	// 	sess.fecEncoder = newFECEncoder(dataShards, parityShards, 0)
-	// }
-
-	// // calculate additional header size introduced by FEC and encryption
-	// if sess.block != nil {
-	// 	sess.headerSize += cryptHeaderSize
-	// }
-	// if sess.fecEncoder != nil {
-	// 	sess.headerSize += fecHeaderSizePlus2
-	// }
 
 	sess.kcp = NewKCP(conv, func(buf []byte, size int) {
 		if size >= IKCP_OVERHEAD+sess.headerSize {
@@ -370,9 +342,6 @@ func (s *UDPSession) Close() error {
 		s.uncork()
 		// release pending segments
 		s.kcp.ReleaseTX()
-		// if s.fecDecoder != nil {
-		// 	s.fecDecoder.release()
-		// }
 		s.mu.Unlock()
 
 		if s.l != nil { // belongs to listener
@@ -551,26 +520,6 @@ func (s *UDPSession) SetWriteBuffer(bytes int) error {
 func (s *UDPSession) output(buf []byte) {
 	var ecc [][]byte
 
-	// // 1. FEC encoding
-	// if s.fecEncoder != nil {
-	// 	ecc = s.fecEncoder.encode(buf)
-	// }
-
-	// // 2&3. crc32 & encryption
-	// if s.block != nil {
-	// 	s.nonce.Fill(buf[:nonceSize])
-	// 	checksum := crc32.ChecksumIEEE(buf[cryptHeaderSize:])
-	// 	binary.LittleEndian.PutUint32(buf[nonceSize:], checksum)
-	// 	s.block.Encrypt(buf, buf)
-	//
-	// 	for k := range ecc {
-	// 		s.nonce.Fill(ecc[k][:nonceSize])
-	// 		checksum := crc32.ChecksumIEEE(ecc[k][cryptHeaderSize:])
-	// 		binary.LittleEndian.PutUint32(ecc[k][nonceSize:], checksum)
-	// 		s.block.Encrypt(ecc[k], ecc[k])
-	// 	}
-	// }
-
 	// 4. TxQueue
 	var msg ipv4.Message
 	for i := 0; i < s.dup+1; i++ {
@@ -662,101 +611,12 @@ func (s *UDPSession) notifyWriteError(err error) {
 
 // packet input stage
 func (s *UDPSession) packetInput(data []byte) {
-	// decrypted := false
-	// if s.block != nil && len(data) >= cryptHeaderSize {
-	// 	s.block.Decrypt(data, data)
-	// 	data = data[nonceSize:]
-	// 	checksum := crc32.ChecksumIEEE(data[crcSize:])
-	// 	if checksum == binary.LittleEndian.Uint32(data) {
-	// 		data = data[crcSize:]
-	// 		decrypted = true
-	// 	} else {
-	// 		atomic.AddUint64(&DefaultSnmp.InCsumErrors, 1)
-	// 	}
-	// } else if s.block == nil {
-	// 	decrypted = true
-	// }
-
-	decrypted := true
-	if decrypted && len(data) >= IKCP_OVERHEAD {
+	if len(data) >= IKCP_OVERHEAD {
 		s.kcpInput(data)
 	}
 }
 
 func (s *UDPSession) kcpInput(data []byte) {
-	// var kcpInErrors, fecErrs, fecRecovered, fecParityShards uint64
-	//
-	// fecFlag := binary.LittleEndian.Uint16(data[8:])
-	// if fecFlag == typeData || fecFlag == typeParity { // 16bit kcp cmd [81-84] and frg [0-255] will not overlap with FEC type 0x00f1 0x00f2
-	// 	if len(data) >= fecHeaderSizePlus2 {
-	// 		f := fecPacket(data)
-	// 		if f.flag() == typeParity {
-	// 			fecParityShards++
-	// 		}
-	//
-	// 		// lock
-	// 		s.mu.Lock()
-	// 		// if fecDecoder is not initialized, create one with default parameter
-	// 		if s.fecDecoder == nil {
-	// 			s.fecDecoder = newFECDecoder(1, 1)
-	// 		}
-	// 		recovers := s.fecDecoder.decode(f)
-	// 		if f.flag() == typeData {
-	// 			if ret := s.kcp.Input(data[fecHeaderSizePlus2:], true, s.ackNoDelay); ret != 0 {
-	// 				kcpInErrors++
-	// 			}
-	// 		}
-	//
-	// 		for _, r := range recovers {
-	// 			if len(r) >= 2 { // must be larger than 2bytes
-	// 				sz := binary.LittleEndian.Uint16(r)
-	// 				if int(sz) <= len(r) && sz >= 2 {
-	// 					if ret := s.kcp.Input(r[2:sz], false, s.ackNoDelay); ret == 0 {
-	// 						fecRecovered++
-	// 					} else {
-	// 						kcpInErrors++
-	// 					}
-	// 				} else {
-	// 					fecErrs++
-	// 				}
-	// 			} else {
-	// 				fecErrs++
-	// 			}
-	// 			// recycle the recovers
-	// 			xmitBuf.Put(r)
-	// 		}
-	//
-	// 		// to notify the readers to receive the data
-	// 		if n := s.kcp.PeekSize(); n > 0 {
-	// 			s.notifyReadEvent()
-	// 		}
-	// 		// to notify the writers
-	// 		waitsnd := s.kcp.WaitSnd()
-	// 		if waitsnd < int(s.kcp.snd_wnd) && waitsnd < int(s.kcp.rmt_wnd) {
-	// 			s.notifyWriteEvent()
-	// 		}
-	//
-	// 		s.uncork()
-	// 		s.mu.Unlock()
-	// 	} else {
-	// 		atomic.AddUint64(&DefaultSnmp.InErrs, 1)
-	// 	}
-	// } else {
-	// 	s.mu.Lock()
-	// 	if ret := s.kcp.Input(data, true, s.ackNoDelay); ret != 0 {
-	// 		kcpInErrors++
-	// 	}
-	// 	if n := s.kcp.PeekSize(); n > 0 {
-	// 		s.notifyReadEvent()
-	// 	}
-	// 	waitsnd := s.kcp.WaitSnd()
-	// 	if waitsnd < int(s.kcp.snd_wnd) && waitsnd < int(s.kcp.rmt_wnd) {
-	// 		s.notifyWriteEvent()
-	// 	}
-	// 	s.uncork()
-	// 	s.mu.Unlock()
-	// }
-
 	var kcpInErrors uint64
 	s.mu.Lock()
 	if ret := s.kcp.Input(data, true, s.ackNoDelay); ret != 0 {
@@ -777,75 +637,11 @@ func (s *UDPSession) kcpInput(data []byte) {
 	if kcpInErrors > 0 {
 		atomic.AddUint64(&DefaultSnmp.KCPInErrors, kcpInErrors)
 	}
-	// if fecParityShards > 0 {
-	// 	atomic.AddUint64(&DefaultSnmp.FECParityShards, fecParityShards)
-	// }
-	// if fecErrs > 0 {
-	// 	atomic.AddUint64(&DefaultSnmp.FECErrs, fecErrs)
-	// }
-	// if fecRecovered > 0 {
-	// 	atomic.AddUint64(&DefaultSnmp.FECRecovered, fecRecovered)
-	// }
-
 }
-
-// 原神Enet连接控制协议
-// MM MM MM MM | LL LL LL LL | HH HH HH HH | EE EE EE EE | MM MM MM MM
-// MM为表示连接状态的幻数 在开头的4字节和结尾的4字节
-// LL和HH分别为convId的低4字节和高4字节
-// EE为Enet事件类型 4字节
-
-// Enet协议上报结构体
-type Enet struct {
-	Addr     string
-	ConvId   uint64
-	ConnType uint8
-	EnetType uint32
-}
-
-// Enet连接状态类型
-const (
-	ConnEnetSyn        = 1
-	ConnEnetEst        = 2
-	ConnEnetFin        = 3
-	ConnEnetAddrChange = 4
-)
-
-// Enet连接状态类型幻数
-var MagicEnetSynHead, _ = hex.DecodeString("000000ff")
-var MagicEnetSynTail, _ = hex.DecodeString("ffffffff")
-var MagicEnetEstHead, _ = hex.DecodeString("00000145")
-var MagicEnetEstTail, _ = hex.DecodeString("14514545")
-var MagicEnetFinHead, _ = hex.DecodeString("00000194")
-var MagicEnetFinTail, _ = hex.DecodeString("19419494")
-
-// Enet事件类型
-const (
-	EnetTimeout                = 0
-	EnetClientClose            = 1
-	EnetClientRebindFail       = 2
-	EnetClientShutdown         = 3
-	EnetServerRelogin          = 4
-	EnetServerKick             = 5
-	EnetServerShutdown         = 6
-	EnetNotFoundSession        = 7
-	EnetLoginUnfinished        = 8
-	EnetPacketFreqTooHigh      = 9
-	EnetPingTimeout            = 10
-	EnetTranferFailed          = 11
-	EnetServerKillClient       = 12
-	EnetCheckMoveSpeed         = 13
-	EnetAccountPasswordChange  = 14
-	EnetClientEditorConnectKey = 987654321
-	EnetClientConnectKey       = 1234567890
-)
 
 type (
 	// Listener defines a server which will be waiting to accept incoming connections
 	Listener struct {
-		// block        BlockCrypt     // block encryption
-		// dataShards   int            // FEC data shard
-		// parityShards int            // FEC parity shard
 		conn    net.PacketConn // the underlying packet connection
 		ownConn bool           // true if we created conn internally, false if provided by caller
 
@@ -871,23 +667,7 @@ type (
 
 // packet input stage
 func (l *Listener) packetInput(data []byte, addr net.Addr, convId uint64) {
-	// decrypted := false
-	// if l.block != nil && len(data) >= cryptHeaderSize {
-	// 	l.block.Decrypt(data, data)
-	// 	data = data[nonceSize:]
-	// 	checksum := crc32.ChecksumIEEE(data[crcSize:])
-	// 	if checksum == binary.LittleEndian.Uint32(data) {
-	// 		data = data[crcSize:]
-	// 		decrypted = true
-	// 	} else {
-	// 		atomic.AddUint64(&DefaultSnmp.InCsumErrors, 1)
-	// 	}
-	// } else if l.block == nil {
-	// 	decrypted = true
-	// }
-
-	decrypted := true
-	if decrypted && len(data) >= IKCP_OVERHEAD {
+	if len(data) >= IKCP_OVERHEAD {
 		l.sessionLock.RLock()
 		s, ok := l.sessions[convId]
 		l.sessionLock.RUnlock()
@@ -895,20 +675,6 @@ func (l *Listener) packetInput(data []byte, addr net.Addr, convId uint64) {
 		var conv uint64
 		var sn uint32
 		convRecovered := false
-		// fecFlag := binary.LittleEndian.Uint16(data[8:])
-		// if fecFlag == typeData || fecFlag == typeParity { // 16bit kcp cmd [81-84] and frg [0-255] will not overlap with FEC type 0x00f1 0x00f2
-		// 	// packet with FEC
-		// 	if fecFlag == typeData && len(data) >= fecHeaderSizePlus2+IKCP_OVERHEAD {
-		// 		conv = binary.LittleEndian.Uint64(data[fecHeaderSizePlus2:])
-		// 		sn = binary.LittleEndian.Uint32(data[fecHeaderSizePlus2+IKCP_SN_OFFSET:])
-		// 		convRecovered = true
-		// 	}
-		// } else {
-		// 	// packet without FEC
-		// 	conv = binary.LittleEndian.Uint64(data)
-		// 	sn = binary.LittleEndian.Uint32(data[IKCP_SN_OFFSET:])
-		// 	convRecovered = true
-		// }
 
 		// packet without FEC
 		conv = binary.LittleEndian.Uint64(data)
@@ -1103,9 +869,6 @@ func serveConn(conn net.PacketConn, ownConn bool) (*Listener, error) {
 	l.chAccepts = make(chan *UDPSession, acceptBacklog)
 	l.chSessionClosed = make(chan net.Addr)
 	l.die = make(chan struct{})
-	// l.dataShards = dataShards
-	// l.parityShards = parityShards
-	// l.block = block
 	l.chSocketReadError = make(chan struct{})
 	l.EnetNotify = make(chan *Enet, 1000)
 	go l.monitor()
@@ -1138,9 +901,36 @@ func DialWithOptions(raddr string) (*UDPSession, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	var convid uint64
-	binary.Read(rand.Reader, binary.LittleEndian, &convid)
-	return newUDPSession(convid, nil, conn, true, udpaddr), nil
+	hsconn, err := net.DialUDP(network, nil, udpaddr)
+	if err != nil {
+		return nil, err
+	}
+	enet := &Enet{
+		Addr:     raddr,
+		ConvId:   0,
+		ConnType: ConnEnetSyn,
+		EnetType: EnetClientConnectKey,
+	}
+	data := BuildEnet(enet.ConnType, enet.EnetType, enet.ConvId)
+	_, err = hsconn.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	buf := make([]byte, mtuLimit)
+	n, addr, err := hsconn.ReadFrom(buf)
+	if err != nil {
+		return nil, err
+	}
+	if addr.String() != raddr {
+		return nil, errors.New("recv packet remote addr not match")
+	}
+	udpPayload := buf[:n]
+	connType, enetType, conv, err := ParseEnet(udpPayload)
+	if err != nil || connType != ConnEnetEst || enetType != EnetClientConnectKey {
+		return nil, errors.New("recv packet format error")
+	}
+
+	return newUDPSession(conv, nil, conn, true, udpaddr), nil
 }
 
 // NewConn3 establishes a session and talks KCP protocol over a packet connection.

@@ -3,6 +3,7 @@ package net
 import (
 	"time"
 
+	"hk4e/gate/client_proto"
 	"hk4e/gate/kcp"
 	hk4egatenet "hk4e/gate/net"
 	"hk4e/pkg/logger"
@@ -10,10 +11,12 @@ import (
 )
 
 type Session struct {
-	Conn     *kcp.UDPSession
-	XorKey   []byte
-	SendChan chan *hk4egatenet.ProtoMsg
-	RecvChan chan *hk4egatenet.ProtoMsg
+	Conn              *kcp.UDPSession
+	XorKey            []byte
+	SendChan          chan *hk4egatenet.ProtoMsg
+	RecvChan          chan *hk4egatenet.ProtoMsg
+	ServerCmdProtoMap *cmd.CmdProtoMap
+	ClientCmdProtoMap *client_proto.ClientCmdProtoMap
 }
 
 func NewSession(gateAddr string, dispatchKey []byte, localPort int) (*Session, error) {
@@ -27,13 +30,13 @@ func NewSession(gateAddr string, dispatchKey []byte, localPort int) (*Session, e
 	}
 	conn.SetACKNoDelay(true)
 	conn.SetWriteDelay(false)
-	sendChan := make(chan *hk4egatenet.ProtoMsg, 1000)
-	recvChan := make(chan *hk4egatenet.ProtoMsg, 1000)
 	r := &Session{
-		Conn:     conn,
-		XorKey:   dispatchKey,
-		SendChan: sendChan,
-		RecvChan: recvChan,
+		Conn:              conn,
+		XorKey:            dispatchKey,
+		SendChan:          make(chan *hk4egatenet.ProtoMsg, 1000),
+		RecvChan:          make(chan *hk4egatenet.ProtoMsg, 1000),
+		ServerCmdProtoMap: cmd.NewCmdProtoMap(),
+		ClientCmdProtoMap: client_proto.NewClientCmdProtoMap(),
 	}
 	go r.recvHandle()
 	go r.sendHandle()
@@ -58,7 +61,7 @@ func (s *Session) recvHandle() {
 		kcpMsgList := make([]*hk4egatenet.KcpMsg, 0)
 		hk4egatenet.DecodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, s.XorKey)
 		for _, v := range kcpMsgList {
-			protoMsgList := hk4egatenet.ProtoDecode(v, cmd.NewCmdProtoMap(), nil)
+			protoMsgList := hk4egatenet.ProtoDecode(v, s.ServerCmdProtoMap, s.ClientCmdProtoMap)
 			for _, vv := range protoMsgList {
 				s.RecvChan <- vv
 			}
@@ -77,7 +80,7 @@ func (s *Session) sendHandle() {
 			_ = conn.Close()
 			break
 		}
-		kcpMsg := hk4egatenet.ProtoEncode(protoMsg, cmd.NewCmdProtoMap(), nil)
+		kcpMsg := hk4egatenet.ProtoEncode(protoMsg, s.ServerCmdProtoMap, s.ClientCmdProtoMap)
 		if kcpMsg == nil {
 			logger.Error("decode kcp msg is nil, convId: %v", convId)
 			continue

@@ -3,9 +3,12 @@ package login
 import (
 	"encoding/base64"
 	"encoding/json"
+	"math"
 	"strconv"
 
+	"hk4e/common/region"
 	"hk4e/dispatch/api"
+	"hk4e/pkg/endec"
 	"hk4e/pkg/httpclient"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -21,9 +24,9 @@ type DispatchInfo struct {
 	DispatchKey []byte
 }
 
-func GetDispatchInfo(url string, clientParam string) (*DispatchInfo, error) {
-	logger.Info("http get url: %v", url+"/query_region_list"+clientParam)
-	regionListBase64, err := httpclient.GetRaw(url+"/query_region_list"+clientParam, "")
+func GetDispatchInfo(regionListUrl string, curRegionUrl string, regionListParam string, curRegionParam string, keyId string) (*DispatchInfo, error) {
+	logger.Info("http get url: %v", regionListUrl+"/query_region_list"+regionListParam)
+	regionListBase64, err := httpclient.GetRaw(regionListUrl+"/query_region_list"+regionListParam, "")
 	if err != nil {
 		return nil, err
 	}
@@ -40,16 +43,50 @@ func GetDispatchInfo(url string, clientParam string) (*DispatchInfo, error) {
 	if len(queryRegionListHttpRsp.RegionList) == 0 {
 		return nil, errors.New("no region found")
 	}
-	selectRegion := queryRegionListHttpRsp.RegionList[0]
-	logger.Info("select region: %v", selectRegion)
-	logger.Info("http get url: %v", selectRegion.DispatchUrl+clientParam)
-	regionCurrBase64, err := httpclient.GetRaw(selectRegion.DispatchUrl+clientParam, "")
+	if curRegionUrl == "" {
+		selectRegion := queryRegionListHttpRsp.RegionList[0]
+		logger.Info("select region: %v", selectRegion)
+		curRegionUrl = selectRegion.DispatchUrl
+	}
+	logger.Info("http get url: %v", curRegionUrl+curRegionParam)
+	regionCurrJson, err := httpclient.GetRaw(curRegionUrl+curRegionParam, "")
 	if err != nil {
 		return nil, err
 	}
-	regionCurrData, err := base64.StdEncoding.DecodeString(regionCurrBase64)
+	queryCurRegionRspJson := new(api.QueryCurRegionRspJson)
+	err = json.Unmarshal([]byte(regionCurrJson), queryCurRegionRspJson)
 	if err != nil {
 		return nil, err
+	}
+	encryptedRegionInfo, err := base64.StdEncoding.DecodeString(queryCurRegionRspJson.Content)
+	if err != nil {
+		return nil, err
+	}
+	chunkSize := 256
+	regionInfoLength := len(encryptedRegionInfo)
+	numChunks := int(math.Ceil(float64(regionInfoLength) / float64(chunkSize)))
+	regionCurrData := make([]byte, 0)
+	_, encRsaKeyMap, _ := region.LoadRsaKey()
+	encPubPrivKey, exist := encRsaKeyMap[keyId]
+	if !exist {
+		logger.Error("can not found key id: %v", keyId)
+		return nil, err
+	}
+	for i := 0; i < numChunks; i++ {
+		from := i * chunkSize
+		to := int(math.Min(float64((i+1)*chunkSize), float64(regionInfoLength)))
+		chunk := encryptedRegionInfo[from:to]
+		privKey, err := endec.RsaParsePrivKey(encPubPrivKey)
+		if err != nil {
+			logger.Error("parse rsa priv key error: %v", err)
+			return nil, err
+		}
+		decrypt, err := endec.RsaDecrypt(chunk, privKey)
+		if err != nil {
+			logger.Error("rsa dec error: %v", err)
+			return nil, err
+		}
+		regionCurrData = append(regionCurrData, decrypt...)
 	}
 	queryCurrRegionHttpRsp := new(proto.QueryCurrRegionHttpRsp)
 	err = pb.Unmarshal(regionCurrData, queryCurrRegionHttpRsp)

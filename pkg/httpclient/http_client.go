@@ -2,11 +2,14 @@ package httpclient
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"hk4e/pkg/logger"
 )
 
 var httpClient http.Client
@@ -14,6 +17,9 @@ var httpClient http.Client
 func init() {
 	httpClient = http.Client{
 		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 			DisableKeepAlives: true,
 		},
 		Timeout: time.Second * 10,
@@ -37,6 +43,7 @@ func GetJson[T any](url string, authToken string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug("http get rsp data: %v", string(data))
 	responseData := new(T)
 	err = json.Unmarshal(data, responseData)
 	if err != nil {
@@ -87,6 +94,7 @@ func PostJson[T any](url string, body any, authToken string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug("http post rsp data: %v", string(rspData))
 	responseData := new(T)
 	err = json.Unmarshal(rspData, responseData)
 	if err != nil {

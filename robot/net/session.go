@@ -1,54 +1,48 @@
 package net
 
 import (
-	"strconv"
 	"time"
 
+	"hk4e/gate/kcp"
 	hk4egatenet "hk4e/gate/net"
 	"hk4e/pkg/logger"
-	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
-
-	"github.com/FlourishingWorld/dpdk-go/protocol/kcp"
 )
 
 type Session struct {
-	SendChan        chan *hk4egatenet.ProtoMsg
-	RecvChan        chan *hk4egatenet.ProtoMsg
-	conn            *kcp.UDPSession
-	seed            uint64 // TODO 密钥交换后收到的服务器生成的seed
-	xorKey          []byte
-	changeXorKeyFin bool
-	useMagicSeed    bool
+	Conn     *kcp.UDPSession
+	XorKey   []byte
+	SendChan chan *hk4egatenet.ProtoMsg
+	RecvChan chan *hk4egatenet.ProtoMsg
 }
 
-func NewSession(gateAddr string, dispatchKey []byte, localPort int) (r *Session) {
-	conn, err := kcp.DialWithOptions(gateAddr, "0.0.0.0:"+strconv.Itoa(localPort))
+func NewSession(gateAddr string, dispatchKey []byte, localPort int) (*Session, error) {
+	// // DPDK模式需开启
+	// conn, err := kcp.DialWithOptions(gateAddr, "0.0.0.0:"+strconv.Itoa(localPort))
+
+	conn, err := kcp.DialWithOptions(gateAddr)
 	if err != nil {
 		logger.Error("kcp client conn to server error: %v", err)
-		return
+		return nil, err
 	}
 	conn.SetACKNoDelay(true)
 	conn.SetWriteDelay(false)
 	sendChan := make(chan *hk4egatenet.ProtoMsg, 1000)
 	recvChan := make(chan *hk4egatenet.ProtoMsg, 1000)
-	r = &Session{
-		SendChan:        sendChan,
-		RecvChan:        recvChan,
-		conn:            conn,
-		seed:            0,
-		xorKey:          dispatchKey,
-		changeXorKeyFin: false,
-		useMagicSeed:    true,
+	r := &Session{
+		Conn:     conn,
+		XorKey:   dispatchKey,
+		SendChan: sendChan,
+		RecvChan: recvChan,
 	}
 	go r.recvHandle()
 	go r.sendHandle()
-	return r
+	return r, nil
 }
 
 func (s *Session) recvHandle() {
 	logger.Info("recv handle start")
-	conn := s.conn
+	conn := s.Conn
 	convId := conn.GetConv()
 	recvBuf := make([]byte, hk4egatenet.PacketMaxLen)
 	dataBuf := make([]byte, 0, 1500)
@@ -62,21 +56,11 @@ func (s *Session) recvHandle() {
 		}
 		recvData := recvBuf[:recvLen]
 		kcpMsgList := make([]*hk4egatenet.KcpMsg, 0)
-		hk4egatenet.DecodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, s.xorKey)
+		hk4egatenet.DecodeBinToPayload(recvData, &dataBuf, convId, &kcpMsgList, s.XorKey)
 		for _, v := range kcpMsgList {
 			protoMsgList := hk4egatenet.ProtoDecode(v, cmd.NewCmdProtoMap(), nil)
 			for _, vv := range protoMsgList {
 				s.RecvChan <- vv
-				if s.changeXorKeyFin == false && vv.CmdId == cmd.GetPlayerTokenRsp {
-					// XOR密钥切换
-					logger.Info("change session xor key, convId: %v", convId)
-					s.changeXorKeyFin = true
-					keyBlock := random.NewKeyBlock(s.seed, s.useMagicSeed)
-					xorKey := keyBlock.XorKey()
-					key := make([]byte, 4096)
-					copy(key, xorKey[:])
-					s.xorKey = key
-				}
 			}
 		}
 	}
@@ -84,7 +68,7 @@ func (s *Session) recvHandle() {
 
 func (s *Session) sendHandle() {
 	logger.Info("send handle start")
-	conn := s.conn
+	conn := s.Conn
 	convId := conn.GetConv()
 	for {
 		protoMsg, ok := <-s.SendChan
@@ -98,7 +82,7 @@ func (s *Session) sendHandle() {
 			logger.Error("decode kcp msg is nil, convId: %v", convId)
 			continue
 		}
-		bin := hk4egatenet.EncodePayloadToBin(kcpMsg, s.xorKey)
+		bin := hk4egatenet.EncodePayloadToBin(kcpMsg, s.XorKey)
 		_ = conn.SetWriteDeadline(time.Now().Add(time.Second * hk4egatenet.ConnSendTimeout))
 		_, err := conn.Write(bin)
 		if err != nil {

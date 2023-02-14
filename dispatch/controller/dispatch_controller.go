@@ -101,10 +101,6 @@ func (c *Controller) queryCurRegion(context *gin.Context) {
 		return
 	}
 	logger.Debug("do hk4e 2.8 rsa logic")
-	if context.Query("dispatchSeed") == "" {
-		rspError()
-		return
-	}
 	keyId := context.Query("key_id")
 	encPubPrivKey, exist := c.encRsaKeyMap[keyId]
 	if !exist {

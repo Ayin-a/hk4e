@@ -56,6 +56,15 @@ func init() {
 	}
 }
 
+const (
+	batchSize = 16
+)
+
+type batchConn interface {
+	WriteBatch(ms []ipv4.Message, flags int) (int, error)
+	ReadBatch(ms []ipv4.Message, flags int) (int, error)
+}
+
 type (
 	// UDPSession defines a KCP session implemented by UDP
 	UDPSession struct {

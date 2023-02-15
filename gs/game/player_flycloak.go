@@ -36,6 +36,14 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 	logger.Debug("user change avatar fly cloak, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarWearFlycloakReq)
 
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		g.SendError(cmd.AvatarWearFlycloakRsp, player, &proto.AvatarWearFlycloakRsp{})
+		return
+	}
+
 	// 确保角色存在
 	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
 	if !ok {
@@ -44,6 +52,7 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 		return
 	}
 
+	// 确保要更换的风之翼已获得
 	exist := false
 	for _, v := range player.FlyCloakList {
 		if v == req.FlycloakId {
@@ -58,9 +67,6 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 
 	// 设置角色风之翼
 	avatar.FlyCloak = req.FlycloakId
-
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
 
 	avatarFlycloakChangeNotify := &proto.AvatarFlycloakChangeNotify{
 		AvatarGuid: req.AvatarGuid,

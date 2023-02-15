@@ -18,6 +18,10 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	targetAvatarGuid := req.Guid
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	targetAvatarId := player.GetAvatarIdByGuid(targetAvatarGuid)
 	oldAvatarId := world.GetPlayerActiveAvatarId(player)
 	if targetAvatarId == oldAvatarId {
@@ -211,6 +215,10 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			continue
 		}
 		worldPlayerScene := world.GetSceneById(worldPlayer.SceneId)
+		if worldPlayerScene == nil {
+			logger.Error("scene is nil, sceneId: %v", worldPlayer.SceneId)
+			return new(proto.SceneTeamUpdateNotify)
+		}
 		worldPlayerAvatar := worldPlayer.AvatarMap[worldAvatar.GetAvatarId()]
 		equipIdList := make([]uint32, 0)
 		weapon := worldPlayerAvatar.EquipWeapon

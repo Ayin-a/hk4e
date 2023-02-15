@@ -81,6 +81,10 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 	player.SceneJump = jumpScene
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	oldScene := world.GetSceneById(oldSceneId)
+	if oldScene == nil {
+		logger.Error("old scene is nil, sceneId: %v", oldSceneId)
+		return
+	}
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)
 	g.RemoveSceneEntityNotifyBroadcast(oldScene, proto.VisionType_VISION_REMOVE, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
 	if jumpScene {
@@ -90,6 +94,10 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 		oldScene.RemovePlayer(player)
 		player.SceneId = newSceneId
 		newScene := world.GetSceneById(newSceneId)
+		if newScene == nil {
+			logger.Error("new scene is nil, sceneId: %v", newSceneId)
+			return
+		}
 		newScene.AddPlayer(player)
 	}
 	player.SceneLoadState = model.SceneNone

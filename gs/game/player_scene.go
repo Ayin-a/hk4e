@@ -43,6 +43,10 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	logger.Debug("user scene init finish, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 
 	serverTimeNotify := &proto.ServerTimeNotify{
 		ServerTime: uint64(time.Now().UnixMilli()),
@@ -240,6 +244,10 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	logger.Debug("user enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 
 	if world.GetMultiplayer() && world.IsPlayerFirstEnter(player) {
 		guestPostEnterSceneNotify := &proto.GuestPostEnterSceneNotify{
@@ -323,6 +331,10 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 	gameTime := req.GameTime
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	scene.ChangeGameTime(gameTime)
 
 	for _, scenePlayer := range scene.GetAllPlayer() {
@@ -412,6 +424,10 @@ func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityCon
 func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return new(proto.PlayerEnterSceneNotify)
+	}
 	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		SceneId:                player.SceneId,
@@ -460,6 +476,10 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 ) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return new(proto.PlayerEnterSceneNotify)
+	}
 	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		PrevSceneId:     prevSceneId,
@@ -538,6 +558,10 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	// 如果总数量太多则分包发送
 	times := int(math.Ceil(float64(len(entityIdList)) / float64(ENTITY_MAX_BATCH_SEND_NUM)))
 	for i := 0; i < times; i++ {

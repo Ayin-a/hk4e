@@ -400,6 +400,10 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 		}
 	}
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 
 	// 仅仅把当前的场上角色的实体消失掉
 	activeAvatarId := world.GetPlayerActiveAvatarId(player)

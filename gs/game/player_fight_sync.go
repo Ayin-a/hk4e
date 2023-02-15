@@ -84,6 +84,10 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	ntf.OpIdx = scene.GetMeeoIndex()
 	scene.SetMeeoIndex(scene.GetMeeoIndex() + 1)
 	g.SendToWorldA(world, cmd.MassiveEntityElementOpBatchNotify, player.ClientSeq, ntf)
@@ -100,6 +104,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
@@ -261,6 +269,10 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 	aoiManager, exist := sceneBlockAoiMap[player.SceneId]
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	if exist {
 		oldGid := aoiManager.GetGidByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
 		newGid := aoiManager.GetGidByPos(float32(newPos.X), 0.0, float32(newPos.Z))
@@ -531,6 +543,10 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 	logger.Debug("EvtCreateGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	scene.CreateEntityGadgetClient(&model.Vector{
 		X: float64(req.InitPos.X),
 		Y: float64(req.InitPos.Y),
@@ -552,6 +568,10 @@ func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb
 	logger.Debug("EvtDestroyGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	scene.DestroyEntity(req.EntityId)
 	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_MISS, []uint32{req.EntityId})
 }

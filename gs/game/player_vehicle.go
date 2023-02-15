@@ -15,6 +15,10 @@ import (
 func (g *GameManager) VehicleDestroyMotion(player *model.Player, entity *Entity, state proto.MotionState) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 
 	// 状态等于 MOTION_STATE_DESTROY_VEHICLE 代表请求销毁
 	if state == proto.MotionState_MOTION_DESTROY_VEHICLE {
@@ -29,6 +33,11 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		g.SendError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
+		return
+	}
 
 	// 创建载具冷却时间
 	createVehicleCd := int64(5000) // TODO 冷却时间读取配置表
@@ -190,6 +199,11 @@ func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Mes
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		g.SendError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
+		return
+	}
 
 	// 获取载具实体
 	entity := scene.GetEntity(req.EntityId)

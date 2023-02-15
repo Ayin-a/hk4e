@@ -293,6 +293,10 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
@@ -323,6 +327,10 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
@@ -460,6 +468,10 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
 	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
 	if avatarEntity == nil {
@@ -525,6 +537,10 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
 	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
 	if avatarEntity == nil {

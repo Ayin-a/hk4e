@@ -53,7 +53,7 @@ func (g *GameManager) TakeoffEquipReq(player *model.Player, payloadMsg pb.Messag
 	req := payloadMsg.(*proto.TakeoffEquipReq)
 
 	// 获取目标角色
-	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
 		g.SendError(cmd.TakeoffEquipRsp, player, &proto.TakeoffEquipRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
@@ -71,10 +71,7 @@ func (g *GameManager) TakeoffEquipReq(player *model.Player, payloadMsg pb.Messag
 	// 角色更新面板
 	g.UpdateUserAvatarFightProp(player.PlayerID, avatar.AvatarId)
 	// 更新玩家装备
-	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
-		AvatarGuid: avatar.Guid,
-		EquipType:  req.Slot,
-	}
+	avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(avatar, uint8(req.Slot))
 	g.SendMsg(cmd.AvatarEquipChangeNotify, player.PlayerID, player.ClientSeq, avatarEquipChangeNotify)
 
 	takeoffEquipRsp := &proto.TakeoffEquipRsp{
@@ -90,10 +87,16 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	req := payloadMsg.(*proto.WearEquipReq)
 
 	// 获取目标角色
-	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
 		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
+		return
+	}
+	// 获取角色配置表
+	avatarConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
+	if avatarConfig == nil {
+		logger.Error("avatar config error, avatarId: %v", avatar.AvatarId)
 		return
 	}
 	// 获取目标装备
@@ -106,10 +109,23 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 	switch equipGameObj.(type) {
 	case *model.Weapon:
 		weapon := equipGameObj.(*model.Weapon)
+		// 获取武器配置表
+		weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
+		if weaponConfig == nil {
+			logger.Error("weapon config error, itemId: %v", weapon.ItemId)
+			return
+		}
+		// 校验装备的武器类型是否匹配
+		if weaponConfig.EquipType != avatarConfig.WeaponType {
+			logger.Error("weapon type error, weaponType: %v", weaponConfig.EquipType)
+			g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
+			return
+		}
 		g.WearUserAvatarWeapon(player.PlayerID, avatar.AvatarId, weapon.WeaponId)
 	case *model.Reliquary:
 		reliquary := equipGameObj.(*model.Reliquary)
-		g.WearUserAvatarReliquary(player.PlayerID, avatar.AvatarId, reliquary.ReliquaryId)
+		logger.Error("itemId: %v", reliquary.ItemId)
+		// g.WearUserAvatarReliquary(player.PlayerID, avatar.AvatarId, reliquary.ReliquaryId)
 	default:
 		logger.Error("equip type error, equipGuid: %v", req.EquipGuid)
 		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})
@@ -168,9 +184,9 @@ func (g *GameManager) WearUserAvatarReliquary(userId uint32, avatarId uint32, re
 		player.TakeOffReliquary(targetReliquaryAvatar.AvatarId, reliquary.ReliquaryId)
 
 		// 更新目标圣遗物角色的装备
-		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(targetReliquaryAvatar, targetReliquaryAvatar.EquipReliquaryMap[uint8(reliquaryConfig.ReliquaryType)])
+		avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(targetReliquaryAvatar, uint8(reliquaryConfig.ReliquaryType))
 		g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
-	} else {
+	} else if avatarCurReliquary != nil {
 		// 角色当前有圣遗物则卸下
 		player.TakeOffReliquary(avatarId, avatarCurReliquary.ReliquaryId)
 	}
@@ -178,7 +194,7 @@ func (g *GameManager) WearUserAvatarReliquary(userId uint32, avatarId uint32, re
 	player.WearReliquary(avatarId, reliquaryId)
 
 	// 更新角色装备
-	avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(avatar, reliquary)
+	avatarEquipChangeNotify := g.PacketAvatarEquipChangeNotifyByReliquary(avatar, uint8(reliquaryConfig.ReliquaryType))
 	g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 }
 
@@ -217,10 +233,11 @@ func (g *GameManager) WearUserAvatarWeapon(userId uint32, avatarId uint32, weapo
 			}
 			// 卸下角色已装备的武器
 			player.TakeOffWeapon(avatarId, avatarCurWeapon.WeaponId)
-			// 将目标武器的角色装备当前角色曾装备的武器
-			player.WearWeapon(targetWeaponAvatar.AvatarId, avatarCurWeapon.WeaponId)
+
 			// 将目标武器的角色卸下武器
 			player.TakeOffWeapon(targetWeaponAvatar.AvatarId, weapon.WeaponId)
+			// 将目标武器的角色装备当前角色曾装备的武器
+			player.WearWeapon(targetWeaponAvatar.AvatarId, avatarCurWeapon.WeaponId)
 
 			// 更新目标武器角色的装备
 			weaponEntityId := uint32(0)
@@ -248,7 +265,17 @@ func (g *GameManager) WearUserAvatarWeapon(userId uint32, avatarId uint32, weapo
 	g.SendMsg(cmd.AvatarEquipChangeNotify, userId, player.ClientSeq, avatarEquipChangeNotify)
 }
 
-func (g *GameManager) PacketAvatarEquipChangeNotifyByReliquary(avatar *model.Avatar, reliquary *model.Reliquary) *proto.AvatarEquipChangeNotify {
+func (g *GameManager) PacketAvatarEquipChangeNotifyByReliquary(avatar *model.Avatar, slot uint8) *proto.AvatarEquipChangeNotify {
+	// 获取角色对应位置的圣遗物
+	reliquary, ok := avatar.EquipReliquaryMap[slot]
+	if !ok {
+		// 没有则代表卸下
+		avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
+			AvatarGuid: avatar.Guid,
+			EquipType:  uint32(slot),
+		}
+		return avatarEquipChangeNotify
+	}
 	reliquaryConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 	if reliquaryConfig == nil {
 		logger.Error("reliquary config error, itemId: %v", reliquary.ItemId)
@@ -294,17 +321,6 @@ func (g *GameManager) PacketAvatarEquipChangeNotifyByWeapon(avatar *model.Avatar
 			AbilityInfo:  new(proto.AbilitySyncStateInfo),
 			AffixMap:     affixMap,
 		},
-	}
-	return avatarEquipChangeNotify
-}
-
-func (g *GameManager) PacketAvatarEquipTakeOffNotify(avatar *model.Avatar, weapon *model.Weapon) *proto.AvatarEquipChangeNotify {
-	avatarEquipChangeNotify := &proto.AvatarEquipChangeNotify{
-		AvatarGuid: avatar.Guid,
-	}
-	itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
-	if itemDataConfig != nil {
-		avatarEquipChangeNotify.EquipType = uint32(itemDataConfig.Type)
 	}
 	return avatarEquipChangeNotify
 }

@@ -50,15 +50,6 @@ func (p *Player) GetReliquaryGuid(reliquaryId uint64) uint64 {
 	return reliquaryInfo.Guid
 }
 
-func (p *Player) GetReliquaryIdByGuid(guid uint64) uint64 {
-	for reliquaryId, reliquary := range p.ReliquaryMap {
-		if guid == reliquary.Guid {
-			return reliquaryId
-		}
-	}
-	return 0
-}
-
 func (p *Player) GetReliquary(reliquaryId uint64) *Reliquary {
 	return p.ReliquaryMap[reliquaryId]
 }
@@ -96,5 +87,6 @@ func (p *Player) CostReliquary(reliquaryId uint64) uint64 {
 		return 0
 	}
 	delete(p.ReliquaryMap, reliquaryId)
+	delete(p.GameObjectGuidMap, reliquary.Guid)
 	return reliquary.Guid
 }

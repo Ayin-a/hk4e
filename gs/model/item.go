@@ -11,6 +11,7 @@ type Item struct {
 func (p *Player) InitAllItem() {
 	for itemId, item := range p.ItemMap {
 		item.Guid = p.GetNextGameObjectGuid()
+		p.GameObjectGuidMap[item.Guid] = GameObject(item)
 		p.ItemMap[itemId] = item
 	}
 }
@@ -21,28 +22,6 @@ func (p *Player) GetItemGuid(itemId uint32) uint64 {
 		return 0
 	}
 	return itemInfo.Guid
-}
-
-func (p *Player) GetItemIdByGuid(itemGuid uint64) uint32 {
-	for _, item := range p.ItemMap {
-		if item.Guid == itemGuid {
-			return item.ItemId
-		}
-	}
-	return 0
-}
-func (p *Player) GetItemIdByItemAndWeaponGuid(guid uint64) uint32 {
-	for _, item := range p.ItemMap {
-		if item.Guid == guid {
-			return item.ItemId
-		}
-	}
-	for _, weapon := range p.WeaponMap {
-		if weapon.Guid == guid {
-			return weapon.ItemId
-		}
-	}
-	return 0
 }
 
 func (p *Player) GetItemCount(itemId uint32) uint32 {
@@ -72,6 +51,7 @@ func (p *Player) AddItem(itemId uint32, count uint32) {
 			Count:  0,
 			Guid:   p.GetNextGameObjectGuid(),
 		}
+		p.GameObjectGuidMap[itemInfo.Guid] = GameObject(itemInfo)
 	}
 	itemInfo.Count += count
 	p.ItemMap[itemId] = itemInfo
@@ -89,6 +69,7 @@ func (p *Player) CostItem(itemId uint32, count uint32) {
 	}
 	if itemInfo.Count == 0 {
 		delete(p.ItemMap, itemId)
+		delete(p.GameObjectGuidMap, itemInfo.Guid)
 	} else {
 		p.ItemMap[itemId] = itemInfo
 	}

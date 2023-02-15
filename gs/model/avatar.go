@@ -80,15 +80,6 @@ func (p *Player) InitAvatarFightProp(avatar *Avatar) {
 	p.SetCurrEnergy(avatar, avatar.CurrEnergy, true)
 }
 
-func (p *Player) GetAvatarIdByGuid(guid uint64) uint32 {
-	for avatarId, avatar := range p.AvatarMap {
-		if guid == avatar.Guid {
-			return avatarId
-		}
-	}
-	return 0
-}
-
 func (p *Player) AddAvatar(avatarId uint32) {
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatarId))
 	if avatarDataConfig == nil {

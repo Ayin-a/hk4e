@@ -73,7 +73,7 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 	logger.Debug("user promote get reward, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarPromoteGetRewardReq)
 	// 是否拥有角色
-	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
 		g.SendError(cmd.AvatarPromoteGetRewardRsp, player, &proto.AvatarPromoteGetRewardRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
@@ -124,7 +124,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 	logger.Debug("user promote, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarPromoteReq)
 	// 是否拥有角色
-	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.Guid)]
+	avatar, ok := player.GameObjectGuidMap[req.Guid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.Guid)
 		g.SendError(cmd.AvatarPromoteRsp, player, &proto.AvatarPromoteRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)
@@ -210,7 +210,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	logger.Debug("user upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarUpgradeReq)
 	// 是否拥有角色
-	avatar, ok := player.AvatarMap[player.GetAvatarIdByGuid(req.AvatarGuid)]
+	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
 	if !ok {
 		logger.Error("avatar error, avatarGuid: %v", req.AvatarGuid)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_CAN_NOT_FIND_AVATAR)

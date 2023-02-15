@@ -22,7 +22,12 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 		logger.Error("scene is nil, sceneId: %v", player.SceneId)
 		return
 	}
-	targetAvatarId := player.GetAvatarIdByGuid(targetAvatarGuid)
+	targetAvatar, ok := player.GameObjectGuidMap[targetAvatarGuid].(*model.Avatar)
+	if !ok {
+		logger.Error("target avatar error, avatarGuid: %v", targetAvatarGuid)
+		return
+	}
+	targetAvatarId := targetAvatar.AvatarId
 	oldAvatarId := world.GetPlayerActiveAvatarId(player)
 	if targetAvatarId == oldAvatarId {
 		logger.Error("can not change to the same avatar, uid: %v, oldAvatarId: %v, targetAvatarId: %v", player.PlayerID, oldAvatarId, targetAvatarId)
@@ -121,7 +126,12 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 		world.InitPlayerWorldAvatar(player)
 
 		currAvatarGuid := req.CurAvatarGuid
-		currAvatarId := player.GetAvatarIdByGuid(currAvatarGuid)
+		currAvatar, ok := player.GameObjectGuidMap[currAvatarGuid].(*model.Avatar)
+		if !ok {
+			logger.Error("avatar error, avatarGuid: %v", currAvatarGuid)
+			return
+		}
+		currAvatarId := currAvatar.AvatarId
 		currAvatarIndex := world.GetPlayerAvatarIndexByAvatarId(player, currAvatarId)
 		player.TeamConfig.CurrAvatarIndex = uint8(currAvatarIndex)
 		world.SetPlayerAvatarIndex(player, currAvatarIndex)
@@ -179,7 +189,12 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	}
 	avatarIdList := make([]uint32, 0)
 	for _, avatarGuid := range avatarGuidList {
-		avatarId := player.GetAvatarIdByGuid(avatarGuid)
+		avatar, ok := player.GameObjectGuidMap[avatarGuid].(*model.Avatar)
+		if !ok {
+			logger.Error("avatar error, avatarGuid: %v", avatarGuid)
+			return
+		}
+		avatarId := avatar.AvatarId
 		avatarIdList = append(avatarIdList, avatarId)
 	}
 	world.SetPlayerLocalTeam(player, avatarIdList)
@@ -187,7 +202,12 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	world.InitPlayerWorldAvatar(player)
 
 	currAvatarGuid := req.CurAvatarGuid
-	currAvatarId := player.GetAvatarIdByGuid(currAvatarGuid)
+	currAvatar, ok := player.GameObjectGuidMap[currAvatarGuid].(*model.Avatar)
+	if !ok {
+		logger.Error("avatar error, avatarGuid: %v", currAvatarGuid)
+		return
+	}
+	currAvatarId := currAvatar.AvatarId
 	newAvatarIndex := world.GetPlayerAvatarIndexByAvatarId(player, currAvatarId)
 	world.SetPlayerAvatarIndex(player, newAvatarIndex)
 

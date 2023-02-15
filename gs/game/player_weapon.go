@@ -123,7 +123,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 是否拥有武器
-	weapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.TargetWeaponGuid)]
+	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
 	if !ok {
 		logger.Error("weapon error, weaponGuid: %v", req.TargetWeaponGuid)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -162,7 +162,22 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	}
 	// 获取精炼材料物品配置表
 	// 精炼的材料可能是武器也可能是物品
-	itemDataConfig := gdconf.GetItemDataById(int32(player.GetItemIdByItemAndWeaponGuid(req.ItemGuid)))
+	gameObj, ok := player.GameObjectGuidMap[req.ItemGuid]
+	if !ok {
+		logger.Error("item guid error, itemGuid: %v", req.ItemGuid)
+		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{})
+		return
+	}
+	itemId := uint32(0)
+	switch gameObj.(type) {
+	case *model.Item:
+		item := gameObj.(*model.Item)
+		itemId = item.ItemId
+	case *model.Weapon:
+		weapon := gameObj.(*model.Weapon)
+		itemId = weapon.ItemId
+	}
+	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
 	if itemDataConfig == nil {
 		logger.Error("item data config error, itemGuid: %v", req.ItemGuid)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -173,9 +188,9 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	case int32(constant.ITEM_TYPE_WEAPON):
 		// 精炼材料为武器
 		// 是否拥有将被用于精炼的武器
-		foodWeapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.ItemGuid)]
+		foodWeapon, ok := player.GameObjectGuidMap[req.ItemGuid].(*model.Weapon)
 		if !ok {
-			logger.Error("weapon error, weaponGuid: %v", req.TargetWeaponGuid)
+			logger.Error("weapon error, weaponGuid: %v", req.ItemGuid)
 			g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
 			return
 		}
@@ -196,7 +211,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	case int32(constant.ITEM_TYPE_MATERIAL):
 		// 精炼材料为道具
 		// 是否拥有将被用于精炼的道具
-		item, ok := player.ItemMap[player.GetItemIdByGuid(req.ItemGuid)]
+		item, ok := player.GameObjectGuidMap[req.ItemGuid].(*model.Item)
 		if !ok {
 			logger.Error("item error, itemGuid: %v", req.ItemGuid)
 			g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -266,7 +281,7 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 	logger.Debug("user weapon promote, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WeaponPromoteReq)
 	// 是否拥有武器
-	weapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.TargetWeaponGuid)]
+	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
 	if !ok {
 		logger.Error("weapon error, weaponGuid: %v", req.TargetWeaponGuid)
 		g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -410,7 +425,7 @@ func (g *GameManager) GetWeaponUpgradeReturnMaterial(overflowExp uint32) (return
 func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemParamList []*proto.ItemParam, foodWeaponGuidList []uint64) (expCount uint32, coinCost uint32, success bool) {
 	// 武器经验计算
 	for _, weaponGuid := range foodWeaponGuidList {
-		foodWeapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(weaponGuid)]
+		foodWeapon, ok := player.GameObjectGuidMap[weaponGuid].(*model.Weapon)
 		if !ok {
 			logger.Error("food weapon error, weaponGuid: %v", weaponGuid)
 			return
@@ -534,7 +549,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	logger.Debug("user weapon upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WeaponUpgradeReq)
 	// 是否拥有武器
-	weapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.TargetWeaponGuid)]
+	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
 	if !ok {
 		logger.Error("weapon error, weaponGuid: %v", req.TargetWeaponGuid)
 		g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -596,7 +611,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 校验作为升级材料的武器是否存在
 	costWeaponIdList := make([]uint64, 0, len(req.FoodWeaponGuidList))
 	for _, weaponGuid := range req.FoodWeaponGuidList {
-		foodWeapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(weaponGuid)]
+		foodWeapon, ok := player.GameObjectGuidMap[weaponGuid].(*model.Weapon)
 		if !ok {
 			logger.Error("food weapon error, weaponGuid: %v", weaponGuid)
 			g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)
@@ -669,7 +684,7 @@ func (g *GameManager) CalcWeaponUpgradeReturnItemsReq(player *model.Player, payl
 	logger.Debug("user calc weapon upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CalcWeaponUpgradeReturnItemsReq)
 	// 是否拥有武器
-	weapon, ok := player.WeaponMap[player.GetWeaponIdByGuid(req.TargetWeaponGuid)]
+	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
 	if !ok {
 		logger.Error("weapon error, weaponGuid: %v", req.TargetWeaponGuid)
 		g.SendError(cmd.CalcWeaponUpgradeReturnItemsRsp, player, &proto.CalcWeaponUpgradeReturnItemsRsp{}, proto.Retcode_RET_ITEM_NOT_EXIST)

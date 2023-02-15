@@ -462,8 +462,8 @@ func (k *KcpConnectManager) SetSession(session *Session, convId uint64, userId u
 }
 
 func (k *KcpConnectManager) DeleteSession(convId uint64, userId uint32) {
-	k.sessionMapLock.RLock()
+	k.sessionMapLock.Lock()
 	delete(k.sessionConvIdMap, convId)
 	delete(k.sessionUserIdMap, userId)
-	k.sessionMapLock.RUnlock()
+	k.sessionMapLock.Unlock()
 }

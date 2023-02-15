@@ -6,10 +6,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"strconv"
-	"time"
 
 	"hk4e/common/region"
-	hk4egatenet "hk4e/gate/net"
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -49,20 +47,12 @@ func GateLogin(dispatchInfo *DispatchInfo, accountInfo *AccountInfo, keyId strin
 		logger.Error("parse key id error: %v", err)
 		return nil, err
 	}
-	session.SendChan <- &hk4egatenet.ProtoMsg{
-		ConvId: 0,
-		CmdId:  cmd.GetPlayerTokenReq,
-		HeadMessage: &proto.PacketHead{
-			ClientSequenceId: 0,
-			SentMs:           uint64(time.Now().UnixMilli()),
-		},
-		PayloadMessage: &proto.GetPlayerTokenReq{
-			AccountToken:  accountInfo.ComboToken,
-			AccountUid:    strconv.Itoa(int(accountInfo.AccountId)),
-			KeyId:         uint32(keyIdInt),
-			ClientRandKey: clientSeedBase64,
-		},
-	}
+	session.SendMsg(cmd.GetPlayerTokenReq, &proto.GetPlayerTokenReq{
+		AccountToken:  accountInfo.ComboToken,
+		AccountUid:    strconv.Itoa(int(accountInfo.AccountId)),
+		KeyId:         uint32(keyIdInt),
+		ClientRandKey: clientSeedBase64,
+	})
 	protoMsg := <-session.RecvChan
 	if protoMsg.CmdId != cmd.GetPlayerTokenRsp {
 		return nil, errors.New("recv pkt is not GetPlayerTokenRsp")

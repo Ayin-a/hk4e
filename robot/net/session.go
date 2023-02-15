@@ -1,6 +1,7 @@
 package net
 
 import (
+	"sync/atomic"
 	"time"
 
 	"hk4e/gate/client_proto"
@@ -8,6 +9,9 @@ import (
 	hk4egatenet "hk4e/gate/net"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
+	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 type Session struct {
@@ -17,6 +21,8 @@ type Session struct {
 	RecvChan          chan *hk4egatenet.ProtoMsg
 	ServerCmdProtoMap *cmd.CmdProtoMap
 	ClientCmdProtoMap *client_proto.ClientCmdProtoMap
+	ClientSeq         uint32
+	DeadEvent         chan bool
 }
 
 func NewSession(gateAddr string, dispatchKey []byte, localPort int) (*Session, error) {
@@ -37,10 +43,25 @@ func NewSession(gateAddr string, dispatchKey []byte, localPort int) (*Session, e
 		RecvChan:          make(chan *hk4egatenet.ProtoMsg, 1000),
 		ServerCmdProtoMap: cmd.NewCmdProtoMap(),
 		ClientCmdProtoMap: client_proto.NewClientCmdProtoMap(),
+		ClientSeq:         0,
+		DeadEvent:         make(chan bool, 10),
 	}
 	go r.recvHandle()
 	go r.sendHandle()
 	return r, nil
+}
+
+func (s *Session) SendMsg(cmdId uint16, msg pb.Message) {
+	atomic.AddUint32(&s.ClientSeq, 1)
+	s.SendChan <- &hk4egatenet.ProtoMsg{
+		ConvId: 0,
+		CmdId:  cmdId,
+		HeadMessage: &proto.PacketHead{
+			ClientSequenceId: s.ClientSeq,
+			SentMs:           uint64(time.Now().UnixMilli()),
+		},
+		PayloadMessage: msg,
+	}
 }
 
 func (s *Session) recvHandle() {
@@ -67,6 +88,7 @@ func (s *Session) recvHandle() {
 			}
 		}
 	}
+	s.DeadEvent <- true
 }
 
 func (s *Session) sendHandle() {
@@ -94,4 +116,5 @@ func (s *Session) sendHandle() {
 			break
 		}
 	}
+	s.DeadEvent <- true
 }

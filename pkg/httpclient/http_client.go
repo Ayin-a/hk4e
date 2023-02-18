@@ -26,13 +26,14 @@ func init() {
 	}
 }
 
-func GetJson[T any](url string, authToken string) (*T, error) {
+func GetJson[T any](url string, authToken ...string) (*T, error) {
+	logger.Debug("http get req url: %v", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	if len(authToken) != 0 {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken[0])
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -52,13 +53,14 @@ func GetJson[T any](url string, authToken string) (*T, error) {
 	return responseData, nil
 }
 
-func GetRaw(url string, authToken string) (string, error) {
+func GetRaw(url string, authToken ...string) (string, error) {
+	logger.Debug("http get req url: %v", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	if len(authToken) != 0 {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken[0])
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -69,21 +71,23 @@ func GetRaw(url string, authToken string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	logger.Debug("http get rsp data: %v", string(data))
 	return string(data), nil
 }
 
-func PostJson[T any](url string, body any, authToken string) (*T, error) {
+func PostJson[T any](url string, body any, authToken ...string) (*T, error) {
 	reqData, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug("http post req url: %v", url)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqData))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	if len(authToken) != 0 {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken[0])
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -103,14 +107,15 @@ func PostJson[T any](url string, body any, authToken string) (*T, error) {
 	return responseData, nil
 }
 
-func PostRaw(url string, body string, authToken string) (string, error) {
+func PostRaw(url string, body string, authToken ...string) (string, error) {
+	logger.Debug("http post req url: %v", url)
 	req, err := http.NewRequest("POST", url, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer"+" "+authToken)
+	if len(authToken) != 0 {
+		req.Header.Set("Authorization", "Bearer"+" "+authToken[0])
 	}
 	rsp, err := httpClient.Do(req)
 	if err != nil {
@@ -121,5 +126,6 @@ func PostRaw(url string, body string, authToken string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	logger.Debug("http post rsp data: %v", string(rspData))
 	return string(rspData), nil
 }

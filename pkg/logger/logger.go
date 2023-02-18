@@ -66,13 +66,23 @@ func InitLogger(appName string) {
 	log.SetFlags(0)
 	LOG = new(Logger)
 	LOG.AppName = appName
-	LOG.Level = LOG.getLevelInt(config.CONF.Logger.Level)
-	LOG.Mode = LOG.getModeInt(config.CONF.Logger.Mode)
-	LOG.Track = config.CONF.Logger.Track
-	LOG.MaxSize = config.CONF.Logger.MaxSize
+	LOG.Level = LOG.getLevelInt(config.GetConfig().Logger.Level)
+	LOG.Mode = LOG.getModeInt(config.GetConfig().Logger.Mode)
+	LOG.Track = config.GetConfig().Logger.Track
+	LOG.MaxSize = config.GetConfig().Logger.MaxSize
 	LOG.LogInfoChan = make(chan *LogInfo, 1000)
 	LOG.File = nil
 	go LOG.doLog()
+}
+
+func CloseLogger() {
+	// 等待所有日志打印完毕
+	for {
+		if len(LOG.LogInfoChan) == 0 {
+			break
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
 }
 
 func (l *Logger) doLog() {

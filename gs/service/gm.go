@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"hk4e/gs/api"
 	"hk4e/gs/game"
@@ -15,9 +14,12 @@ type GMService struct {
 }
 
 func (s *GMService) Cmd(ctx context.Context, req *api.CmdRequest) (*api.CmdReply, error) {
-	// TODO implement me
-	fmt.Println("Cmd", req.FuncName, req.Param)
+	commandTextInput := game.COMMAND_MANAGER.GetCommandTextInput()
+	commandTextInput <- &game.CommandMessage{
+		FuncName: req.FuncName,
+		Param:    req.Param,
+	}
 	return &api.CmdReply{
-		Message: "TODO",
+		Message: "OK",
 	}, nil
 }

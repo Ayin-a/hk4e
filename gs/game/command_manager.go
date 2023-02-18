@@ -31,6 +31,8 @@ type CommandMessage struct {
 	Text     string            // 命令原始文本
 	Name     string            // 命令前缀
 	Args     map[string]string // 命令参数
+	FuncName string            // 函数名
+	Param    []string          // 函数参数列表
 }
 
 // CommandManager 命令管理器
@@ -129,6 +131,12 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 // HandleCommand 处理命令
 // 主协程接收到命令消息后执行
 func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
+	if cmd.FuncName != "" {
+		logger.Info("run gm cmd, FuncName: %v, Param: %v", cmd.FuncName, cmd.Param)
+		// TODO 反射调用command_gm.go中的函数并反射解析传入参数类型
+		return
+	}
+
 	executor := cmd.Executor
 
 	// 分割出命令的每个参数

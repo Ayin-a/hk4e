@@ -41,7 +41,7 @@ type MessageQueue struct {
 
 func NewMessageQueue(serverType string, appId string, rpcClient *rpc.Client) (r *MessageQueue) {
 	r = new(MessageQueue)
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	conn, err := nats.Connect(config.GetConfig().MQ.NatsUrl)
 	if err != nil {
 		logger.Error("connect nats error: %v", err)
 		return nil
@@ -247,7 +247,7 @@ type GateTcpMqEvent struct {
 }
 
 func (m *MessageQueue) runGateTcpMqServer() {
-	addr, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(int(config.CONF.Hk4e.GateTcpMqPort)))
+	addr, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(int(config.GetConfig().Hk4e.GateTcpMqPort)))
 	if err != nil {
 		logger.Error("gate tcp mq parse port error: %v", err)
 		return

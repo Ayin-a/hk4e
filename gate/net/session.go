@@ -191,11 +191,10 @@ func (k *KcpConnectManager) sendMsgHandle() {
 			})
 		} else if protoMsg.CmdId == cmd.ClientReconnectNotify {
 			tokenResetRsp, err := httpclient.PostJson[controller.TokenResetRsp](
-				config.CONF.Hk4e.LoginSdkUrl+"/gate/token/reset?key=flswld",
+				config.GetConfig().Hk4e.LoginSdkUrl+"/gate/token/reset?key=flswld",
 				&controller.TokenResetReq{
 					PlayerId: session.userId,
-				},
-				"")
+				})
 			if err != nil {
 				logger.Error("reset token error: %v", err)
 				k.kcpEventInput <- &KcpEvent{
@@ -343,12 +342,11 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		}
 	}
 	tokenVerifyRsp, err := httpclient.PostJson[controller.TokenVerifyRsp](
-		config.CONF.Hk4e.LoginSdkUrl+"/gate/token/verify?key=flswld",
+		config.GetConfig().Hk4e.LoginSdkUrl+"/gate/token/verify?key=flswld",
 		&controller.TokenVerifyReq{
 			AccountId:    req.AccountUid,
 			AccountToken: req.AccountToken,
-		},
-		"")
+		})
 	if err != nil {
 		logger.Error("verify token error: %v, account uid: %v", err, req.AccountUid)
 		loginFailClose()

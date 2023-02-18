@@ -1,9 +1,10 @@
 package game
 
 import (
-	"hk4e/gdconf"
 	"strconv"
 	"strings"
+
+	"hk4e/gdconf"
 
 	"hk4e/gs/model"
 )

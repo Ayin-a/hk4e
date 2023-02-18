@@ -19,7 +19,7 @@ type Client struct {
 // NewClient 构造
 func NewClient() (*Client, error) {
 	r := new(Client)
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	conn, err := nats.Connect(config.GetConfig().MQ.NatsUrl)
 	if err != nil {
 		return nil, err
 	}

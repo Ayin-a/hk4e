@@ -20,7 +20,7 @@ type Dao struct {
 
 func NewDao() (r *Dao, err error) {
 	r = new(Dao)
-	clientOptions := options.Client().ApplyURI(config.CONF.Database.Url).SetMinPoolSize(1).SetMaxPoolSize(10)
+	clientOptions := options.Client().ApplyURI(config.GetConfig().Database.Url).SetMinPoolSize(1).SetMaxPoolSize(10)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		logger.Error("mongo connect error: %v", err)
@@ -34,8 +34,8 @@ func NewDao() (r *Dao, err error) {
 	r.mongo = client
 	r.db = client.Database("gs_hk4e")
 	r.redis = redis.NewClient(&redis.Options{
-		Addr:         config.CONF.Redis.Addr,
-		Password:     config.CONF.Redis.Password,
+		Addr:         config.GetConfig().Redis.Addr,
+		Password:     config.GetConfig().Redis.Password,
 		DB:           0,
 		PoolSize:     10,
 		MinIdleConns: 1,

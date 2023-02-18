@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"hk4e/common/config"
 	"hk4e/common/rpc"
@@ -20,6 +19,9 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("dispatch")
 	logger.Warn("dispatch start")
+	defer func() {
+		logger.CloseLogger()
+	}()
 
 	db := dao.NewDao()
 	defer db.CloseDao()
@@ -43,8 +45,6 @@ func Run(ctx context.Context, configFile string) error {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 				logger.Warn("dispatch exit")
-
-				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:
 			default:

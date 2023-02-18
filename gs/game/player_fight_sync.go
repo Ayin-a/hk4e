@@ -112,7 +112,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
 			hitInfo := new(proto.EvtBeingHitInfo)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")
@@ -170,7 +170,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")
@@ -239,7 +239,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("EvtAnimatorStateChangedInfo")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")
@@ -403,7 +403,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 		switch abilityInvokeEntry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_META_ADD_NEW_ABILITY:
 			abilityMetaAddAbility := new(proto.AbilityMetaAddAbility)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaAddAbility")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")
@@ -433,7 +433,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			worldAvatar.SetAbilityList(abilityList)
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaModifierChange")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")

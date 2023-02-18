@@ -33,12 +33,12 @@ func Run(ctx context.Context, configFile string) error {
 	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
 		ServerType: api.GATE,
 		GateServerAddr: &api.GateServerAddr{
-			KcpAddr: config.CONF.Hk4e.KcpAddr,
-			KcpPort: uint32(config.CONF.Hk4e.KcpPort),
-			MqAddr:  config.CONF.Hk4e.GateTcpMqAddr,
-			MqPort:  uint32(config.CONF.Hk4e.GateTcpMqPort),
+			KcpAddr: config.GetConfig().Hk4e.KcpAddr,
+			KcpPort: uint32(config.GetConfig().Hk4e.KcpPort),
+			MqAddr:  config.GetConfig().Hk4e.GateTcpMqAddr,
+			MqPort:  uint32(config.GetConfig().Hk4e.GateTcpMqPort),
 		},
-		Version: strings.Split(config.CONF.Hk4e.Version, ","),
+		Version: strings.Split(config.GetConfig().Hk4e.Version, ","),
 	})
 	if err != nil {
 		return err
@@ -67,6 +67,9 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("gate_" + APPID)
 	logger.Warn("gate start, appid: %v", APPID)
+	defer func() {
+		logger.CloseLogger()
+	}()
 
 	messageQueue := mq.NewMessageQueue(api.GATE, APPID, client)
 	defer messageQueue.Close()
@@ -93,7 +96,6 @@ func Run(ctx context.Context, configFile string) error {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 				logger.Warn("gate exit, appid: %v", APPID)
-				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:
 			default:

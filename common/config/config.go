@@ -46,7 +46,8 @@ type Hk4e struct {
 	Version                string `toml:"version"`          // 支持的客户端协议版本号 三位数字 多个以逗号分隔 如300,310,320
 	GateTcpMqAddr          string `toml:"gate_tcp_mq_addr"` // 访问网关tcp直连消息队列的地址 填网关的内网地址
 	GateTcpMqPort          int32  `toml:"gate_tcp_mq_port"`
-	LoginSdkUrl            string `toml:"login_sdk_url"` // 网关登录验证token的sdk服务器地址 目前填dispatch的内网地址
+	LoginSdkUrl            string `toml:"login_sdk_url"`         // 网关登录验证token的sdk服务器地址 目前填dispatch的内网地址
+	LoadSceneLuaConfig     bool   `toml:"load_scene_lua_config"` // 是否加载场景详情LUA配置数据
 }
 
 // MQ 消息队列
@@ -57,6 +58,10 @@ type MQ struct {
 func InitConfig(filePath string) {
 	CONF = new(Config)
 	CONF.loadConfigFile(filePath)
+}
+
+func GetConfig() *Config {
+	return CONF
 }
 
 // 加载配置文件

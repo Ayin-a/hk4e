@@ -9,7 +9,7 @@ import (
 )
 
 func UnmarshalProtoObj(serverProtoObj pb.Message, clientProtoObj pb.Message, data []byte) bool {
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		err := pb.Unmarshal(data, clientProtoObj)
 		if err != nil {
 			logger.Error("parse client proto obj error: %v", err)

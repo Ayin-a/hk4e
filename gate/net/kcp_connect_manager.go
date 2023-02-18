@@ -73,7 +73,7 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 	r.kcpEventOutput = make(chan *KcpEvent, 1000)
 	r.reLoginRemoteKickRegChan = make(chan *RemoteKick, 1000)
 	r.serverCmdProtoMap = cmd.NewCmdProtoMap()
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 	}
 	r.messageQueue = messageQueue
@@ -100,7 +100,7 @@ func (k *KcpConnectManager) run() {
 	regionEc2b.SetSeed(ec2b.Seed())
 	k.dispatchKey = regionEc2b.XorKey()
 	// kcp
-	port := strconv.Itoa(int(config.CONF.Hk4e.KcpPort))
+	port := strconv.Itoa(int(config.GetConfig().Hk4e.KcpPort))
 	listener, err := kcp.ListenWithOptions("0.0.0.0:" + port)
 	if err != nil {
 		logger.Error("listen kcp err: %v", err)

@@ -94,6 +94,9 @@ func TestGenGdCsv(t *testing.T) {
 func TestInitGameDataConfig(t *testing.T) {
 	config.InitConfig("./bin/application.toml")
 	logger.InitLogger("InitGameDataConfig")
+	defer func() {
+		logger.CloseLogger()
+	}()
 	logger.Info("start load conf")
 	InitGameDataConfig()
 	logger.Info("load conf finish, conf: %v", CONF)
@@ -132,6 +135,9 @@ func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount 
 func TestCheckJsonValid(t *testing.T) {
 	config.InitConfig("./bin/application.toml")
 	logger.InitLogger("CheckJsonValid")
+	defer func() {
+		logger.CloseLogger()
+	}()
 	errorJsonFileList := make([]string, 0)
 	totalJsonFileCount := 0
 	CheckJsonLoop("./game_data_config/json", &errorJsonFileList, &totalJsonFileCount)
@@ -146,6 +152,9 @@ func TestCheckJsonValid(t *testing.T) {
 func TestSceneBlock(t *testing.T) {
 	config.InitConfig("./bin/application.toml")
 	logger.InitLogger("SceneBlock")
+	defer func() {
+		logger.CloseLogger()
+	}()
 	InitGameDataConfig()
 	scene, exist := CONF.SceneDetailMap[3]
 	if !exist {

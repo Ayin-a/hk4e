@@ -63,7 +63,7 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 		// 反射调用的方法在启动时测试是否正常防止中途panic
 		r.GetClientProtoObjByName("PingReq")
@@ -276,7 +276,6 @@ func (g *GameManager) Close() {
 			},
 		})
 	}
-	time.Sleep(time.Second)
 }
 
 // SendMsgToGate 发送消息给客户端 指定网关

@@ -26,7 +26,7 @@ type DispatchInfo struct {
 
 func GetDispatchInfo(regionListUrl string, curRegionUrl string, regionListParam string, curRegionParam string, keyId string) (*DispatchInfo, error) {
 	logger.Info("http get url: %v", regionListUrl+"/query_region_list"+regionListParam)
-	regionListBase64, err := httpclient.GetRaw(regionListUrl+"/query_region_list"+regionListParam, "")
+	regionListBase64, err := httpclient.GetRaw(regionListUrl + "/query_region_list" + regionListParam)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func GetDispatchInfo(regionListUrl string, curRegionUrl string, regionListParam 
 		curRegionUrl = selectRegion.DispatchUrl
 	}
 	logger.Info("http get url: %v", curRegionUrl+curRegionParam)
-	regionCurrJson, err := httpclient.GetRaw(curRegionUrl+curRegionParam, "")
+	regionCurrJson, err := httpclient.GetRaw(curRegionUrl + curRegionParam)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func AccountLogin(url string, account string, password string) (*AccountInfo, er
 		IsCrypto: true,
 	}
 	logger.Info("http post url: %v", url+"/hk4e_global/mdk/shield/api/login")
-	loginResult, err := httpclient.PostJson[api.LoginResult](url+"/hk4e_global/mdk/shield/api/login", loginAccountRequestJson, "")
+	loginResult, err := httpclient.PostJson[api.LoginResult](url+"/hk4e_global/mdk/shield/api/login", loginAccountRequestJson)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func AccountLogin(url string, account string, password string) (*AccountInfo, er
 		Data:      string(loginTokenDataJson),
 	}
 	logger.Info("http post url: %v", url+"/hk4e_global/combo/granter/login/v2/login")
-	comboTokenRsp, err := httpclient.PostJson[api.ComboTokenRsp](url+"/hk4e_global/combo/granter/login/v2/login", comboTokenReq, "")
+	comboTokenRsp, err := httpclient.PostJson[api.ComboTokenRsp](url+"/hk4e_global/combo/granter/login/v2/login", comboTokenReq)
 	if err != nil {
 		return nil, err
 	}

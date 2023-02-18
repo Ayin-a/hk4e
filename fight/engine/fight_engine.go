@@ -228,7 +228,7 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 				continue
 			}
 			hitInfo := new(proto.EvtBeingHitInfo)
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientProtoObj := GetClientProtoObjByName("EvtBeingHitInfo")
 				if clientProtoObj == nil {
 					logger.Error("get client proto obj is nil")
@@ -303,7 +303,7 @@ func (f *FightRoutine) getAllPlayer(entityMap map[uint32]*Entity) []uint32 {
 var ClientCmdProtoMap *client_proto.ClientCmdProtoMap
 
 func initClientCmdProtoMap() {
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		ClientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 	}
 }

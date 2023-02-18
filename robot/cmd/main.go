@@ -18,8 +18,11 @@ import (
 func main() {
 	config.InitConfig("application.toml")
 	logger.InitLogger("robot")
+	defer func() {
+		logger.CloseLogger()
+	}()
 
-	config.CONF.Hk4e.ClientProtoProxyEnable = false
+	config.GetConfig().Hk4e.ClientProtoProxyEnable = false
 
 	// // DPDK模式需开启
 	// err := engine.InitEngine("00:0C:29:3E:3E:DF", "192.168.199.199", "255.255.255.0", "192.168.199.1")
@@ -39,11 +42,8 @@ func main() {
 		s := <-c
 		switch s {
 		case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-
 			// // DPDK模式需开启
 			// engine.StopEngine()
-
-			time.Sleep(time.Second)
 			return
 		case syscall.SIGHUP:
 		default:
@@ -85,7 +85,7 @@ func runRobot(name string) {
 			pingSeq++
 			// 通过这个接口发消息给服务器
 			session.SendMsg(cmd.PingReq, &proto.PingReq{
-				ClientTime: uint32(time.Now().UnixMilli()),
+				ClientTime: uint32(time.Now().Unix()),
 				Seq:        pingSeq,
 			})
 		case protoMsg := <-session.RecvChan:

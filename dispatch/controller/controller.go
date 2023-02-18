@@ -60,7 +60,7 @@ func (c *Controller) authorize() gin.HandlerFunc {
 }
 
 func (c *Controller) registerRouter() {
-	if config.CONF.Logger.Level == "DEBUG" {
+	if config.GetConfig().Logger.Level == "DEBUG" {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -138,7 +138,7 @@ func (c *Controller) registerRouter() {
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)
 	engine.POST("/gate/token/reset", c.gateTokenReset)
-	port := config.CONF.HttpPort
+	port := config.GetConfig().HttpPort
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)
 	if err != nil {

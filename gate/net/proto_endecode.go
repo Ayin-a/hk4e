@@ -28,7 +28,7 @@ type ProtoMessage struct {
 func ProtoDecode(kcpMsg *KcpMsg,
 	serverCmdProtoMap *cmd.CmdProtoMap, clientCmdProtoMap *client_proto.ClientCmdProtoMap) (protoMsgList []*ProtoMsg) {
 	protoMsgList = make([]*ProtoMsg, 0)
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		clientCmdId := kcpMsg.CmdId
 		clientProtoData := kcpMsg.ProtoData
 		cmdName := clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
@@ -139,7 +139,7 @@ func ProtoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]
 			return
 		}
 		for _, unionCmd := range unionCmdNotify.GetCmdList() {
-			if config.CONF.Hk4e.ClientProtoProxyEnable {
+			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 				clientCmdId := uint16(unionCmd.MessageId)
 				clientProtoData := unionCmd.Body
 				cmdName := clientCmdProtoMap.GetClientCmdNameByCmdId(clientCmdId)
@@ -231,7 +231,7 @@ func ProtoEncode(protoMsg *ProtoMsg,
 	} else {
 		kcpMsg.ProtoData = nil
 	}
-	if config.CONF.Hk4e.ClientProtoProxyEnable {
+	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
 		serverCmdId := kcpMsg.CmdId
 		serverProtoData := kcpMsg.ProtoData
 		serverProtoObj := serverCmdProtoMap.GetProtoObjByCmdId(serverCmdId)

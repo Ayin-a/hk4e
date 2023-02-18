@@ -57,6 +57,9 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("pathfinding_" + APPID)
 	logger.Warn("pathfinding start, appid: %v", APPID)
+	defer func() {
+		logger.CloseLogger()
+	}()
 
 	messageQueue := mq.NewMessageQueue(api.PATHFINDING, APPID, client)
 	defer messageQueue.Close()
@@ -74,7 +77,6 @@ func Run(ctx context.Context, configFile string) error {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 				logger.Warn("pathfinding exit, appid: %v", APPID)
-				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:
 			default:

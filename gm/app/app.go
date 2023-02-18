@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"hk4e/common/config"
 	"hk4e/common/rpc"
@@ -18,6 +17,9 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("gm")
 	logger.Warn("gm start")
+	defer func() {
+		logger.CloseLogger()
+	}()
 
 	// natsrpc client
 	client, err := rpc.NewClient()
@@ -38,7 +40,6 @@ func Run(ctx context.Context, configFile string) error {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 				logger.Warn("gm exit")
-				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:
 			default:

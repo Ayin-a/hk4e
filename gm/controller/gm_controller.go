@@ -18,6 +18,7 @@ func (c *Controller) gmCmd(context *gin.Context) {
 	gmCmdReq := new(GmCmdReq)
 	err := context.ShouldBindJSON(gmCmdReq)
 	if err != nil {
+		logger.Error("parse json error: %v", err)
 		return
 	}
 	rep, err := c.gm.Cmd(context.Request.Context(), &api.CmdRequest{

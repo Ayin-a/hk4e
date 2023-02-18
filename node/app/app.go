@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"hk4e/common/config"
 	"hk4e/node/service"
@@ -20,9 +19,12 @@ func Run(ctx context.Context, configFile string) error {
 
 	logger.InitLogger("node")
 	logger.Warn("node start")
+	defer func() {
+		logger.CloseLogger()
+	}()
 
 	// natsrpc server
-	conn, err := nats.Connect(config.CONF.MQ.NatsUrl)
+	conn, err := nats.Connect(config.GetConfig().MQ.NatsUrl)
 	if err != nil {
 		logger.Error("connect nats error: %v", err)
 		return err
@@ -45,7 +47,6 @@ func Run(ctx context.Context, configFile string) error {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 				logger.Warn("node exit")
-				time.Sleep(time.Second)
 				return nil
 			case syscall.SIGHUP:
 			default:

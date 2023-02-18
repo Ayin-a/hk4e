@@ -11,6 +11,9 @@ func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 	filePath := "./application.toml"
 	config.InitConfig(filePath)
 	logger.InitLogger("")
+	defer func() {
+		logger.CloseLogger()
+	}()
 	aoiManager := NewAoiManager()
 	aoiManager.SetAoiRange(
 		-150, 150,

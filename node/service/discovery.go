@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"hk4e/common/region"
@@ -53,8 +52,7 @@ type ServerInstance struct {
 type DiscoveryService struct {
 	regionEc2b        *random.Ec2b         // 全局区服密钥信息
 	serverInstanceMap map[string]*sync.Map // 全部服务器实例集合 key:服务器类型 value:服务器实例集合 -> key:appid value:服务器实例
-	serverAppIdMap    map[string]bool      // 服务器appid集合 key:appid value:是否存在
-	gsIdCounter       uint32               // GSID计数器
+	serverAppIdMap    *sync.Map            // 服务器appid集合 key:appid value:是否存在
 }
 
 func NewDiscoveryService() *DiscoveryService {
@@ -62,12 +60,11 @@ func NewDiscoveryService() *DiscoveryService {
 	r.regionEc2b = region.NewRegionEc2b()
 	logger.Info("region ec2b create ok, seed: %v", r.regionEc2b.Seed())
 	r.serverInstanceMap = make(map[string]*sync.Map)
-	r.serverInstanceMap[api.GATE] = &sync.Map{}
-	r.serverInstanceMap[api.GS] = &sync.Map{}
-	r.serverInstanceMap[api.FIGHT] = &sync.Map{}
-	r.serverInstanceMap[api.PATHFINDING] = &sync.Map{}
-	r.serverAppIdMap = make(map[string]bool)
-	r.gsIdCounter = 0
+	r.serverInstanceMap[api.GATE] = new(sync.Map)
+	r.serverInstanceMap[api.GS] = new(sync.Map)
+	r.serverInstanceMap[api.FIGHT] = new(sync.Map)
+	r.serverInstanceMap[api.PATHFINDING] = new(sync.Map)
+	r.serverAppIdMap = new(sync.Map)
 	go r.removeDeadServer()
 	return r
 }
@@ -82,9 +79,9 @@ func (s *DiscoveryService) RegisterServer(ctx context.Context, req *api.Register
 	var appId string
 	for {
 		appId = strings.ToLower(random.GetRandomStr(8))
-		_, exist := s.serverAppIdMap[appId]
+		_, exist := s.serverAppIdMap.Load(appId)
 		if !exist {
-			s.serverAppIdMap[appId] = true
+			s.serverAppIdMap.Store(appId, true)
 			break
 		}
 	}
@@ -108,12 +105,29 @@ func (s *DiscoveryService) RegisterServer(ctx context.Context, req *api.Register
 		AppId: appId,
 	}
 	if req.ServerType == api.GS {
-		gsId := atomic.AddUint32(&s.gsIdCounter, 1)
-		if gsId > MaxGsId {
-			return nil, errors.New("above max gs count")
+		gsIdUseList := make([]bool, MaxGsId+1)
+		gsIdUseList[0] = true
+		instMap.Range(func(key, value any) bool {
+			serverInstance := value.(*ServerInstance)
+			if serverInstance.gsId > MaxGsId {
+				logger.Error("invalid gs id inst: %v", serverInstance)
+				return true
+			}
+			gsIdUseList[serverInstance.gsId] = true
+			return true
+		})
+		newGsId := uint32(0)
+		for gsId, use := range gsIdUseList {
+			if !use {
+				newGsId = uint32(gsId)
+				break
+			}
 		}
-		inst.gsId = gsId
-		rsp.GsId = gsId
+		if newGsId == 0 {
+			return nil, errors.New("no gs id can use")
+		}
+		inst.gsId = newGsId
+		rsp.GsId = newGsId
 	}
 	return rsp, nil
 }
@@ -250,12 +264,12 @@ func (s *DiscoveryService) GetMainGameServerAppId(ctx context.Context, req *api.
 		return nil, errors.New("no game server found")
 	}
 	appid := ""
-	minGsId := uint32(MaxGsId)
+	mainGsId := uint32(1)
 	instMap.Range(func(key, value any) bool {
 		serverInstance := value.(*ServerInstance)
-		if serverInstance.gsId < minGsId {
-			minGsId = serverInstance.gsId
+		if serverInstance.gsId == mainGsId {
 			appid = serverInstance.appId
+			return false
 		}
 		return true
 	})

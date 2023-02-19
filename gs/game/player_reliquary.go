@@ -18,8 +18,8 @@ func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 		if (itemId >= 20002 && itemId <= 20004) ||
 			itemId == 23334 ||
 			(itemId >= 23300 && itemId <= 23340) {
-			// 跳过无效圣遗物
 			continue
+			// 跳过无效圣遗物
 		}
 		allReliquaryDataConfig[itemId] = itemData
 	}
@@ -37,9 +37,14 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 		logger.Error("reliquary config error, itemId: %v", itemId)
 		return 0
 	}
+	reliquaryMainConfig := gdconf.GetReliquaryMainDataRandomByDepotId(reliquaryConfig.MainPropDepotId)
+	if reliquaryMainConfig == nil {
+		logger.Error("reliquary main config error, mainPropDepotId: %v", reliquaryConfig.MainPropDepotId)
+		return 0
+	}
 	reliquaryId := uint64(g.snowflake.GenId())
-	// player.AddReliquary(24825, uint64(g.snowflake.GenId()), 15007)
-	player.AddReliquary(itemId, reliquaryId, 15007) // TODO 随机主属性库
+	// 根据圣遗物类型给予主属性Id
+	player.AddReliquary(itemId, reliquaryId, uint32(reliquaryMainConfig.MainPropId))
 	reliquary := player.GetReliquary(reliquaryId)
 	if reliquary == nil {
 		logger.Error("reliquary is nil, itemId: %v, reliquaryId: %v", itemId, reliquaryId)

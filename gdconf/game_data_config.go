@@ -48,6 +48,7 @@ type GameDataConfig struct {
 	RewardDataMap           map[int32]*RewardData                  // 奖励
 	AvatarCostumeDataMap    map[int32]*AvatarCostumeData           // 角色时装
 	AvatarFlycloakDataMap   map[int32]*AvatarFlycloakData          // 角色风之翼
+	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData // 圣遗物主属性
 }
 
 func InitGameDataConfig() {
@@ -71,7 +72,7 @@ func ReplaceGameDataConfig() {
 }
 
 func (g *GameDataConfig) loadAll() {
-	pathPrefix := config.GetConfig().Hk4e.GameDataConfigPath
+	pathPrefix := config.CONF.Hk4e.GameDataConfigPath
 
 	dirInfo, err := os.Stat(pathPrefix)
 	if err != nil || !dirInfo.IsDir() {
@@ -131,6 +132,7 @@ func (g *GameDataConfig) load() {
 	g.loadRewardData()         // 奖励
 	g.loadAvatarCostumeData()  // 角色时装
 	g.loadAvatarFlycloakData() // 角色风之翼
+	g.loadReliquaryMainData()  // 圣遗物主属性
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

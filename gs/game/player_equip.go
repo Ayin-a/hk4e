@@ -124,8 +124,7 @@ func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) 
 		g.WearUserAvatarWeapon(player.PlayerID, avatar.AvatarId, weapon.WeaponId)
 	case *model.Reliquary:
 		reliquary := equipGameObj.(*model.Reliquary)
-		logger.Error("itemId: %v", reliquary.ItemId)
-		// g.WearUserAvatarReliquary(player.PlayerID, avatar.AvatarId, reliquary.ReliquaryId)
+		g.WearUserAvatarReliquary(player.PlayerID, avatar.AvatarId, reliquary.ReliquaryId)
 	default:
 		logger.Error("equip type error, equipGuid: %v", req.EquipGuid)
 		g.SendError(cmd.WearEquipRsp, player, &proto.WearEquipRsp{})

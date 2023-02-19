@@ -35,7 +35,9 @@ type ItemData struct {
 	SkillAffix         []int32
 	AwakenCoinCostList []uint32
 	// 圣遗物
-	ReliquaryType int32 `csv:"ReliquaryType,omitempty"` // 圣遗物类别
+	ReliquaryType     int32 `csv:"ReliquaryType,omitempty"`     // 圣遗物类别
+	MainPropDepotId   int32 `csv:"MainPropDepotId,omitempty"`   // 主属性库ID
+	AppendPropDepotId int32 `csv:"AppendPropDepotId,omitempty"` // 追加属性库ID
 }
 
 func (g *GameDataConfig) loadItemData() {

@@ -236,27 +236,41 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			sceneEntity.SetLastMoveSceneTimeMs(entityMoveInfo.SceneTime)
 			sceneEntity.SetLastMoveReliableSeq(entityMoveInfo.ReliableSeq)
 
+			if motionInfo.State == proto.MotionState_MOTION_NOTIFY {
+				continue
+			}
+
+			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
+		case proto.CombatTypeArgument_COMBAT_ANIMATOR_PARAMETER_CHANGED:
+			evtAnimatorParameterInfo := new(proto.EvtAnimatorParameterInfo)
+			err := pb.Unmarshal(entry.CombatData, evtAnimatorParameterInfo)
+			if err != nil {
+				logger.Error("parse EvtAnimatorParameterInfo error: %v", err)
+				continue
+			}
+			logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
+
+			// 这是否?
+			if evtAnimatorParameterInfo.IsServerCache {
+				evtAnimatorParameterInfo.IsServerCache = false
+				// TODO 暂时只做3.2协议的兼容了 在GS这边处理不同版本的协议太烦人了 有机会全部改到GATE那边处理 GS所有接收和发送的都应该是3.2版本的协议
+				newCombatData, err := pb.Marshal(evtAnimatorParameterInfo)
+				if err != nil {
+					logger.Error("build EvtAnimatorParameterInfo error: %v", err)
+					continue
+				}
+				entry.CombatData = newCombatData
+			}
+
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := g.GetClientProtoObjByName("EvtAnimatorStateChangedInfo")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(evtAnimatorStateChangedInfo, clientProtoObj, entry.CombatData)
-				if !ok {
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
-				if err != nil {
-					logger.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
+			if err != nil {
+				logger.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
+				continue
 			}
-			logger.Debug("EvtAnimatorStateChangedInfo: %v", entry, player.PlayerID)
+			logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
@@ -375,7 +389,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		// logger.Debug("ClientAbilityInitFinishNotify: %v", entry, player.PlayerID)
+		// logger.Debug("ClientAbilityInitFinishNotify: %v", entry)
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 	DoForward[proto.AbilityInvokeEntry](player, &proto.ClientAbilityInitFinishNotify{}, []string{"EntityId"}, "Invokes", invokeHandler)
@@ -389,7 +403,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	}
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
-		// logger.Debug("ClientAbilityChangeNotify: %v", entry, player.PlayerID)
+		// logger.Debug("ClientAbilityChangeNotify: %v", entry)
 
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}

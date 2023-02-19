@@ -301,6 +301,17 @@ func (c *CmdProtoMap) registerAllMessage() {
 	// c.registerMessage(GCGStartChallengeReq, &proto.GCGStartChallengeReq{})                           // GCG开始挑战请求
 	// c.registerMessage(GCGStartChallengeRsp, &proto.GCGStartChallengeRsp{})                           // GCG开始挑战响应
 
+	// 任务
+	c.registerMessage(AddQuestContentProgressReq, &proto.AddQuestContentProgressReq{})                   // 添加任务内容进度请求
+	c.registerMessage(AddQuestContentProgressRsp, &proto.AddQuestContentProgressRsp{})                   // 添加任务内容进度响应
+	c.registerMessage(QuestListNotify, &proto.QuestListNotify{})                                         // 任务列表通知
+	c.registerMessage(QuestListUpdateNotify, &proto.QuestListUpdateNotify{})                             // 任务列表更新通知
+	c.registerMessage(FinishedParentQuestNotify, &proto.FinishedParentQuestNotify{})                     // 已完成父任务列表通知
+	c.registerMessage(FinishedParentQuestUpdateNotify, &proto.FinishedParentQuestUpdateNotify{})         // 已完成父任务列表更新通知
+	c.registerMessage(ServerCondMeetQuestListUpdateNotify, &proto.ServerCondMeetQuestListUpdateNotify{}) // 服务器动态任务列表更新通知
+	c.registerMessage(QuestProgressUpdateNotify, &proto.QuestProgressUpdateNotify{})                     // 任务进度更新通知
+	c.registerMessage(QuestGlobalVarNotify, &proto.QuestGlobalVarNotify{})                               // 任务全局变量通知
+
 	// 乱七八糟
 	c.registerMessage(MarkMapReq, &proto.MarkMapReq{})                                 // 标记地图请求
 	c.registerMessage(TowerAllDataReq, &proto.TowerAllDataReq{})                       // 深渊数据请求

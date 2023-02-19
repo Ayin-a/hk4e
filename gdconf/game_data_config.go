@@ -24,31 +24,32 @@ type GameDataConfig struct {
 	jsonPrefix string
 	luaPrefix  string
 	// 配置表数据
-	AvatarDataMap           map[int32]*AvatarData                  // 角色
-	AvatarSkillDataMap      map[int32]*AvatarSkillData             // 角色技能
-	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData        // 角色技能库
-	DropGroupDataMap        map[int32]*DropGroupData               // 掉落组
-	GCGCharDataMap          map[int32]*GCGCharData                 // 角色卡牌
-	GCGSkillDataMap         map[int32]*GCGSkillData                // 卡牌技能
-	SceneDataMap            map[int32]*SceneData                   // 场景
-	ScenePointMap           map[int32]*ScenePoint                  // 场景传送点
-	SceneTagDataMap         map[int32]*SceneTagData                // 场景标签
-	SceneDetailMap          map[int32]*SceneDetail                 // 场景详情LUA配置数据
-	WorldAreaDataMap        map[int32]*WorldAreaData               // 世界区域
-	GatherDataMap           map[int32]*GatherData                  // 采集物
-	GatherDataPointTypeMap  map[int32]*GatherData                  // 采集物场景节点索引
-	FetterDataMap           map[int32]*FetterData                  // 角色资料解锁
-	FetterDataAvatarIdMap   map[int32][]int32                      // 角色资料解锁角色id索引
-	ItemDataMap             map[int32]*ItemData                    // 统一道具
-	AvatarLevelDataMap      map[int32]*AvatarLevelData             // 角色等级
-	AvatarPromoteDataMap    map[int32]map[int32]*AvatarPromoteData // 角色突破
-	PlayerLevelDataMap      map[int32]*PlayerLevelData             // 玩家等级
-	WeaponLevelDataMap      map[int32]*WeaponLevelData             // 武器等级
-	WeaponPromoteDataMap    map[int32]map[int32]*WeaponPromoteData // 角色突破
-	RewardDataMap           map[int32]*RewardData                  // 奖励
-	AvatarCostumeDataMap    map[int32]*AvatarCostumeData           // 角色时装
-	AvatarFlycloakDataMap   map[int32]*AvatarFlycloakData          // 角色风之翼
-	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData // 圣遗物主属性
+	AvatarDataMap           map[int32]*AvatarData                   // 角色
+	AvatarSkillDataMap      map[int32]*AvatarSkillData              // 角色技能
+	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData         // 角色技能库
+	DropGroupDataMap        map[int32]*DropGroupData                // 掉落组
+	GCGCharDataMap          map[int32]*GCGCharData                  // 角色卡牌
+	GCGSkillDataMap         map[int32]*GCGSkillData                 // 卡牌技能
+	SceneDataMap            map[int32]*SceneData                    // 场景
+	ScenePointMap           map[int32]*ScenePoint                   // 场景传送点
+	SceneTagDataMap         map[int32]*SceneTagData                 // 场景标签
+	SceneDetailMap          map[int32]*SceneDetail                  // 场景详情LUA配置数据
+	WorldAreaDataMap        map[int32]*WorldAreaData                // 世界区域
+	GatherDataMap           map[int32]*GatherData                   // 采集物
+	GatherDataPointTypeMap  map[int32]*GatherData                   // 采集物场景节点索引
+	FetterDataMap           map[int32]*FetterData                   // 角色资料解锁
+	FetterDataAvatarIdMap   map[int32][]int32                       // 角色资料解锁角色id索引
+	ItemDataMap             map[int32]*ItemData                     // 统一道具
+	AvatarLevelDataMap      map[int32]*AvatarLevelData              // 角色等级
+	AvatarPromoteDataMap    map[int32]map[int32]*AvatarPromoteData  // 角色突破
+	PlayerLevelDataMap      map[int32]*PlayerLevelData              // 玩家等级
+	WeaponLevelDataMap      map[int32]*WeaponLevelData              // 武器等级
+	WeaponPromoteDataMap    map[int32]map[int32]*WeaponPromoteData  // 角色突破
+	RewardDataMap           map[int32]*RewardData                   // 奖励
+	AvatarCostumeDataMap    map[int32]*AvatarCostumeData            // 角色时装
+	AvatarFlycloakDataMap   map[int32]*AvatarFlycloakData           // 角色风之翼
+	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData  // 圣遗物主属性
+	ReliquaryAffixDataMap   map[int32]map[int32]*ReliquaryAffixData // 圣遗物追加属性
 }
 
 func InitGameDataConfig() {
@@ -72,7 +73,7 @@ func ReplaceGameDataConfig() {
 }
 
 func (g *GameDataConfig) loadAll() {
-	pathPrefix := config.CONF.Hk4e.GameDataConfigPath
+	pathPrefix := config.GetConfig().Hk4e.GameDataConfigPath
 
 	dirInfo, err := os.Stat(pathPrefix)
 	if err != nil || !dirInfo.IsDir() {
@@ -133,6 +134,7 @@ func (g *GameDataConfig) load() {
 	g.loadAvatarCostumeData()  // 角色时装
 	g.loadAvatarFlycloakData() // 角色风之翼
 	g.loadReliquaryMainData()  // 圣遗物主属性
+	g.loadReliquaryAffixData() // 圣遗物追加属性
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

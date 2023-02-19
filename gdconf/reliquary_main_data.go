@@ -14,7 +14,7 @@ type ReliquaryMainData struct {
 	MainPropId      int32 `csv:"MainPropId"`                // 主属性ID
 	MainPropDepotId int32 `csv:"MainPropDepotId,omitempty"` // 主属性库ID
 	PropType        int32 `csv:"PropType,omitempty"`        // 属性类别
-	Weight          int32 `csv:"Weight,omitempty"`          // 随机权重
+	RandomWeight    int32 `csv:"RandomWeight,omitempty"`    // 随机权重
 }
 
 func (g *GameDataConfig) loadReliquaryMainData() {
@@ -53,11 +53,11 @@ func GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32) *ReliquaryMainDa
 	}
 	choices := make([]weightedrand.Choice, 0, len(mainPropMap))
 	for _, data := range mainPropMap {
-		choices = append(choices, weightedrand.NewChoice(data, uint(data.Weight)))
+		choices = append(choices, weightedrand.NewChoice(data, uint(data.RandomWeight)))
 	}
 	chooser, err := weightedrand.NewChooser(choices...)
 	if err != nil {
-		logger.Error("reliquary main error: %v", err)
+		logger.Error("reliquary main random error: %v", err)
 		return nil
 	}
 	result := chooser.Pick()

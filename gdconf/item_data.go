@@ -38,6 +38,7 @@ type ItemData struct {
 	ReliquaryType     int32 `csv:"ReliquaryType,omitempty"`     // 圣遗物类别
 	MainPropDepotId   int32 `csv:"MainPropDepotId,omitempty"`   // 主属性库ID
 	AppendPropDepotId int32 `csv:"AppendPropDepotId,omitempty"` // 追加属性库ID
+	AppendPropCount   int32 `csv:"AppendPropCount,omitempty"`   // 追加属性初始条数
 }
 
 func (g *GameDataConfig) loadItemData() {

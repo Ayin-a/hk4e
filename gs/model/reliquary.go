@@ -76,7 +76,6 @@ func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint
 		AvatarId:         0,
 		Guid:             0,
 	}
-	_ = itemDataConfig
 	p.InitReliquary(reliquary)
 	p.ReliquaryMap[reliquaryId] = reliquary
 }

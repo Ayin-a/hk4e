@@ -74,43 +74,24 @@ func (g *GameManager) AppendReliquaryProp(reliquary *model.Reliquary, count int3
 	}
 	// 圣遗物追加属性的次数
 	for i := 0; i < int(count); i++ {
+		// 要排除的属性类型
+		excludeTypeList := make([]uint32, 0, len(reliquary.AppendPropIdList)+1)
+		// 排除主属性
+		excludeTypeList = append(excludeTypeList, uint32(reliquaryMainConfig.PropType))
+		// 排除追加的属性
+		for _, propId := range reliquary.AppendPropIdList {
+			targetAffixConfig := gdconf.GetReliquaryAffixDataByDepotIdAndPropId(reliquaryConfig.AppendPropDepotId, int32(propId))
+			if targetAffixConfig == nil {
+				logger.Error("target affix config error, propId: %v", propId)
+				return
+			}
+			excludeTypeList = append(excludeTypeList, uint32(targetAffixConfig.PropType))
+		}
 		// 将要添加的属性
-		appendAffixConfig := gdconf.GetReliquaryAffixDataRandomByDepotId(reliquaryConfig.AppendPropDepotId)
+		appendAffixConfig := gdconf.GetReliquaryAffixDataRandomByDepotId(reliquaryConfig.AppendPropDepotId, excludeTypeList...)
 		if appendAffixConfig == nil {
 			logger.Error("append affix config error, appendPropDepotId: %v", reliquaryConfig.AppendPropDepotId)
 			return
-		}
-
-		isNotBoth := false
-		// 如果圣遗物词条为0就直接加不用校验是否相同
-		for len(reliquary.AppendPropIdList) > 0 {
-			if isNotBoth {
-				break
-			}
-			// 追加的属性类型不能相同
-			for i, propId := range reliquary.AppendPropIdList {
-				targetAffixConfig := gdconf.GetReliquaryAffixDataByDepotIdAndPropId(reliquaryConfig.AppendPropDepotId, int32(propId))
-				if targetAffixConfig == nil {
-					logger.Error("target affix config error, propId: %v", propId)
-					return
-				}
-				// 如果类型相同则重新随机获取一个属性
-				// 追加的属性还不能和主属性相同
-				if appendAffixConfig.PropType == targetAffixConfig.PropType || appendAffixConfig.PropType == reliquaryMainConfig.PropType {
-					reliquaryAffixConfig := gdconf.GetReliquaryAffixDataRandomByDepotId(reliquaryConfig.AppendPropDepotId)
-					if reliquaryAffixConfig == nil {
-						logger.Error("reliquary affix config error, appendPropDepotId: %v", reliquaryConfig.AppendPropDepotId)
-						return
-					}
-					// 将属性赋值并重新查找
-					appendAffixConfig = reliquaryAffixConfig
-					break
-				}
-				// 如果循环到最后一个还不匹配那就是没有相同的了
-				if i == len(reliquary.AppendPropIdList)-1 {
-					isNotBoth = true
-				}
-			}
 		}
 		// 圣遗物添加词条
 		reliquary.AppendPropIdList = append(reliquary.AppendPropIdList, uint32(appendAffixConfig.AppendPropId))

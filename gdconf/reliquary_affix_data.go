@@ -46,13 +46,24 @@ func GetReliquaryAffixDataByDepotIdAndPropId(appendPropDepotId int32, appendProp
 	return value[appendPropId]
 }
 
-func GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int32) *ReliquaryAffixData {
+func GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int32, excludeTypeList ...uint32) *ReliquaryAffixData {
 	appendPropMap, exist := CONF.ReliquaryAffixDataMap[appendPropDepotId]
 	if !exist {
 		return nil
 	}
 	choices := make([]weightedrand.Choice, 0, len(appendPropMap))
 	for _, data := range appendPropMap {
+		isBoth := false
+		// 排除列表中的属性类型是否相同
+		for _, propType := range excludeTypeList {
+			if propType == uint32(data.PropType) {
+				isBoth = true
+				break
+			}
+		}
+		if isBoth {
+			continue
+		}
 		choices = append(choices, weightedrand.NewChoice(data, uint(data.RandomWeight)))
 	}
 	chooser, err := weightedrand.NewChooser(choices...)

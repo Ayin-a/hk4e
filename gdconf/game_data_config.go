@@ -51,6 +51,7 @@ type GameDataConfig struct {
 	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData  // 圣遗物主属性
 	ReliquaryAffixDataMap   map[int32]map[int32]*ReliquaryAffixData // 圣遗物追加属性
 	QuestDataMap            map[int32]*QuestData                    // 任务
+	TriggerDataMap          map[int32]*TriggerData                  // 场景LUA触发器
 }
 
 func InitGameDataConfig() {
@@ -137,6 +138,7 @@ func (g *GameDataConfig) load() {
 	g.loadReliquaryMainData()  // 圣遗物主属性
 	g.loadReliquaryAffixData() // 圣遗物追加属性
 	g.loadQuestData()          // 任务
+	g.loadTriggerData()        // 场景LUA触发器
 }
 
 func (g *GameDataConfig) readCsvFileData(fileName string) []byte {

@@ -54,6 +54,7 @@ type Player struct {
 	MainCharAvatarId uint32                // 主角id
 	GCGInfo          *GCGInfo              // 七圣召唤信息
 	IsGM             uint8                 // 管理员权限等级
+	DbQuest          *DbQuest              // 任务
 	// 在线数据 请随意 记得加忽略字段的tag
 	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
 	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌

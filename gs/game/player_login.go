@@ -148,6 +148,7 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
 	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, g.PacketAvatarDataNotify(player))
 	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, g.PacketOpenStateUpdateNotify())
+	g.SendMsg(cmd.QuestListNotify, userId, clientSeq, g.PacketQuestListNotify(player))
 	// g.GCGLogin(player) // 发送GCG登录相关的通知包
 	playerLoginRsp := &proto.PlayerLoginRsp{
 		IsUseAbilityHash: true,
@@ -160,45 +161,6 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 		TotalTickTime:    0.0,
 	}
 	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
-
-	questListNotify := &proto.QuestListNotify{
-		QuestList: make([]*proto.Quest, 0),
-	}
-
-	for _, questDataConfig := range gdconf.GetQuestDataMap() {
-		if questDataConfig.QuestId == 35104 {
-			questListNotify.QuestList = append(questListNotify.QuestList, &proto.Quest{
-				QuestId:            35104,
-				State:              2,
-				StartTime:          uint32(time.Now().Unix()),
-				ParentQuestId:      351,
-				StartGameTime:      438,
-				AcceptTime:         uint32(time.Now().Unix()),
-				FinishProgressList: []uint32{0},
-			})
-			continue
-		}
-		finishProgressList := make([]uint32, 0)
-		if questDataConfig.FinishCondType1 != 0 {
-			finishProgressList = append(finishProgressList, 0)
-		}
-		if questDataConfig.FinishCondType2 != 0 {
-			finishProgressList = append(finishProgressList, 0)
-		}
-		if questDataConfig.FinishCondType3 != 0 {
-			finishProgressList = append(finishProgressList, 0)
-		}
-		questListNotify.QuestList = append(questListNotify.QuestList, &proto.Quest{
-			QuestId:            uint32(questDataConfig.QuestId),
-			State:              1,
-			StartTime:          uint32(time.Now().Unix()),
-			ParentQuestId:      uint32(questDataConfig.ParentQuestId),
-			StartGameTime:      0,
-			AcceptTime:         uint32(time.Now().Unix()),
-			FinishProgressList: finishProgressList,
-		})
-	}
-	g.SendMsg(cmd.QuestListNotify, userId, clientSeq, questListNotify)
 }
 
 func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {
@@ -431,6 +393,8 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.TeamConfig.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
 
 	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
+
+	g.AcceptQuest(player, false)
 
 	return player
 }

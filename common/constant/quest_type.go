@@ -1,0 +1,15 @@
+package constant
+
+const (
+	QUEST_STATE_TYPE_ACCEPT uint32 = 1
+	QUEST_STATE_TYPE_EXEC   uint32 = 2
+	QUEST_STATE_TYPE_FINISH uint32 = 3
+)
+
+const (
+	QUEST_ACCEPT_COND_TYPE_QUEST_STATE_EQ int32 = 1
+)
+
+const (
+	QUEST_FINISH_COND_TYPE_SCENE_TRIGGER = 6
+)

@@ -1,7 +1,7 @@
 package alg
 
 import (
-	"fmt"
+	"log"
 	"sync"
 	"testing"
 )
@@ -32,13 +32,13 @@ func idDupCheck[T UniqueID](genIdFunc func() T) {
 		for _, id := range *idListPtr {
 			value, exist := dupCheck[id]
 			if exist && value == true {
-				fmt.Printf("find dup id, gid: %v, id: %v\n", gid, id)
+				log.Printf("find dup id, gid: %v, id: %v\n", gid, id)
 			} else {
 				dupCheck[id] = true
 			}
 		}
 	}
-	fmt.Printf("check finish\n")
+	log.Printf("check finish\n")
 }
 
 func TestSnowflakeGenId(t *testing.T) {

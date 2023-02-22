@@ -1,19 +1,11 @@
 package alg
 
 import (
+	"log"
 	"testing"
-
-	"hk4e/common/config"
-	"hk4e/pkg/logger"
 )
 
 func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
-	filePath := "./application.toml"
-	config.InitConfig(filePath)
-	logger.InitLogger("")
-	defer func() {
-		logger.CloseLogger()
-	}()
 	aoiManager := NewAoiManager()
 	aoiManager.SetAoiRange(
 		-150, 150,
@@ -25,11 +17,11 @@ func TestAoiManagerGetSurrGridListByGid(t *testing.T) {
 		// 得到当前格子周边的九宫格
 		gridList := aoiManager.GetSurrGridListByGid(k)
 		// 得到九宫格所有的id
-		logger.Debug("gid: %d gridList len: %d", k, len(gridList))
+		log.Printf("gid: %d gridList len: %d", k, len(gridList))
 		gidList := make([]uint32, 0, len(gridList))
 		for _, grid := range gridList {
 			gidList = append(gidList, grid.gid)
 		}
-		logger.Debug("Grid: gid: %d, surr grid gid list: %v", k, gidList)
+		log.Printf("Grid: gid: %d, surr grid gid list: %v", k, gidList)
 	}
 }

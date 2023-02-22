@@ -1,7 +1,7 @@
 package alg
 
 import (
-	"fmt"
+	"log"
 	"testing"
 )
 
@@ -15,7 +15,7 @@ func TestLLQueue(t *testing.T) {
 	queue.EnQueue(5)
 	for queue.Len() > 0 {
 		value := queue.DeQueue()
-		fmt.Println(value)
+		log.Println(value)
 	}
 }
 
@@ -27,7 +27,7 @@ func TestALQueue(t *testing.T) {
 	queue.EnQueue(9)
 	for queue.Len() > 0 {
 		value := queue.DeQueue()
-		fmt.Println(value)
+		log.Println(value)
 	}
 }
 
@@ -39,7 +39,7 @@ func TestRAQueue(t *testing.T) {
 	queue.EnQueue(9)
 	for queue.Len() > 0 {
 		value := queue.DeQueue()
-		fmt.Println(value)
+		log.Println(value)
 	}
 }
 

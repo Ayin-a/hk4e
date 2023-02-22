@@ -1,11 +1,5 @@
 package alg
 
-import (
-	"math"
-
-	"hk4e/pkg/logger"
-)
-
 // AoiManager aoi管理模块
 type AoiManager struct {
 	// 区域边界坐标
@@ -62,31 +56,6 @@ func (a *AoiManager) Init3DRectAoiManager(numX, numY, numZ int16) {
 			}
 		}
 	}
-}
-
-func (a *AoiManager) AoiInfoLog(debug bool) {
-	logger.Info("AoiMgr: minX: %d, maxX: %d, numX: %d, minY: %d, maxY: %d, numY: %d, minZ: %d, maxZ: %d, numZ: %d, num grid: %d\n",
-		a.minX, a.maxX, a.numX, a.minY, a.maxY, a.numY, a.minZ, a.maxZ, a.numZ, uint32(a.numX)*uint32(a.numY)*uint32(a.numZ))
-	minGridObjectCount := math.MaxInt32
-	maxGridObjectCount := 0
-	for _, grid := range a.gridMap {
-		gridObjectCount := len(grid.objectMap)
-		if gridObjectCount > maxGridObjectCount {
-			maxGridObjectCount = gridObjectCount
-		}
-		if gridObjectCount < minGridObjectCount {
-			minGridObjectCount = gridObjectCount
-		}
-		if debug {
-			// logger.Debug("Grid: gid: %d, minX: %d, maxX: %d, minY: %d, maxY: %d, minZ: %d, maxZ: %d, object count: %v",
-			// 	grid.gid, grid.minX, grid.maxX, grid.minY, grid.maxY, grid.minZ, grid.maxZ, gridObjectCount)
-			for objectId, object := range grid.objectMap {
-				logger.Debug("objectId: %v, object: %v", objectId, object)
-			}
-		}
-	}
-	logger.Info("min grid object count: %v", minGridObjectCount)
-	logger.Info("max grid object count: %v", maxGridObjectCount)
 }
 
 // GridXLen 每个格子在x轴方向的长度
@@ -203,7 +172,6 @@ func (a *AoiManager) GetObjectListByPos(x, y, z float32) map[int64]any {
 		for kk, vv := range tmp {
 			objectList[kk] = vv
 		}
-		logger.Debug("Grid: gid: %d, tmp len: %v", v.gid, len(tmp))
 	}
 	return objectList
 }
@@ -212,7 +180,6 @@ func (a *AoiManager) GetObjectListByPos(x, y, z float32) map[int64]any {
 func (a *AoiManager) GetObjectListByGid(gid uint32) map[int64]any {
 	grid := a.gridMap[gid]
 	if grid == nil {
-		logger.Error("grid is nil, gid: %v", gid)
 		return nil
 	}
 	objectList := grid.GetObjectList()
@@ -223,7 +190,6 @@ func (a *AoiManager) GetObjectListByGid(gid uint32) map[int64]any {
 func (a *AoiManager) AddObjectToGrid(objectId int64, object any, gid uint32) {
 	grid := a.gridMap[gid]
 	if grid == nil {
-		logger.Error("grid is nil, gid: %v", gid)
 		return
 	}
 	grid.AddObject(objectId, object)
@@ -233,7 +199,6 @@ func (a *AoiManager) AddObjectToGrid(objectId int64, object any, gid uint32) {
 func (a *AoiManager) RemoveObjectFromGrid(objectId int64, gid uint32) {
 	grid := a.gridMap[gid]
 	if grid == nil {
-		logger.Error("grid is nil, gid: %v", gid)
 		return
 	}
 	grid.RemoveObject(objectId)
@@ -249,4 +214,47 @@ func (a *AoiManager) AddObjectToGridByPos(objectId int64, object any, x, y, z fl
 func (a *AoiManager) RemoveObjectFromGridByPos(objectId int64, x, y, z float32) {
 	gid := a.GetGidByPos(x, y, z)
 	a.RemoveObjectFromGrid(objectId, gid)
+}
+
+// Grid 地图格子
+type Grid struct {
+	gid uint32 // 格子id
+	// 格子边界坐标
+	// 目前开发阶段暂时用不到 节省点内存
+	// minX      int16
+	// maxX      int16
+	// minY      int16
+	// maxY      int16
+	// minZ      int16
+	// maxZ      int16
+	objectMap map[int64]any // k:objectId v:对象
+}
+
+// NewGrid 初始化格子
+func NewGrid(gid uint32, minX, maxX, minY, maxY, minZ, maxZ int16) (r *Grid) {
+	r = new(Grid)
+	r.gid = gid
+	// r.minX = minX
+	// r.maxX = maxX
+	// r.minY = minY
+	// r.maxY = maxY
+	// r.minZ = minZ
+	// r.maxZ = maxZ
+	r.objectMap = make(map[int64]any)
+	return r
+}
+
+// AddObject 向格子中添加一个对象
+func (g *Grid) AddObject(objectId int64, object any) {
+	g.objectMap[objectId] = object
+}
+
+// RemoveObject 从格子中删除一个对象
+func (g *Grid) RemoveObject(objectId int64) {
+	delete(g.objectMap, objectId)
+}
+
+// GetObjectList 获取格子中所有对象
+func (g *Grid) GetObjectList() map[int64]any {
+	return g.objectMap
 }

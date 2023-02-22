@@ -134,10 +134,6 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 				}
 			}
 		}
-		if sceneConfig.Id == 3 {
-			logger.Info("init scene aoi mgr, scene: %v", sceneConfig.Id)
-			aoiManager.AoiInfoLog(false)
-		}
 		r.sceneBlockAoiMap[uint32(sceneConfig.Id)] = aoiManager
 	}
 	r.multiplayerWorldNum = 0

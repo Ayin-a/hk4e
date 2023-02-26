@@ -6,6 +6,19 @@ import (
 	"hk4e/pkg/logger"
 )
 
+type DbReliquary struct {
+	ReliquaryMap map[uint64]*Reliquary // 圣遗物背包
+}
+
+func (p *Player) GetDbReliquary() *DbReliquary {
+	if p.DbReliquary == nil {
+		p.DbReliquary = &DbReliquary{
+			ReliquaryMap: make(map[uint64]*Reliquary),
+		}
+	}
+	return p.DbReliquary
+}
+
 type Reliquary struct {
 	ReliquaryId      uint64   // 圣遗物的唯一id
 	ItemId           uint32   // 圣遗物的道具id
@@ -19,44 +32,45 @@ type Reliquary struct {
 	Guid             uint64   `bson:"-" msgpack:"-"`
 }
 
-func (p *Player) InitReliquary(reliquary *Reliquary) {
+func (r *DbReliquary) InitAllReliquary(player *Player) {
+	for _, reliquary := range r.ReliquaryMap {
+		r.InitReliquary(player, reliquary)
+	}
+}
+
+func (r *DbReliquary) InitReliquary(player *Player, reliquary *Reliquary) {
 	// 获取圣遗物配置表
 	reliquaryConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 	if reliquaryConfig == nil {
 		logger.Error("reliquary config error, itemId: %v", reliquary.ItemId)
 		return
 	}
-	reliquary.Guid = p.GetNextGameObjectGuid()
-	p.GameObjectGuidMap[reliquary.Guid] = GameObject(reliquary)
-	p.ReliquaryMap[reliquary.ReliquaryId] = reliquary
+	reliquary.Guid = player.GetNextGameObjectGuid()
+	player.GameObjectGuidMap[reliquary.Guid] = GameObject(reliquary)
+	r.ReliquaryMap[reliquary.ReliquaryId] = reliquary
 	if reliquary.AvatarId != 0 {
-		avatar := p.AvatarMap[reliquary.AvatarId]
+		dbAvatar := player.GetDbAvatar()
+		avatar := dbAvatar.AvatarMap[reliquary.AvatarId]
 		avatar.EquipGuidMap[reliquary.Guid] = reliquary.Guid
 		avatar.EquipReliquaryMap[uint8(reliquaryConfig.ReliquaryType)] = reliquary
 	}
 }
 
-func (p *Player) InitAllReliquary() {
-	for _, reliquary := range p.ReliquaryMap {
-		p.InitReliquary(reliquary)
-	}
-}
-
-func (p *Player) GetReliquaryGuid(reliquaryId uint64) uint64 {
-	reliquaryInfo := p.ReliquaryMap[reliquaryId]
+func (r *DbReliquary) GetReliquaryGuid(reliquaryId uint64) uint64 {
+	reliquaryInfo := r.ReliquaryMap[reliquaryId]
 	if reliquaryInfo == nil {
 		return 0
 	}
 	return reliquaryInfo.Guid
 }
 
-func (p *Player) GetReliquary(reliquaryId uint64) *Reliquary {
-	return p.ReliquaryMap[reliquaryId]
+func (r *DbReliquary) GetReliquary(reliquaryId uint64) *Reliquary {
+	return r.ReliquaryMap[reliquaryId]
 }
 
-func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint32) {
+func (r *DbReliquary) AddReliquary(player *Player, itemId uint32, reliquaryId uint64, mainPropId uint32) {
 	// 校验背包圣遗物容量
-	if len(p.ReliquaryMap) > constant.STORE_PACK_LIMIT_RELIQUARY {
+	if len(r.ReliquaryMap) > constant.STORE_PACK_LIMIT_RELIQUARY {
 		return
 	}
 	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
@@ -76,16 +90,16 @@ func (p *Player) AddReliquary(itemId uint32, reliquaryId uint64, mainPropId uint
 		AvatarId:         0,
 		Guid:             0,
 	}
-	p.InitReliquary(reliquary)
-	p.ReliquaryMap[reliquaryId] = reliquary
+	r.InitReliquary(player, reliquary)
+	r.ReliquaryMap[reliquaryId] = reliquary
 }
 
-func (p *Player) CostReliquary(reliquaryId uint64) uint64 {
-	reliquary := p.ReliquaryMap[reliquaryId]
+func (r *DbReliquary) CostReliquary(player *Player, reliquaryId uint64) uint64 {
+	reliquary := r.ReliquaryMap[reliquaryId]
 	if reliquary == nil {
 		return 0
 	}
-	delete(p.ReliquaryMap, reliquaryId)
-	delete(p.GameObjectGuidMap, reliquary.Guid)
+	delete(r.ReliquaryMap, reliquaryId)
+	delete(player.GameObjectGuidMap, reliquary.Guid)
 	return reliquary.Guid
 }

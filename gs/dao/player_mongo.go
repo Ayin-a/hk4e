@@ -116,7 +116,7 @@ func (d *Dao) DeleteChatMsgList(idList []primitive.ObjectID) error {
 
 func (d *Dao) UpdatePlayer(player *model.Player) error {
 	db := d.db.Collection("player")
-	_, err := db.UpdateOne(
+	_, err := db.UpdateMany(
 		context.TODO(),
 		bson.D{{"PlayerID", player.PlayerID}},
 		bson.D{{"$set", player}},
@@ -129,7 +129,7 @@ func (d *Dao) UpdatePlayer(player *model.Player) error {
 
 func (d *Dao) UpdateChatMsg(chatMsg *model.ChatMsg) error {
 	db := d.db.Collection("chat_msg")
-	_, err := db.UpdateOne(
+	_, err := db.UpdateMany(
 		context.TODO(),
 		bson.D{{"_id", chatMsg.ID}},
 		bson.D{{"$set", chatMsg}},
@@ -147,7 +147,7 @@ func (d *Dao) UpdatePlayerList(playerList []*model.Player) error {
 	db := d.db.Collection("player")
 	modelOperateList := make([]mongo.WriteModel, 0)
 	for _, player := range playerList {
-		modelOperate := mongo.NewUpdateOneModel().SetFilter(bson.D{{"PlayerID", player.PlayerID}}).SetUpdate(bson.D{{"$set", player}})
+		modelOperate := mongo.NewUpdateManyModel().SetFilter(bson.D{{"PlayerID", player.PlayerID}}).SetUpdate(bson.D{{"$set", player}})
 		modelOperateList = append(modelOperateList, modelOperate)
 	}
 	_, err := db.BulkWrite(context.TODO(), modelOperateList)
@@ -164,7 +164,7 @@ func (d *Dao) UpdateChatMsgList(chatMsgList []*model.ChatMsg) error {
 	db := d.db.Collection("chat_msg")
 	modelOperateList := make([]mongo.WriteModel, 0)
 	for _, chatMsg := range chatMsgList {
-		modelOperate := mongo.NewUpdateOneModel().SetFilter(bson.D{{"_id", chatMsg.ID}}).SetUpdate(bson.D{{"$set", chatMsg}})
+		modelOperate := mongo.NewUpdateManyModel().SetFilter(bson.D{{"_id", chatMsg.ID}}).SetUpdate(bson.D{{"$set", chatMsg}})
 		modelOperateList = append(modelOperateList, modelOperate)
 	}
 	_, err := db.BulkWrite(context.TODO(), modelOperateList)

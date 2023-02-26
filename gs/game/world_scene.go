@@ -88,7 +88,8 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 			return
 		}
 		// 获取角色
-		avatar, ok := player.AvatarMap[entity.avatarEntity.avatarId]
+		dbAvatar := player.GetDbAvatar()
+		avatar, ok := dbAvatar.AvatarMap[entity.avatarEntity.avatarId]
 		if !ok {
 			logger.Error("avatar is nil, avatarId: %v", avatar)
 			return
@@ -139,7 +140,8 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_AVATAR)
-	avatar, ok := player.AvatarMap[avatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[avatarId]
 	if !ok {
 		logger.Error("avatar error, avatarId: %v", avatar)
 		return 0
@@ -153,7 +155,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
-		fightProp:           player.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
+		fightProp:           dbAvatar.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
 		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
@@ -169,7 +171,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 			EntityId:       entity.id,
 			FightPropMap:   entity.fightProp,
 			Uid:            entity.avatarEntity.uid,
-			AvatarGuid:     player.AvatarMap[avatarId].Guid,
+			AvatarGuid:     dbAvatar.AvatarMap[avatarId].Guid,
 		},
 	})
 	return entity.id

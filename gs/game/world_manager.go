@@ -309,11 +309,12 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 	w.peerList = append(w.peerList, player)
 	w.playerMap[player.PlayerID] = player
 	// 将玩家自身当前的队伍角色信息复制到世界的玩家本地队伍
-	team := player.TeamConfig.GetActiveTeam()
+	dbTeam := player.GetDbTeam()
+	team := dbTeam.GetActiveTeam()
 	if player.PlayerID == w.owner.PlayerID {
 		w.SetPlayerLocalTeam(player, team.GetAvatarIdList())
 	} else {
-		activeAvatarId := player.TeamConfig.GetActiveAvatarId()
+		activeAvatarId := dbTeam.GetActiveAvatarId()
 		w.SetPlayerLocalTeam(player, []uint32{activeAvatarId})
 	}
 	playerNum := w.GetWorldPlayerNum()
@@ -328,7 +329,8 @@ func (w *World) AddPlayer(player *model.Player, sceneId uint32) {
 	for _, worldPlayer := range w.playerMap {
 		list := w.GetPlayerWorldAvatarList(worldPlayer)
 		maxIndex := len(list) - 1
-		index := int(worldPlayer.TeamConfig.CurrAvatarIndex)
+		worldPlayerDbTeam := worldPlayer.GetDbTeam()
+		index := int(worldPlayerDbTeam.CurrAvatarIndex)
 		if index > maxIndex {
 			w.SetPlayerAvatarIndex(worldPlayer, 0)
 		} else {

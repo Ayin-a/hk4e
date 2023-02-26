@@ -108,10 +108,11 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 			}
 			robot := r.CreateRobot(uid, random.GetRandomStr(8), random.GetRandomStr(10))
 			r.AddUserAvatar(uid, avatarId)
+			dbAvatar := robot.GetDbAvatar()
 			r.SetUpAvatarTeamReq(robot, &proto.SetUpAvatarTeamReq{
 				TeamId:             1,
-				AvatarTeamGuidList: []uint64{robot.AvatarMap[avatarId].Guid},
-				CurAvatarGuid:      robot.AvatarMap[avatarId].Guid,
+				AvatarTeamGuidList: []uint64{dbAvatar.AvatarMap[avatarId].Guid},
+				CurAvatarGuid:      dbAvatar.AvatarMap[avatarId].Guid,
 			})
 			robot.Pos.X -= random.GetRandomFloat64(25.0, 35.0)
 			robot.Pos.Y += 1.0
@@ -160,7 +161,7 @@ func (g *GameManager) run() {
 }
 
 func (g *GameManager) gameMainLoopD() {
-	for times := 1; times <= 100000; times++ {
+	for times := 1; times <= 10000; times++ {
 		logger.Warn("start game main loop, times: %v", times)
 		g.gameMainLoop()
 		logger.Warn("game main loop stop")

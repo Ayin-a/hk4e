@@ -114,7 +114,9 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 	// 如果玩家正在载具中
 	if g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
 		// 离开载具
-		g.ExitVehicle(player, entity, player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid)
+		dbTeam := player.GetDbTeam()
+		dbAvatar := player.GetDbAvatar()
+		g.ExitVehicle(player, entity, dbAvatar.AvatarMap[dbTeam.GetActiveAvatarId()].Guid)
 	}
 	// 删除已创建的载具
 	scene.DestroyEntity(entity.GetId())
@@ -220,7 +222,9 @@ func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Mes
 		return
 	}
 
-	avatarGuid := player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Guid
+	dbTeam := player.GetDbTeam()
+	dbAvatar := player.GetDbAvatar()
+	avatarGuid := dbAvatar.AvatarMap[dbTeam.GetActiveAvatarId()].Guid
 
 	switch req.InteractType {
 	case proto.VehicleInteractType_VEHICLE_INTERACT_IN:

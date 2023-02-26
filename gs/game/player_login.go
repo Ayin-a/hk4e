@@ -56,7 +56,15 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	player.GateAppId = gateAppId
 
 	// 初始化
-	player.InitAll()
+	player.InitOnlineData()
+	dbAvatar := player.GetDbAvatar()
+	dbAvatar.InitAllAvatar(player)
+	dbReliquary := player.GetDbReliquary()
+	dbReliquary.InitAllReliquary(player)
+	dbWeapon := player.GetDbWeapon()
+	dbWeapon.InitAllWeapon(player)
+	dbItem := player.GetDbItem()
+	dbItem.InitAllItem(player)
 
 	// 确保玩家位置安全
 	player.Pos.X = player.SafePos.X
@@ -67,9 +75,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 		player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
 	}
-
-	player.CombatInvokeHandler = model.NewInvokeHandler[proto.CombatInvokeEntry]()
-	player.AbilityInvokeHandler = model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 
 	if userId < PlayerBaseUid {
 		return
@@ -196,12 +201,15 @@ func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNoti
 }
 
 func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
+	dbItem := player.GetDbItem()
+	dbWeapon := player.GetDbWeapon()
+	dbReliquary := player.GetDbReliquary()
 	playerStoreNotify := &proto.PlayerStoreNotify{
 		StoreType:   proto.StoreType_STORE_PACK,
 		WeightLimit: constant.STORE_PACK_LIMIT_WEIGHT,
-		ItemList:    make([]*proto.Item, 0, len(player.WeaponMap)+len(player.ReliquaryMap)+len(player.ItemMap)),
+		ItemList:    make([]*proto.Item, 0, len(dbItem.ItemMap)+len(dbWeapon.WeaponMap)+len(dbReliquary.ReliquaryMap)),
 	}
-	for _, weapon := range player.WeaponMap {
+	for _, weapon := range dbWeapon.WeaponMap {
 		itemDataConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", weapon.ItemId)
@@ -233,7 +241,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		}
 		playerStoreNotify.ItemList = append(playerStoreNotify.ItemList, pbItem)
 	}
-	for _, reliquary := range player.ReliquaryMap {
+	for _, reliquary := range dbReliquary.ReliquaryMap {
 		itemDataConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", reliquary.ItemId)
@@ -262,7 +270,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 		}
 		playerStoreNotify.ItemList = append(playerStoreNotify.ItemList, pbItem)
 	}
-	for _, item := range player.ItemMap {
+	for _, item := range dbItem.ItemMap {
 		itemDataConfig := gdconf.GetItemDataById(int32(item.ItemId))
 		if itemDataConfig == nil {
 			logger.Error("get item data config is nil, itemId: %v", item.ItemId)
@@ -293,24 +301,25 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 }
 
 func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.AvatarDataNotify {
-	chooseAvatarId := player.MainCharAvatarId
+	dbAvatar := player.GetDbAvatar()
+	dbTeam := player.GetDbTeam()
 	avatarDataNotify := &proto.AvatarDataNotify{
-		CurAvatarTeamId:   uint32(player.TeamConfig.GetActiveTeamId()),
-		ChooseAvatarGuid:  player.AvatarMap[chooseAvatarId].Guid,
+		CurAvatarTeamId:   uint32(dbTeam.GetActiveTeamId()),
+		ChooseAvatarGuid:  dbAvatar.AvatarMap[dbAvatar.MainCharAvatarId].Guid,
 		OwnedFlycloakList: player.FlyCloakList,
 		// 角色衣装
 		OwnedCostumeList: player.CostumeList,
 		AvatarList:       make([]*proto.AvatarInfo, 0),
 		AvatarTeamMap:    make(map[uint32]*proto.AvatarTeam),
 	}
-	for _, avatar := range player.AvatarMap {
+	for _, avatar := range dbAvatar.AvatarMap {
 		pbAvatar := g.PacketAvatarInfo(avatar)
 		avatarDataNotify.AvatarList = append(avatarDataNotify.AvatarList, pbAvatar)
 	}
-	for teamIndex, team := range player.TeamConfig.TeamList {
+	for teamIndex, team := range dbTeam.TeamList {
 		var teamAvatarGuidList []uint64 = nil
 		for _, avatarId := range team.GetAvatarIdList() {
-			teamAvatarGuidList = append(teamAvatarGuidList, player.AvatarMap[avatarId].Guid)
+			teamAvatarGuidList = append(teamAvatarGuidList, dbAvatar.AvatarMap[avatarId].Guid)
 		}
 		avatarDataNotify.AvatarTeamMap[uint32(teamIndex)+1] = &proto.AvatarTeam{
 			AvatarGuidList: teamAvatarGuidList,
@@ -336,7 +345,6 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.PlayerID = userId
 	player.NickName = nickName
 	player.Signature = ""
-	player.MainCharAvatarId = mainCharAvatarId
 	player.HeadImage = mainCharAvatarId
 	player.Birthday = []uint8{0, 0}
 	player.NameCard = 210001
@@ -368,29 +376,28 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
 	player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
 
-	player.ItemMap = make(map[uint32]*model.Item)
-	player.WeaponMap = make(map[uint64]*model.Weapon)
-	player.ReliquaryMap = make(map[uint64]*model.Reliquary)
-	player.AvatarMap = make(map[uint32]*model.Avatar)
+	dbAvatar := player.GetDbAvatar()
+	dbAvatar.MainCharAvatarId = mainCharAvatarId
+
 	player.GameObjectGuidMap = make(map[uint64]model.GameObject)
-	player.DropInfo = model.NewDropInfo()
 	player.GCGInfo = model.NewGCGInfo()
 
 	// 添加选定的主角
-	player.AddAvatar(mainCharAvatarId)
-	// 添加初始武器
+	dbAvatar.AddAvatar(player, mainCharAvatarId)
+	// 添加主角初始武器
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(mainCharAvatarId))
 	if avatarDataConfig == nil {
 		logger.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
 		return nil
 	}
 	weaponId := uint64(g.snowflake.GenId())
-	player.AddWeapon(uint32(avatarDataConfig.InitialWeapon), weaponId)
-	// 角色装上初始武器
-	player.WearWeapon(mainCharAvatarId, weaponId)
+	dbWeapon := player.GetDbWeapon()
+	dbWeapon.AddWeapon(player, uint32(avatarDataConfig.InitialWeapon), weaponId)
+	weapon := dbWeapon.WeaponMap[weaponId]
+	dbAvatar.WearWeapon(mainCharAvatarId, weapon)
 
-	player.TeamConfig = model.NewTeamInfo()
-	player.TeamConfig.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
+	dbTeam := player.GetDbTeam()
+	dbTeam.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
 
 	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
 

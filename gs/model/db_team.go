@@ -32,7 +32,7 @@ func (t *Team) SetAvatarIdList(avatarIdList []uint32) {
 	}
 }
 
-type TeamInfo struct {
+type DbTeam struct {
 	TeamList             []*Team
 	CurrTeamIndex        uint8
 	CurrAvatarIndex      uint8
@@ -40,8 +40,15 @@ type TeamInfo struct {
 	TeamResonancesConfig map[int32]bool  `bson:"-" msgpack:"-"`
 }
 
-func NewTeamInfo() (r *TeamInfo) {
-	r = &TeamInfo{
+func (p *Player) GetDbTeam() *DbTeam {
+	if p.DbTeam == nil {
+		p.DbTeam = NewDbTeam()
+	}
+	return p.DbTeam
+}
+
+func NewDbTeam() (r *DbTeam) {
+	r = &DbTeam{
 		TeamList: []*Team{
 			{Name: "冒险", AvatarIdList: make([]uint32, 4)},
 			{Name: "委托", AvatarIdList: make([]uint32, 4)},
@@ -54,7 +61,7 @@ func NewTeamInfo() (r *TeamInfo) {
 	return r
 }
 
-func (t *TeamInfo) UpdateTeam() {
+func (t *DbTeam) UpdateTeam() {
 	activeTeam := t.GetActiveTeam()
 	// TODO 队伍元素共鸣
 	t.TeamResonances = make(map[uint16]bool)
@@ -88,11 +95,11 @@ func (t *TeamInfo) UpdateTeam() {
 	}
 }
 
-func (t *TeamInfo) GetActiveTeamId() uint8 {
+func (t *DbTeam) GetActiveTeamId() uint8 {
 	return t.CurrTeamIndex + 1
 }
 
-func (t *TeamInfo) GetTeamByIndex(teamIndex uint8) *Team {
+func (t *DbTeam) GetTeamByIndex(teamIndex uint8) *Team {
 	if t.TeamList == nil {
 		return nil
 	}
@@ -103,11 +110,11 @@ func (t *TeamInfo) GetTeamByIndex(teamIndex uint8) *Team {
 	return activeTeam
 }
 
-func (t *TeamInfo) GetActiveTeam() *Team {
+func (t *DbTeam) GetActiveTeam() *Team {
 	return t.GetTeamByIndex(t.CurrTeamIndex)
 }
 
-func (t *TeamInfo) GetActiveAvatarId() uint32 {
+func (t *DbTeam) GetActiveAvatarId() uint32 {
 	team := t.GetActiveTeam()
 	if team == nil {
 		return 0

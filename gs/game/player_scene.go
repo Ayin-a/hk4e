@@ -148,8 +148,9 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 			},
 			AvatarEnterInfo: make([]*proto.AvatarEnterSceneInfo, 0),
 		}
+		dbAvatar := player.GetDbAvatar()
 		for _, worldAvatar := range world.GetPlayerWorldAvatarList(player) {
-			avatar := player.AvatarMap[worldAvatar.GetAvatarId()]
+			avatar := dbAvatar.AvatarMap[worldAvatar.GetAvatarId()]
 			avatarEnterSceneInfo := &proto.AvatarEnterSceneInfo{
 				AvatarGuid:     avatar.Guid,
 				AvatarEntityId: world.GetPlayerWorldAvatarEntityId(player, worldAvatar.GetAvatarId()),
@@ -652,7 +653,8 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 		Z: float32(entity.GetPos().Z),
 	}
 	worldAvatar := scene.GetWorld().GetWorldAvatarByEntityId(entity.GetId())
-	avatar, ok := player.AvatarMap[worldAvatar.GetAvatarId()]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[worldAvatar.GetAvatarId()]
 	if !ok {
 		logger.Error("avatar error, avatarId: %v", worldAvatar.GetAvatarId())
 		return new(proto.SceneEntityInfo)
@@ -897,7 +899,8 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 }
 
 func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
-	avatar, ok := player.AvatarMap[avatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[avatarId]
 	if !ok {
 		logger.Error("avatar error, avatarId: %v", avatarId)
 		return new(proto.SceneAvatarInfo)

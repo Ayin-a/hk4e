@@ -101,6 +101,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		// 自动注册
 		accountId, err := c.dao.GetNextAccountId()
 		if err != nil {
+			logger.Error("get next account id error: %v", err)
 			responseData.Retcode = -201
 			responseData.Message = "服务器内部错误:-1"
 			context.JSON(http.StatusOK, responseData)
@@ -108,6 +109,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		}
 		playerID, err := c.dao.GetNextYuanShenUid()
 		if err != nil {
+			logger.Error("get next player id error: %v", err)
 			responseData.Retcode = -201
 			responseData.Message = "服务器内部错误:-2"
 			context.JSON(http.StatusOK, responseData)
@@ -125,6 +127,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 		}
 		_, err = c.dao.InsertAccount(regAccount)
 		if err != nil {
+			logger.Error("insert account error: %v", err)
 			responseData.Retcode = -201
 			responseData.Message = "服务器内部错误:-3"
 			context.JSON(http.StatusOK, responseData)
@@ -142,6 +145,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 	account.Token = base64.StdEncoding.EncodeToString(random.GetRandomByte(24))
 	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "Token", account.Token)
 	if err != nil {
+		logger.Error("update account token error: %v", err)
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-4"
 		context.JSON(http.StatusOK, responseData)
@@ -149,6 +153,7 @@ func (c *Controller) apiLogin(context *gin.Context) {
 	}
 	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "TokenCreateTime", time.Now().UnixMilli())
 	if err != nil {
+		logger.Error("update account token time error: %v", err)
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-5"
 		context.JSON(http.StatusOK, responseData)
@@ -233,13 +238,15 @@ func (c *Controller) v2Login(context *gin.Context) {
 	account.ComboToken = random.GetRandomByteHexStr(20)
 	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboToken", account.ComboToken)
 	if err != nil {
+		logger.Error("update combo token error: %v", err)
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-1"
 		context.JSON(http.StatusOK, responseData)
 		return
 	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboTokenUsed", false)
+	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboTokenCreateTime", time.Now().UnixMilli())
 	if err != nil {
+		logger.Error("update combo token time error: %v", err)
 		responseData.Retcode = -201
 		responseData.Message = "服务器内部错误:-2"
 		context.JSON(http.StatusOK, responseData)

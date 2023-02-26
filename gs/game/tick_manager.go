@@ -194,19 +194,19 @@ func (t *TickManager) onTickMinute(now int64) {
 			i := int32(0)
 			for itemId := range allItemDataConfig {
 				num := random.GetRandomInt32(1, 9)
-				GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
+				GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
 				i++
 				if i > count {
 					break
 				}
 			}
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
 			// 蓝球粉球
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*UserItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
+			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
 		}
 	}
 }

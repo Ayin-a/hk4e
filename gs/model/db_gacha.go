@@ -8,12 +8,19 @@ type GachaPoolInfo struct {
 	MustGetUpPurple bool   // 是否4星大保底
 }
 
-type DropInfo struct {
+type DbGacha struct {
 	GachaPoolInfo map[uint32]*GachaPoolInfo
 }
 
-func NewDropInfo() (r *DropInfo) {
-	r = new(DropInfo)
+func (p *Player) GetDbGacha() *DbGacha {
+	if p.DbGacha == nil {
+		p.DbGacha = NewDbGacha()
+	}
+	return p.DbGacha
+}
+
+func NewDbGacha() (r *DbGacha) {
+	r = new(DbGacha)
 	r.GachaPoolInfo = make(map[uint32]*GachaPoolInfo)
 	r.GachaPoolInfo[300] = &GachaPoolInfo{
 		// 温迪

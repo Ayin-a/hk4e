@@ -8,6 +8,20 @@ import (
 	"hk4e/pkg/logger"
 )
 
+type DbAvatar struct {
+	AvatarMap        map[uint32]*Avatar // 角色列表
+	MainCharAvatarId uint32             // 主角id
+}
+
+func (p *Player) GetDbAvatar() *DbAvatar {
+	if p.DbAvatar == nil {
+		p.DbAvatar = &DbAvatar{
+			AvatarMap: make(map[uint32]*Avatar),
+		}
+	}
+	return p.DbAvatar
+}
+
 type Avatar struct {
 	AvatarId            uint32               // 角色id
 	LifeState           uint16               // 存活状态
@@ -35,26 +49,26 @@ type Avatar struct {
 	ExtraAbilityEmbryos map[string]bool      `bson:"-" msgpack:"-"`
 }
 
-func (p *Player) InitAllAvatar() {
-	for _, avatar := range p.AvatarMap {
-		p.InitAvatar(avatar)
+func (a *DbAvatar) InitAllAvatar(player *Player) {
+	for _, avatar := range a.AvatarMap {
+		a.InitAvatar(player, avatar)
 	}
 }
 
-func (p *Player) InitAvatar(avatar *Avatar) {
+func (a *DbAvatar) InitAvatar(player *Player, avatar *Avatar) {
 	// 角色战斗属性
-	p.InitAvatarFightProp(avatar)
+	a.InitAvatarFightProp(avatar)
 	// guid
-	avatar.Guid = p.GetNextGameObjectGuid()
-	p.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
+	avatar.Guid = player.GetNextGameObjectGuid()
+	player.GameObjectGuidMap[avatar.Guid] = GameObject(avatar)
 	avatar.EquipGuidMap = make(map[uint64]uint64)
 	avatar.EquipReliquaryMap = make(map[uint8]*Reliquary)
-	p.AvatarMap[avatar.AvatarId] = avatar
+	a.AvatarMap[avatar.AvatarId] = avatar
 	return
 }
 
 // InitAvatarFightProp 初始化角色面板
-func (p *Player) InitAvatarFightProp(avatar *Avatar) {
+func (a *DbAvatar) InitAvatarFightProp(avatar *Avatar) {
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
 	if avatarDataConfig == nil {
 		logger.Error("avatarDataConfig error, avatarId: %v", avatar.AvatarId)
@@ -77,10 +91,10 @@ func (p *Player) InitAvatarFightProp(avatar *Avatar) {
 	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CRITICAL_HURT)] = float32(avatarDataConfig.CriticalHurt)
 	// 元素充能
 	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY)] = 1.0
-	p.SetCurrEnergy(avatar, avatar.CurrEnergy, true)
+	a.SetCurrEnergy(avatar, avatar.CurrEnergy, true)
 }
 
-func (p *Player) AddAvatar(avatarId uint32) {
+func (a *DbAvatar) AddAvatar(player *Player, avatarId uint32) {
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatarId))
 	if avatarDataConfig == nil {
 		logger.Error("avatar data config is nil, avatarId: %v", avatarId)
@@ -140,11 +154,11 @@ func (p *Player) AddAvatar(avatarId uint32) {
 		avatar.PromoteRewardMap[promoteLevel] = false
 	}
 
-	p.InitAvatar(avatar)
-	p.AvatarMap[avatarId] = avatar
+	a.InitAvatar(player, avatar)
+	a.AvatarMap[avatarId] = avatar
 }
 
-func (p *Player) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
+func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
 	var avatarSkillDataConfig *gdconf.AvatarSkillData = nil
 	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
 		avatarSkillDepotDataConfig := gdconf.GetAvatarSkillDepotDataById(int32(avatar.SkillDepotId))
@@ -175,9 +189,8 @@ func (p *Player) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
 	}
 }
 
-func (p *Player) WearReliquary(avatarId uint32, reliquaryId uint64) {
-	avatar := p.AvatarMap[avatarId]
-	reliquary := p.ReliquaryMap[reliquaryId]
+func (a *DbAvatar) WearReliquary(avatarId uint32, reliquary *Reliquary) {
+	avatar := a.AvatarMap[avatarId]
 	reliquaryConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 	if reliquaryConfig == nil {
 		logger.Error("reliquary config error, itemId: %v", reliquary.ItemId)
@@ -188,9 +201,8 @@ func (p *Player) WearReliquary(avatarId uint32, reliquaryId uint64) {
 	avatar.EquipGuidMap[reliquary.Guid] = reliquary.Guid
 }
 
-func (p *Player) TakeOffReliquary(avatarId uint32, reliquaryId uint64) {
-	avatar := p.AvatarMap[avatarId]
-	reliquary := p.ReliquaryMap[reliquaryId]
+func (a *DbAvatar) TakeOffReliquary(avatarId uint32, reliquary *Reliquary) {
+	avatar := a.AvatarMap[avatarId]
 	reliquaryConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 	if reliquaryConfig == nil {
 		logger.Error("reliquary config error, itemId: %v", reliquary.ItemId)
@@ -201,17 +213,15 @@ func (p *Player) TakeOffReliquary(avatarId uint32, reliquaryId uint64) {
 	delete(avatar.EquipGuidMap, reliquary.Guid)
 }
 
-func (p *Player) WearWeapon(avatarId uint32, weaponId uint64) {
-	avatar := p.AvatarMap[avatarId]
-	weapon := p.WeaponMap[weaponId]
+func (a *DbAvatar) WearWeapon(avatarId uint32, weapon *Weapon) {
+	avatar := a.AvatarMap[avatarId]
 	avatar.EquipWeapon = weapon
 	weapon.AvatarId = avatarId
 	avatar.EquipGuidMap[weapon.Guid] = weapon.Guid
 }
 
-func (p *Player) TakeOffWeapon(avatarId uint32, weaponId uint64) {
-	avatar := p.AvatarMap[avatarId]
-	weapon := p.WeaponMap[weaponId]
+func (a *DbAvatar) TakeOffWeapon(avatarId uint32, weapon *Weapon) {
+	avatar := a.AvatarMap[avatarId]
 	avatar.EquipWeapon = nil
 	weapon.AvatarId = 0
 	delete(avatar.EquipGuidMap, weapon.Guid)

@@ -18,6 +18,10 @@ type StaminaInfo struct {
 	DrownBackDelay      uint8             // 溺水返回安全点延时
 }
 
+func NewStaminaInfo() *StaminaInfo {
+	return new(StaminaInfo)
+}
+
 // SetStaminaCost 设置动作需要消耗的耐力
 func (s *StaminaInfo) SetStaminaCost(state proto.MotionState) {
 	// 根据状态决定要修改的耐力

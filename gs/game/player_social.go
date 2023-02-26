@@ -127,7 +127,8 @@ func (g *GameManager) SetPlayerHeadImageReq(player *model.Player, payloadMsg pb.
 	logger.Debug("user change head image, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerHeadImageReq)
 	avatarId := req.AvatarId
-	_, exist := player.AvatarMap[avatarId]
+	dbAvatar := player.GetDbAvatar()
+	_, exist := dbAvatar.AvatarMap[avatarId]
 	if !exist {
 		logger.Error("the head img of the avatar not exist, uid: %v", player.PlayerID)
 		return

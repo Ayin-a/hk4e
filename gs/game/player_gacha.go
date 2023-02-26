@@ -222,7 +222,7 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 	}
 
 	// 先扣掉粉球或蓝球再进行抽卡
-	g.CostUserItem(player.PlayerID, []*UserItem{
+	g.CostUserItem(player.PlayerID, []*ChangeItem{
 		{
 			ItemId:      costItemId,
 			ChangeCount: gachaTimes,
@@ -268,19 +268,21 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		// 添加抽卡获得的道具
 		if itemId > 1000 && itemId < 2000 {
 			avatarId := (itemId % 1000) + 10000000
-			_, exist := player.AvatarMap[avatarId]
+			dbAvatar := player.GetDbAvatar()
+			_, exist := dbAvatar.AvatarMap[avatarId]
 			if !exist {
 				g.AddUserAvatar(player.PlayerID, avatarId)
 			} else {
 				constellationItemId := itemId + 100
-				if player.GetItemCount(constellationItemId) < 6 {
-					g.AddUserItem(player.PlayerID, []*UserItem{{ItemId: constellationItemId, ChangeCount: 1}}, false, 0)
+				dbItem := player.GetDbItem()
+				if dbItem.GetItemCount(player, constellationItemId) < 6 {
+					g.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: constellationItemId, ChangeCount: 1}}, false, 0)
 				}
 			}
 		} else if itemId > 10000 && itemId < 20000 {
 			g.AddUserWeapon(player.PlayerID, itemId)
 		} else {
-			g.AddUserItem(player.PlayerID, []*UserItem{{ItemId: itemId, ChangeCount: 1}}, false, 0)
+			g.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: itemId, ChangeCount: 1}}, false, 0)
 		}
 
 		// 计算星尘星辉
@@ -294,7 +296,7 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		}
 		// 星尘
 		if xc != 0 {
-			g.AddUserItem(player.PlayerID, []*UserItem{{
+			g.AddUserItem(player.PlayerID, []*ChangeItem{{
 				ItemId:      222,
 				ChangeCount: xc,
 			}}, false, 0)
@@ -305,7 +307,7 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 		}
 		// 星辉
 		if xh != 0 {
-			g.AddUserItem(player.PlayerID, []*UserItem{{
+			g.AddUserItem(player.PlayerID, []*ChangeItem{{
 				ItemId:      221,
 				ChangeCount: xh,
 			}}, false, 0)
@@ -392,7 +394,8 @@ func (g *GameManager) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnab
 	}
 
 	// 获取用户的卡池保底信息
-	gachaPoolInfo := player.DropInfo.GachaPoolInfo[gachaType]
+	dbGacha := player.GetDbGacha()
+	gachaPoolInfo := dbGacha.GachaPoolInfo[gachaType]
 	if gachaPoolInfo == nil {
 		logger.Error("user gacha pool info not found, gacha type: %v", gachaType)
 		return false, 0

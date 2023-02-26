@@ -46,8 +46,9 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	// 圣遗物主属性
 	mainPropId := uint32(reliquaryMainConfig.MainPropId)
 	// 玩家添加圣遗物
-	player.AddReliquary(itemId, reliquaryId, mainPropId)
-	reliquary := player.GetReliquary(reliquaryId)
+	dbReliquary := player.GetDbReliquary()
+	dbReliquary.AddReliquary(player, itemId, reliquaryId, mainPropId)
+	reliquary := dbReliquary.GetReliquary(reliquaryId)
 	if reliquary == nil {
 		logger.Error("reliquary is nil, itemId: %v, reliquaryId: %v", itemId, reliquaryId)
 		return 0
@@ -108,8 +109,9 @@ func (g *GameManager) CostUserReliquary(userId uint32, reliquaryIdList []uint64)
 		GuidList:  make([]uint64, 0, len(reliquaryIdList)),
 		StoreType: proto.StoreType_STORE_PACK,
 	}
+	dbReliquary := player.GetDbReliquary()
 	for _, reliquaryId := range reliquaryIdList {
-		reliquaryGuid := player.CostReliquary(reliquaryId)
+		reliquaryGuid := dbReliquary.CostReliquary(player, reliquaryId)
 		if reliquaryGuid == 0 {
 			logger.Error("reliquary cost error, reliquaryId: %v", reliquaryId)
 			return

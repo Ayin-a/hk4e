@@ -8,7 +8,7 @@ import (
 	"hk4e/protocol/proto"
 )
 
-type UserItem struct {
+type ChangeItem struct {
 	ItemId      uint32
 	ChangeCount uint32
 }
@@ -49,7 +49,7 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 }
 
 // AddUserItem 玩家添加物品
-func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bool, hintReason uint16) {
+func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint bool, hintReason uint16) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -58,6 +58,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 	playerPropNotify := &proto.PlayerPropNotify{
 		PropMap: make(map[uint32]*proto.PropValue),
 	}
+	dbItem := player.GetDbItem()
 	for _, userItem := range itemList {
 		// 物品为虚拟物品则另外处理
 		switch userItem.ItemId {
@@ -83,7 +84,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 			g.AddUserPlayerExp(userId, userItem.ChangeCount)
 		default:
 			// 普通物品直接进背包
-			player.AddItem(userItem.ItemId, userItem.ChangeCount)
+			dbItem.AddItem(player, userItem.ItemId, userItem.ChangeCount)
 		}
 	}
 	if len(playerPropNotify.PropMap) > 0 {
@@ -97,10 +98,10 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 	for _, userItem := range itemList {
 		pbItem := &proto.Item{
 			ItemId: userItem.ItemId,
-			Guid:   player.GetItemGuid(userItem.ItemId),
+			Guid:   dbItem.GetItemGuid(userItem.ItemId),
 			Detail: &proto.Item_Material{
 				Material: &proto.Material{
-					Count: player.GetItemCount(userItem.ItemId),
+					Count: dbItem.GetItemCount(player, userItem.ItemId),
 				},
 			},
 		}
@@ -127,7 +128,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*UserItem, isHint bo
 	}
 }
 
-func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
+func (g *GameManager) CostUserItem(userId uint32, itemList []*ChangeItem) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -136,6 +137,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 	playerPropNotify := &proto.PlayerPropNotify{
 		PropMap: make(map[uint32]*proto.PropValue),
 	}
+	dbItem := player.GetDbItem()
 	for _, userItem := range itemList {
 		// 物品为虚拟物品则另外处理
 		switch userItem.ItemId {
@@ -164,7 +166,7 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 			// 冒险阅历应该也没人会去扣吧?
 		default:
 			// 普通物品直接扣除
-			player.CostItem(userItem.ItemId, userItem.ChangeCount)
+			dbItem.CostItem(player, userItem.ItemId, userItem.ChangeCount)
 		}
 	}
 	if len(playerPropNotify.PropMap) > 0 {
@@ -176,13 +178,13 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		ItemList:  make([]*proto.Item, 0),
 	}
 	for _, userItem := range itemList {
-		count := player.GetItemCount(userItem.ItemId)
+		count := dbItem.GetItemCount(player, userItem.ItemId)
 		if count == 0 {
 			continue
 		}
 		pbItem := &proto.Item{
 			ItemId: userItem.ItemId,
-			Guid:   player.GetItemGuid(userItem.ItemId),
+			Guid:   dbItem.GetItemGuid(userItem.ItemId),
 			Detail: &proto.Item_Material{
 				Material: &proto.Material{
 					Count: count,
@@ -200,11 +202,11 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*UserItem) {
 		GuidList:  make([]uint64, 0),
 	}
 	for _, userItem := range itemList {
-		count := player.GetItemCount(userItem.ItemId)
+		count := dbItem.GetItemCount(player, userItem.ItemId)
 		if count > 0 {
 			continue
 		}
-		storeItemDelNotify.GuidList = append(storeItemDelNotify.GuidList, player.GetItemGuid(userItem.ItemId))
+		storeItemDelNotify.GuidList = append(storeItemDelNotify.GuidList, dbItem.GetItemGuid(userItem.ItemId))
 	}
 	if len(storeItemDelNotify.GuidList) > 0 {
 		g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)

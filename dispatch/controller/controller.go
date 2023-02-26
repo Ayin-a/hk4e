@@ -137,7 +137,6 @@ func (c *Controller) registerRouter() {
 	}
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)
-	engine.POST("/gate/token/reset", c.gateTokenReset)
 	port := config.GetConfig().HttpPort
 	addr := ":" + strconv.Itoa(int(port))
 	err := engine.Run(addr)

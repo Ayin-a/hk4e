@@ -25,45 +25,43 @@ type GameObject interface {
 
 type Player struct {
 	// 离线数据 请尽量不要定义接口等复杂数据结构
-	ID               primitive.ObjectID    `bson:"_id,omitempty"`
-	PlayerID         uint32                `bson:"PlayerID"` // 玩家uid
-	NickName         string                // 玩家昵称
-	Signature        string                // 玩家签名
-	HeadImage        uint32                // 玩家头像
-	Birthday         []uint8               // 生日
-	NameCard         uint32                // 当前名片
-	NameCardList     []uint32              // 已解锁名片列表
-	FriendList       map[uint32]bool       // 好友uid列表
-	FriendApplyList  map[uint32]bool       // 好友申请uid列表
-	OfflineTime      uint32                // 离线时间点
-	OnlineTime       uint32                // 上线时间点
-	TotalOnlineTime  uint32                // 玩家累计在线时长
-	PropertiesMap    map[uint16]uint32     // 玩家自身相关的一些属性
-	FlyCloakList     []uint32              // 风之翼列表
-	CostumeList      []uint32              // 角色衣装列表
-	SceneId          uint32                // 场景
-	SafePos          *Vector               // 玩家在陆地时的坐标
-	Pos              *Vector               // 玩家坐标
-	Rot              *Vector               // 玩家朝向
-	ItemMap          map[uint32]*Item      // 玩家统一大背包仓库
-	WeaponMap        map[uint64]*Weapon    // 玩家武器背包
-	ReliquaryMap     map[uint64]*Reliquary // 玩家圣遗物背包
-	TeamConfig       *TeamInfo             // 队伍配置
-	AvatarMap        map[uint32]*Avatar    // 角色信息
-	DropInfo         *DropInfo             // 掉落信息
-	MainCharAvatarId uint32                // 主角id
-	GCGInfo          *GCGInfo              // 七圣召唤信息
-	IsGM             uint8                 // 管理员权限等级
-	DbQuest          *DbQuest              // 任务
+	ID              primitive.ObjectID `bson:"_id,omitempty"`
+	PlayerID        uint32             `bson:"PlayerID"` // 玩家uid
+	NickName        string             // 昵称
+	Signature       string             // 签名
+	HeadImage       uint32             // 头像
+	Birthday        []uint8            // 生日
+	NameCard        uint32             // 当前名片
+	NameCardList    []uint32           // 已解锁名片列表
+	FriendList      map[uint32]bool    // 好友uid列表
+	FriendApplyList map[uint32]bool    // 好友申请uid列表
+	OfflineTime     uint32             // 离线时间点
+	OnlineTime      uint32             // 上线时间点
+	TotalOnlineTime uint32             // 累计在线时长
+	PropertiesMap   map[uint16]uint32  // 玩家自身相关的一些属性
+	FlyCloakList    []uint32           // 风之翼列表
+	CostumeList     []uint32           // 角色衣装列表
+	SceneId         uint32             // 场景
+	IsGM            uint8              // 管理员权限等级
+	SafePos         *Vector            // 在陆地时的坐标
+	Pos             *Vector            // 坐标
+	Rot             *Vector            // 朝向
+	DbItem          *DbItem            // 道具
+	DbWeapon        *DbWeapon          // 武器
+	DbReliquary     *DbReliquary       // 圣遗物
+	DbTeam          *DbTeam            // 队伍
+	DbAvatar        *DbAvatar          // 角色
+	DbGacha         *DbGacha           // 卡池
+	DbQuest         *DbQuest           // 任务
 	// 在线数据 请随意 记得加忽略字段的tag
 	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
-	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 玩家的世界进入令牌
+	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 世界进入令牌
 	DbState               int                                      `bson:"-" msgpack:"-"` // 数据库存档状态
 	WorldId               uint32                                   `bson:"-" msgpack:"-"` // 所在的世界id
 	GameObjectGuidCounter uint64                                   `bson:"-" msgpack:"-"` // 游戏对象guid计数器
 	LastKeepaliveTime     uint32                                   `bson:"-" msgpack:"-"` // 上一次保持活跃时间
-	ClientTime            uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端的本地时钟
-	ClientRTT             uint32                                   `bson:"-" msgpack:"-"` // 玩家客户端往返时延
+	ClientTime            uint32                                   `bson:"-" msgpack:"-"` // 客户端的本地时钟
+	ClientRTT             uint32                                   `bson:"-" msgpack:"-"` // 客户端往返时延
 	GameObjectGuidMap     map[uint64]GameObject                    `bson:"-" msgpack:"-"` // 游戏对象guid映射表
 	Online                bool                                     `bson:"-" msgpack:"-"` // 在线状态
 	Pause                 bool                                     `bson:"-" msgpack:"-"` // 暂停状态
@@ -78,6 +76,7 @@ type Player struct {
 	GateAppId             string                                   `bson:"-" msgpack:"-"` // 网关服务器的appid
 	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
 	GCGCurGameGuid        uint32                                   `bson:"-" msgpack:"-"` // GCG玩家所在的游戏guid
+	GCGInfo               *GCGInfo                                 `bson:"-" msgpack:"-"` // 七圣召唤信息
 	// 特殊数据
 	ChatMsgMap map[uint32][]*ChatMsg `bson:"-" msgpack:"-"` // 聊天信息 数据量偏大 只从db读写 不保存到redis
 }
@@ -87,17 +86,15 @@ func (p *Player) GetNextGameObjectGuid() uint64 {
 	return uint64(p.PlayerID)<<32 + p.GameObjectGuidCounter
 }
 
-func (p *Player) InitAll() {
+func (p *Player) InitOnlineData() {
+	// 在线数据初始化
 	p.GameObjectGuidMap = make(map[uint64]GameObject)
 	p.CoopApplyMap = make(map[uint32]int64)
-	p.StaminaInfo = new(StaminaInfo)
-	p.VehicleInfo = new(VehicleInfo)
-	p.VehicleInfo.LastCreateEntityIdMap = make(map[uint32]uint32)
+	p.StaminaInfo = NewStaminaInfo()
+	p.VehicleInfo = NewVehicleInfo()
+	p.CombatInvokeHandler = NewInvokeHandler[proto.CombatInvokeEntry]()
+	p.AbilityInvokeHandler = NewInvokeHandler[proto.AbilityInvokeEntry]()
 	p.GCGInfo = NewGCGInfo() // 临时测试用数据
-	p.InitAllAvatar()
-	p.InitAllWeapon()
-	p.InitAllItem()
-	p.InitAllReliquary()
 }
 
 // 多人世界网络同步包转发器

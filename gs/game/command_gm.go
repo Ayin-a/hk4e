@@ -23,7 +23,7 @@ func (c *CommandManager) GMTeleportPlayer(userId, sceneId uint32, posX, posY, po
 
 // GMAddUserItem 给予玩家物品
 func (c *CommandManager) GMAddUserItem(userId, itemId, itemCount uint32) {
-	GAME_MANAGER.AddUserItem(userId, []*UserItem{
+	GAME_MANAGER.AddUserItem(userId, []*ChangeItem{
 		{
 			ItemId:      itemId,
 			ChangeCount: itemCount,
@@ -75,9 +75,9 @@ func (c *CommandManager) GMAddUserAllItem(userId, itemCount uint32) {
 	// for itemId := range GAME_MANAGER.GetAllItemDataConfig() {
 	// 	c.GMAddUserItem(userId, uint32(itemId), itemCount)
 	// }
-	itemList := make([]*UserItem, 0)
+	itemList := make([]*ChangeItem, 0)
 	for itemId := range GAME_MANAGER.GetAllItemDataConfig() {
-		itemList = append(itemList, &UserItem{
+		itemList = append(itemList, &ChangeItem{
 			ItemId:      uint32(itemId),
 			ChangeCount: itemCount,
 		})

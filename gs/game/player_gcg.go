@@ -169,6 +169,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		},
 	}
 	// 玩家信息列表
+	dbAvatar := player.GetDbAvatar()
 	for _, controller := range game.controllerMap {
 		gcgControllerShowInfo := &proto.GCGControllerShowInfo{
 			ControllerId:   controller.controllerId,
@@ -177,7 +178,7 @@ func (g *GameManager) GCGAskDuelReq(player *model.Player, payloadMsg pb.Message)
 		// 如果为玩家则更改为玩家信息
 		if controller.controllerType == ControllerType_Player {
 			gcgControllerShowInfo.ProfilePicture.AvatarId = player.HeadImage
-			gcgControllerShowInfo.ProfilePicture.AvatarId = player.AvatarMap[player.HeadImage].Costume
+			gcgControllerShowInfo.ProfilePicture.AvatarId = dbAvatar.AvatarMap[player.HeadImage].Costume
 		}
 		gcgAskDuelRsp.Duel.ShowInfoList = append(gcgAskDuelRsp.Duel.ShowInfoList)
 	}
@@ -481,6 +482,8 @@ func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, busines
 		},
 		IsNewGame: true, // TODO 根据游戏修改
 	}
+	dbTeam := player.GetDbTeam()
+	dbAvatar := player.GetDbAvatar()
 	for _, controller := range game.controllerMap {
 		gcgPlayerBriefData := &proto.GCGPlayerBriefData{
 			ControllerId:   controller.controllerId,
@@ -494,8 +497,8 @@ func (g *GameManager) PacketGCGGameBriefDataNotify(player *model.Player, busines
 		// 玩家信息
 		if controller.player != nil {
 			gcgPlayerBriefData.Uid = player.PlayerID
-			gcgPlayerBriefData.ProfilePicture.AvatarId = player.TeamConfig.GetActiveAvatarId()
-			gcgPlayerBriefData.ProfilePicture.CostumeId = player.AvatarMap[player.TeamConfig.GetActiveAvatarId()].Costume
+			gcgPlayerBriefData.ProfilePicture.AvatarId = dbTeam.GetActiveAvatarId()
+			gcgPlayerBriefData.ProfilePicture.CostumeId = dbAvatar.AvatarMap[dbTeam.GetActiveAvatarId()].Costume
 			gcgPlayerBriefData.NickName = player.NickName
 		}
 		gcgGameBriefDataNotify.GcgBriefData.PlayerBriefList = append(gcgGameBriefDataNotify.GcgBriefData.PlayerBriefList)

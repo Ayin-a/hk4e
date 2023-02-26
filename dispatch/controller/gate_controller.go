@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"hk4e/pkg/logger"
 
@@ -51,12 +52,7 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		verifyFail(account.PlayerID)
 		return
 	}
-	if account.ComboTokenUsed {
-		verifyFail(account.PlayerID)
-		return
-	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("AccountID", account.AccountID, "ComboTokenUsed", true)
-	if err != nil {
+	if time.Now().UnixMilli()-int64(account.ComboTokenCreateTime) > time.Minute.Milliseconds()*5 {
 		verifyFail(account.PlayerID)
 		return
 	}
@@ -65,34 +61,5 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		Forbid:        account.Forbid,
 		ForbidEndTime: account.ForbidEndTime,
 		PlayerID:      account.PlayerID,
-	})
-}
-
-type TokenResetReq struct {
-	PlayerId uint32 `json:"playerId"`
-}
-
-type TokenResetRsp struct {
-	Result bool `json:"result"`
-}
-
-func (c *Controller) gateTokenReset(context *gin.Context) {
-	req := new(TokenResetReq)
-	err := context.ShouldBindJSON(req)
-	if err != nil {
-		context.JSON(http.StatusOK, &TokenResetRsp{
-			Result: false,
-		})
-		return
-	}
-	_, err = c.dao.UpdateAccountFieldByFieldName("PlayerID", req.PlayerId, "ComboTokenUsed", false)
-	if err != nil {
-		context.JSON(http.StatusOK, &TokenResetRsp{
-			Result: false,
-		})
-		return
-	}
-	context.JSON(http.StatusOK, &TokenResetRsp{
-		Result: true,
 	})
 }

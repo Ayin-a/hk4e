@@ -22,7 +22,13 @@ func (d *Dao) GetNextYuanShenUid() (uint32, error) {
 }
 
 func (d *Dao) redisInc(keyName string) (uint32, error) {
-	exist, err := d.redis.Exists(context.TODO(), keyName).Result()
+	var exist int64 = 0
+	var err error = nil
+	if d.redisCluster != nil {
+		exist, err = d.redisCluster.Exists(context.TODO(), keyName).Result()
+	} else {
+		exist, err = d.redis.Exists(context.TODO(), keyName).Result()
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -33,12 +39,22 @@ func (d *Dao) redisInc(keyName string) (uint32, error) {
 		} else if keyName == RedisPlayerKeyPrefix+":"+YuanShenUidRedisKey {
 			value = YuanShenUidBegin
 		}
-		err := d.redis.Set(context.TODO(), keyName, value, 0).Err()
+		var err error = nil
+		if d.redisCluster != nil {
+			err = d.redisCluster.Set(context.TODO(), keyName, value, 0).Err()
+		} else {
+			err = d.redis.Set(context.TODO(), keyName, value, 0).Err()
+		}
 		if err != nil {
 			return 0, err
 		}
 	}
-	id, err := d.redis.Incr(context.TODO(), keyName).Result()
+	var id int64 = 0
+	if d.redisCluster != nil {
+		id, err = d.redisCluster.Incr(context.TODO(), keyName).Result()
+	} else {
+		id, err = d.redis.Incr(context.TODO(), keyName).Result()
+	}
 	if err != nil {
 		return 0, err
 	}

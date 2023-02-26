@@ -30,7 +30,13 @@ func (d *Dao) GetRedisPlayerLockKey(userId uint32) string {
 // GetRedisPlayer 获取玩家数据
 func (d *Dao) GetRedisPlayer(userId uint32) *model.Player {
 	startTime := time.Now().UnixNano()
-	playerDataLz4, err := d.redis.Get(context.TODO(), d.GetRedisPlayerKey(userId)).Result()
+	var playerDataLz4 = ""
+	var err error = nil
+	if d.redisCluster != nil {
+		playerDataLz4, err = d.redisCluster.Get(context.TODO(), d.GetRedisPlayerKey(userId)).Result()
+	} else {
+		playerDataLz4, err = d.redis.Get(context.TODO(), d.GetRedisPlayerKey(userId)).Result()
+	}
 	if err != nil {
 		logger.Error("get player from redis error: %v", err)
 		return nil
@@ -90,7 +96,11 @@ func (d *Dao) SetRedisPlayer(player *model.Player) {
 	logger.Debug("lz4 encode cost time: %v ns, before len: %v, after len: %v, ratio lz4/raw: %v",
 		costTime, len(playerData), len(playerDataLz4), float64(len(playerDataLz4))/float64(len(playerData)))
 	startTime = time.Now().UnixNano()
-	err = d.redis.Set(context.TODO(), d.GetRedisPlayerKey(player.PlayerID), playerDataLz4, time.Hour*24*30).Err()
+	if d.redisCluster != nil {
+		err = d.redisCluster.Set(context.TODO(), d.GetRedisPlayerKey(player.PlayerID), playerDataLz4, time.Hour*24*30).Err()
+	} else {
+		err = d.redis.Set(context.TODO(), d.GetRedisPlayerKey(player.PlayerID), playerDataLz4, time.Hour*24*30).Err()
+	}
 	if err != nil {
 		logger.Error("set player to redis error: %v", err)
 		return
@@ -118,10 +128,19 @@ const (
 
 // DistLock 加锁并返回是否成功
 func (d *Dao) DistLock(userId uint32) bool {
-	result, err := d.redis.SetNX(context.TODO(),
-		d.GetRedisPlayerLockKey(userId),
-		time.Now().UnixMilli(),
-		time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+	var result = false
+	var err error = nil
+	if d.redisCluster != nil {
+		result, err = d.redisCluster.SetNX(context.TODO(),
+			d.GetRedisPlayerLockKey(userId),
+			time.Now().UnixMilli(),
+			time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+	} else {
+		result, err = d.redis.SetNX(context.TODO(),
+			d.GetRedisPlayerLockKey(userId),
+			time.Now().UnixMilli(),
+			time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+	}
 	if err != nil {
 		logger.Error("redis lock setnx error: %v", err)
 		return false
@@ -132,10 +151,19 @@ func (d *Dao) DistLock(userId uint32) bool {
 // DistLockSync 加锁同步阻塞直到成功或超时
 func (d *Dao) DistLockSync(userId uint32) bool {
 	for i := 0; i < MaxLockRetryTimes; i++ {
-		result, err := d.redis.SetNX(context.TODO(),
-			d.GetRedisPlayerLockKey(userId),
-			time.Now().UnixMilli(),
-			time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+		var result = false
+		var err error = nil
+		if d.redisCluster != nil {
+			result, err = d.redisCluster.SetNX(context.TODO(),
+				d.GetRedisPlayerLockKey(userId),
+				time.Now().UnixMilli(),
+				time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+		} else {
+			result, err = d.redis.SetNX(context.TODO(),
+				d.GetRedisPlayerLockKey(userId),
+				time.Now().UnixMilli(),
+				time.Millisecond*time.Duration(MaxLockAliveTime)).Result()
+		}
 		if err != nil {
 			logger.Error("redis lock setnx error: %v", err)
 			return false
@@ -150,7 +178,13 @@ func (d *Dao) DistLockSync(userId uint32) bool {
 
 // DistUnlock 解锁
 func (d *Dao) DistUnlock(userId uint32) {
-	result, err := d.redis.Del(context.TODO(), d.GetRedisPlayerLockKey(userId)).Result()
+	var result int64 = 0
+	var err error = nil
+	if d.redisCluster != nil {
+		result, err = d.redisCluster.Del(context.TODO(), d.GetRedisPlayerLockKey(userId)).Result()
+	} else {
+		result, err = d.redis.Del(context.TODO(), d.GetRedisPlayerLockKey(userId)).Result()
+	}
 	if err != nil {
 		logger.Error("redis lock del error: %v", err)
 		return

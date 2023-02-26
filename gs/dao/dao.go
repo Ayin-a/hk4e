@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"strings"
 
 	"hk4e/common/config"
 	"hk4e/pkg/logger"
@@ -13,13 +14,15 @@ import (
 )
 
 type Dao struct {
-	mongo *mongo.Client
-	db    *mongo.Database
-	redis *redis.Client
+	mongo        *mongo.Client
+	db           *mongo.Database
+	redis        *redis.Client
+	redisCluster *redis.ClusterClient
 }
 
 func NewDao() (r *Dao, err error) {
 	r = new(Dao)
+
 	clientOptions := options.Client().ApplyURI(config.GetConfig().Database.Url).SetMinPoolSize(1).SetMaxPoolSize(10)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
@@ -33,18 +36,37 @@ func NewDao() (r *Dao, err error) {
 	}
 	r.mongo = client
 	r.db = client.Database("gs_hk4e")
-	r.redis = redis.NewClient(&redis.Options{
-		Addr:         config.GetConfig().Redis.Addr,
-		Password:     config.GetConfig().Redis.Password,
-		DB:           0,
-		PoolSize:     10,
-		MinIdleConns: 1,
-	})
-	err = r.redis.Ping(context.TODO()).Err()
+
+	r.redis = nil
+	r.redisCluster = nil
+	redisAddr := strings.ReplaceAll(config.GetConfig().Redis.Addr, "redis://", "")
+	if strings.Contains(redisAddr, ",") {
+		redisAddrList := strings.Split(redisAddr, ",")
+		r.redisCluster = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:        redisAddrList,
+			Password:     config.GetConfig().Redis.Password,
+			PoolSize:     10,
+			MinIdleConns: 1,
+		})
+	} else {
+		r.redis = redis.NewClient(&redis.Options{
+			Addr:         redisAddr,
+			Password:     config.GetConfig().Redis.Password,
+			DB:           0,
+			PoolSize:     10,
+			MinIdleConns: 1,
+		})
+	}
+	if r.redisCluster != nil {
+		err = r.redisCluster.Ping(context.TODO()).Err()
+	} else {
+		err = r.redis.Ping(context.TODO()).Err()
+	}
 	if err != nil {
 		logger.Error("redis ping error: %v", err)
 		return nil, err
 	}
+
 	return r, nil
 }
 
@@ -53,7 +75,11 @@ func (d *Dao) CloseDao() {
 	if err != nil {
 		logger.Error("mongo close error: %v", err)
 	}
-	err = d.redis.Close()
+	if d.redisCluster != nil {
+		err = d.redisCluster.Close()
+	} else {
+		err = d.redis.Close()
+	}
 	if err != nil {
 		logger.Error("redis close error: %v", err)
 	}

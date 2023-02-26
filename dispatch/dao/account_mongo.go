@@ -27,7 +27,7 @@ func (d *Dao) InsertAccount(account *model.Account) (primitive.ObjectID, error) 
 
 func (d *Dao) UpdateAccountFieldByFieldName(fieldName string, fieldValue any, fieldUpdateName string, fieldUpdateValue any) (int64, error) {
 	db := d.db.Collection("account")
-	updateCount, err := db.UpdateOne(
+	updateCount, err := db.UpdateMany(
 		context.TODO(),
 		bson.D{
 			{fieldName, fieldValue},

@@ -39,7 +39,8 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	if !world.GetMultiplayer() {
-		player.TeamConfig.CurrAvatarIndex = uint8(newAvatarIndex)
+		dbTeam := player.GetDbTeam()
+		dbTeam.CurrAvatarIndex = uint8(newAvatarIndex)
 	}
 	world.SetPlayerAvatarIndex(player, newAvatarIndex)
 	oldAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, oldAvatarId)
@@ -89,31 +90,33 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 		return
 	}
 	avatarGuidList := req.AvatarTeamGuidList
-	selfTeam := teamId == uint32(player.TeamConfig.GetActiveTeamId())
+	dbTeam := player.GetDbTeam()
+	selfTeam := teamId == uint32(dbTeam.GetActiveTeamId())
 	if (selfTeam && len(avatarGuidList) == 0) || len(avatarGuidList) > 4 {
 		g.SendError(cmd.SetUpAvatarTeamRsp, player, &proto.SetUpAvatarTeamRsp{})
 		return
 	}
 	avatarIdList := make([]uint32, 0)
+	dbAvatar := player.GetDbAvatar()
 	for _, avatarGuid := range avatarGuidList {
-		for avatarId, avatar := range player.AvatarMap {
+		for avatarId, avatar := range dbAvatar.AvatarMap {
 			if avatarGuid == avatar.Guid {
 				avatarIdList = append(avatarIdList, avatarId)
 			}
 		}
 	}
-	player.TeamConfig.GetTeamByIndex(uint8(teamId - 1)).SetAvatarIdList(avatarIdList)
+	dbTeam.GetTeamByIndex(uint8(teamId - 1)).SetAvatarIdList(avatarIdList)
 
 	avatarTeamUpdateNotify := &proto.AvatarTeamUpdateNotify{
 		AvatarTeamMap: make(map[uint32]*proto.AvatarTeam),
 	}
-	for teamIndex, team := range player.TeamConfig.TeamList {
+	for teamIndex, team := range dbTeam.TeamList {
 		avatarTeam := &proto.AvatarTeam{
 			TeamName:       team.Name,
 			AvatarGuidList: make([]uint64, 0),
 		}
 		for _, avatarId := range team.GetAvatarIdList() {
-			avatarTeam.AvatarGuidList = append(avatarTeam.AvatarGuidList, player.AvatarMap[avatarId].Guid)
+			avatarTeam.AvatarGuidList = append(avatarTeam.AvatarGuidList, dbAvatar.AvatarMap[avatarId].Guid)
 		}
 		avatarTeamUpdateNotify.AvatarTeamMap[uint32(teamIndex)+1] = avatarTeam
 	}
@@ -133,7 +136,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 		}
 		currAvatarId := currAvatar.AvatarId
 		currAvatarIndex := world.GetPlayerAvatarIndexByAvatarId(player, currAvatarId)
-		player.TeamConfig.CurrAvatarIndex = uint8(currAvatarIndex)
+		dbTeam.CurrAvatarIndex = uint8(currAvatarIndex)
 		world.SetPlayerAvatarIndex(player, currAvatarIndex)
 
 		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
@@ -157,12 +160,13 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 		g.SendError(cmd.ChooseCurAvatarTeamRsp, player, &proto.ChooseCurAvatarTeamRsp{})
 		return
 	}
-	team := player.TeamConfig.GetTeamByIndex(uint8(teamId) - 1)
+	dbTeam := player.GetDbTeam()
+	team := dbTeam.GetTeamByIndex(uint8(teamId) - 1)
 	if team == nil || len(team.GetAvatarIdList()) == 0 {
 		return
 	}
-	player.TeamConfig.CurrTeamIndex = uint8(teamId) - 1
-	player.TeamConfig.CurrAvatarIndex = 0
+	dbTeam.CurrTeamIndex = uint8(teamId) - 1
+	dbTeam.CurrAvatarIndex = 0
 	// player.TeamConfig.UpdateTeam()
 	world.SetPlayerAvatarIndex(player, 0)
 	world.SetPlayerLocalTeam(player, team.GetAvatarIdList())
@@ -239,7 +243,8 @@ func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeam
 			logger.Error("scene is nil, sceneId: %v", worldPlayer.SceneId)
 			return new(proto.SceneTeamUpdateNotify)
 		}
-		worldPlayerAvatar := worldPlayer.AvatarMap[worldAvatar.GetAvatarId()]
+		worldPlayerDbAvatar := worldPlayer.GetDbAvatar()
+		worldPlayerAvatar := worldPlayerDbAvatar.AvatarMap[worldAvatar.GetAvatarId()]
 		equipIdList := make([]uint32, 0)
 		weapon := worldPlayerAvatar.EquipWeapon
 		equipIdList = append(equipIdList, weapon.ItemId)

@@ -80,19 +80,20 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 		return
 	}
 
-	if player.GetItemCount(201) < costHcoinCount {
+	dbItem := player.GetDbItem()
+	if dbItem.GetItemCount(player, 201) < costHcoinCount {
 		return
 	}
-	g.CostUserItem(player.PlayerID, []*UserItem{{
+	g.CostUserItem(player.PlayerID, []*ChangeItem{{
 		ItemId:      201,
 		ChangeCount: costHcoinCount,
 	}})
 
-	g.AddUserItem(player.PlayerID, []*UserItem{{
+	g.AddUserItem(player.PlayerID, []*ChangeItem{{
 		ItemId:      buyItemId,
 		ChangeCount: buyItemCount,
 	}}, true, constant.ActionReasonShop)
-	req.Goods.BoughtNum = player.GetItemCount(buyItemId)
+	req.Goods.BoughtNum = dbItem.GetItemCount(player, buyItemId)
 
 	buyGoodsRsp := &proto.BuyGoodsRsp{
 		ShopType:  req.ShopType,
@@ -110,15 +111,16 @@ func (g *GameManager) McoinExchangeHcoinReq(player *model.Player, payloadMsg pb.
 	}
 	count := req.Hcoin
 
-	if player.GetItemCount(203) < count {
+	dbItem := player.GetDbItem()
+	if dbItem.GetItemCount(player, 203) < count {
 		return
 	}
-	g.CostUserItem(player.PlayerID, []*UserItem{{
+	g.CostUserItem(player.PlayerID, []*ChangeItem{{
 		ItemId:      203,
 		ChangeCount: count,
 	}})
 
-	g.AddUserItem(player.PlayerID, []*UserItem{{
+	g.AddUserItem(player.PlayerID, []*ChangeItem{{
 		ItemId:      201,
 		ChangeCount: count,
 	}}, false, 0)

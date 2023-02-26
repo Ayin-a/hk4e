@@ -41,12 +41,13 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 		return
 	}
 	// 判断玩家是否已有该角色
-	_, ok := player.AvatarMap[avatarId]
+	dbAvatar := player.GetDbAvatar()
+	_, ok := dbAvatar.AvatarMap[avatarId]
 	if ok {
 		// TODO 如果已有转换命座材料
 		return
 	}
-	player.AddAvatar(avatarId)
+	dbAvatar.AddAvatar(player, avatarId)
 
 	// 添加初始武器
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatarId))
@@ -62,7 +63,7 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 	g.UpdateUserAvatarFightProp(player.PlayerID, avatarId)
 
 	avatarAddNotify := &proto.AvatarAddNotify{
-		Avatar:   g.PacketAvatarInfo(player.AvatarMap[avatarId]),
+		Avatar:   g.PacketAvatarInfo(dbAvatar.AvatarMap[avatarId]),
 		IsInTeam: false,
 	}
 	g.SendMsg(cmd.AvatarAddNotify, userId, player.ClientSeq, avatarAddNotify)
@@ -102,9 +103,9 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 	// 设置该奖励为已被获取状态
 	avatar.PromoteRewardMap[req.PromoteLevel] = true
 	// 给予突破奖励
-	rewardItemList := make([]*UserItem, 0, len(rewardConfig.RewardItemMap))
+	rewardItemList := make([]*ChangeItem, 0, len(rewardConfig.RewardItemMap))
 	for itemId, count := range rewardConfig.RewardItemMap {
-		rewardItemList = append(rewardItemList, &UserItem{
+		rewardItemList = append(rewardItemList, &ChangeItem{
 			ItemId:      itemId,
 			ChangeCount: count,
 		})
@@ -158,22 +159,23 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 将被消耗的物品列表
-	costItemList := make([]*UserItem, 0, len(avatarPromoteConfig.CostItemMap)+1)
+	costItemList := make([]*ChangeItem, 0, len(avatarPromoteConfig.CostItemMap)+1)
 	// 突破材料是否足够并添加到消耗物品列表
 	for itemId, count := range avatarPromoteConfig.CostItemMap {
-		costItemList = append(costItemList, &UserItem{
+		costItemList = append(costItemList, &ChangeItem{
 			ItemId:      itemId,
 			ChangeCount: count,
 		})
 	}
 	// 消耗列表添加摩拉的消耗
-	costItemList = append(costItemList, &UserItem{
+	costItemList = append(costItemList, &ChangeItem{
 		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: uint32(avatarPromoteConfig.CostCoin),
 	})
 	// 突破材料以及摩拉是否足够
+	dbItem := player.GetDbItem()
 	for _, item := range costItemList {
-		if player.GetItemCount(item.ItemId) < item.ChangeCount {
+		if dbItem.GetItemCount(player, item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ITEM_ID_SCOIN {
@@ -217,7 +219,8 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 经验书数量是否足够
-	if player.GetItemCount(req.ItemId) < req.Count {
+	dbItem := player.GetDbItem()
+	if dbItem.GetItemCount(player, req.ItemId) < req.Count {
 		logger.Error("item count not enough, itemId: %v", req.ItemId)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
 		return
@@ -239,7 +242,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	// 角色获得的经验
 	expCount := uint32(itemParam) * req.Count
 	// 摩拉数量是否足够
-	if player.GetItemCount(constant.ITEM_ID_SCOIN) < expCount/5 {
+	if dbItem.GetItemCount(player, constant.ITEM_ID_SCOIN) < expCount/5 {
 		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.AvatarUpgradeRsp, player, &proto.AvatarUpgradeRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 		return
@@ -265,7 +268,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 消耗升级材料以及摩拉
-	g.CostUserItem(player.PlayerID, []*UserItem{
+	g.CostUserItem(player.PlayerID, []*ChangeItem{
 		{
 			ItemId:      req.ItemId,
 			ChangeCount: req.Count,
@@ -365,13 +368,14 @@ func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) 
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	avatar, ok := player.AvatarMap[avatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[avatarId]
 	if !ok {
 		logger.Error("avatar is nil, avatarId: %v", avatar)
 		return
 	}
 	// 角色初始化面板
-	player.InitAvatarFightProp(avatar)
+	dbAvatar.InitAvatarFightProp(avatar)
 
 	avatarFightPropNotify := &proto.AvatarFightPropNotify{
 		AvatarGuid:   avatar.Guid,

@@ -50,8 +50,9 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 		return 0
 	}
 	weaponId := uint64(g.snowflake.GenId())
-	player.AddWeapon(itemId, weaponId)
-	weapon := player.GetWeapon(weaponId)
+	dbWeapon := player.GetDbWeapon()
+	dbWeapon.AddWeapon(player, itemId, weaponId)
+	weapon := dbWeapon.GetWeapon(weaponId)
 	if weapon == nil {
 		logger.Error("weapon is nil, itemId: %v, weaponId: %v", itemId, weaponId)
 		return 0
@@ -70,8 +71,9 @@ func (g *GameManager) CostUserWeapon(userId uint32, weaponIdList []uint64) {
 		GuidList:  make([]uint64, 0, len(weaponIdList)),
 		StoreType: proto.StoreType_STORE_PACK,
 	}
+	dbWeapon := player.GetDbWeapon()
 	for _, weaponId := range weaponIdList {
-		weaponGuid := player.CostWeapon(weaponId)
+		weaponGuid := dbWeapon.CostWeapon(player, weaponId)
 		if weaponGuid == 0 {
 			logger.Error("weapon cost error, weaponId: %v", weaponId)
 			return
@@ -142,7 +144,8 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 摩拉数量是否足够
-	if player.GetItemCount(constant.ITEM_ID_SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
+	dbItem := player.GetDbItem()
+	if dbItem.GetItemCount(player, constant.ITEM_ID_SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
 		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
 		return
@@ -224,7 +227,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 			return
 		}
 		// 消耗作为精炼材料的道具
-		g.CostUserItem(player.PlayerID, []*UserItem{
+		g.CostUserItem(player.PlayerID, []*ChangeItem{
 			{
 				ItemId:      item.ItemId,
 				ChangeCount: 1,
@@ -236,7 +239,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 消耗摩拉
-	g.CostUserItem(player.PlayerID, []*UserItem{
+	g.CostUserItem(player.PlayerID, []*ChangeItem{
 		{
 			ItemId:      constant.ITEM_ID_SCOIN,
 			ChangeCount: weaponConfig.AwakenCoinCostList[weapon.Refinement],
@@ -260,7 +263,8 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	// 更新武器的物品数据
 	g.SendMsg(cmd.StoreItemChangeNotify, player.PlayerID, player.ClientSeq, g.PacketStoreItemChangeNotifyByWeapon(weapon))
 	// 获取持有该武器的角色
-	avatar, ok := player.AvatarMap[weapon.AvatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[weapon.AvatarId]
 	// 武器可能没被任何角色装备 仅在被装备时更新面板
 	if ok {
 		weaponAwakenRsp.AvatarGuid = avatar.Guid
@@ -315,22 +319,23 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 将被消耗的物品列表
-	costItemList := make([]*UserItem, 0, len(weaponPromoteConfig.CostItemMap)+1)
+	costItemList := make([]*ChangeItem, 0, len(weaponPromoteConfig.CostItemMap)+1)
 	// 突破材料是否足够并添加到消耗物品列表
 	for itemId, count := range weaponPromoteConfig.CostItemMap {
-		costItemList = append(costItemList, &UserItem{
+		costItemList = append(costItemList, &ChangeItem{
 			ItemId:      itemId,
 			ChangeCount: count,
 		})
 	}
 	// 消耗列表添加摩拉的消耗
-	costItemList = append(costItemList, &UserItem{
+	costItemList = append(costItemList, &ChangeItem{
 		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: uint32(weaponPromoteConfig.CostCoin),
 	})
 	// 突破材料以及摩拉是否足够
+	dbItem := player.GetDbItem()
 	for _, item := range costItemList {
-		if player.GetItemCount(item.ItemId) < item.ChangeCount {
+		if dbItem.GetItemCount(player, item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ITEM_ID_SCOIN {
@@ -357,7 +362,8 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 	// 更新武器的物品数据
 	g.SendMsg(cmd.StoreItemChangeNotify, player.PlayerID, player.ClientSeq, g.PacketStoreItemChangeNotifyByWeapon(weapon))
 	// 获取持有该武器的角色
-	avatar, ok := player.AvatarMap[weapon.AvatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[weapon.AvatarId]
 	// 武器可能没被任何角色装备 仅在被装备时更新面板
 	if ok {
 		// 角色更新面板
@@ -576,10 +582,10 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 将被消耗的物品列表
-	costItemList := make([]*UserItem, 0, len(req.ItemParamList)+1)
+	costItemList := make([]*ChangeItem, 0, len(req.ItemParamList)+1)
 	// 突破材料是否足够并添加到消耗物品列表
 	for _, itemParam := range req.ItemParamList {
-		costItemList = append(costItemList, &UserItem{
+		costItemList = append(costItemList, &ChangeItem{
 			ItemId:      itemParam.ItemId,
 			ChangeCount: itemParam.Count,
 		})
@@ -592,13 +598,14 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 消耗列表添加摩拉的消耗
-	costItemList = append(costItemList, &UserItem{
+	costItemList = append(costItemList, &ChangeItem{
 		ItemId:      constant.ITEM_ID_SCOIN,
 		ChangeCount: coinCost,
 	})
 	// 校验物品是否足够
+	dbItem := player.GetDbItem()
 	for _, item := range costItemList {
-		if player.GetItemCount(item.ItemId) < item.ChangeCount {
+		if dbItem.GetItemCount(player, item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ITEM_ID_SCOIN {
@@ -652,7 +659,8 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	g.SendMsg(cmd.StoreItemChangeNotify, player.PlayerID, player.ClientSeq, g.PacketStoreItemChangeNotifyByWeapon(weapon))
 
 	// 获取持有该武器的角色
-	avatar, ok := player.AvatarMap[weapon.AvatarId]
+	dbAvatar := player.GetDbAvatar()
+	avatar, ok := dbAvatar.AvatarMap[weapon.AvatarId]
 	// 武器可能没被任何角色装备 仅在被装备时更新面板
 	if ok {
 		// 角色更新面板
@@ -660,9 +668,9 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 	}
 
 	// 将给予的材料列表
-	addItemList := make([]*UserItem, 0, len(returnItemList))
+	addItemList := make([]*ChangeItem, 0, len(returnItemList))
 	for _, param := range returnItemList {
-		addItemList = append(addItemList, &UserItem{
+		addItemList = append(addItemList, &ChangeItem{
 			ItemId:      param.ItemId,
 			ChangeCount: param.Count,
 		})

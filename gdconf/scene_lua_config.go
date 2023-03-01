@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"hk4e/pkg/logger"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // 场景详情配置数据
@@ -14,16 +16,16 @@ const (
 	SceneGroupLoaderLimit = 4 // 加载文件的并发数 此操作很耗内存 调大之前请确保你的机器内存足够
 )
 
-type SceneDetail struct {
+type SceneLuaConfig struct {
 	Id          int32
 	SceneConfig *SceneConfig     // 地图配置
 	BlockMap    map[int32]*Block // 所有的区块
 }
 
 type Vector struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-	Z float64 `json:"z"`
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
+	Z float32 `json:"z"`
 }
 
 type SceneConfig struct {
@@ -31,7 +33,7 @@ type SceneConfig struct {
 	Size         *Vector `json:"size"`
 	BornPos      *Vector `json:"born_pos"`
 	BornRot      *Vector `json:"born_rot"`
-	DieY         float64 `json:"die_y"`
+	DieY         float32 `json:"die_y"`
 	VisionAnchor *Vector `json:"vision_anchor"`
 }
 
@@ -55,7 +57,11 @@ type Group struct {
 	IsReplaceable *Replaceable `json:"is_replaceable"`
 	MonsterList   []*Monster   `json:"monsters"` // 怪物
 	NpcList       []*Npc       `json:"npcs"`     // NPC
-	GadgetList    []*Gadget    `json:"gadgets"`  // 装置
+	GadgetList    []*Gadget    `json:"gadgets"`  // 物件
+	RegionList    []*Region    `json:"regions"`
+	TriggerList   []*Trigger   `json:"triggers"`
+	LuaStr        string
+	LuaState      *lua.LState
 }
 
 type Replaceable struct {
@@ -91,6 +97,25 @@ type Gadget struct {
 	PointType int32   `json:"point_type"` // 关联GatherData表
 }
 
+type Region struct {
+	ConfigId int32   `json:"config_id"`
+	Shape    int32   `json:"shape"`
+	Radius   float32 `json:"radius"`
+	Size     *Vector `json:"size"`
+	Pos      *Vector `json:"pos"`
+	AreaId   int32   `json:"area_id"`
+}
+
+type Trigger struct {
+	ConfigId     int32  `json:"config_id"`
+	Name         string `json:"name"`
+	Event        int32  `json:"event"`
+	Source       string `json:"source"`
+	Condition    string `json:"condition"`
+	Action       string `json:"action"`
+	TriggerCount int32  `json:"trigger_count"`
+}
+
 func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, blockId int32) {
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	sceneIdStr := strconv.Itoa(int(sceneId))
@@ -101,13 +126,14 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 		logger.Error("open file error: %v, sceneId: %v, blockId: %v, groupId: %v", err, sceneId, blockId, groupId)
 		return
 	}
-	luaState := fixLuaState(string(groupLuaData))
+	group.LuaStr = string(groupLuaData)
+	luaState := newLuaState(group.LuaStr)
+	group.LuaState = luaState
 	// monsters
 	group.MonsterList = make([]*Monster, 0)
 	ok := parseLuaTableToObject[*[]*Monster](luaState, "monsters", &group.MonsterList)
 	if !ok {
 		logger.Error("get monsters object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-		luaState.Close()
 		return
 	}
 	// npcs
@@ -115,15 +141,27 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 	ok = parseLuaTableToObject[*[]*Npc](luaState, "npcs", &group.NpcList)
 	if !ok {
 		logger.Error("get npcs object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
-		luaState.Close()
 		return
 	}
 	// gadgets
 	group.GadgetList = make([]*Gadget, 0)
 	ok = parseLuaTableToObject[*[]*Gadget](luaState, "gadgets", &group.GadgetList)
-	luaState.Close()
 	if !ok {
 		logger.Error("get gadgets object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		return
+	}
+	// regions
+	group.RegionList = make([]*Region, 0)
+	ok = parseLuaTableToObject[*[]*Region](luaState, "regions", &group.RegionList)
+	if !ok {
+		logger.Error("get regions object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		return
+	}
+	// triggers
+	group.TriggerList = make([]*Trigger, 0)
+	ok = parseLuaTableToObject[*[]*Trigger](luaState, "triggers", &group.TriggerList)
+	if !ok {
+		logger.Error("get triggers object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 		return
 	}
 	block.groupMapLoadLock.Lock()
@@ -131,8 +169,8 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 	block.groupMapLoadLock.Unlock()
 }
 
-func (g *GameDataConfig) loadSceneDetail() {
-	g.SceneDetailMap = make(map[int32]*SceneDetail)
+func (g *GameDataConfig) loadSceneLuaConfig() {
+	g.SceneLuaConfigMap = make(map[int32]*SceneLuaConfig)
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	for _, sceneData := range g.SceneDataMap {
 		sceneId := sceneData.SceneId
@@ -142,18 +180,18 @@ func (g *GameDataConfig) loadSceneDetail() {
 			logger.Info("open file error: %v, sceneId: %v", err, sceneId)
 			continue
 		}
-		luaState := fixLuaState(string(mainLuaData))
-		sceneDetail := new(SceneDetail)
-		sceneDetail.Id = sceneId
+		luaState := newLuaState(string(mainLuaData))
+		sceneLuaConfig := new(SceneLuaConfig)
+		sceneLuaConfig.Id = sceneId
 		// scene_config
-		sceneDetail.SceneConfig = new(SceneConfig)
-		ok := parseLuaTableToObject[*SceneConfig](luaState, "scene_config", sceneDetail.SceneConfig)
+		sceneLuaConfig.SceneConfig = new(SceneConfig)
+		ok := parseLuaTableToObject[*SceneConfig](luaState, "scene_config", sceneLuaConfig.SceneConfig)
 		if !ok {
 			logger.Error("get scene_config object error, sceneId: %v", sceneId)
 			luaState.Close()
 			continue
 		}
-		sceneDetail.BlockMap = make(map[int32]*Block)
+		sceneLuaConfig.BlockMap = make(map[int32]*Block)
 		// blocks
 		blockIdList := make([]int32, 0)
 		ok = parseLuaTableToObject[*[]int32](luaState, "blocks", &blockIdList)
@@ -183,7 +221,7 @@ func (g *GameDataConfig) loadSceneDetail() {
 				logger.Error("open file error: %v, sceneId: %v, blockId: %v", err, sceneId, blockId)
 				continue
 			}
-			luaState = fixLuaState(string(blockLuaData))
+			luaState = newLuaState(string(blockLuaData))
 			// groups
 			block.GroupMap = make(map[int32]*Group)
 			groupList := make([]*Group, 0)
@@ -207,9 +245,9 @@ func (g *GameDataConfig) loadSceneDetail() {
 				}()
 			}
 			wg.Wait()
-			sceneDetail.BlockMap[block.Id] = block
+			sceneLuaConfig.BlockMap[block.Id] = block
 		}
-		g.SceneDetailMap[sceneId] = sceneDetail
+		g.SceneLuaConfigMap[sceneId] = sceneLuaConfig
 	}
 	sceneCount := 0
 	blockCount := 0
@@ -217,7 +255,7 @@ func (g *GameDataConfig) loadSceneDetail() {
 	monsterCount := 0
 	npcCount := 0
 	gadgetCount := 0
-	for _, scene := range g.SceneDetailMap {
+	for _, scene := range g.SceneLuaConfigMap {
 		for _, block := range scene.BlockMap {
 			for _, group := range block.GroupMap {
 				monsterCount += len(group.MonsterList)
@@ -233,19 +271,19 @@ func (g *GameDataConfig) loadSceneDetail() {
 		sceneCount, blockCount, groupCount, monsterCount, npcCount, gadgetCount)
 }
 
-func GetSceneDetailById(sceneId int32) *SceneDetail {
-	return CONF.SceneDetailMap[sceneId]
+func GetSceneLuaConfigById(sceneId int32) *SceneLuaConfig {
+	return CONF.SceneLuaConfigMap[sceneId]
 }
 
-func GetSceneDetailMap() map[int32]*SceneDetail {
-	return CONF.SceneDetailMap
+func GetSceneLuaConfigMap() map[int32]*SceneLuaConfig {
+	return CONF.SceneLuaConfigMap
 }
 
 func GetSceneBlockConfig(sceneId int32, blockId int32) ([]*Monster, []*Npc, []*Gadget, bool) {
 	monsterList := make([]*Monster, 0)
 	npcList := make([]*Npc, 0)
 	gadgetList := make([]*Gadget, 0)
-	sceneConfig, exist := CONF.SceneDetailMap[sceneId]
+	sceneConfig, exist := CONF.SceneLuaConfigMap[sceneId]
 	if !exist {
 		return nil, nil, nil, false
 	}

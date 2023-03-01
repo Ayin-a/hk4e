@@ -156,7 +156,7 @@ func TestSceneBlock(t *testing.T) {
 		logger.CloseLogger()
 	}()
 	InitGameDataConfig()
-	scene, exist := CONF.SceneDetailMap[3]
+	scene, exist := CONF.SceneLuaConfigMap[3]
 	if !exist {
 		panic("scene 3 not exist")
 	}

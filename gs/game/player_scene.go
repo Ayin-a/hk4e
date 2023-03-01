@@ -370,24 +370,24 @@ func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityCon
 	case *gdconf.Monster:
 		monster := entityConfig.(*gdconf.Monster)
 		return scene.CreateEntityMonster(&model.Vector{
-			X: monster.Pos.X,
-			Y: monster.Pos.Y,
-			Z: monster.Pos.Z,
+			X: float64(monster.Pos.X),
+			Y: float64(monster.Pos.Y),
+			Z: float64(monster.Pos.Z),
 		}, &model.Vector{
-			X: monster.Rot.X,
-			Y: monster.Rot.Y,
-			Z: monster.Rot.Z,
+			X: float64(monster.Rot.X),
+			Y: float64(monster.Rot.Y),
+			Z: float64(monster.Rot.Z),
 		}, uint32(monster.MonsterId), uint8(monster.Level), g.GetTempFightPropMap(), uint32(monster.ConfigId), objectId)
 	case *gdconf.Npc:
 		npc := entityConfig.(*gdconf.Npc)
 		return scene.CreateEntityNpc(&model.Vector{
-			X: npc.Pos.X,
-			Y: npc.Pos.Y,
-			Z: npc.Pos.Z,
+			X: float64(npc.Pos.X),
+			Y: float64(npc.Pos.Y),
+			Z: float64(npc.Pos.Z),
 		}, &model.Vector{
-			X: npc.Rot.X,
-			Y: npc.Rot.Y,
-			Z: npc.Rot.Z,
+			X: float64(npc.Rot.X),
+			Y: float64(npc.Rot.Y),
+			Z: float64(npc.Rot.Z),
 		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), objectId)
 	case *gdconf.Gadget:
 		gadget := entityConfig.(*gdconf.Gadget)
@@ -398,23 +398,23 @@ func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityCon
 				return 0
 			}
 			return scene.CreateEntityGadgetGather(&model.Vector{
-				X: gadget.Pos.X,
-				Y: gadget.Pos.Y,
-				Z: gadget.Pos.Z,
+				X: float64(gadget.Pos.X),
+				Y: float64(gadget.Pos.Y),
+				Z: float64(gadget.Pos.Z),
 			}, &model.Vector{
-				X: gadget.Rot.X,
-				Y: gadget.Rot.Y,
-				Z: gadget.Rot.Z,
+				X: float64(gadget.Rot.X),
+				Y: float64(gadget.Rot.Y),
+				Z: float64(gadget.Rot.Z),
 			}, uint32(gatherDataConfig.GadgetId), uint32(gatherDataConfig.GatherId), uint32(gadget.ConfigId), objectId)
 		} else {
 			return scene.CreateEntityGadgetNormal(&model.Vector{
-				X: gadget.Pos.X,
-				Y: gadget.Pos.Y,
-				Z: gadget.Pos.Z,
+				X: float64(gadget.Pos.X),
+				Y: float64(gadget.Pos.Y),
+				Z: float64(gadget.Pos.Z),
 			}, &model.Vector{
-				X: gadget.Rot.X,
-				Y: gadget.Rot.Y,
-				Z: gadget.Rot.Z,
+				X: float64(gadget.Rot.X),
+				Y: float64(gadget.Rot.Y),
+				Z: float64(gadget.Rot.Z),
 			}, uint32(gadget.GadgetId), uint32(gadget.ConfigId), objectId)
 		}
 	default:

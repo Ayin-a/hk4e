@@ -33,7 +33,7 @@ type GameDataConfig struct {
 	SceneDataMap            map[int32]*SceneData                    // 场景
 	ScenePointMap           map[int32]*ScenePoint                   // 场景传送点
 	SceneTagDataMap         map[int32]*SceneTagData                 // 场景标签
-	SceneDetailMap          map[int32]*SceneDetail                  // 场景详情LUA配置数据
+	SceneLuaConfigMap       map[int32]*SceneLuaConfig               // 场景LUA配置
 	WorldAreaDataMap        map[int32]*WorldAreaData                // 世界区域
 	GatherDataMap           map[int32]*GatherData                   // 采集物
 	GatherDataPointTypeMap  map[int32]*GatherData                   // 采集物场景节点索引
@@ -121,7 +121,7 @@ func (g *GameDataConfig) load() {
 	g.loadScenePoint()           // 场景传送点
 	g.loadSceneTagData()         // 场景地图图标
 	if config.GetConfig().Hk4e.LoadSceneLuaConfig {
-		g.loadSceneDetail() // 场景详情LUA配置数据
+		g.loadSceneLuaConfig() // 场景LUA配置
 	}
 	g.loadWorldAreaData()      // 世界区域
 	g.loadGatherData()         // 采集物
@@ -157,14 +157,53 @@ func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
 	return standardCsvData
 }
 
-func fixLuaState(luaStr string) *lua.LState {
-	fixLua := ""
-	fixLua += "GadgetState = {}\n"
-	fixLua += "EventType = {}\n"
-	fixLua += "RegionShape = {}\n"
-	fixLua += "VisionLevelType = {}\n"
-	luaStr = fixLua + luaStr
-	luaState := lua.NewState()
+func RegScriptLib(fnName string, fn lua.LGFunction) {
+	for _, sceneLuaConfig := range CONF.SceneLuaConfigMap {
+		for _, block := range sceneLuaConfig.BlockMap {
+			for _, group := range block.GroupMap {
+				luaState := group.LuaState
+				scriptLib := luaState.NewTable()
+				luaState.SetField(scriptLib, fnName, luaState.NewFunction(fn))
+			}
+		}
+	}
+}
+
+func initLuaState(luaState *lua.LState) {
+	eventType := luaState.NewTable()
+	luaState.SetGlobal("EventType", eventType)
+	luaState.SetField(eventType, "NONE", lua.LNumber(0))
+	luaState.SetField(eventType, "EVENT_ENTER_REGION", lua.LNumber(1))
+
+	entityType := luaState.NewTable()
+	luaState.SetGlobal("EntityType", entityType)
+	luaState.SetField(entityType, "NONE", lua.LNumber(0))
+	luaState.SetField(entityType, "AVATAR", lua.LNumber(1))
+
+	regionShape := luaState.NewTable()
+	luaState.SetGlobal("RegionShape", regionShape)
+	luaState.SetField(regionShape, "NONE", lua.LNumber(0))
+	luaState.SetField(regionShape, "SPHERE", lua.LNumber(1))
+
+	questState := luaState.NewTable()
+	luaState.SetGlobal("QuestState", questState)
+	luaState.SetField(questState, "NONE", lua.LNumber(0))
+	luaState.SetField(questState, "UNFINISHED", lua.LNumber(1))
+
+	gadgetState := luaState.NewTable()
+	luaState.SetGlobal("GadgetState", gadgetState)
+	luaState.SetField(gadgetState, "NONE", lua.LNumber(0))
+
+	visionLevelType := luaState.NewTable()
+	luaState.SetGlobal("VisionLevelType", visionLevelType)
+	luaState.SetField(visionLevelType, "NONE", lua.LNumber(0))
+}
+
+func newLuaState(luaStr string) *lua.LState {
+	luaState := lua.NewState(lua.Options{
+		IncludeGoStackTrace: true,
+	})
+	initLuaState(luaState)
 	err := luaState.DoString(luaStr)
 	if err != nil {
 		if strings.Contains(err.Error(), "module") && strings.Contains(err.Error(), "not found") {

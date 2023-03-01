@@ -32,7 +32,7 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 	r.worldMap = make(map[uint32]*World)
 	r.snowflake = snowflake
 	r.sceneBlockAoiMap = make(map[uint32]*alg.AoiManager)
-	for _, sceneConfig := range gdconf.GetSceneDetailMap() {
+	for _, sceneLuaConfig := range gdconf.GetSceneLuaConfigMap() {
 		minX := int16(0)
 		maxX := int16(0)
 		minZ := int16(0)
@@ -41,7 +41,7 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 		blockYLen := int16(0)
 		blockZLen := int16(0)
 		ok := true
-		for _, blockConfig := range sceneConfig.BlockMap {
+		for _, blockConfig := range sceneLuaConfig.BlockMap {
 			if int16(blockConfig.BlockRange.Min.X) < minX {
 				minX = int16(blockConfig.BlockRange.Min.X)
 			}
@@ -112,7 +112,7 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 		aoiManager := alg.NewAoiManager()
 		aoiManager.SetAoiRange(minX, maxX, -1.0, 1.0, minZ, maxZ)
 		aoiManager.Init3DRectAoiManager(numX, 1, numZ)
-		for _, blockConfig := range sceneConfig.BlockMap {
+		for _, blockConfig := range sceneLuaConfig.BlockMap {
 			for _, groupConfig := range blockConfig.GroupMap {
 				for _, monsterConfig := range groupConfig.MonsterList {
 					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), monsterConfig,
@@ -134,7 +134,7 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 				}
 			}
 		}
-		r.sceneBlockAoiMap[uint32(sceneConfig.Id)] = aoiManager
+		r.sceneBlockAoiMap[uint32(sceneLuaConfig.Id)] = aoiManager
 	}
 	r.multiplayerWorldNum = 0
 	return r

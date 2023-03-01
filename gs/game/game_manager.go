@@ -79,6 +79,7 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 	TICK_MANAGER = NewTickManager()
 	COMMAND_MANAGER = NewCommandManager()
 	GCG_MANAGER = NewGCGManager()
+	RegLuaLibFunc()
 	// 创建本服的Ai世界
 	uid := AiBaseUid + gsId
 	name := AiName

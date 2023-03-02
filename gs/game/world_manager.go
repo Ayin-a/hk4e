@@ -31,8 +31,85 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 	r = new(WorldManager)
 	r.worldMap = make(map[uint32]*World)
 	r.snowflake = snowflake
-	r.sceneBlockAoiMap = make(map[uint32]*alg.AoiManager)
+	r.LoadSceneBlockAoiMap()
+	r.multiplayerWorldNum = 0
+	return r
+}
+
+func (w *WorldManager) GetWorldByID(worldId uint32) *World {
+	return w.worldMap[worldId]
+}
+
+func (w *WorldManager) GetAllWorld() map[uint32]*World {
+	return w.worldMap
+}
+
+func (w *WorldManager) CreateWorld(owner *model.Player) *World {
+	worldId := uint32(w.snowflake.GenId())
+	world := &World{
+		id:                  worldId,
+		owner:               owner,
+		playerMap:           make(map[uint32]*model.Player),
+		sceneMap:            make(map[uint32]*Scene),
+		entityIdCounter:     0,
+		worldLevel:          0,
+		multiplayer:         false,
+		mpLevelEntityId:     0,
+		chatMsgList:         make([]*proto.ChatInfo, 0),
+		playerFirstEnterMap: make(map[uint32]int64),
+		waitEnterPlayerMap:  make(map[uint32]int64),
+		multiplayerTeam:     CreateMultiplayerTeam(),
+		peerList:            make([]*model.Player, 0),
+	}
+	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.ENTITY_TYPE_MP_LEVEL)
+	w.worldMap[worldId] = world
+	return world
+}
+
+func (w *WorldManager) DestroyWorld(worldId uint32) {
+	world := w.GetWorldByID(worldId)
+	for _, player := range world.playerMap {
+		world.RemovePlayer(player)
+		player.WorldId = 0
+	}
+	delete(w.worldMap, worldId)
+	if world.multiplayer {
+		w.multiplayerWorldNum--
+	}
+}
+
+// GetAiWorld 获取本服务器的Ai世界
+func (w *WorldManager) GetAiWorld() *World {
+	return w.aiWorld
+}
+
+// InitAiWorld 初始化Ai世界
+func (w *WorldManager) InitAiWorld(owner *model.Player) {
+	w.aiWorld = w.GetWorldByID(owner.WorldId)
+	w.aiWorld.ChangeToMultiplayer()
+	go RunPlayAudio()
+}
+
+func (w *WorldManager) IsAiWorld(world *World) bool {
+	return world.id == w.aiWorld.id
+}
+
+func (w *WorldManager) IsRobotWorld(world *World) bool {
+	return world.owner.PlayerID < PlayerBaseUid
+}
+
+func (w *WorldManager) IsBigWorld(world *World) bool {
+	return (world.id == w.aiWorld.id) && (w.aiWorld.owner.PlayerID == BigWorldAiUid)
+}
+
+func (w *WorldManager) GetSceneBlockAoiMap() map[uint32]*alg.AoiManager {
+	return w.sceneBlockAoiMap
+}
+
+func (w *WorldManager) LoadSceneBlockAoiMap() {
+	w.sceneBlockAoiMap = make(map[uint32]*alg.AoiManager)
 	for _, sceneLuaConfig := range gdconf.GetSceneLuaConfigMap() {
+		// 检查各block大小是否相同 并提取出block大小
 		minX := int16(0)
 		maxX := int16(0)
 		minZ := int16(0)
@@ -83,13 +160,11 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 			}
 		}
 		if !ok {
+			logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
 			continue
 		}
 		numX := int16(0)
 		if blockXLen != 0 {
-			if blockXLen > 32 {
-				blockXLen = 32
-			}
 			numX = (maxX - minX) / blockXLen
 		} else {
 			numX = 1
@@ -99,9 +174,6 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 		}
 		numZ := int16(0)
 		if blockZLen != 0 {
-			if blockZLen > 32 {
-				blockZLen = 32
-			}
 			numZ = (maxZ - minZ) / blockZLen
 		} else {
 			numZ = 1
@@ -109,105 +181,20 @@ func NewWorldManager(snowflake *alg.SnowflakeWorker) (r *WorldManager) {
 		if numZ == 0 {
 			numZ = 1
 		}
+		// 将每个block作为aoi格子 并在格子中放入block拥有的所有group
 		aoiManager := alg.NewAoiManager()
 		aoiManager.SetAoiRange(minX, maxX, -1.0, 1.0, minZ, maxZ)
 		aoiManager.Init3DRectAoiManager(numX, 1, numZ)
-		for _, blockConfig := range sceneLuaConfig.BlockMap {
-			for _, groupConfig := range blockConfig.GroupMap {
-				for _, monsterConfig := range groupConfig.MonsterList {
-					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), monsterConfig,
-						float32(monsterConfig.Pos.X),
-						float32(0.0),
-						float32(monsterConfig.Pos.Z))
-				}
-				for _, npcConfig := range groupConfig.NpcList {
-					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), npcConfig,
-						float32(npcConfig.Pos.X),
-						float32(0.0),
-						float32(npcConfig.Pos.Z))
-				}
-				for _, gadgetConfig := range groupConfig.GadgetList {
-					aoiManager.AddObjectToGridByPos(r.snowflake.GenId(), gadgetConfig,
-						float32(gadgetConfig.Pos.X),
-						float32(0.0),
-						float32(gadgetConfig.Pos.Z))
-				}
+		for _, block := range sceneLuaConfig.BlockMap {
+			for _, group := range block.GroupMap {
+				aoiManager.AddObjectToGridByPos(int64(group.Id), group,
+					group.Pos.X,
+					0.0,
+					group.Pos.Z)
 			}
 		}
-		r.sceneBlockAoiMap[uint32(sceneLuaConfig.Id)] = aoiManager
+		w.sceneBlockAoiMap[uint32(sceneLuaConfig.Id)] = aoiManager
 	}
-	r.multiplayerWorldNum = 0
-	return r
-}
-
-func (w *WorldManager) GetWorldByID(worldId uint32) *World {
-	return w.worldMap[worldId]
-}
-
-func (w *WorldManager) GetAllWorld() map[uint32]*World {
-	return w.worldMap
-}
-
-func (w *WorldManager) CreateWorld(owner *model.Player) *World {
-	worldId := uint32(w.snowflake.GenId())
-	world := &World{
-		id:                  worldId,
-		owner:               owner,
-		playerMap:           make(map[uint32]*model.Player),
-		sceneMap:            make(map[uint32]*Scene),
-		entityIdCounter:     0,
-		worldLevel:          0,
-		multiplayer:         false,
-		mpLevelEntityId:     0,
-		chatMsgList:         make([]*proto.ChatInfo, 0),
-		playerFirstEnterMap: make(map[uint32]int64),
-		waitEnterPlayerMap:  make(map[uint32]int64),
-		multiplayerTeam:     CreateMultiplayerTeam(),
-		peerList:            make([]*model.Player, 0),
-	}
-	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_MPLEVEL)
-	w.worldMap[worldId] = world
-	return world
-}
-
-func (w *WorldManager) DestroyWorld(worldId uint32) {
-	world := w.GetWorldByID(worldId)
-	for _, player := range world.playerMap {
-		world.RemovePlayer(player)
-		player.WorldId = 0
-	}
-	delete(w.worldMap, worldId)
-	if world.multiplayer {
-		w.multiplayerWorldNum--
-	}
-}
-
-// GetAiWorld 获取本服务器的Ai世界
-func (w *WorldManager) GetAiWorld() *World {
-	return w.aiWorld
-}
-
-// InitAiWorld 初始化Ai世界
-func (w *WorldManager) InitAiWorld(owner *model.Player) {
-	w.aiWorld = w.GetWorldByID(owner.WorldId)
-	w.aiWorld.ChangeToMultiplayer()
-	go RunPlayAudio()
-}
-
-func (w *WorldManager) IsAiWorld(world *World) bool {
-	return world.id == w.aiWorld.id
-}
-
-func (w *WorldManager) IsRobotWorld(world *World) bool {
-	return world.owner.PlayerID < PlayerBaseUid
-}
-
-func (w *WorldManager) IsBigWorld(world *World) bool {
-	return (world.id == w.aiWorld.id) && (w.aiWorld.owner.PlayerID == BigWorldAiUid)
-}
-
-func (w *WorldManager) GetSceneBlockAoiMap() map[uint32]*alg.AoiManager {
-	return w.sceneBlockAoiMap
 }
 
 func (w *WorldManager) GetMultiplayerWorldNum() uint32 {
@@ -259,7 +246,7 @@ func (w *World) GetMpLevelEntityId() uint32 {
 	return w.mpLevelEntityId
 }
 
-func (w *World) GetNextWorldEntityId(entityType uint16) uint32 {
+func (w *World) GetNextWorldEntityId(entityType uint8) uint32 {
 	for {
 		w.entityIdCounter++
 		ret := (uint32(entityType) << 24) + w.entityIdCounter
@@ -484,7 +471,7 @@ func (w *World) GetPlayerTeamEntityId(player *model.Player) uint32 {
 
 // InitPlayerTeamEntityId 初始化某玩家的本地队伍实体id
 func (w *World) InitPlayerTeamEntityId(player *model.Player) {
-	w.multiplayerTeam.localTeamEntityMap[player.PlayerID] = w.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_TEAM)
+	w.multiplayerTeam.localTeamEntityMap[player.PlayerID] = w.GetNextWorldEntityId(constant.ENTITY_TYPE_TEAM)
 }
 
 // GetPlayerWorldAvatarEntityId 获取某玩家在世界队伍中的某角色的实体id
@@ -735,7 +722,7 @@ func (w *World) CreateScene(sceneId uint32) *Scene {
 		world:             w,
 		playerMap:         make(map[uint32]*model.Player),
 		entityMap:         make(map[uint32]*Entity),
-		objectIdEntityMap: make(map[int64]*Entity),
+		objectIdEntityMap: make(map[uint64]*Entity),
 		gameTime:          18 * 60,
 		createTime:        time.Now().UnixMilli(),
 		meeoIndex:         0,
@@ -745,6 +732,7 @@ func (w *World) CreateScene(sceneId uint32) *Scene {
 }
 
 func (w *World) GetSceneById(sceneId uint32) *Scene {
+	// 场景是取时创建 可以简化代码不判空
 	scene, exist := w.sceneMap[sceneId]
 	if !exist {
 		scene = w.CreateScene(sceneId)

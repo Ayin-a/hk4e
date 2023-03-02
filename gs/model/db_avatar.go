@@ -30,8 +30,8 @@ type Avatar struct {
 	Promote             uint8                // 突破等阶
 	Satiation           uint32               // 饱食度
 	SatiationPenalty    uint32               // 饱食度溢出
-	CurrHP              float64              // 当前生命值
-	CurrEnergy          float64              // 当前元素能量值
+	CurrHP              float32              // 当前生命值
+	CurrEnergy          float32              // 当前元素能量值
 	FetterList          []uint32             // 资料解锁条目
 	SkillLevelMap       map[uint32]uint32    // 技能等级数据
 	SkillDepotId        uint32               // 技能库id
@@ -75,22 +75,22 @@ func (a *DbAvatar) InitAvatarFightProp(avatar *Avatar) {
 		return
 	}
 	avatar.FightPropMap = make(map[uint32]float32)
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_NONE)] = 0.0
+	avatar.FightPropMap[constant.FIGHT_PROP_NONE] = 0.0
 	// 白字攻防血
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_BASE_ATTACK)] = float32(avatarDataConfig.GetBaseAttackByLevel(avatar.Level))
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_BASE_DEFENSE)] = float32(avatarDataConfig.GetBaseDefenseByLevel(avatar.Level))
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_BASE_HP)] = float32(avatarDataConfig.GetBaseHpByLevel(avatar.Level))
+	avatar.FightPropMap[constant.FIGHT_PROP_BASE_ATTACK] = avatarDataConfig.GetBaseAttackByLevel(avatar.Level)
+	avatar.FightPropMap[constant.FIGHT_PROP_BASE_DEFENSE] = avatarDataConfig.GetBaseDefenseByLevel(avatar.Level)
+	avatar.FightPropMap[constant.FIGHT_PROP_BASE_HP] = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
 	// 白字+绿字攻防血
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CUR_ATTACK)] = float32(avatarDataConfig.GetBaseAttackByLevel(avatar.Level))
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CUR_DEFENSE)] = float32(avatarDataConfig.GetBaseDefenseByLevel(avatar.Level))
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_MAX_HP)] = float32(avatarDataConfig.GetBaseHpByLevel(avatar.Level))
+	avatar.FightPropMap[constant.FIGHT_PROP_CUR_ATTACK] = avatarDataConfig.GetBaseAttackByLevel(avatar.Level)
+	avatar.FightPropMap[constant.FIGHT_PROP_CUR_DEFENSE] = avatarDataConfig.GetBaseDefenseByLevel(avatar.Level)
+	avatar.FightPropMap[constant.FIGHT_PROP_MAX_HP] = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
 	// 当前血量
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)] = float32(avatar.CurrHP)
+	avatar.FightPropMap[constant.FIGHT_PROP_CUR_HP] = avatar.CurrHP
 	// 双暴
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CRITICAL)] = float32(avatarDataConfig.Critical)
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CRITICAL_HURT)] = float32(avatarDataConfig.CriticalHurt)
+	avatar.FightPropMap[constant.FIGHT_PROP_CRITICAL] = avatarDataConfig.Critical
+	avatar.FightPropMap[constant.FIGHT_PROP_CRITICAL_HURT] = avatarDataConfig.CriticalHurt
 	// 元素充能
-	avatar.FightPropMap[uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY)] = 1.0
+	avatar.FightPropMap[constant.FIGHT_PROP_CHARGE_EFFICIENCY] = 1.0
 	a.SetCurrEnergy(avatar, avatar.CurrEnergy, true)
 }
 
@@ -158,7 +158,7 @@ func (a *DbAvatar) AddAvatar(player *Player, avatarId uint32) {
 	a.AvatarMap[avatarId] = avatar
 }
 
-func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
+func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float32, max bool) {
 	var avatarSkillDataConfig *gdconf.AvatarSkillData = nil
 	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
 		avatarSkillDepotDataConfig := gdconf.GetAvatarSkillDepotDataById(int32(avatar.SkillDepotId))
@@ -185,7 +185,7 @@ func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
 	if max {
 		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(avatarSkillDataConfig.CostElemVal)
 	} else {
-		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(value)
+		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = value
 	}
 }
 

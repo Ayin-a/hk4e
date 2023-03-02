@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"hk4e/pkg/logger"
 
@@ -15,6 +16,8 @@ import (
 const (
 	SceneGroupLoaderLimit = 4 // 加载文件的并发数 此操作很耗内存 调大之前请确保你的机器内存足够
 )
+
+var OBJECT_ID_COUNTER uint64
 
 type SceneLuaConfig struct {
 	Id          int32
@@ -54,14 +57,15 @@ type Group struct {
 	RefreshId     int32        `json:"refresh_id"`
 	Area          int32        `json:"area"`
 	Pos           *Vector      `json:"pos"`
+	DynamicLoad   bool         `json:"dynamic_load"`
 	IsReplaceable *Replaceable `json:"is_replaceable"`
 	MonsterList   []*Monster   `json:"monsters"` // 怪物
 	NpcList       []*Npc       `json:"npcs"`     // NPC
 	GadgetList    []*Gadget    `json:"gadgets"`  // 物件
 	RegionList    []*Region    `json:"regions"`
 	TriggerList   []*Trigger   `json:"triggers"`
-	LuaStr        string
-	LuaState      *lua.LState
+	LuaStr        string       `json:"-"`
+	LuaState      *lua.LState  `json:"-"`
 }
 
 type Replaceable struct {
@@ -77,6 +81,7 @@ type Monster struct {
 	Rot       *Vector `json:"rot"`
 	Level     int32   `json:"level"`
 	AreaId    int32   `json:"area_id"`
+	ObjectId  uint64  `json:"-"`
 }
 
 type Npc struct {
@@ -85,6 +90,7 @@ type Npc struct {
 	Pos      *Vector `json:"pos"`
 	Rot      *Vector `json:"rot"`
 	AreaId   int32   `json:"area_id"`
+	ObjectId uint64  `json:"-"`
 }
 
 type Gadget struct {
@@ -95,15 +101,18 @@ type Gadget struct {
 	Level     int32   `json:"level"`
 	AreaId    int32   `json:"area_id"`
 	PointType int32   `json:"point_type"` // 关联GatherData表
+	ObjectId  uint64  `json:"-"`
 }
 
 type Region struct {
-	ConfigId int32   `json:"config_id"`
-	Shape    int32   `json:"shape"`
-	Radius   float32 `json:"radius"`
-	Size     *Vector `json:"size"`
-	Pos      *Vector `json:"pos"`
-	AreaId   int32   `json:"area_id"`
+	ConfigId   int32     `json:"config_id"`
+	Shape      int32     `json:"shape"`
+	Radius     float32   `json:"radius"`
+	Size       *Vector   `json:"size"`
+	Pos        *Vector   `json:"pos"`
+	Height     float32   `json:"height"`
+	PointArray []*Vector `json:"point_array"`
+	AreaId     int32     `json:"area_id"`
 }
 
 type Trigger struct {
@@ -136,6 +145,9 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 		logger.Error("get monsters object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 		return
 	}
+	for _, monster := range group.MonsterList {
+		monster.ObjectId = atomic.AddUint64(&OBJECT_ID_COUNTER, 1)
+	}
 	// npcs
 	group.NpcList = make([]*Npc, 0)
 	ok = parseLuaTableToObject[*[]*Npc](luaState, "npcs", &group.NpcList)
@@ -143,12 +155,18 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 		logger.Error("get npcs object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 		return
 	}
+	for _, npc := range group.NpcList {
+		npc.ObjectId = atomic.AddUint64(&OBJECT_ID_COUNTER, 1)
+	}
 	// gadgets
 	group.GadgetList = make([]*Gadget, 0)
 	ok = parseLuaTableToObject[*[]*Gadget](luaState, "gadgets", &group.GadgetList)
 	if !ok {
 		logger.Error("get gadgets object error, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 		return
+	}
+	for _, gadget := range group.GadgetList {
+		gadget.ObjectId = atomic.AddUint64(&OBJECT_ID_COUNTER, 1)
 	}
 	// regions
 	group.RegionList = make([]*Region, 0)
@@ -170,6 +188,7 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 }
 
 func (g *GameDataConfig) loadSceneLuaConfig() {
+	OBJECT_ID_COUNTER = 0
 	g.SceneLuaConfigMap = make(map[int32]*SceneLuaConfig)
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	for _, sceneData := range g.SceneDataMap {

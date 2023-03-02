@@ -16,11 +16,11 @@ import (
 // AvatarData 角色配置表
 type AvatarData struct {
 	AvatarId              int32   `csv:"AvatarId"`                        // ID
-	HpBase                float64 `csv:"HpBase,omitempty"`                // 基础生命值
-	AttackBase            float64 `csv:"AttackBase,omitempty"`            // 基础攻击力
-	DefenseBase           float64 `csv:"DefenseBase,omitempty"`           // 基础防御力
-	Critical              float64 `csv:"Critical,omitempty"`              // 暴击率
-	CriticalHurt          float64 `csv:"CriticalHurt,omitempty"`          // 暴击伤害
+	HpBase                float32 `csv:"HpBase,omitempty"`                // 基础生命值
+	AttackBase            float32 `csv:"AttackBase,omitempty"`            // 基础攻击力
+	DefenseBase           float32 `csv:"DefenseBase,omitempty"`           // 基础防御力
+	Critical              float32 `csv:"Critical,omitempty"`              // 暴击率
+	CriticalHurt          float32 `csv:"CriticalHurt,omitempty"`          // 暴击伤害
 	QualityType           int32   `csv:"QualityType,omitempty"`           // 角色品质
 	ConfigJson            string  `csv:"ConfigJson,omitempty"`            // 战斗config
 	InitialWeapon         int32   `csv:"InitialWeapon,omitempty"`         // 初始武器
@@ -107,14 +107,14 @@ func GetAvatarDataMap() map[int32]*AvatarData {
 
 // TODO 成长属性要读表
 
-func (a *AvatarData) GetBaseHpByLevel(level uint8) float64 {
-	return a.HpBase * float64(level)
+func (a *AvatarData) GetBaseHpByLevel(level uint8) float32 {
+	return a.HpBase * float32(level)
 }
 
-func (a *AvatarData) GetBaseAttackByLevel(level uint8) float64 {
-	return a.AttackBase * float64(level)
+func (a *AvatarData) GetBaseAttackByLevel(level uint8) float32 {
+	return a.AttackBase * float32(level)
 }
 
-func (a *AvatarData) GetBaseDefenseByLevel(level uint8) float64 {
-	return a.DefenseBase * float64(level)
+func (a *AvatarData) GetBaseDefenseByLevel(level uint8) float32 {
+	return a.DefenseBase * float32(level)
 }

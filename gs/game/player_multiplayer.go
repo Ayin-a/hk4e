@@ -340,7 +340,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 		hostPlayer,
 		hostPlayer,
 		proto.EnterType_ENTER_GOTO,
-		uint32(constant.EnterReasonHostFromSingleToMp),
+		uint32(proto.EnterReason_ENTER_REASON_HOST_FROM_SINGLE_TO_MP),
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
 		0,

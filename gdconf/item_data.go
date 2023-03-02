@@ -62,7 +62,7 @@ func (g *GameDataConfig) loadItemData() {
 				itemData.SkillAffix = append(itemData.SkillAffix, itemData.SkillAffix2)
 			}
 			// 武器精炼摩拉消耗列表读取转换
-			if itemData.Type == int32(constant.ITEM_TYPE_WEAPON) && itemData.AwakenCoinCostStr != "" {
+			if itemData.Type == constant.ITEM_TYPE_WEAPON && itemData.AwakenCoinCostStr != "" {
 				tempCostList := strings.Split(strings.ReplaceAll(itemData.AwakenCoinCostStr, " ", ""), "#")
 				itemData.AwakenCoinCostList = make([]uint32, 0, len(tempCostList))
 				for _, s := range tempCostList {

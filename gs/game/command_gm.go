@@ -1,10 +1,10 @@
 package game
 
 import (
-	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/protocol/proto"
 )
 
 // GMTeleportPlayer 传送玩家
@@ -14,7 +14,7 @@ func (c *CommandManager) GMTeleportPlayer(userId, sceneId uint32, posX, posY, po
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME_MANAGER.TeleportPlayer(player, constant.EnterReasonGm, sceneId, &model.Vector{
+	GAME_MANAGER.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_GM), sceneId, &model.Vector{
 		X: posX,
 		Y: posY,
 		Z: posZ,

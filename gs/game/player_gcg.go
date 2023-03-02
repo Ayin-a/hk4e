@@ -63,7 +63,7 @@ func (g *GameManager) GCGStartChallenge(player *model.Player) {
 		g.PacketGCGGameBriefDataNotify(player, proto.GCGGameBusinessType_GCG_GAME_GUIDE_GROUP, game))
 
 	// 玩家进入GCG界面
-	g.TeleportPlayer(player, constant.EnterReasonDungeonEnter, 79999, new(model.Vector), new(model.Vector), 2162)
+	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER), 79999, new(model.Vector), new(model.Vector), 2162)
 }
 
 // GCGAskDuelReq GCG决斗请求

@@ -18,10 +18,10 @@ type Scene struct {
 	world             *World
 	playerMap         map[uint32]*model.Player
 	entityMap         map[uint32]*Entity
-	objectIdEntityMap map[int64]*Entity // 用于标识配置档里的唯一实体是否已被创建
-	gameTime          uint32            // 游戏内提瓦特大陆的时间
-	createTime        int64             // 场景创建时间
-	meeoIndex         uint32            // 客户端风元素染色同步协议的计数器
+	objectIdEntityMap map[uint64]*Entity // 用于标识配置档里的唯一实体是否已被创建
+	gameTime          uint32             // 游戏内提瓦特大陆的时间
+	createTime        int64              // 场景创建时间
+	meeoIndex         uint32             // 客户端风元素染色同步协议的计数器
 }
 
 func (s *Scene) GetId() uint32 {
@@ -80,7 +80,7 @@ func (s *Scene) RemovePlayer(player *model.Player) {
 }
 
 func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType proto.PlayerDieType) {
-	if entity.avatarEntity != nil {
+	if entity.GetEntityType() == constant.ENTITY_TYPE_AVATAR {
 		// 获取玩家对象
 		player := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
 		if player == nil {
@@ -98,8 +98,8 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 		if lifeState == constant.LIFE_STATE_REVIVE {
 			avatar.LifeState = constant.LIFE_STATE_ALIVE
 			// 设置血量
-			entity.fightProp[uint32(constant.FIGHT_PROP_CUR_HP)] = 110
-			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FIGHT_PROP_CUR_HP))
+			entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 110
+			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, constant.FIGHT_PROP_CUR_HP)
 		}
 
 		avatarLifeStateChangeNotify := &proto.AvatarLifeStateChangeNotify{
@@ -118,8 +118,8 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 
 		if lifeState == constant.LIFE_STATE_DEAD {
 			// 设置血量
-			entity.fightProp[uint32(constant.FIGHT_PROP_CUR_HP)] = 0
-			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, uint32(constant.FIGHT_PROP_CUR_HP))
+			entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
+			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, constant.FIGHT_PROP_CUR_HP)
 		}
 
 		lifeStateChangeNotify := &proto.LifeStateChangeNotify{
@@ -139,7 +139,7 @@ func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType pro
 }
 
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_AVATAR)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_AVATAR)
 	dbAvatar := player.GetDbAvatar()
 	avatar, ok := dbAvatar.AvatarMap[avatarId]
 	if !ok {
@@ -156,7 +156,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           dbAvatar.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR),
+		entityType:          constant.ENTITY_TYPE_AVATAR,
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,
 			avatarId: avatarId,
@@ -178,7 +178,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 }
 
 func (s *Scene) CreateEntityWeapon() uint32 {
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_WEAPON)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_WEAPON)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -189,18 +189,18 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           nil,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON),
+		entityType:          constant.ENTITY_TYPE_WEAPON,
 	}
 	s.CreateEntity(entity, 0)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, level uint8, fightProp map[uint32]float32, configId uint32, objectId int64) uint32 {
+func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, level uint8, fightProp map[uint32]float32, configId uint32, objectId uint64) uint32 {
 	_, exist := s.objectIdEntityMap[objectId]
 	if exist {
 		return 0
 	}
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_MONSTER)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_MONSTER)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -211,7 +211,7 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp:           fightProp,
-		entityType:          uint32(proto.ProtEntityType_PROT_ENTITY_MONSTER),
+		entityType:          constant.ENTITY_TYPE_MONSTER,
 		level:               level,
 		monsterEntity: &MonsterEntity{
 			monsterId: monsterId,
@@ -232,12 +232,12 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 	return entity.id
 }
 
-func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId, configId uint32, objectId int64) uint32 {
+func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId, configId uint32, objectId uint64) uint32 {
 	_, exist := s.objectIdEntityMap[objectId]
 	if exist {
 		return 0
 	}
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_NPC)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_NPC)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -248,11 +248,11 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
-			uint32(constant.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_BASE_HP): float32(1),
+			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_NPC),
+		entityType: constant.ENTITY_TYPE_NPC,
 		npcEntity: &NpcEntity{
 			NpcId:         npcId,
 			RoomId:        roomId,
@@ -266,12 +266,12 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32, configId uint32, objectId int64) uint32 {
+func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32, configId uint32, objectId uint64) uint32 {
 	_, exist := s.objectIdEntityMap[objectId]
 	if exist {
 		return 0
 	}
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_GADGET)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -282,11 +282,11 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
-			uint32(constant.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_BASE_HP): float32(1),
+			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
+		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_NORMAL,
@@ -298,12 +298,12 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32, gatherId uint32, configId uint32, objectId int64) uint32 {
+func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32, gatherId uint32, configId uint32, objectId uint64) uint32 {
 	_, exist := s.objectIdEntityMap[objectId]
 	if exist {
 		return 0
 	}
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_GADGET)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -314,11 +314,11 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
-			uint32(constant.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_BASE_HP): float32(1),
+			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
+		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
 			gadgetId:   gadgetId,
 			gadgetType: GADGET_TYPE_GATHER,
@@ -344,11 +344,11 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
-			uint32(constant.FIGHT_PROP_CUR_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_MAX_HP):  math.MaxFloat32,
-			uint32(constant.FIGHT_PROP_BASE_HP): float32(1),
+			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
+		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_CLIENT,
 			gadgetClientEntity: &GadgetClientEntity{
@@ -370,7 +370,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 		logger.Error("player is nil, uid: %v", uid)
 		return 0
 	}
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_ID_TYPE_GADGET)
+	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -382,11 +382,11 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 		lastMoveReliableSeq: 0,
 		fightProp: map[uint32]float32{
 			// TODO 以后使用配置表
-			uint32(constant.FIGHT_PROP_CUR_HP):  114514,
-			uint32(constant.FIGHT_PROP_MAX_HP):  114514,
-			uint32(constant.FIGHT_PROP_BASE_HP): float32(1),
+			constant.FIGHT_PROP_CUR_HP:  114514,
+			constant.FIGHT_PROP_MAX_HP:  114514,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
 		},
-		entityType: uint32(proto.ProtEntityType_PROT_ENTITY_GADGET),
+		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
 			gadgetType: GADGET_TYPE_VEHICLE,
 			gadgetVehicleEntity: &GadgetVehicleEntity{
@@ -402,7 +402,7 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 	return entity.id
 }
 
-func (s *Scene) CreateEntity(entity *Entity, objectId int64) {
+func (s *Scene) CreateEntity(entity *Entity, objectId uint64) {
 	if len(s.entityMap) >= ENTITY_MAX_SEND_NUM && !ENTITY_NUM_UNLIMIT {
 		logger.Error("above max scene entity num limit: %v, id: %v, pos: %v", ENTITY_MAX_SEND_NUM, entity.id, entity.pos)
 		return
@@ -434,29 +434,29 @@ func (s *Scene) GetEntity(entityId uint32) *Entity {
 	return s.entityMap[entityId]
 }
 
-func (s *Scene) GetEntityByObjectId(objectId int64) *Entity {
+func (s *Scene) GetEntityByObjectId(objectId uint64) *Entity {
 	return s.objectIdEntityMap[objectId]
 }
 
 // Entity 场景实体数据结构
 type Entity struct {
-	id                  uint32
-	scene               *Scene
-	lifeState           uint16
-	pos                 *model.Vector
-	rot                 *model.Vector
-	moveState           uint16
+	id                  uint32        // 实体id
+	scene               *Scene        // 实体归属上级场景的访问指针
+	lifeState           uint16        // 存活状态
+	pos                 *model.Vector // 位置
+	rot                 *model.Vector // 朝向
+	moveState           uint16        // 运动状态
 	lastMoveSceneTimeMs uint32
 	lastMoveReliableSeq uint32
-	fightProp           map[uint32]float32
-	entityType          uint32
-	level               uint8
+	fightProp           map[uint32]float32 // 战斗属性
+	level               uint8              // 等级
+	entityType          uint8              // 实体类型
 	avatarEntity        *AvatarEntity
 	monsterEntity       *MonsterEntity
 	npcEntity           *NpcEntity
 	gadgetEntity        *GadgetEntity
-	configId            uint32
-	objectId            int64
+	configId            uint32 // 配置表相关
+	objectId            uint64
 }
 
 func (e *Entity) GetId() uint32 {
@@ -503,12 +503,12 @@ func (e *Entity) GetFightProp() map[uint32]float32 {
 	return e.fightProp
 }
 
-func (e *Entity) GetEntityType() uint32 {
-	return e.entityType
-}
-
 func (e *Entity) GetLevel() uint8 {
 	return e.level
+}
+
+func (e *Entity) GetEntityType() uint8 {
+	return e.entityType
 }
 
 func (e *Entity) GetAvatarEntity() *AvatarEntity {

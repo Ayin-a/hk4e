@@ -1,7 +1,6 @@
 package game
 
 import (
-	"hk4e/pkg/logger"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -9,6 +8,8 @@ import (
 	"os"
 	"sort"
 	"strconv"
+
+	"hk4e/pkg/logger"
 
 	"hk4e/gs/model"
 	"hk4e/protocol/proto"
@@ -215,7 +216,7 @@ func LoadVideoPlayerFile() error {
 	return nil
 }
 
-var OBJECT_ID_COUNTER int64 = math.MaxUint32
+var OBJECT_ID_COUNTER uint64 = math.MaxUint64
 
 func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 	err := LoadVideoPlayerFile()

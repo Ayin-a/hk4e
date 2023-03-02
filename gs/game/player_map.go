@@ -3,7 +3,6 @@ package game
 import (
 	"strconv"
 
-	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -25,7 +24,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 
 	// 传送玩家
 	sceneId := req.SceneId
-	g.TeleportPlayer(player, constant.EnterReasonTransPoint, sceneId, &model.Vector{
+	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_TRANS_POINT), sceneId, &model.Vector{
 		X: pointDataConfig.TranPos.X,
 		Y: pointDataConfig.TranPos.Y,
 		Z: pointDataConfig.TranPos.Z,
@@ -55,7 +54,7 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 				posYInt = 300
 			}
 			// 传送玩家
-			g.TeleportPlayer(player, constant.EnterReasonGm, req.Mark.SceneId, &model.Vector{
+			g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_GM), req.Mark.SceneId, &model.Vector{
 				X: float64(req.Mark.Pos.X),
 				Y: float64(posYInt),
 				Z: float64(req.Mark.Pos.Z),
@@ -110,8 +109,8 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 
 	var enterType proto.EnterType
 	switch enterReason {
-	case constant.EnterReasonDungeonEnter:
-		logger.Debug("player dungeon scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+	case uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER):
+		logger.Debug("player tp to dungeon scene, sceneId: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_DUNGEON
 	default:
 		if jumpScene {

@@ -520,7 +520,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		//	}
 		// }
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, constant.EnterReasonRevival, player.SceneId, pos, new(model.Vector), 0)
+		g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_REVIVAL), player.SceneId, pos, new(model.Vector), 0)
 	}
 	// 防止重置后又被修改
 	if player.StaminaInfo.DrownBackDelay != 0 {

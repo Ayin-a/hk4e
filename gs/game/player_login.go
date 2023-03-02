@@ -215,7 +215,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 			logger.Error("get item data config is nil, itemId: %v", weapon.ItemId)
 			continue
 		}
-		if uint16(itemDataConfig.Type) != constant.ITEM_TYPE_WEAPON {
+		if itemDataConfig.Type != constant.ITEM_TYPE_WEAPON {
 			continue
 		}
 		affixMap := make(map[uint32]uint32)
@@ -247,7 +247,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 			logger.Error("get item data config is nil, itemId: %v", reliquary.ItemId)
 			continue
 		}
-		if uint16(itemDataConfig.Type) != constant.ITEM_TYPE_RELIQUARY {
+		if itemDataConfig.Type != constant.ITEM_TYPE_RELIQUARY {
 			continue
 		}
 		pbItem := &proto.Item{
@@ -281,7 +281,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 			Guid:   item.Guid,
 			Detail: nil,
 		}
-		if itemDataConfig != nil && uint16(itemDataConfig.Type) == constant.ITEM_TYPE_FURNITURE {
+		if itemDataConfig != nil && itemDataConfig.Type == constant.ITEM_TYPE_FURNITURE {
 			pbItem.Detail = &proto.Item_Furniture{
 				Furniture: &proto.Furniture{
 					Count: item.Count,

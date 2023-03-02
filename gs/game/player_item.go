@@ -16,11 +16,11 @@ type ChangeItem struct {
 func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	allItemDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
-		if uint16(itemData.Type) == constant.ITEM_TYPE_WEAPON {
+		if itemData.Type == constant.ITEM_TYPE_WEAPON {
 			// 排除武器
 			continue
 		}
-		if uint16(itemData.Type) == constant.ITEM_TYPE_RELIQUARY {
+		if itemData.Type == constant.ITEM_TYPE_RELIQUARY {
 			// 排除圣遗物
 			continue
 		}
@@ -111,7 +111,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint 
 
 	if isHint {
 		if hintReason == 0 {
-			hintReason = constant.ActionReasonSubfieldDrop
+			hintReason = uint16(proto.ActionReasonType_ACTION_REASON_SUBFIELD_DROP)
 		}
 		itemAddHintNotify := &proto.ItemAddHintNotify{
 			Reason:   uint32(hintReason),

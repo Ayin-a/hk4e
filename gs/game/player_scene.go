@@ -19,6 +19,7 @@ import (
 
 const (
 	ENTITY_MAX_BATCH_SEND_NUM = 1000 // 单次同步的最大实体数量
+	ENTITY_LOD                = 300  // 实体加载视野距离
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
@@ -172,7 +173,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 
 		sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
 			WeatherAreaId: 0,
-			ClimateType:   uint32(constant.CLIMATE_TYPE_SUNNY),
+			ClimateType:   constant.CLIMATE_TYPE_SUNNY,
 		}
 		g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
 	}
@@ -272,8 +273,21 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[scene.GetId()]
 	if exist {
 		objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
-		for objectId, entityConfig := range objectList {
-			g.CreateConfigEntity(scene, objectId, entityConfig)
+		for _, groupAny := range objectList {
+			group := groupAny.(*gdconf.Group)
+			distance2D := math.Sqrt(math.Pow(player.Pos.X-float64(group.Pos.X), 2.0) + math.Pow(player.Pos.Z-float64(group.Pos.Z), 2.0))
+			if distance2D > ENTITY_LOD {
+				continue
+			}
+			for _, monster := range group.MonsterList {
+				g.CreateConfigEntity(scene, monster.ObjectId, monster)
+			}
+			for _, npc := range group.NpcList {
+				g.CreateConfigEntity(scene, npc.ObjectId, npc)
+			}
+			for _, gadget := range group.GadgetList {
+				g.CreateConfigEntity(scene, gadget.ObjectId, gadget)
+			}
 		}
 	}
 	if player.SceneJump {
@@ -293,7 +307,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 
 	sceneAreaWeatherNotify := &proto.SceneAreaWeatherNotify{
 		WeatherAreaId: 0,
-		ClimateType:   uint32(constant.CLIMATE_TYPE_SUNNY),
+		ClimateType:   constant.CLIMATE_TYPE_SUNNY,
 	}
 	g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
 
@@ -365,7 +379,7 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 }
 
 // CreateConfigEntity 创建配置表里的实体
-func (g *GameManager) CreateConfigEntity(scene *Scene, objectId int64, entityConfig any) uint32 {
+func (g *GameManager) CreateConfigEntity(scene *Scene, objectId uint64, entityConfig any) uint32 {
 	switch entityConfig.(type) {
 	case *gdconf.Monster:
 		monster := entityConfig.(*gdconf.Monster)
@@ -438,7 +452,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 		TargetUid:              player.PlayerID,
 		EnterSceneToken:        player.EnterSceneToken,
 		WorldLevel:             player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL],
-		EnterReason:            uint32(constant.EnterReasonLogin),
+		EnterReason:            uint32(proto.EnterReason_ENTER_REASON_LOGIN),
 		IsFirstLoginEnterScene: true,
 		WorldType:              1,
 		SceneTagIdList:         make([]uint32, 0),
@@ -580,7 +594,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				continue
 			}
 			switch entity.GetEntityType() {
-			case uint32(proto.ProtEntityType_PROT_ENTITY_AVATAR):
+			case constant.ENTITY_TYPE_AVATAR:
 				if visionType == proto.VisionType_VISION_MEET && entity.GetAvatarEntity().GetUid() == player.PlayerID {
 					continue
 				}
@@ -594,14 +608,14 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				}
 				sceneEntityInfoAvatar := g.PacketSceneEntityInfoAvatar(scene, scenePlayer, world.GetPlayerActiveAvatarId(scenePlayer))
 				entityList = append(entityList, sceneEntityInfoAvatar)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_WEAPON):
-			case uint32(proto.ProtEntityType_PROT_ENTITY_MONSTER):
+			case constant.ENTITY_TYPE_WEAPON:
+			case constant.ENTITY_TYPE_MONSTER:
 				sceneEntityInfoMonster := g.PacketSceneEntityInfoMonster(scene, entity.GetId())
 				entityList = append(entityList, sceneEntityInfoMonster)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_NPC):
+			case constant.ENTITY_TYPE_NPC:
 				sceneEntityInfoNpc := g.PacketSceneEntityInfoNpc(scene, entity.GetId())
 				entityList = append(entityList, sceneEntityInfoNpc)
-			case uint32(proto.ProtEntityType_PROT_ENTITY_GADGET):
+			case constant.ENTITY_TYPE_GADGET:
 				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.GetId())
 				entityList = append(entityList, sceneEntityInfoGadget)
 			}
@@ -628,16 +642,16 @@ func (g *GameManager) EntityFightPropUpdateNotifyBroadcast(scene *Scene, entity 
 
 func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint32]float32) []*proto.FightPropPair {
 	fightPropList := []*proto.FightPropPair{
-		{PropType: uint32(constant.FIGHT_PROP_BASE_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_HP)]},
-		{PropType: uint32(constant.FIGHT_PROP_BASE_ATTACK), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_ATTACK)]},
-		{PropType: uint32(constant.FIGHT_PROP_BASE_DEFENSE), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_BASE_DEFENSE)]},
-		{PropType: uint32(constant.FIGHT_PROP_CRITICAL), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CRITICAL)]},
-		{PropType: uint32(constant.FIGHT_PROP_CRITICAL_HURT), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CRITICAL_HURT)]},
-		{PropType: uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CHARGE_EFFICIENCY)]},
-		{PropType: uint32(constant.FIGHT_PROP_CUR_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_HP)]},
-		{PropType: uint32(constant.FIGHT_PROP_MAX_HP), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_MAX_HP)]},
-		{PropType: uint32(constant.FIGHT_PROP_CUR_ATTACK), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_ATTACK)]},
-		{PropType: uint32(constant.FIGHT_PROP_CUR_DEFENSE), PropValue: fightPropMap[uint32(constant.FIGHT_PROP_CUR_DEFENSE)]},
+		{PropType: constant.FIGHT_PROP_BASE_HP, PropValue: fightPropMap[constant.FIGHT_PROP_BASE_HP]},
+		{PropType: constant.FIGHT_PROP_BASE_ATTACK, PropValue: fightPropMap[constant.FIGHT_PROP_BASE_ATTACK]},
+		{PropType: constant.FIGHT_PROP_BASE_DEFENSE, PropValue: fightPropMap[constant.FIGHT_PROP_BASE_DEFENSE]},
+		{PropType: constant.FIGHT_PROP_CRITICAL, PropValue: fightPropMap[constant.FIGHT_PROP_CRITICAL]},
+		{PropType: constant.FIGHT_PROP_CRITICAL_HURT, PropValue: fightPropMap[constant.FIGHT_PROP_CRITICAL_HURT]},
+		{PropType: constant.FIGHT_PROP_CHARGE_EFFICIENCY, PropValue: fightPropMap[constant.FIGHT_PROP_CHARGE_EFFICIENCY]},
+		{PropType: constant.FIGHT_PROP_CUR_HP, PropValue: fightPropMap[constant.FIGHT_PROP_CUR_HP]},
+		{PropType: constant.FIGHT_PROP_MAX_HP, PropValue: fightPropMap[constant.FIGHT_PROP_MAX_HP]},
+		{PropType: constant.FIGHT_PROP_CUR_ATTACK, PropValue: fightPropMap[constant.FIGHT_PROP_CUR_ATTACK]},
+		{PropType: constant.FIGHT_PROP_CUR_DEFENSE, PropValue: fightPropMap[constant.FIGHT_PROP_CUR_DEFENSE]},
 	}
 	return fightPropList
 }
@@ -1053,21 +1067,21 @@ func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Play
 
 func (g *GameManager) GetTempFightPropMap() map[uint32]float32 {
 	fpm := map[uint32]float32{
-		uint32(constant.FIGHT_PROP_CUR_HP):            float32(72.91699),
-		uint32(constant.FIGHT_PROP_PHYSICAL_SUB_HURT): float32(0.1),
-		uint32(constant.FIGHT_PROP_CUR_DEFENSE):       float32(505.0),
-		uint32(constant.FIGHT_PROP_CUR_ATTACK):        float32(45.679916),
-		uint32(constant.FIGHT_PROP_ICE_SUB_HURT):      float32(0.1),
-		uint32(constant.FIGHT_PROP_BASE_ATTACK):       float32(45.679916),
-		uint32(constant.FIGHT_PROP_MAX_HP):            float32(72.91699),
-		uint32(constant.FIGHT_PROP_FIRE_SUB_HURT):     float32(0.1),
-		uint32(constant.FIGHT_PROP_ELEC_SUB_HURT):     float32(0.1),
-		uint32(constant.FIGHT_PROP_WIND_SUB_HURT):     float32(0.1),
-		uint32(constant.FIGHT_PROP_ROCK_SUB_HURT):     float32(0.1),
-		uint32(constant.FIGHT_PROP_GRASS_SUB_HURT):    float32(0.1),
-		uint32(constant.FIGHT_PROP_WATER_SUB_HURT):    float32(0.1),
-		uint32(constant.FIGHT_PROP_BASE_HP):           float32(72.91699),
-		uint32(constant.FIGHT_PROP_BASE_DEFENSE):      float32(505.0),
+		constant.FIGHT_PROP_CUR_HP:            float32(72.91699),
+		constant.FIGHT_PROP_PHYSICAL_SUB_HURT: float32(0.1),
+		constant.FIGHT_PROP_CUR_DEFENSE:       float32(505.0),
+		constant.FIGHT_PROP_CUR_ATTACK:        float32(45.679916),
+		constant.FIGHT_PROP_ICE_SUB_HURT:      float32(0.1),
+		constant.FIGHT_PROP_BASE_ATTACK:       float32(45.679916),
+		constant.FIGHT_PROP_MAX_HP:            float32(72.91699),
+		constant.FIGHT_PROP_FIRE_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_ELEC_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_WIND_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_ROCK_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_GRASS_SUB_HURT:    float32(0.1),
+		constant.FIGHT_PROP_WATER_SUB_HURT:    float32(0.1),
+		constant.FIGHT_PROP_BASE_HP:           float32(72.91699),
+		constant.FIGHT_PROP_BASE_DEFENSE:      float32(505.0),
 	}
 	return fpm
 }

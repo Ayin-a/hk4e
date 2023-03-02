@@ -167,5 +167,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		}()
 	case ReloadGameDataConfigFinish:
 		gdconf.ReplaceGameDataConfig()
+		// TODO 参考更表一样改成异步加载
+		WORLD_MANAGER.LoadSceneBlockAoiMap()
 	}
 }

@@ -314,7 +314,7 @@ func (g *GameManager) PacketAvatarEquipChangeNotifyByWeapon(avatar *model.Avatar
 		AvatarGuid: avatar.Guid,
 		ItemId:     weapon.ItemId,
 		EquipGuid:  weapon.Guid,
-		EquipType:  uint32(constant.EQUIP_TYPE_WEAPON),
+		EquipType:  constant.EQUIP_TYPE_WEAPON,
 		Weapon: &proto.SceneWeaponInfo{
 			EntityId:     entityId,
 			GadgetId:     uint32(weaponConfig.GadgetId),

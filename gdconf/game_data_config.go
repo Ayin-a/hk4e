@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hk4e/common/config"
+	"hk4e/common/constant"
 	"hk4e/pkg/logger"
 
 	lua "github.com/yuin/gopher-lua"
@@ -172,18 +173,22 @@ func RegScriptLib(fnName string, fn lua.LGFunction) {
 func initLuaState(luaState *lua.LState) {
 	eventType := luaState.NewTable()
 	luaState.SetGlobal("EventType", eventType)
-	luaState.SetField(eventType, "NONE", lua.LNumber(0))
-	luaState.SetField(eventType, "EVENT_ENTER_REGION", lua.LNumber(1))
+	luaState.SetField(eventType, "EVENT_NONE", lua.LNumber(constant.LUA_EVENT_NONE))
+	luaState.SetField(eventType, "EVENT_ENTER_REGION", lua.LNumber(constant.LUA_EVENT_ENTER_REGION))
+	luaState.SetField(eventType, "EVENT_LEAVE_REGION", lua.LNumber(constant.LUA_EVENT_LEAVE_REGION))
 
 	entityType := luaState.NewTable()
 	luaState.SetGlobal("EntityType", entityType)
-	luaState.SetField(entityType, "NONE", lua.LNumber(0))
-	luaState.SetField(entityType, "AVATAR", lua.LNumber(1))
+	luaState.SetField(entityType, "NONE", lua.LNumber(constant.ENTITY_TYPE_NONE))
+	luaState.SetField(entityType, "AVATAR", lua.LNumber(constant.ENTITY_TYPE_AVATAR))
 
 	regionShape := luaState.NewTable()
 	luaState.SetGlobal("RegionShape", regionShape)
-	luaState.SetField(regionShape, "NONE", lua.LNumber(0))
-	luaState.SetField(regionShape, "SPHERE", lua.LNumber(1))
+	luaState.SetField(regionShape, "NONE", lua.LNumber(constant.REGION_SHAPE_NONE))
+	luaState.SetField(regionShape, "SPHERE", lua.LNumber(constant.REGION_SHAPE_SPHERE))
+	luaState.SetField(regionShape, "CUBIC", lua.LNumber(constant.REGION_SHAPE_CUBIC))
+	luaState.SetField(regionShape, "CYLINDER", lua.LNumber(constant.REGION_SHAPE_CYLINDER))
+	luaState.SetField(regionShape, "POLYGON", lua.LNumber(constant.REGION_SHAPE_POLYGON))
 
 	questState := luaState.NewTable()
 	luaState.SetGlobal("QuestState", questState)

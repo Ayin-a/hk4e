@@ -16,7 +16,7 @@ type DbQuest struct {
 // Quest 任务
 type Quest struct {
 	QuestId            uint32   // 任务id
-	State              uint32   // 任务状态
+	State              uint8    // 任务状态
 	AcceptTime         uint32   // 接取时间
 	StartTime          uint32   // 开始执行时间
 	FinishProgressList []uint32 // 任务进度
@@ -55,7 +55,7 @@ func (q *DbQuest) AddQuest(questId uint32) {
 	}
 	q.QuestMap[questId] = &Quest{
 		QuestId:            uint32(questDataConfig.QuestId),
-		State:              constant.QUEST_STATE_TYPE_ACCEPT,
+		State:              constant.QUEST_STATE_UNSTARTED,
 		AcceptTime:         uint32(time.Now().Unix()),
 		StartTime:          0,
 		FinishProgressList: nil,
@@ -69,7 +69,7 @@ func (q *DbQuest) ExecQuest(questId uint32) {
 		logger.Error("get quest is nil, questId: %v", questId)
 		return
 	}
-	if quest.State != constant.QUEST_STATE_TYPE_ACCEPT {
+	if quest.State != constant.QUEST_STATE_UNSTARTED {
 		logger.Error("invalid quest state, questId: %v, state: %v", questId, quest.State)
 		return
 	}
@@ -78,7 +78,7 @@ func (q *DbQuest) ExecQuest(questId uint32) {
 		logger.Error("get quest data config is nil, questId: %v", questId)
 		return
 	}
-	quest.State = constant.QUEST_STATE_TYPE_EXEC
+	quest.State = constant.QUEST_STATE_UNFINISHED
 	quest.StartTime = uint32(time.Now().Unix())
 	quest.FinishProgressList = make([]uint32, len(questDataConfig.FinishCondList))
 }
@@ -100,7 +100,7 @@ func (q *DbQuest) AddQuestProgress(questId uint32, index int, progress uint32) {
 		logger.Error("get quest is nil, questId: %v", questId)
 		return
 	}
-	if quest.State != constant.QUEST_STATE_TYPE_EXEC {
+	if quest.State != constant.QUEST_STATE_UNFINISHED {
 		logger.Error("invalid quest state, questId: %v, state: %v", questId, quest.State)
 		return
 	}
@@ -115,7 +115,7 @@ func (q *DbQuest) AddQuestProgress(questId uint32, index int, progress uint32) {
 	}
 	quest.FinishProgressList[index] += progress
 	if quest.FinishProgressList[index] >= uint32(questDataConfig.FinishCondList[index].Count) {
-		quest.State = constant.QUEST_STATE_TYPE_FINISH
+		quest.State = constant.QUEST_STATE_FINISHED
 	}
 }
 

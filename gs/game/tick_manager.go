@@ -292,7 +292,7 @@ func (t *TickManager) onTick5Second(now int64) {
 				for _, entityId := range scenePlayer.VehicleInfo.LastCreateEntityIdMap {
 					entity := scene.GetEntity(entityId)
 					// 确保实体类型是否为载具
-					if entity != nil && entity.gadgetEntity != nil && entity.gadgetEntity.gadgetVehicleEntity != nil {
+					if entity != nil && entity.GetEntityType() == constant.ENTITY_TYPE_GADGET && entity.gadgetEntity.gadgetVehicleEntity != nil {
 						vehicleLocationInfo := &proto.VehicleLocationInfo{
 							Rot: &proto.Vector{
 								X: float32(entity.rot.X),
@@ -300,7 +300,7 @@ func (t *TickManager) onTick5Second(now int64) {
 								Z: float32(entity.rot.Z),
 							},
 							EntityId: entity.id,
-							CurHp:    entity.fightProp[uint32(constant.FIGHT_PROP_CUR_HP)],
+							CurHp:    entity.fightProp[constant.FIGHT_PROP_CUR_HP],
 							OwnerUid: entity.gadgetEntity.gadgetVehicleEntity.owner.PlayerID,
 							Pos: &proto.Vector{
 								X: float32(entity.pos.X),
@@ -309,7 +309,7 @@ func (t *TickManager) onTick5Second(now int64) {
 							},
 							UidList:  make([]uint32, 0, len(entity.gadgetEntity.gadgetVehicleEntity.memberMap)),
 							GadgetId: entity.gadgetEntity.gadgetVehicleEntity.vehicleId,
-							MaxHp:    entity.fightProp[uint32(constant.FIGHT_PROP_MAX_HP)],
+							MaxHp:    entity.fightProp[constant.FIGHT_PROP_MAX_HP],
 						}
 						for _, p := range entity.gadgetEntity.gadgetVehicleEntity.memberMap {
 							vehicleLocationInfo.UidList = append(vehicleLocationInfo.UidList, p.PlayerID)

@@ -12,7 +12,7 @@ import (
 func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 	allReliquaryDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
-		if uint16(itemData.Type) != constant.ITEM_TYPE_RELIQUARY {
+		if itemData.Type != constant.ITEM_TYPE_RELIQUARY {
 			continue
 		}
 		if (itemId >= 20002 && itemId <= 20004) ||

@@ -17,7 +17,7 @@ import (
 func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 	allWeaponDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
-		if uint16(itemData.Type) != constant.ITEM_TYPE_WEAPON {
+		if itemData.Type != constant.ITEM_TYPE_WEAPON {
 			continue
 		}
 		if (itemId >= 10000 && itemId <= 10008) ||
@@ -188,7 +188,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 	}
 	// 根据精炼材料的类型做不同操作
 	switch itemDataConfig.Type {
-	case int32(constant.ITEM_TYPE_WEAPON):
+	case constant.ITEM_TYPE_WEAPON:
 		// 精炼材料为武器
 		// 是否拥有将被用于精炼的武器
 		foodWeapon, ok := player.GameObjectGuidMap[req.ItemGuid].(*model.Weapon)
@@ -211,7 +211,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		}
 		// 消耗作为精炼材料的武器
 		g.CostUserWeapon(player.PlayerID, []uint64{foodWeapon.WeaponId})
-	case int32(constant.ITEM_TYPE_MATERIAL):
+	case constant.ITEM_TYPE_MATERIAL:
 		// 精炼材料为道具
 		// 是否拥有将被用于精炼的道具
 		item, ok := player.GameObjectGuidMap[req.ItemGuid].(*model.Item)

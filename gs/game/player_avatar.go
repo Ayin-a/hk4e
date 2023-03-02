@@ -440,14 +440,14 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 	for _, v := range avatar.FetterList {
 		pbAvatar.FetterInfo.FetterList = append(pbAvatar.FetterInfo.FetterList, &proto.FetterData{
 			FetterId:    v,
-			FetterState: uint32(constant.FETTER_STATE_FINISH),
+			FetterState: constant.FETTER_STATE_FINISH,
 		})
 	}
 	// 解锁全部资料
 	for _, v := range gdconf.GetFetterIdListByAvatarId(int32(avatar.AvatarId)) {
 		pbAvatar.FetterInfo.FetterList = append(pbAvatar.FetterInfo.FetterList, &proto.FetterData{
 			FetterId:    uint32(v),
-			FetterState: uint32(constant.FETTER_STATE_FINISH),
+			FetterState: constant.FETTER_STATE_FINISH,
 		})
 	}
 	// 突破等级奖励

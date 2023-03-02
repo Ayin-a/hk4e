@@ -3,7 +3,6 @@ package game
 import (
 	"time"
 
-	"hk4e/common/constant"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -92,7 +91,7 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 	g.AddUserItem(player.PlayerID, []*ChangeItem{{
 		ItemId:      buyItemId,
 		ChangeCount: buyItemCount,
-	}}, true, constant.ActionReasonShop)
+	}}, true, uint16(proto.ActionReasonType_ACTION_REASON_SHOP))
 	req.Goods.BoughtNum = dbItem.GetItemCount(player, buyItemId)
 
 	buyGoodsRsp := &proto.BuyGoodsRsp{

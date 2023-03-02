@@ -1,10 +1,14 @@
 package game
 
 import (
+	"math"
+
 	"hk4e/common/config"
 	"hk4e/common/constant"
 	"hk4e/common/utils"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
+	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/reflection"
 	"hk4e/protocol/cmd"
@@ -147,19 +151,19 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			currHp := float32(0)
 			fightProp := target.GetFightProp()
 			if fightProp != nil {
-				currHp = fightProp[uint32(constant.FIGHT_PROP_CUR_HP)]
+				currHp = fightProp[constant.FIGHT_PROP_CUR_HP]
 				currHp -= damage
 				if currHp < 0 {
 					currHp = 0
 				}
-				fightProp[uint32(constant.FIGHT_PROP_CUR_HP)] = currHp
+				fightProp[constant.FIGHT_PROP_CUR_HP] = currHp
 			}
 			entityFightPropUpdateNotify := &proto.EntityFightPropUpdateNotify{
 				FightPropMap: fightProp,
 				EntityId:     target.GetId(),
 			}
 			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
-			if currHp == 0 && target.GetAvatarEntity() == nil {
+			if currHp == 0 && target.GetEntityType() != constant.ENTITY_TYPE_AVATAR {
 				scene.SetEntityLifeState(target, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(hitInfo)
@@ -195,13 +199,13 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if sceneEntity == nil {
 				continue
 			}
-			if sceneEntity.GetAvatarEntity() != nil {
+			if sceneEntity.GetEntityType() == constant.ENTITY_TYPE_AVATAR {
 				// 玩家实体在移动
 				g.AoiPlayerMove(player, player.Pos, &model.Vector{
 					X: float64(motionInfo.Pos.X),
 					Y: float64(motionInfo.Pos.Y),
 					Z: float64(motionInfo.Pos.Z),
-				})
+				}, sceneEntity.GetId())
 				// 更新玩家的位置信息
 				player.Pos.X = float64(motionInfo.Pos.X)
 				player.Pos.Y = float64(motionInfo.Pos.Y)
@@ -223,13 +227,15 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				rot.X = float64(motionInfo.Rot.X)
 				rot.Y = float64(motionInfo.Rot.Y)
 				rot.Z = float64(motionInfo.Rot.Z)
-				// 载具耐力消耗
-				gadgetEntity := sceneEntity.GetGadgetEntity()
-				if gadgetEntity != nil && gadgetEntity.GetGadgetVehicleEntity() != nil {
-					// 处理耐力消耗
-					g.ImmediateStamina(player, motionInfo.State)
-					// 处理载具销毁请求
-					g.VehicleDestroyMotion(player, sceneEntity, motionInfo.State)
+				if sceneEntity.GetEntityType() == constant.ENTITY_TYPE_GADGET {
+					// 载具耐力消耗
+					gadgetEntity := sceneEntity.GetGadgetEntity()
+					if gadgetEntity.GetGadgetVehicleEntity() != nil {
+						// 处理耐力消耗
+						g.ImmediateStamina(player, motionInfo.State)
+						// 处理载具销毁请求
+						g.VehicleDestroyMotion(player, sceneEntity, motionInfo.State)
+					}
 				}
 			}
 			sceneEntity.SetMoveState(uint16(motionInfo.State))
@@ -278,67 +284,181 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	}
 }
 
-func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
-	sceneBlockAoiMap := WORLD_MANAGER.GetSceneBlockAoiMap()
-	aoiManager, exist := sceneBlockAoiMap[player.SceneId]
+func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector, entityId uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+	if world == nil {
+		logger.Error("get player world is nil, uid: %v", player.PlayerID)
 		return
 	}
-	if exist {
-		oldGid := aoiManager.GetGidByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
-		newGid := aoiManager.GetGidByPos(float32(newPos.X), 0.0, float32(newPos.Z))
-		if oldGid != newGid {
-			// 跨越了格子
-			oldGridList := aoiManager.GetSurrGridListByGid(oldGid)
-			oldObjectMap := make(map[int64]any)
-			for _, grid := range oldGridList {
-				tmp := grid.GetObjectList()
-				for k, v := range tmp {
-					oldObjectMap[k] = v
-				}
+	scene := world.GetSceneById(player.SceneId)
+	sceneBlockAoiMap := WORLD_MANAGER.GetSceneBlockAoiMap()
+	aoiManager, exist := sceneBlockAoiMap[player.SceneId]
+	if !exist {
+		logger.Error("get scene block aoi is nil, sceneId: %v, uid: %v", player.SceneId, player.PlayerID)
+		return
+	}
+	oldGid := aoiManager.GetGidByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
+	newGid := aoiManager.GetGidByPos(float32(newPos.X), 0.0, float32(newPos.Z))
+	if oldGid != newGid {
+		// 跨越了block格子
+		logger.Debug("player cross grid, oldGid: %v, newGid: %v, uid: %v", oldGid, newGid, player.PlayerID)
+	}
+	// 旧位置视野范围内的group
+	oldVisionGroupMap := make(map[uint32]*gdconf.Group)
+	oldGroupList := aoiManager.GetObjectListByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
+	for groupId, groupAny := range oldGroupList {
+		group := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt(math.Pow(oldPos.X-float64(group.Pos.X), 2.0) + math.Pow(oldPos.Z-float64(group.Pos.Z), 2.0))
+		if distance2D > ENTITY_LOD {
+			continue
+		}
+		oldVisionGroupMap[uint32(groupId)] = group
+	}
+	// 新位置视野范围内的group
+	newVisionGroupMap := make(map[uint32]*gdconf.Group)
+	newGroupList := aoiManager.GetObjectListByPos(float32(newPos.X), 0.0, float32(newPos.Z))
+	for groupId, groupAny := range newGroupList {
+		group := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt(math.Pow(newPos.X-float64(group.Pos.X), 2.0) + math.Pow(newPos.Z-float64(group.Pos.Z), 2.0))
+		if distance2D > ENTITY_LOD {
+			continue
+		}
+		newVisionGroupMap[uint32(groupId)] = group
+	}
+	// 消失的场景实体
+	delEntityIdList := make([]uint32, 0)
+	for groupId, group := range oldVisionGroupMap {
+		_, exist := newVisionGroupMap[groupId]
+		if exist {
+			continue
+		}
+		// 旧有新没有的group即为消失的
+		for _, monster := range group.MonsterList {
+			entity := scene.GetEntityByObjectId(monster.ObjectId)
+			if entity == nil {
+				continue
 			}
-			newGridList := aoiManager.GetSurrGridListByGid(newGid)
-			newObjectMap := make(map[int64]any)
-			for _, grid := range newGridList {
-				tmp := grid.GetObjectList()
-				for k, v := range tmp {
-					newObjectMap[k] = v
-				}
+			scene.DestroyEntity(entity.GetId())
+			delEntityIdList = append(delEntityIdList, entity.GetId())
+		}
+		for _, npc := range group.NpcList {
+			entity := scene.GetEntityByObjectId(npc.ObjectId)
+			if entity == nil {
+				continue
 			}
-			delEntityIdList := make([]uint32, 0)
-			for oldObjectId := range oldObjectMap {
-				_, exist := newObjectMap[oldObjectId]
-				if exist {
-					continue
-				}
-				entity := scene.GetEntityByObjectId(oldObjectId)
-				if entity == nil {
-					continue
-				}
-				scene.DestroyEntity(entity.GetId())
-				delEntityIdList = append(delEntityIdList, entity.GetId())
+			scene.DestroyEntity(entity.GetId())
+			delEntityIdList = append(delEntityIdList, entity.GetId())
+		}
+		for _, gadget := range group.GadgetList {
+			entity := scene.GetEntityByObjectId(gadget.ObjectId)
+			if entity == nil {
+				continue
 			}
-			addEntityIdList := make([]uint32, 0)
-			for newObjectId, newObject := range newObjectMap {
-				_, exist := oldObjectMap[newObjectId]
-				if exist {
-					continue
-				}
-				entityId := g.CreateConfigEntity(scene, newObjectId, newObject)
-				if entityId == 0 {
-					continue
-				}
-				addEntityIdList = append(addEntityIdList, entityId)
-			}
-			// 发送已消失格子里的实体消失通知
-			g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
-			// 发送新出现格子里的实体出现通知
-			g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
+			scene.DestroyEntity(entity.GetId())
+			delEntityIdList = append(delEntityIdList, entity.GetId())
 		}
 	}
+	// 出现的场景实体
+	addEntityIdList := make([]uint32, 0)
+	for groupId, group := range newVisionGroupMap {
+		_, exist := oldVisionGroupMap[groupId]
+		if exist {
+			continue
+		}
+		// 新有旧没有的group即为出现的
+		for _, monster := range group.MonsterList {
+			entityId := g.CreateConfigEntity(scene, monster.ObjectId, monster)
+			addEntityIdList = append(addEntityIdList, entityId)
+		}
+		for _, npc := range group.NpcList {
+			entityId := g.CreateConfigEntity(scene, npc.ObjectId, npc)
+			addEntityIdList = append(addEntityIdList, entityId)
+		}
+		for _, gadget := range group.GadgetList {
+			entityId := g.CreateConfigEntity(scene, gadget.ObjectId, gadget)
+			addEntityIdList = append(addEntityIdList, entityId)
+		}
+	}
+	// 同步客户端消失和出现的场景实体
+	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
+	g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
+	// 场景区域触发器
+	dbQuest := player.GetDbQuest()
+	for _, group := range newVisionGroupMap {
+		for _, region := range group.RegionList {
+			shape := alg.NewShape()
+			switch uint8(region.Shape) {
+			case constant.REGION_SHAPE_SPHERE:
+				shape.NewSphere(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z}, region.Radius)
+			case constant.REGION_SHAPE_CUBIC:
+				shape.NewCubic(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
+					&alg.Vector3{X: region.Size.X, Y: region.Size.Y, Z: region.Size.Z})
+			case constant.REGION_SHAPE_CYLINDER:
+				shape.NewCylinder(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
+					region.Radius, region.Height)
+			case constant.REGION_SHAPE_POLYGON:
+				vector2PointArray := make([]*alg.Vector2, 0)
+				for _, vector := range region.PointArray {
+					// z就是y
+					vector2PointArray = append(vector2PointArray, &alg.Vector2{X: vector.X, Z: vector.Y})
+				}
+				shape.NewPolygon(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
+					vector2PointArray, region.Height)
+			}
+			oldPosInRegion := shape.Contain(&alg.Vector3{
+				X: float32(oldPos.X),
+				Y: float32(oldPos.Y),
+				Z: float32(oldPos.Z),
+			})
+			newPosInRegion := shape.Contain(&alg.Vector3{
+				X: float32(newPos.X),
+				Y: float32(newPos.Y),
+				Z: float32(newPos.Z),
+			})
+			if !oldPosInRegion && newPosInRegion {
+				// EVENT_ENTER_REGION
+				logger.Debug("player enter region: %v, uid: %v", region, player.PlayerID)
+				for _, trigger := range group.TriggerList {
+					if trigger.Event != constant.LUA_EVENT_ENTER_REGION {
+						continue
+					}
+					cond := CallLuaFunc(group.LuaState, trigger.Condition, &LuaCtx{
+						uid: player.PlayerID,
+					}, &LuaEvt{
+						param1:         region.ConfigId,
+						targetEntityId: entityId,
+					})
+					if !cond {
+						continue
+					}
+					// TODO 这一块写得太炸裂了需要优化
+					for _, triggerDataConfig := range gdconf.GetTriggerDataMap() {
+						if triggerDataConfig.TriggerName == trigger.Name {
+							for _, quest := range dbQuest.GetQuestMap() {
+								questDataConfig := gdconf.GetQuestDataById(int32(quest.QuestId))
+								if questDataConfig == nil {
+									continue
+								}
+								for _, questCond := range questDataConfig.FinishCondList {
+									if questCond.Type != constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE {
+										continue
+									}
+									if questCond.Param[0] != triggerDataConfig.TriggerId {
+										continue
+									}
+									dbQuest.ForceFinishQuest(quest.QuestId)
+								}
+							}
+						}
+					}
+				}
+			} else if oldPosInRegion && !newPosInRegion {
+				// EVENT_LEAVE_REGION
+				logger.Debug("player leave region: %v, uid: %v", region, player.PlayerID)
+			}
+		}
+	}
+	g.AcceptQuest(player, true)
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {

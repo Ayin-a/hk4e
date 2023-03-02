@@ -72,7 +72,7 @@ func (g *GameManager) AcceptQuest(player *model.Player, isNtfClient bool) {
 		canAccept := true
 		for _, acceptCond := range questData.AcceptCondList {
 			switch acceptCond.Type {
-			case constant.QUEST_ACCEPT_COND_TYPE_QUEST_STATE_EQ:
+			case constant.QUEST_ACCEPT_COND_TYPE_STATE_EQUAL:
 				// 某个任务状态等于 参数1:任务id 参数2:任务状态
 				if len(acceptCond.Param) != 2 {
 					logger.Error("quest accept cond config format error, questId: %v", questData.QuestId)
@@ -84,7 +84,7 @@ func (g *GameManager) AcceptQuest(player *model.Player, isNtfClient bool) {
 					canAccept = false
 					break
 				}
-				if quest.State != uint32(acceptCond.Param[1]) {
+				if quest.State != uint8(acceptCond.Param[1]) {
 					canAccept = false
 					break
 				}
@@ -130,7 +130,7 @@ func (g *GameManager) PacketQuest(player *model.Player, questId uint32) *proto.Q
 	}
 	pbQuest := &proto.Quest{
 		QuestId:            quest.QuestId,
-		State:              quest.State,
+		State:              uint32(quest.State),
 		StartTime:          quest.StartTime,
 		ParentQuestId:      uint32(questDataConfig.ParentQuestId),
 		StartGameTime:      0,

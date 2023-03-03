@@ -19,11 +19,11 @@ import (
 
 const (
 	ENTITY_MAX_BATCH_SEND_NUM = 1000 // 单次同步的最大实体数量
-	ENTITY_LOD                = 100  // 实体加载视野距离
+	ENTITY_LOD                = 300  // 实体加载视野距离
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user enter scene ready, uid: %v", player.PlayerID)
+	logger.Debug("player enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 
 	enterScenePeerNotify := &proto.EnterScenePeerNotify{
@@ -41,7 +41,7 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user scene init finish, uid: %v", player.PlayerID)
+	logger.Debug("player scene init finish, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if scene == nil {
@@ -243,7 +243,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user enter scene done, uid: %v", player.PlayerID)
+	logger.Debug("player enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if scene == nil {
@@ -277,6 +277,9 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 			group := groupAny.(*gdconf.Group)
 			distance2D := math.Sqrt(math.Pow(player.Pos.X-float64(group.Pos.X), 2.0) + math.Pow(player.Pos.Z-float64(group.Pos.Z), 2.0))
 			if distance2D > ENTITY_LOD {
+				continue
+			}
+			if group.DynamicLoad {
 				continue
 			}
 			for _, monster := range group.MonsterList {
@@ -332,7 +335,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user post enter scene, uid: %v", player.PlayerID)
+	logger.Debug("player post enter scene, uid: %v", player.PlayerID)
 
 	postEnterSceneRsp := &proto.PostEnterSceneRsp{
 		EnterSceneToken: player.EnterSceneToken,
@@ -341,7 +344,6 @@ func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change game time, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeGameTimeReq)
 	gameTime := req.GameTime
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -370,11 +372,13 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneEntityDrownReq)
 
-	logger.Error("entity drown, entityId: %v", req.EntityId)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	scene.DestroyEntity(req.EntityId)
 
-	// PacketSceneEntityDrownRsp
-	sceneEntityDrownRsp := new(proto.SceneEntityDrownRsp)
-	sceneEntityDrownRsp.EntityId = req.EntityId
+	sceneEntityDrownRsp := &proto.SceneEntityDrownRsp{
+		EntityId: req.EntityId,
+	}
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
 }
 

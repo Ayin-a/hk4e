@@ -33,7 +33,6 @@ func (g *GameManager) AddUserCostume(userId uint32, costumeId uint32) {
 
 // AvatarChangeCostumeReq 角色更换时装请求
 func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change avatar costume, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarChangeCostumeReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)

@@ -17,7 +17,6 @@ import (
 )
 
 func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get player social detail, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetPlayerSocialDetailReq)
 	targetUid := req.Uid
 
@@ -47,7 +46,6 @@ func (g *GameManager) GetPlayerSocialDetailReq(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) SetPlayerBirthdayReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user set birthday, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerBirthdayReq)
 	if player.Birthday[0] != 0 || player.Birthday[1] != 0 {
 		g.SendError(cmd.SetPlayerBirthdayRsp, player, &proto.SetPlayerBirthdayRsp{})
@@ -64,7 +62,6 @@ func (g *GameManager) SetPlayerBirthdayReq(player *model.Player, payloadMsg pb.M
 }
 
 func (g *GameManager) SetNameCardReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change name card, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetNameCardReq)
 	nameCardId := req.NameCardId
 	exist := false
@@ -86,7 +83,6 @@ func (g *GameManager) SetNameCardReq(player *model.Player, payloadMsg pb.Message
 }
 
 func (g *GameManager) SetPlayerSignatureReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change signature, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerSignatureReq)
 	signature := req.Signature
 
@@ -103,7 +99,6 @@ func (g *GameManager) SetPlayerSignatureReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) SetPlayerNameReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change nickname, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerNameReq)
 	nickName := req.NickName
 
@@ -124,7 +119,6 @@ func (g *GameManager) SetPlayerNameReq(player *model.Player, payloadMsg pb.Messa
 }
 
 func (g *GameManager) SetPlayerHeadImageReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change head image, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetPlayerHeadImageReq)
 	avatarId := req.AvatarId
 	dbAvatar := player.GetDbAvatar()
@@ -142,8 +136,6 @@ func (g *GameManager) SetPlayerHeadImageReq(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) GetAllUnlockNameCardReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get all unlock name card, uid: %v", player.PlayerID)
-
 	getAllUnlockNameCardRsp := &proto.GetAllUnlockNameCardRsp{
 		NameCardList: player.NameCardList,
 	}
@@ -151,7 +143,6 @@ func (g *GameManager) GetAllUnlockNameCardReq(player *model.Player, payloadMsg p
 }
 
 func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get friend list, uid: %v", player.PlayerID)
 	getPlayerFriendListRsp := &proto.GetPlayerFriendListRsp{
 		FriendList: make([]*proto.FriendBrief, 0),
 	}
@@ -193,8 +184,6 @@ func (g *GameManager) GetPlayerFriendListReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) GetPlayerAskFriendListReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get friend apply list, uid: %v", player.PlayerID)
-
 	getPlayerAskFriendListRsp := &proto.GetPlayerAskFriendListRsp{
 		AskFriendList: make([]*proto.FriendBrief, 0),
 	}
@@ -231,7 +220,6 @@ func (g *GameManager) GetPlayerAskFriendListReq(player *model.Player, payloadMsg
 }
 
 func (g *GameManager) AskAddFriendReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user apply add friend, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AskAddFriendReq)
 	targetUid := req.TargetUid
 
@@ -318,7 +306,6 @@ func (g *GameManager) AskAddFriendReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user deal friend apply, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.DealAddFriendReq)
 	targetUid := req.TargetUid
 	result := req.DealAddFriendResult
@@ -378,8 +365,6 @@ func (g *GameManager) DealAddFriendReq(player *model.Player, payloadMsg pb.Messa
 }
 
 func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get online player list, uid: %v", player.PlayerID)
-
 	count := 0
 	getOnlinePlayerListRsp := &proto.GetOnlinePlayerListRsp{
 		PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
@@ -432,7 +417,6 @@ func (g *GameManager) GetOnlinePlayerListReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) GetOnlinePlayerInfoReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get online player info, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetOnlinePlayerInfoReq)
 	targetUid, ok := req.PlayerId.(*proto.GetOnlinePlayerInfoReq_TargetUid)
 	if !ok {

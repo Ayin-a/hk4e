@@ -116,7 +116,6 @@ func (g *GameManager) PacketStoreItemChangeNotifyByWeapon(weapon *model.Weapon) 
 
 // WeaponAwakenReq 武器精炼请求
 func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user weapon awaken, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WeaponAwakenReq)
 	// 确保精炼的武器与精炼材料不是同一个
 	if req.TargetWeaponGuid == req.ItemGuid {
@@ -282,7 +281,6 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 
 // WeaponPromoteReq 武器突破请求
 func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user weapon promote, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WeaponPromoteReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
@@ -552,7 +550,6 @@ func (g *GameManager) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (
 
 // WeaponUpgradeReq 武器升级请求
 func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user weapon upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WeaponUpgradeReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
@@ -689,7 +686,6 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 
 // CalcWeaponUpgradeReturnItemsReq 计算武器升级返回矿石请求
 func (g *GameManager) CalcWeaponUpgradeReturnItemsReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user calc weapon upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CalcWeaponUpgradeReturnItemsReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)

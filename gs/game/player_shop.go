@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"hk4e/gs/model"
-	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -12,8 +11,6 @@ import (
 )
 
 func (g *GameManager) GetShopmallDataReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get shop mall, uid: %v", player.PlayerID)
-
 	getShopmallDataRsp := &proto.GetShopmallDataRsp{
 		ShopTypeList: []uint32{900, 1052, 902, 1001, 903},
 	}
@@ -21,7 +18,6 @@ func (g *GameManager) GetShopmallDataReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) GetShopReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get shop, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetShopReq)
 	shopType := req.ShopType
 
@@ -69,7 +65,6 @@ func (g *GameManager) GetShopReq(player *model.Player, payloadMsg pb.Message) {
 }
 
 func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user buy goods, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.BuyGoodsReq)
 	buyItemId := req.Goods.GoodsItem.ItemId
 	buyItemCount := req.BuyCount
@@ -103,7 +98,6 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 }
 
 func (g *GameManager) McoinExchangeHcoinReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user mcoin exchange hcoin, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.McoinExchangeHcoinReq)
 	if req.Hcoin != req.McoinCost {
 		return

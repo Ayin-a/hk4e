@@ -14,7 +14,7 @@ import (
 // AddQuestContentProgressReq 添加任务内容进度请求
 func (g *GameManager) AddQuestContentProgressReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AddQuestContentProgressReq)
-	logger.Error("AddQuestContentProgressReq: %v", req)
+	logger.Debug("AddQuestContentProgressReq: %v", req)
 
 	g.AddQuestProgress(player, req)
 

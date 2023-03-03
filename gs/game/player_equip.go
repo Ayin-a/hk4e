@@ -13,7 +13,6 @@ import (
 
 // SetEquipLockStateReq 设置装备上锁状态请求
 func (g *GameManager) SetEquipLockStateReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user set equip lock, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetEquipLockStateReq)
 
 	// 获取目标装备
@@ -49,7 +48,6 @@ func (g *GameManager) SetEquipLockStateReq(player *model.Player, payloadMsg pb.M
 
 // TakeoffEquipReq 装备卸下请求
 func (g *GameManager) TakeoffEquipReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user take off equip, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.TakeoffEquipReq)
 
 	// 获取目标角色
@@ -84,7 +82,6 @@ func (g *GameManager) TakeoffEquipReq(player *model.Player, payloadMsg pb.Messag
 
 // WearEquipReq 穿戴装备请求
 func (g *GameManager) WearEquipReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user wear equip, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.WearEquipReq)
 
 	// 获取目标角色

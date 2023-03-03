@@ -22,7 +22,6 @@ type UserInfo struct {
 
 // 获取卡池信息
 func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get gacha info, uid: %v", player.PlayerID)
 	serverAddr := config.GetConfig().Hk4e.GachaHistoryServer
 	userInfo := &UserInfo{
 		UserId: player.PlayerID,
@@ -195,7 +194,6 @@ func (g *GameManager) GetGachaInfoReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user do gacha, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.DoGachaReq)
 	gachaScheduleId := req.GachaScheduleId
 	gachaTimes := req.GachaTimes

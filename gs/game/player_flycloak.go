@@ -33,7 +33,6 @@ func (g *GameManager) AddUserFlycloak(userId uint32, flyCloakId uint32) {
 
 // AvatarWearFlycloakReq 角色装备风之翼请求
 func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change avatar fly cloak, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarWearFlycloakReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)

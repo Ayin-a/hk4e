@@ -422,17 +422,23 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 					if trigger.Event != constant.LUA_EVENT_ENTER_REGION {
 						continue
 					}
-					cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
-						&LuaCtx{uid: player.PlayerID},
-						&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
-					if !cond {
-						continue
+					if trigger.Condition != "" {
+						cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
+							&LuaCtx{uid: player.PlayerID},
+							&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
+						if !cond {
+							continue
+						}
 					}
-					ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
-						&LuaCtx{uid: player.PlayerID},
-						&LuaEvt{})
-					if !ok {
-						continue
+					logger.Debug("scene group trigger fire, trigger: %v, uid: %v", trigger, player.PlayerID)
+					if trigger.Action != "" {
+						logger.Debug("scene group trigger do action, trigger: %v, uid: %v", trigger, player.PlayerID)
+						ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
+							&LuaCtx{uid: player.PlayerID},
+							&LuaEvt{})
+						if !ok {
+							logger.Error("trigger action fail, trigger: %v, uid: %v", trigger, player.PlayerID)
+						}
 					}
 					updateQuest = g.TriggerFire(dbQuest, trigger)
 				}
@@ -442,17 +448,23 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 					if trigger.Event != constant.LUA_EVENT_LEAVE_REGION {
 						continue
 					}
-					cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
-						&LuaCtx{uid: player.PlayerID},
-						&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
-					if !cond {
-						continue
+					if trigger.Condition != "" {
+						cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
+							&LuaCtx{uid: player.PlayerID},
+							&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
+						if !cond {
+							continue
+						}
 					}
-					ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
-						&LuaCtx{uid: player.PlayerID},
-						&LuaEvt{})
-					if !ok {
-						continue
+					logger.Debug("scene group trigger fire, trigger: %v, uid: %v", trigger, player.PlayerID)
+					if trigger.Action != "" {
+						logger.Debug("scene group trigger do action, trigger: %v, uid: %v", trigger, player.PlayerID)
+						ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
+							&LuaCtx{uid: player.PlayerID},
+							&LuaEvt{})
+						if !ok {
+							logger.Error("trigger action fail, trigger: %v, uid: %v", trigger, player.PlayerID)
+						}
 					}
 				}
 			}

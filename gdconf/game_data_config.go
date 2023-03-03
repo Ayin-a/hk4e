@@ -158,16 +158,18 @@ func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
 	return standardCsvData
 }
 
-func RegScriptLib(fnName string, fn lua.LGFunction) {
-	for _, sceneLuaConfig := range CONF.SceneLuaConfigMap {
-		for _, block := range sceneLuaConfig.BlockMap {
-			for _, group := range block.GroupMap {
-				luaState := group.LuaState
-				scriptLib := luaState.NewTable()
-				luaState.SetField(scriptLib, fnName, luaState.NewFunction(fn))
-			}
-		}
-	}
+type ScriptLibFunc struct {
+	fnName string
+	fn     lua.LGFunction
+}
+
+var SCRIPT_LIB_FUNC_LIST = make([]*ScriptLibFunc, 0)
+
+func RegScriptLibFunc(fnName string, fn lua.LGFunction) {
+	SCRIPT_LIB_FUNC_LIST = append(SCRIPT_LIB_FUNC_LIST, &ScriptLibFunc{
+		fnName: fnName,
+		fn:     fn,
+	})
 }
 
 func initLuaState(luaState *lua.LState) {
@@ -181,6 +183,9 @@ func initLuaState(luaState *lua.LState) {
 	luaState.SetGlobal("EntityType", entityType)
 	luaState.SetField(entityType, "NONE", lua.LNumber(constant.ENTITY_TYPE_NONE))
 	luaState.SetField(entityType, "AVATAR", lua.LNumber(constant.ENTITY_TYPE_AVATAR))
+	luaState.SetField(entityType, "MONSTER", lua.LNumber(constant.ENTITY_TYPE_MONSTER))
+	luaState.SetField(entityType, "NPC", lua.LNumber(constant.ENTITY_TYPE_NPC))
+	luaState.SetField(entityType, "GADGET", lua.LNumber(constant.ENTITY_TYPE_GADGET))
 
 	regionShape := luaState.NewTable()
 	luaState.SetGlobal("RegionShape", regionShape)
@@ -192,8 +197,11 @@ func initLuaState(luaState *lua.LState) {
 
 	questState := luaState.NewTable()
 	luaState.SetGlobal("QuestState", questState)
-	luaState.SetField(questState, "NONE", lua.LNumber(0))
-	luaState.SetField(questState, "UNFINISHED", lua.LNumber(1))
+	luaState.SetField(questState, "NONE", lua.LNumber(constant.QUEST_STATE_NONE))
+	luaState.SetField(questState, "UNSTARTED", lua.LNumber(constant.QUEST_STATE_UNSTARTED))
+	luaState.SetField(questState, "UNFINISHED", lua.LNumber(constant.QUEST_STATE_UNFINISHED))
+	luaState.SetField(questState, "FINISHED", lua.LNumber(constant.QUEST_STATE_FINISHED))
+	luaState.SetField(questState, "FAILED", lua.LNumber(constant.QUEST_STATE_FAILED))
 
 	gadgetState := luaState.NewTable()
 	luaState.SetGlobal("GadgetState", gadgetState)
@@ -228,7 +236,7 @@ func newLuaState(luaStr string) *lua.LState {
 	return luaState
 }
 
-func parseLuaTableToObject[T any](luaState *lua.LState, tableName string, object T) bool {
+func getSceneLuaConfigTable[T any](luaState *lua.LState, tableName string, object T) bool {
 	luaValue := luaState.GetGlobal(tableName)
 	table, ok := luaValue.(*lua.LTable)
 	if !ok {
@@ -253,6 +261,24 @@ func parseLuaTableToObject[T any](luaState *lua.LState, tableName string, object
 		logger.Error("not support type")
 		return false
 	}
+	jsonData, err := json.Marshal(tableObject)
+	if err != nil {
+		logger.Error("build json error: %v", err)
+		return false
+	}
+	if string(jsonData) == "{}" {
+		return true
+	}
+	err = json.Unmarshal(jsonData, object)
+	if err != nil {
+		logger.Error("parse json error: %v", err)
+		return false
+	}
+	return true
+}
+
+func ParseLuaTableToObject[T any](table *lua.LTable, object T) bool {
+	tableObject := convLuaValueToGo(table)
 	jsonData, err := json.Marshal(tableObject)
 	if err != nil {
 		logger.Error("build json error: %v", err)

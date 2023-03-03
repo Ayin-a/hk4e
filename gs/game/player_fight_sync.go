@@ -384,6 +384,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 	g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
 	// 场景区域触发器
 	dbQuest := player.GetDbQuest()
+	updateQuest := false
 	for _, group := range newVisionGroupMap {
 		for _, region := range group.RegionList {
 			shape := alg.NewShape()
@@ -416,49 +417,79 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 				Z: float32(newPos.Z),
 			})
 			if !oldPosInRegion && newPosInRegion {
-				// EVENT_ENTER_REGION
 				logger.Debug("player enter region: %v, uid: %v", region, player.PlayerID)
 				for _, trigger := range group.TriggerList {
 					if trigger.Event != constant.LUA_EVENT_ENTER_REGION {
 						continue
 					}
-					cond := CallLuaFunc(group.LuaState, trigger.Condition, &LuaCtx{
-						uid: player.PlayerID,
-					}, &LuaEvt{
-						param1:         region.ConfigId,
-						targetEntityId: entityId,
-					})
+					cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
+						&LuaCtx{uid: player.PlayerID},
+						&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
 					if !cond {
 						continue
 					}
-					// TODO 这一块写得太炸裂了需要优化
-					for _, triggerDataConfig := range gdconf.GetTriggerDataMap() {
-						if triggerDataConfig.TriggerName == trigger.Name {
-							for _, quest := range dbQuest.GetQuestMap() {
-								questDataConfig := gdconf.GetQuestDataById(int32(quest.QuestId))
-								if questDataConfig == nil {
-									continue
-								}
-								for _, questCond := range questDataConfig.FinishCondList {
-									if questCond.Type != constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE {
-										continue
-									}
-									if questCond.Param[0] != triggerDataConfig.TriggerId {
-										continue
-									}
-									dbQuest.ForceFinishQuest(quest.QuestId)
-								}
-							}
-						}
+					ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
+						&LuaCtx{uid: player.PlayerID},
+						&LuaEvt{})
+					if !ok {
+						continue
 					}
+					updateQuest = g.TriggerFire(dbQuest, trigger)
 				}
 			} else if oldPosInRegion && !newPosInRegion {
-				// EVENT_LEAVE_REGION
 				logger.Debug("player leave region: %v, uid: %v", region, player.PlayerID)
+				for _, trigger := range group.TriggerList {
+					if trigger.Event != constant.LUA_EVENT_LEAVE_REGION {
+						continue
+					}
+					cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
+						&LuaCtx{uid: player.PlayerID},
+						&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
+					if !cond {
+						continue
+					}
+					ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
+						&LuaCtx{uid: player.PlayerID},
+						&LuaEvt{})
+					if !ok {
+						continue
+					}
+				}
 			}
 		}
 	}
-	g.AcceptQuest(player, true)
+	if updateQuest {
+		g.AcceptQuest(player, true)
+	}
+}
+
+func (g *GameManager) TriggerFire(dbQuest *model.DbQuest, trigger *gdconf.Trigger) bool {
+	// TODO 这一块写得太炸裂了需要优化
+	updateQuest := false
+	for _, triggerDataConfig := range gdconf.GetTriggerDataMap() {
+		if triggerDataConfig.TriggerName == trigger.Name {
+			for _, quest := range dbQuest.GetQuestMap() {
+				questDataConfig := gdconf.GetQuestDataById(int32(quest.QuestId))
+				if questDataConfig == nil {
+					continue
+				}
+				for _, questCond := range questDataConfig.FinishCondList {
+					if questCond.Type != constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE {
+						continue
+					}
+					if len(questCond.Param) != 1 {
+						continue
+					}
+					if questCond.Param[0] != triggerDataConfig.TriggerId {
+						continue
+					}
+					dbQuest.ForceFinishQuest(quest.QuestId)
+					updateQuest = true
+				}
+			}
+		}
+	}
+	return updateQuest
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {

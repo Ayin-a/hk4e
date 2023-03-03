@@ -19,7 +19,7 @@ import (
 
 const (
 	ENTITY_MAX_BATCH_SEND_NUM = 1000 // 单次同步的最大实体数量
-	ENTITY_LOD                = 300  // 实体加载视野距离
+	ENTITY_LOD                = 100  // 实体加载视野距离
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {

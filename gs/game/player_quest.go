@@ -62,7 +62,7 @@ func (g *GameManager) AddQuestProgress(player *model.Player, req *proto.AddQuest
 }
 
 // AcceptQuest 接取当前条件下能接取到的全部任务
-func (g *GameManager) AcceptQuest(player *model.Player, isNtfClient bool) {
+func (g *GameManager) AcceptQuest(player *model.Player, notifyClient bool) {
 	dbQuest := player.GetDbQuest()
 	addQuestIdList := make([]uint32, 0)
 	for _, questData := range gdconf.GetQuestDataMap() {
@@ -100,7 +100,7 @@ func (g *GameManager) AcceptQuest(player *model.Player, isNtfClient bool) {
 			addQuestIdList = append(addQuestIdList, uint32(questData.QuestId))
 		}
 	}
-	if isNtfClient {
+	if notifyClient {
 		ntf := &proto.QuestListUpdateNotify{
 			QuestList: make([]*proto.Quest, 0),
 		}

@@ -108,6 +108,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(DungeonWayPointNotify, &proto.DungeonWayPointNotify{})                   // 地牢副本相关
 	c.registerMessage(DungeonDataNotify, &proto.DungeonDataNotify{})                           // 地牢副本相关
 	c.registerMessage(SceneAudioNotify, &proto.SceneAudioNotify{})                             // 场景风物之琴音乐同步通知
+	c.registerMessage(BeginCameraSceneLookNotify, &proto.BeginCameraSceneLookNotify{})         // 场景镜头注目通知
 
 	// 战斗与同步
 	c.registerMessage(AvatarFightPropNotify, &proto.AvatarFightPropNotify{})                         // 角色战斗属性通知

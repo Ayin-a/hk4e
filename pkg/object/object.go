@@ -128,6 +128,14 @@ func ConvInt64ToBool(v int64) bool {
 	}
 }
 
+func ConvRetCodeToBool(v int64) bool {
+	if v == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func ConvListToMap[T any](l []T) map[uint64]T {
 	ret := make(map[uint64]T)
 	for index, value := range l {

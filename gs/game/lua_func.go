@@ -1,8 +1,12 @@
 package game
 
 import (
+	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/object"
+	"hk4e/protocol/cmd"
+	"hk4e/protocol/proto"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -50,21 +54,26 @@ func CallLuaFunc(luaState *lua.LState, luaFuncName string, luaCtx *LuaCtx, luaEv
 		Protect: true,
 	}, ctx, evt)
 	if err != nil {
-		logger.Error("call lua error: %v", err)
+		logger.Error("call lua error, func: %v, error: %v", luaFuncName, err)
 		return false
 	}
 	luaRet := luaState.Get(-1)
 	luaState.Pop(1)
-	ret, ok := luaRet.(lua.LBool)
-	if !ok {
+	switch luaRet.(type) {
+	case lua.LBool:
+		return bool(luaRet.(lua.LBool))
+	case lua.LNumber:
+		return object.ConvRetCodeToBool(int64(luaRet.(lua.LNumber)))
+	default:
 		return false
 	}
-	return bool(ret)
 }
 
 func RegLuaLibFunc() {
-	gdconf.RegScriptLib("GetEntityType", GetEntityType)
-	gdconf.RegScriptLib("GetQuestState", GetQuestState)
+	gdconf.RegScriptLibFunc("GetEntityType", GetEntityType)
+	gdconf.RegScriptLibFunc("GetQuestState", GetQuestState)
+	gdconf.RegScriptLibFunc("PrintContextLog", PrintContextLog)
+	gdconf.RegScriptLibFunc("BeginCameraSceneLook", BeginCameraSceneLook)
 }
 
 func GetEntityType(luaState *lua.LState) int {
@@ -76,20 +85,66 @@ func GetEntityType(luaState *lua.LState) int {
 func GetQuestState(luaState *lua.LState) int {
 	ctx, ok := luaState.Get(1).(*lua.LTable)
 	if !ok {
-		luaState.Push(lua.LNumber(0))
+		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
 		return 1
 	}
 	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
 	if !ok {
-		luaState.Push(lua.LNumber(0))
+		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
 		return 1
 	}
 	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	if player == nil {
+		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
+		return 1
+	}
 	entityId := luaState.ToInt(2)
 	_ = entityId
 	questId := luaState.ToInt(3)
 	dbQuest := player.GetDbQuest()
 	quest := dbQuest.GetQuestById(uint32(questId))
 	luaState.Push(lua.LNumber(quest.State))
+	return 1
+}
+
+func PrintContextLog(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		return 0
+	}
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		return 0
+	}
+	logInfo := luaState.ToString(2)
+	logger.Info("[LUA LOG] %v [UID %v]", logInfo, uid)
+	return 0
+}
+
+func BeginCameraSceneLook(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	cameraLockInfo, ok := luaState.Get(2).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	ntf := new(proto.BeginCameraSceneLookNotify)
+	gdconf.ParseLuaTableToObject(cameraLockInfo, ntf)
+	GAME_MANAGER.SendMsg(cmd.BeginCameraSceneLookNotify, player.PlayerID, player.ClientSeq, ntf)
+	luaState.Push(lua.LNumber(0))
 	return 1
 }

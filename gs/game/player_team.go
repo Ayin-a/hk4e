@@ -13,7 +13,6 @@ import (
 )
 
 func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeAvatarReq)
 	targetAvatarGuid := req.Guid
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -77,7 +76,6 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change team avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SetUpAvatarTeamReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world.GetMultiplayer() {
@@ -152,7 +150,6 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user switch team, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChooseCurAvatarTeamReq)
 	teamId := req.TeamId
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -183,7 +180,6 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 }
 
 func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user change mp team avatar, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ChangeMpTeamAvatarReq)
 	avatarGuidList := req.AvatarGuidList
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)

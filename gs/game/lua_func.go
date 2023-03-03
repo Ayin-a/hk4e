@@ -72,6 +72,7 @@ func CallLuaFunc(luaState *lua.LState, luaFuncName string, luaCtx *LuaCtx, luaEv
 func RegLuaLibFunc() {
 	gdconf.RegScriptLibFunc("GetEntityType", GetEntityType)
 	gdconf.RegScriptLibFunc("GetQuestState", GetQuestState)
+	gdconf.RegScriptLibFunc("PrintLog", PrintLog)
 	gdconf.RegScriptLibFunc("PrintContextLog", PrintContextLog)
 	gdconf.RegScriptLibFunc("BeginCameraSceneLook", BeginCameraSceneLook)
 }
@@ -103,8 +104,18 @@ func GetQuestState(luaState *lua.LState) int {
 	questId := luaState.ToInt(3)
 	dbQuest := player.GetDbQuest()
 	quest := dbQuest.GetQuestById(uint32(questId))
+	if quest == nil {
+		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
+		return 1
+	}
 	luaState.Push(lua.LNumber(quest.State))
 	return 1
+}
+
+func PrintLog(luaState *lua.LState) int {
+	logInfo := luaState.ToString(1)
+	logger.Info("[LUA LOG] %v", logInfo)
+	return 0
 }
 
 func PrintContextLog(luaState *lua.LState) int {
@@ -117,7 +128,7 @@ func PrintContextLog(luaState *lua.LState) int {
 		return 0
 	}
 	logInfo := luaState.ToString(2)
-	logger.Info("[LUA LOG] %v [UID %v]", logInfo, uid)
+	logger.Info("[LUA CTX LOG] %v [UID %v]", logInfo, uid)
 	return 0
 }
 

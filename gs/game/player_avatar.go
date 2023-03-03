@@ -71,7 +71,6 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 
 // AvatarPromoteGetRewardReq 角色突破获取奖励请求
 func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user promote get reward, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarPromoteGetRewardReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
@@ -122,7 +121,6 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 
 // AvatarPromoteReq 角色突破请求
 func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user promote, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarPromoteReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.Guid].(*model.Avatar)
@@ -209,7 +207,6 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 
 // AvatarUpgradeReq 角色升级请求
 func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user upgrade, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AvatarUpgradeReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)

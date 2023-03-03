@@ -64,7 +64,6 @@ func DoForward[IET model.InvokeEntryType](player *model.Player, req pb.Message, 
 }
 
 func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user send union cmd, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.UnionCmdNotify)
 	_ = req
 	if player.SceneLoadState != model.SceneEnterDone {
@@ -77,7 +76,6 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 }
 
 func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user meeo sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.MassiveEntityElementOpBatchNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -98,7 +96,6 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 }
 
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user combat invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -254,7 +251,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("parse EvtAnimatorParameterInfo error: %v", err)
 				continue
 			}
-			logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
+			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
 
 			// 这是否?
 			if evtAnimatorParameterInfo.IsServerCache {
@@ -312,6 +309,9 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		if distance2D > ENTITY_LOD {
 			continue
 		}
+		if group.DynamicLoad {
+			continue
+		}
 		oldVisionGroupMap[uint32(groupId)] = group
 	}
 	// 新位置视野范围内的group
@@ -321,6 +321,9 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		group := groupAny.(*gdconf.Group)
 		distance2D := math.Sqrt(math.Pow(newPos.X-float64(group.Pos.X), 2.0) + math.Pow(newPos.Z-float64(group.Pos.Z), 2.0))
 		if distance2D > ENTITY_LOD {
+			continue
+		}
+		if group.DynamicLoad {
 			continue
 		}
 		newVisionGroupMap[uint32(groupId)] = group
@@ -505,7 +508,6 @@ func (g *GameManager) TriggerFire(dbQuest *model.DbQuest, trigger *gdconf.Trigge
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user ability invocations, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -545,7 +547,6 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user client ability init finish, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -559,7 +560,6 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 }
 
 func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user client ability change, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -656,7 +656,6 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 }
 
 func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user event do skill success, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtDoSkillSuccNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -668,7 +667,6 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 }
 
 func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user avatar enter focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarEnterFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -679,7 +677,6 @@ func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg
 }
 
 func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user avatar update focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarUpdateFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -690,7 +687,6 @@ func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMs
 }
 
 func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user avatar exit focus, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtAvatarExitFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -701,7 +697,6 @@ func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg 
 }
 
 func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user entity render change, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtEntityRenderersChangedNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -712,7 +707,6 @@ func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payl
 }
 
 func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user create gadget, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtCreateGadgetNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -737,7 +731,6 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 }
 
 func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user destroy gadget, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EvtDestroyGadgetNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return

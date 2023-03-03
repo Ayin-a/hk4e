@@ -17,7 +17,6 @@ const (
 )
 
 func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user pull recent chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PullRecentChatReq)
 	// 经研究发现 原神现网环境 客户端仅拉取最新的5条未读聊天消息 所以人太多的话小姐姐不回你消息是有原因的
 	// 因此 阿米你这样做真的合适吗 不过现在代码到了我手上我想怎么写就怎么写 我才不会重蹈覆辙
@@ -57,7 +56,6 @@ func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user pull private chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PullPrivateChatReq)
 	targetUid := req.TargetUid
 	pullNum := req.PullNum
@@ -173,7 +171,6 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 }
 
 func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user send private chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PrivateChatReq)
 	targetUid := req.TargetUid
 	content := req.Content
@@ -202,7 +199,6 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 }
 
 func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user read private chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ReadPrivateChatReq)
 	targetUid := req.TargetUid
 
@@ -223,7 +219,6 @@ func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 }
 
 func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user multiplayer chat, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerChatReq)
 	channelId := req.ChannelId
 	chatInfo := req.ChatInfo

@@ -13,7 +13,6 @@ import (
 )
 
 func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get scene trans to point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.SceneTransToPointReq)
 
 	pointDataConfig := gdconf.GetScenePointBySceneIdAndPointId(int32(req.SceneId), int32(req.PointId))
@@ -42,12 +41,11 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 }
 
 func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user mark map, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.MarkMapReq)
 	operation := req.Op
 	if operation == proto.MarkMapReq_ADD {
 		logger.Debug("user mark type: %v", req.Mark.PointType)
-		if req.Mark.PointType == proto.MapMarkPointType_MONSTER {
+		if req.Mark.PointType == proto.MapMarkPointType_NPC {
 			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
 			if err != nil {
 				logger.Error("parse pos y error: %v", err)
@@ -126,7 +124,6 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 }
 
 func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get scene point, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetScenePointReq)
 
 	scenePointMapConfig := gdconf.GetScenePointMapBySceneId(int32(req.SceneId))
@@ -158,7 +155,6 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 }
 
 func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get scene area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.GetSceneAreaReq)
 
 	getSceneAreaRsp := &proto.GetSceneAreaRsp{
@@ -191,7 +187,7 @@ func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user enter world area, uid: %v", player.PlayerID)
+	logger.Debug("player enter world area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EnterWorldAreaReq)
 
 	logger.Debug("EnterWorldAreaReq: %v", req)

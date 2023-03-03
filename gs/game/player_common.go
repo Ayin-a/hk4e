@@ -14,7 +14,6 @@ import (
 )
 
 func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user pause, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PlayerSetPauseReq)
 	isPaused := req.IsPaused
 	player.Pause = isPaused
@@ -23,8 +22,6 @@ func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user get tower all data, uid: %v", player.PlayerID)
-
 	towerAllDataRsp := &proto.TowerAllDataRsp{
 		TowerScheduleId:        29,
 		TowerFloorRecordList:   []*proto.TowerFloorRecord{{FloorId: 1001}},
@@ -42,7 +39,6 @@ func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
-	// logger.Debug("user query path, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.QueryPathReq)
 
 	queryPathRsp := &proto.QueryPathRsp{
@@ -54,7 +50,6 @@ func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) 
 }
 
 func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user entity ai sync, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EntityAiSyncNotify)
 
 	entityAiSyncNotify := &proto.EntityAiSyncNotify{
@@ -86,7 +81,6 @@ func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	logger.Debug("client time notify, uid: %v, time: %v", userId, clientTime)
 	player.ClientTime = clientTime
 	now := time.Now().Unix()
 	// 客户端与服务器时间相差太过严重
@@ -123,14 +117,14 @@ func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
 }
 
 func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user ttm enter scene, uid: %v", player.PlayerID)
+	logger.Debug("player ttm enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
 	_ = req
 	g.SendMsg(cmd.ToTheMoonEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
 }
 
 func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user pf enter scene, uid: %v", player.PlayerID)
+	logger.Debug("player pf enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PathfindingEnterSceneReq)
 	_ = req
 	g.SendMsg(cmd.PathfindingEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.PathfindingEnterSceneRsp))
@@ -178,7 +172,7 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 }
 
 func (g *GameManager) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user obstacle modify, uid: %v", player.PlayerID)
 	ntf := payloadMsg.(*proto.ObstacleModifyNotify)
-	logger.Debug("ObstacleModifyNotify: %v", ntf)
+	_ = ntf
+	// logger.Debug("ObstacleModifyNotify: %v, uid: %v", ntf, player.PlayerID)
 }

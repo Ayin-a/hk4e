@@ -167,10 +167,10 @@ func TestSceneBlock(t *testing.T) {
 		block.BlockRange.Min.Z *= -1.0
 		block.BlockRange.Max.Z *= -1.0
 	}
-	minX := 0.0
-	maxX := 0.0
-	minZ := 0.0
-	maxZ := 0.0
+	minX := float32(0.0)
+	maxX := float32(0.0)
+	minZ := float32(0.0)
+	maxZ := float32(0.0)
 	for _, block := range scene.BlockMap {
 		if block.BlockRange.Min.X < minX {
 			minX = block.BlockRange.Min.X

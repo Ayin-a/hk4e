@@ -52,7 +52,7 @@ func (c *Controller) gateTokenVerify(context *gin.Context) {
 		verifyFail(account.PlayerID)
 		return
 	}
-	if time.Now().UnixMilli()-int64(account.ComboTokenCreateTime) > time.Minute.Milliseconds()*5 {
+	if time.Now().UnixMilli()-int64(account.ComboTokenCreateTime) > time.Hour.Milliseconds()*24 {
 		verifyFail(account.PlayerID)
 		return
 	}

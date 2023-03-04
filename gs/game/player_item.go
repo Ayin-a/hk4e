@@ -24,25 +24,6 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 			// 排除圣遗物
 			continue
 		}
-		if itemId == 100086 ||
-			itemId == 100087 ||
-			(itemId >= 100100 && itemId <= 101000) ||
-			(itemId >= 101106 && itemId <= 101110) ||
-			itemId == 101306 ||
-			(itemId >= 101500 && itemId <= 104000) ||
-			itemId == 105001 ||
-			itemId == 105004 ||
-			(itemId >= 106000 && itemId <= 107000) ||
-			itemId == 107011 ||
-			itemId == 108000 ||
-			(itemId >= 109000 && itemId <= 110000) ||
-			(itemId >= 115000 && itemId <= 130000) ||
-			(itemId >= 200200 && itemId <= 200899) ||
-			itemId == 220050 ||
-			itemId == 220054 {
-			// 排除无效道具
-			continue
-		}
 		allItemDataConfig[itemId] = itemData
 	}
 	return allItemDataConfig

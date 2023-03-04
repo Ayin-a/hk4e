@@ -1,15 +1,15 @@
 package model
 
+type DbGacha struct {
+	GachaPoolInfo map[uint32]*GachaPoolInfo
+}
+
 type GachaPoolInfo struct {
 	GachaType       uint32 // 卡池类型
 	OrangeTimes     uint32 // 5星保底计数
 	PurpleTimes     uint32 // 4星保底计数
 	MustGetUpOrange bool   // 是否5星大保底
 	MustGetUpPurple bool   // 是否4星大保底
-}
-
-type DbGacha struct {
-	GachaPoolInfo map[uint32]*GachaPoolInfo
 }
 
 func (p *Player) GetDbGacha() *DbGacha {

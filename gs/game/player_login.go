@@ -50,6 +50,7 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
 	}
+	SELF = player
 
 	player.OnlineTime = uint32(time.Now().UnixMilli())
 	player.Online = true
@@ -80,6 +81,9 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 		return
 	}
 
+	// TODO DEBUG DEL
+	g.AcceptQuest(player, false)
+
 	g.LoginNotify(userId, player, clientSeq)
 
 	MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
@@ -95,6 +99,8 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100)
 
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, 1)
+
+	SELF = nil
 }
 
 func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {

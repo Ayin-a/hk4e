@@ -68,8 +68,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(EnterWorldAreaRsp, &proto.EnterWorldAreaRsp{})                           // 进入世界区域响应
 	c.registerMessage(SceneTransToPointReq, &proto.SceneTransToPointReq{})                     // 场景传送点传送请求
 	c.registerMessage(SceneTransToPointRsp, &proto.SceneTransToPointRsp{})                     // 场景传送点传送响应
-	c.registerMessage(PathfindingEnterSceneReq, &proto.PathfindingEnterSceneReq{})             // 寻路进入场景请求
-	c.registerMessage(PathfindingEnterSceneRsp, &proto.PathfindingEnterSceneRsp{})             // 寻路进入场景响应
+	c.registerMessage(UnlockTransPointReq, &proto.UnlockTransPointReq{})                       // 解锁场景传送点请求
+	c.registerMessage(UnlockTransPointRsp, &proto.UnlockTransPointRsp{})                       // 解锁场景传送点响应
+	c.registerMessage(ScenePointUnlockNotify, &proto.ScenePointUnlockNotify{})                 // 场景传送点解锁通知
 	c.registerMessage(QueryPathReq, &proto.QueryPathReq{})                                     // 寻路请求
 	c.registerMessage(QueryPathRsp, &proto.QueryPathRsp{})                                     // 寻路响应
 	c.registerMessage(GetScenePointReq, &proto.GetScenePointReq{})                             // 获取场景传送点请求
@@ -95,8 +96,10 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(WorldDataNotify, &proto.WorldDataNotify{})                               // 世界数据通知 世界等级、是否多人世界等
 	c.registerMessage(WorldPlayerInfoNotify, &proto.WorldPlayerInfoNotify{})                   // 世界玩家信息通知
 	c.registerMessage(HostPlayerNotify, &proto.HostPlayerNotify{})                             // 世界房主玩家信息通知
-	c.registerMessage(ToTheMoonEnterSceneReq, &proto.ToTheMoonEnterSceneReq{})                 // 进入场景请求
-	c.registerMessage(ToTheMoonEnterSceneRsp, &proto.ToTheMoonEnterSceneRsp{})                 // 进入场景响应
+	c.registerMessage(PathfindingEnterSceneReq, &proto.PathfindingEnterSceneReq{})             // 寻路服务器进入场景请求
+	c.registerMessage(PathfindingEnterSceneRsp, &proto.PathfindingEnterSceneRsp{})             // 寻路服务器进入场景响应
+	c.registerMessage(ToTheMoonEnterSceneReq, &proto.ToTheMoonEnterSceneReq{})                 // 寻路服务器进入场景请求
+	c.registerMessage(ToTheMoonEnterSceneRsp, &proto.ToTheMoonEnterSceneRsp{})                 // 寻路服务器进入场景响应
 	c.registerMessage(SetEntityClientDataNotify, &proto.SetEntityClientDataNotify{})           // 通知
 	c.registerMessage(LeaveWorldNotify, &proto.LeaveWorldNotify{})                             // 删除客户端世界通知
 	c.registerMessage(SceneAvatarStaminaStepReq, &proto.SceneAvatarStaminaStepReq{})           // 缓慢游泳或缓慢攀爬时消耗耐力请求
@@ -278,9 +281,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(VehicleStaminaNotify, &proto.VehicleStaminaNotify{}) // 载具耐力消耗通知
 
 	// 七圣召唤
-	c.registerMessage(GCGBasicDataNotify, &proto.GCGBasicDataNotify{})                         // GCG基本数据通知
-	c.registerMessage(GCGLevelChallengeNotify, &proto.GCGLevelChallengeNotify{})               // GCG等级挑战通知
-	c.registerMessage(GCGDSBanCardNotify, &proto.GCGDSBanCardNotify{})                         // GCG禁止的卡牌通知
+	c.registerMessage(GCGBasicDataNotify, &proto.GCGBasicDataNotify{})           // GCG基本数据通知
+	c.registerMessage(GCGLevelChallengeNotify, &proto.GCGLevelChallengeNotify{}) // GCG等级挑战通知
+	// c.registerMessage(GCGDSBanCardNotify, &proto.GCGDSBanCardNotify{})                         // GCG禁止的卡牌通知
 	c.registerMessage(GCGDSDataNotify, &proto.GCGDSDataNotify{})                               // GCG数据通知 (解锁的内容)
 	c.registerMessage(GCGTCTavernChallengeDataNotify, &proto.GCGTCTavernChallengeDataNotify{}) // GCG酒馆挑战数据通知
 	c.registerMessage(GCGTCTavernInfoNotify, &proto.GCGTCTavernInfoNotify{})                   // GCG酒馆信息通知

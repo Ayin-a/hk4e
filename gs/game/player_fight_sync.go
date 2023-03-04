@@ -386,8 +386,6 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
 	g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
 	// 场景区域触发器
-	dbQuest := player.GetDbQuest()
-	updateQuest := false
 	for _, group := range newVisionGroupMap {
 		for _, region := range group.RegionList {
 			shape := alg.NewShape()
@@ -443,7 +441,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 							logger.Error("trigger action fail, trigger: %v, uid: %v", trigger, player.PlayerID)
 						}
 					}
-					updateQuest = g.TriggerFire(dbQuest, trigger)
+					g.TriggerFire(player, trigger)
 				}
 			} else if oldPosInRegion && !newPosInRegion {
 				logger.Debug("player leave region: %v, uid: %v", region, player.PlayerID)
@@ -473,38 +471,14 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 			}
 		}
 	}
-	if updateQuest {
-		g.AcceptQuest(player, true)
-	}
 }
 
-func (g *GameManager) TriggerFire(dbQuest *model.DbQuest, trigger *gdconf.Trigger) bool {
-	// TODO 这一块写得太炸裂了需要优化
-	updateQuest := false
+func (g *GameManager) TriggerFire(player *model.Player, trigger *gdconf.Trigger) {
 	for _, triggerDataConfig := range gdconf.GetTriggerDataMap() {
 		if triggerDataConfig.TriggerName == trigger.Name {
-			for _, quest := range dbQuest.GetQuestMap() {
-				questDataConfig := gdconf.GetQuestDataById(int32(quest.QuestId))
-				if questDataConfig == nil {
-					continue
-				}
-				for _, questCond := range questDataConfig.FinishCondList {
-					if questCond.Type != constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE {
-						continue
-					}
-					if len(questCond.Param) != 1 {
-						continue
-					}
-					if questCond.Param[0] != triggerDataConfig.TriggerId {
-						continue
-					}
-					dbQuest.ForceFinishQuest(quest.QuestId)
-					updateQuest = true
-				}
-			}
+			g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE, triggerDataConfig.TriggerId)
 		}
 	}
-	return updateQuest
 }
 
 func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
@@ -713,9 +687,12 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 	}
 	logger.Debug("EvtCreateGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		logger.Error("world is nil, WorldId: %v", player.WorldId)
+		return
+	}
 	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+	if req.InitPos == nil {
 		return
 	}
 	scene.CreateEntityGadgetClient(&model.Vector{

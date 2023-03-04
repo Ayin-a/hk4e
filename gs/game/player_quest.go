@@ -69,28 +69,60 @@ func (g *GameManager) AcceptQuest(player *model.Player, notifyClient bool) {
 		if dbQuest.GetQuestById(uint32(questData.QuestId)) != nil {
 			continue
 		}
-		canAccept := true
+		acceptCondResultList := make([]bool, 0)
 		for _, acceptCond := range questData.AcceptCondList {
+			result := false
 			switch acceptCond.Type {
 			case constant.QUEST_ACCEPT_COND_TYPE_STATE_EQUAL:
 				// 某个任务状态等于 参数1:任务id 参数2:任务状态
 				if len(acceptCond.Param) != 2 {
-					logger.Error("quest accept cond config format error, questId: %v", questData.QuestId)
-					canAccept = false
 					break
 				}
 				quest := dbQuest.GetQuestById(uint32(acceptCond.Param[0]))
 				if quest == nil {
-					canAccept = false
 					break
 				}
 				if quest.State != uint8(acceptCond.Param[1]) {
+					break
+				}
+				result = true
+			case constant.QUEST_ACCEPT_COND_TYPE_STATE_NOT_EQUAL:
+				// 某个任务状态不等于 参数1:任务id 参数2:任务状态
+				if len(acceptCond.Param) != 2 {
+					break
+				}
+				quest := dbQuest.GetQuestById(uint32(acceptCond.Param[0]))
+				if quest == nil {
+					break
+				}
+				if quest.State == uint8(acceptCond.Param[1]) {
+					break
+				}
+				result = true
+			default:
+				break
+			}
+			acceptCondResultList = append(acceptCondResultList, result)
+		}
+		canAccept := false
+		switch questData.AcceptCondCompose {
+		case constant.QUEST_LOGIC_TYPE_NONE:
+			fallthrough
+		case constant.QUEST_LOGIC_TYPE_AND:
+			canAccept = true
+			for _, acceptCondResult := range acceptCondResultList {
+				if !acceptCondResult {
 					canAccept = false
 					break
 				}
-			default:
-				canAccept = false
-				break
+			}
+		case constant.QUEST_LOGIC_TYPE_OR:
+			canAccept = false
+			for _, acceptCondResult := range acceptCondResultList {
+				if acceptCondResult {
+					canAccept = true
+					break
+				}
 			}
 		}
 		if canAccept {
@@ -112,6 +144,68 @@ func (g *GameManager) AcceptQuest(player *model.Player, notifyClient bool) {
 			ntf.QuestList = append(ntf.QuestList, pbQuest)
 		}
 		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+	}
+}
+
+// TriggerQuest 触发任务
+func (g *GameManager) TriggerQuest(player *model.Player, cond int32, param ...int32) {
+	dbQuest := player.GetDbQuest()
+	updateQuestIdList := make([]uint32, 0)
+	for _, quest := range dbQuest.GetQuestMap() {
+		questDataConfig := gdconf.GetQuestDataById(int32(quest.QuestId))
+		if questDataConfig == nil {
+			continue
+		}
+		for _, questCond := range questDataConfig.FinishCondList {
+			if questCond.Type != cond {
+				continue
+			}
+			switch cond {
+			case constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE:
+				// 场景触发器跳了 参数1:触发器id
+				if len(questCond.Param) != 1 {
+					continue
+				}
+				if len(param) != 1 {
+					continue
+				}
+				if questCond.Param[0] != param[0] {
+					continue
+				}
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
+			case constant.QUEST_FINISH_COND_TYPE_UNLOCK_TRANS_POINT:
+				// 解锁传送锚点 参数1:场景id 参数2:传送锚点id
+				if len(questCond.Param) != 2 {
+					continue
+				}
+				if len(param) != 2 {
+					continue
+				}
+				if questCond.Param[0] != param[0] {
+					continue
+				}
+				if questCond.Param[1] != param[1] {
+					continue
+				}
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
+			}
+		}
+	}
+	if len(updateQuestIdList) > 0 {
+		ntf := &proto.QuestListUpdateNotify{
+			QuestList: make([]*proto.Quest, 0),
+		}
+		for _, questId := range updateQuestIdList {
+			pbQuest := g.PacketQuest(player, questId)
+			if pbQuest == nil {
+				continue
+			}
+			ntf.QuestList = append(ntf.QuestList, pbQuest)
+		}
+		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+		g.AcceptQuest(player, true)
 	}
 }
 

@@ -17,16 +17,12 @@ import (
 func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
 	allAvatarDataConfig := make(map[int32]*gdconf.AvatarData)
 	for avatarId, avatarData := range gdconf.GetAvatarDataMap() {
-		if avatarId < 10000002 || avatarId >= 11000000 {
+		if avatarId <= 10000001 || avatarId >= 11000000 {
 			// 跳过无效角色
 			continue
 		}
 		if avatarId == 10000005 || avatarId == 10000007 {
 			// 跳过主角
-			continue
-		}
-		if avatarId >= 10000079 {
-			// 跳过后续版本的角色
 			continue
 		}
 		allAvatarDataConfig[avatarId] = avatarData

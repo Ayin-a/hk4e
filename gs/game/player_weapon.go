@@ -20,24 +20,6 @@ func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 		if itemData.Type != constant.ITEM_TYPE_WEAPON {
 			continue
 		}
-		if (itemId >= 10000 && itemId <= 10008) ||
-			itemId == 11411 ||
-			(itemId >= 11506 && itemId <= 11508) ||
-			itemId == 12505 ||
-			itemId == 12506 ||
-			itemId == 12508 ||
-			itemId == 12509 ||
-			itemId == 13503 ||
-			itemId == 13506 ||
-			itemId == 14411 ||
-			itemId == 14503 ||
-			itemId == 14505 ||
-			itemId == 14508 ||
-			(itemId >= 15504 && itemId <= 15506) ||
-			itemId == 20001 || itemId == 15306 || itemId == 14306 || itemId == 13304 || itemId == 12304 {
-			// 跳过无效武器
-			continue
-		}
 		allWeaponDataConfig[itemId] = itemData
 	}
 	return allWeaponDataConfig

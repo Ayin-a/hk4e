@@ -9,6 +9,18 @@ const (
 )
 
 const (
+	QUEST_LOGIC_TYPE_NONE              = 0
+	QUEST_LOGIC_TYPE_AND               = 1
+	QUEST_LOGIC_TYPE_OR                = 2
+	QUEST_LOGIC_TYPE_NOT               = 3
+	QUEST_LOGIC_TYPE_A_AND_ETCOR       = 4
+	QUEST_LOGIC_TYPE_A_AND_B_AND_ETCOR = 5
+	QUEST_LOGIC_TYPE_A_OR_ETCAND       = 6
+	QUEST_LOGIC_TYPE_A_OR_B_OR_ETCAND  = 7
+	QUEST_LOGIC_TYPE_A_AND_B_OR_ETCAND = 8
+)
+
+const (
 	QUEST_ACCEPT_COND_TYPE_NONE                           = 0
 	QUEST_ACCEPT_COND_TYPE_STATE_EQUAL                    = 1
 	QUEST_ACCEPT_COND_TYPE_STATE_NOT_EQUAL                = 2

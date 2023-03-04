@@ -69,6 +69,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.PostEnterSceneReq, GAME_MANAGER.PostEnterSceneReq)
 	r.registerRouter(cmd.TowerAllDataReq, GAME_MANAGER.TowerAllDataReq)
 	r.registerRouter(cmd.SceneTransToPointReq, GAME_MANAGER.SceneTransToPointReq)
+	r.registerRouter(cmd.UnlockTransPointReq, GAME_MANAGER.UnlockTransPointReq)
 	r.registerRouter(cmd.MarkMapReq, GAME_MANAGER.MarkMapReq)
 	r.registerRouter(cmd.ChangeAvatarReq, GAME_MANAGER.ChangeAvatarReq)
 	r.registerRouter(cmd.SetUpAvatarTeamReq, GAME_MANAGER.SetUpAvatarTeamReq)

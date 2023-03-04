@@ -15,12 +15,6 @@ func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 		if itemData.Type != constant.ITEM_TYPE_RELIQUARY {
 			continue
 		}
-		if (itemId >= 20002 && itemId <= 20004) ||
-			itemId == 23334 ||
-			(itemId >= 23300 && itemId <= 23340) {
-			// 跳过无效圣遗物
-			continue
-		}
 		allReliquaryDataConfig[itemId] = itemData
 	}
 	return allReliquaryDataConfig

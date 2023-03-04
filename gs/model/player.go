@@ -53,6 +53,7 @@ type Player struct {
 	DbAvatar        *DbAvatar          // 角色
 	DbGacha         *DbGacha           // 卡池
 	DbQuest         *DbQuest           // 任务
+	DbWorld         *DbWorld           // 大世界
 	// 在线数据 请随意 记得加忽略字段的tag
 	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
 	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 世界进入令牌

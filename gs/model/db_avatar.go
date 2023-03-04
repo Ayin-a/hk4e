@@ -30,8 +30,8 @@ type Avatar struct {
 	Promote             uint8                // 突破等阶
 	Satiation           uint32               // 饱食度
 	SatiationPenalty    uint32               // 饱食度溢出
-	CurrHP              float32              // 当前生命值
-	CurrEnergy          float32              // 当前元素能量值
+	CurrHP              float64              // 当前生命值
+	CurrEnergy          float64              // 当前元素能量值
 	FetterList          []uint32             // 资料解锁条目
 	SkillLevelMap       map[uint32]uint32    // 技能等级数据
 	SkillDepotId        uint32               // 技能库id
@@ -85,7 +85,7 @@ func (a *DbAvatar) InitAvatarFightProp(avatar *Avatar) {
 	avatar.FightPropMap[constant.FIGHT_PROP_CUR_DEFENSE] = avatarDataConfig.GetBaseDefenseByLevel(avatar.Level)
 	avatar.FightPropMap[constant.FIGHT_PROP_MAX_HP] = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
 	// 当前血量
-	avatar.FightPropMap[constant.FIGHT_PROP_CUR_HP] = avatar.CurrHP
+	avatar.FightPropMap[constant.FIGHT_PROP_CUR_HP] = float32(avatar.CurrHP)
 	// 双暴
 	avatar.FightPropMap[constant.FIGHT_PROP_CRITICAL] = avatarDataConfig.Critical
 	avatar.FightPropMap[constant.FIGHT_PROP_CRITICAL_HURT] = avatarDataConfig.CriticalHurt
@@ -147,7 +147,7 @@ func (a *DbAvatar) AddAvatar(player *Player, avatarId uint32) {
 		// 小技能1级
 		avatar.SkillLevelMap[uint32(skillId)] = 1
 	}
-	avatar.CurrHP = avatarDataConfig.GetBaseHpByLevel(avatar.Level)
+	avatar.CurrHP = float64(avatarDataConfig.GetBaseHpByLevel(avatar.Level))
 
 	// 角色突破奖励领取状态
 	for promoteLevel := range avatarDataConfig.PromoteRewardMap {
@@ -158,7 +158,7 @@ func (a *DbAvatar) AddAvatar(player *Player, avatarId uint32) {
 	a.AvatarMap[avatarId] = avatar
 }
 
-func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float32, max bool) {
+func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float64, max bool) {
 	var avatarSkillDataConfig *gdconf.AvatarSkillData = nil
 	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
 		avatarSkillDepotDataConfig := gdconf.GetAvatarSkillDepotDataById(int32(avatar.SkillDepotId))
@@ -185,7 +185,7 @@ func (a *DbAvatar) SetCurrEnergy(avatar *Avatar, value float32, max bool) {
 	if max {
 		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(avatarSkillDataConfig.CostElemVal)
 	} else {
-		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = value
+		avatar.FightPropMap[uint32(elementType.CurrEnergyProp)] = float32(value)
 	}
 }
 

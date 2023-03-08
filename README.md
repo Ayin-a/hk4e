@@ -6,13 +6,13 @@
 
 #### 代号hk4e中的hk起源于『Honkai Impact 3rd』
 
-#### 项目的客户端协议和配置表主要基于3.2版本修改而来，因此请尽量使用3.2版本的客户端，但不是必须的
+#### 项目的客户端协议([360NENZ/teyvat-helper-hk4e-proto](https://github.com/360NENZ/teyvat-helper-hk4e-proto))、配置表([TomyJan/xudong](https://github.com/TomyJan/xudong))主要基于3.2版本修改而来，因此请尽量使用3.2版本的客户端，但不是必须的
 
 [3.2.0国际服客户端下载链接](https://autopatchhk.yuanshen.com/client_app/download/pc_zip/20221024103618_h2e3o3zijYKEqHnQ/GenshinImpact_3.2.0.zip)
 
 #### 客户端需要本地https代理和打破解补丁才能正常使用，详情请参考目前主流私服连接方法
 
-#### 可以使用新版补丁避免https代理，支持自定义密钥和连接任意地址的服务器，感谢[mhypbase](https://github.com/Jx2f/mhypbase)
+#### 可以使用新版补丁避免https代理，支持自定义密钥和连接任意地址的服务器，感谢[Jx2f/mhypbase](https://github.com/Jx2f/mhypbase)
 
 ## 特性
 

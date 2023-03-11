@@ -6,7 +6,6 @@ import (
 	"hk4e/pkg/logger"
 
 	"github.com/jszwec/csvutil"
-	"github.com/mroth/weightedrand"
 )
 
 // ReliquaryMainData 圣遗物主属性配置表
@@ -44,24 +43,6 @@ func GetReliquaryMainDataByDepotIdAndPropId(mainPropDepotId int32, mainPropId in
 		return nil
 	}
 	return value[mainPropId]
-}
-
-func GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32) *ReliquaryMainData {
-	mainPropMap, exist := CONF.ReliquaryMainDataMap[mainPropDepotId]
-	if !exist {
-		return nil
-	}
-	choices := make([]weightedrand.Choice, 0, len(mainPropMap))
-	for _, data := range mainPropMap {
-		choices = append(choices, weightedrand.NewChoice(data, uint(data.RandomWeight)))
-	}
-	chooser, err := weightedrand.NewChooser(choices...)
-	if err != nil {
-		logger.Error("reliquary main random error: %v", err)
-		return nil
-	}
-	result := chooser.Pick()
-	return result.(*ReliquaryMainData)
 }
 
 func GetReliquaryMainDataMap() map[int32]map[int32]*ReliquaryMainData {

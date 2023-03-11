@@ -5,6 +5,7 @@ import (
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )
@@ -20,6 +21,29 @@ func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 	return allReliquaryDataConfig
 }
 
+func (g *GameManager) GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32) *gdconf.ReliquaryMainData {
+	mainPropMap, exist := gdconf.GetReliquaryMainDataMap()[mainPropDepotId]
+	if !exist {
+		return nil
+	}
+	weightAll := int32(0)
+	mainPropList := make([]*gdconf.ReliquaryMainData, 0)
+	for _, data := range mainPropMap {
+		weightAll += data.RandomWeight
+		mainPropList = append(mainPropList, data)
+	}
+	randNum := random.GetRandomInt32(0, weightAll-1)
+	sumWeight := int32(0)
+	// 轮盘选择法
+	for _, data := range mainPropList {
+		sumWeight += data.RandomWeight
+		if sumWeight > randNum {
+			return data
+		}
+	}
+	return nil
+}
+
 func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
@@ -31,7 +55,7 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 		logger.Error("reliquary config error, itemId: %v", itemId)
 		return 0
 	}
-	reliquaryMainConfig := gdconf.GetReliquaryMainDataRandomByDepotId(reliquaryConfig.MainPropDepotId)
+	reliquaryMainConfig := g.GetReliquaryMainDataRandomByDepotId(reliquaryConfig.MainPropDepotId)
 	if reliquaryMainConfig == nil {
 		logger.Error("reliquary main config error, mainPropDepotId: %v", reliquaryConfig.MainPropDepotId)
 		return 0
@@ -51,6 +75,40 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	g.AppendReliquaryProp(reliquary, reliquaryConfig.AppendPropCount)
 	g.SendMsg(cmd.StoreItemChangeNotify, userId, player.ClientSeq, g.PacketStoreItemChangeNotifyByReliquary(reliquary))
 	return reliquaryId
+}
+
+func (g *GameManager) GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int32, excludeTypeList ...uint32) *gdconf.ReliquaryAffixData {
+	appendPropMap, exist := gdconf.GetReliquaryAffixDataMap()[appendPropDepotId]
+	if !exist {
+		return nil
+	}
+	weightAll := int32(0)
+	appendPropList := make([]*gdconf.ReliquaryAffixData, 0)
+	for _, data := range appendPropMap {
+		isBoth := false
+		// 排除列表中的属性类型是否相同
+		for _, propType := range excludeTypeList {
+			if propType == uint32(data.PropType) {
+				isBoth = true
+				break
+			}
+		}
+		if isBoth {
+			continue
+		}
+		weightAll += data.RandomWeight
+		appendPropList = append(appendPropList, data)
+	}
+	randNum := random.GetRandomInt32(0, weightAll-1)
+	sumWeight := int32(0)
+	// 轮盘选择法
+	for _, data := range appendPropList {
+		sumWeight += data.RandomWeight
+		if sumWeight > randNum {
+			return data
+		}
+	}
+	return nil
 }
 
 // AppendReliquaryProp 圣遗物追加属性
@@ -83,7 +141,7 @@ func (g *GameManager) AppendReliquaryProp(reliquary *model.Reliquary, count int3
 			excludeTypeList = append(excludeTypeList, uint32(targetAffixConfig.PropType))
 		}
 		// 将要添加的属性
-		appendAffixConfig := gdconf.GetReliquaryAffixDataRandomByDepotId(reliquaryConfig.AppendPropDepotId, excludeTypeList...)
+		appendAffixConfig := g.GetReliquaryAffixDataRandomByDepotId(reliquaryConfig.AppendPropDepotId, excludeTypeList...)
 		if appendAffixConfig == nil {
 			logger.Error("append affix config error, appendPropDepotId: %v", reliquaryConfig.AppendPropDepotId)
 			return

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"os"
 
+	"hk4e/common/config"
 	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -61,7 +62,7 @@ func GetRegionList(ec2b *random.Ec2b) *proto.QueryRegionListHttpRsp {
 		Name:        "os_usa",
 		Title:       "America",
 		Type:        "DEV_PUBLIC",
-		DispatchUrl: "https://osusadispatch.yuanshen.com/query_cur_region",
+		DispatchUrl: config.GetConfig().Hk4e.DispatchUrl,
 	}
 	serverList = append(serverList, server)
 	regionList := new(proto.QueryRegionListHttpRsp)

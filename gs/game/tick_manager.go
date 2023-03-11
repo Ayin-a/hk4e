@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
@@ -186,6 +187,7 @@ func (t *TickManager) onTickHour(now int64) {
 
 func (t *TickManager) onTickMinute(now int64) {
 	// GAME_MANAGER.ServerAnnounceNotify(100, "test123")
+	gdconf.LuaStateLruRemove()
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
 		for _, player := range world.GetAllPlayer() {
 			// 随机物品

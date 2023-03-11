@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -35,6 +36,8 @@ type GameDataConfig struct {
 	ScenePointMap           map[int32]*ScenePoint                   // 场景传送点
 	SceneTagDataMap         map[int32]*SceneTagData                 // 场景标签
 	SceneLuaConfigMap       map[int32]*SceneLuaConfig               // 场景LUA配置
+	GroupMap                map[int32]*Group                        // 场景LUA区块group索引
+	LuaStateLruMap          map[int32]*LuaStateLru                  // 场景LUA虚拟机LRU内存淘汰
 	WorldAreaDataMap        map[int32]*WorldAreaData                // 世界区域
 	GatherDataMap           map[int32]*GatherData                   // 采集物
 	GatherDataPointTypeMap  map[int32]*GatherData                   // 采集物场景节点索引
@@ -60,6 +63,7 @@ func InitGameDataConfig() {
 	startTime := time.Now().Unix()
 	CONF.loadAll()
 	endTime := time.Now().Unix()
+	runtime.GC()
 	logger.Info("load all game data config finish, cost: %v(s)", endTime-startTime)
 }
 
@@ -68,6 +72,7 @@ func ReloadGameDataConfig() {
 	startTime := time.Now().Unix()
 	CONF_RELOAD.loadAll()
 	endTime := time.Now().Unix()
+	runtime.GC()
 	logger.Info("reload all game data config finish, cost: %v(s)", endTime-startTime)
 }
 

@@ -87,7 +87,6 @@ func (w *WorldManager) GetAiWorld() *World {
 func (w *WorldManager) InitAiWorld(owner *model.Player) {
 	w.aiWorld = w.GetWorldByID(owner.WorldId)
 	w.aiWorld.ChangeToMultiplayer()
-	go RunPlayAudio()
 }
 
 func (w *WorldManager) IsAiWorld(world *World) bool {

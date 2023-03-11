@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 
 	"hk4e/pkg/logger"
 
@@ -15,7 +16,87 @@ import (
 	"hk4e/protocol/proto"
 
 	"github.com/pkg/errors"
+	"gitlab.com/gomidi/midi/v2"
+	"gitlab.com/gomidi/midi/v2/smf"
 )
+
+const (
+	KeyOffset = -12 * 1 // 八度修正偏移
+)
+
+var AUDIO_CHAN chan uint32
+
+func init() {
+	AUDIO_CHAN = make(chan uint32, 1000)
+}
+
+func PlayAudio() {
+	audio, err := smf.ReadFile("./audio.mid")
+	if err != nil {
+		logger.Error("read midi file error: %v", err)
+		return
+	}
+	tempoChangeList := audio.TempoChanges()
+	if len(tempoChangeList) != 1 {
+		logger.Error("midi file format not support")
+		return
+	}
+	tempoChange := tempoChangeList[0]
+	metricTicks := audio.TimeFormat.(smf.MetricTicks)
+	tickTime := ((60000000.0 / tempoChange.BPM) / float64(metricTicks.Resolution())) / 1000.0
+	logger.Debug("start play audio")
+	for _, track := range audio.Tracks {
+		// 全部轨道
+		totalTick := uint64(0)
+		for _, event := range track {
+			// 单个轨道
+			delay := uint32(float64(event.Delta) * tickTime)
+			// busyPollWaitMilliSecond(delay)
+			interruptWaitMilliSecond(delay)
+			totalTick += uint64(delay)
+
+			msg := event.Message
+			if msg.Type() != midi.NoteOnMsg {
+				continue
+			}
+			midiMsg := midi.Message(msg)
+			var channel, key, velocity uint8
+			midiMsg.GetNoteOn(&channel, &key, &velocity)
+			// TODO 测试一下客户端是否支持更宽的音域
+			// 60 -> 中央C C4
+			// if key < 36 || key > 71 {
+			// 	continue
+			// }
+			note := int32(key) + int32(KeyOffset)
+			if note < 21 || note > 108 {
+				// 非88键钢琴音域
+				continue
+			}
+			if velocity == 0 {
+				// 可能是NoteOffMsg
+				continue
+			}
+
+			AUDIO_CHAN <- uint32(note)
+			// logger.Debug("send midi note: %v, delay: %v, totalTick: %v", note, delay, totalTick)
+		}
+	}
+}
+
+func interruptWaitMilliSecond(delay uint32) {
+	time.Sleep(time.Millisecond * time.Duration(delay))
+}
+
+func busyPollWaitMilliSecond(delay uint32) {
+	start := time.Now()
+	end := start.Add(time.Millisecond * time.Duration(delay))
+	for {
+		now := time.Now()
+		if now.After(end) {
+			break
+		}
+	}
+}
 
 const (
 	SCREEN_WIDTH  = 80
@@ -159,9 +240,9 @@ func WriteJpgFile(fileName string, jpg image.Image) {
 	}
 }
 
-func LoadVideoPlayerFile() error {
-	inImg := ReadJpgFile("./in.jpg")
-	if inImg == nil {
+func LoadFrameFile() error {
+	frameImg := ReadJpgFile("./frame.jpg")
+	if frameImg == nil {
 		return errors.New("file not exist")
 	}
 	FRAME = make([][]bool, SCREEN_WIDTH)
@@ -176,20 +257,20 @@ func LoadVideoPlayerFile() error {
 	grayImg := image.NewRGBA(image.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
 	for w := 0; w < SCREEN_WIDTH; w++ {
 		for h := 0; h < SCREEN_HEIGHT; h++ {
-			pix := inImg.At(w, h)
+			pix := frameImg.At(w, h)
 			r, g, b, _ := pix.RGBA()
 			gray := float32(r>>8)*0.299 + float32(g>>8)*0.587 + float32(b>>8)*0.114
 			grayImg.SetRGBA(w, h, color.RGBA{R: uint8(gray), G: uint8(gray), B: uint8(gray), A: 255})
 			grayAvg += uint64(gray)
 		}
 	}
-	WriteJpgFile("./gray.jpg", grayImg)
+	WriteJpgFile("./frame_gray.jpg", grayImg)
 	grayAvg /= SCREEN_WIDTH * SCREEN_HEIGHT
 	rgbImg := image.NewRGBA(image.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
 	binImg := image.NewRGBA(image.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
 	for w := 0; w < SCREEN_WIDTH; w++ {
 		for h := 0; h < SCREEN_HEIGHT; h++ {
-			pix := inImg.At(w, h)
+			pix := frameImg.At(w, h)
 			r, g, b, _ := pix.RGBA()
 			gray := float32(r>>8)*0.299 + float32(g>>8)*0.587 + float32(b>>8)*0.114
 			c := ""
@@ -211,15 +292,15 @@ func LoadVideoPlayerFile() error {
 			}
 		}
 	}
-	WriteJpgFile("./rgb.jpg", rgbImg)
-	WriteJpgFile("./bin.jpg", binImg)
+	WriteJpgFile("./frame_rgb.jpg", rgbImg)
+	WriteJpgFile("./frame_bin.jpg", binImg)
 	return nil
 }
 
 var OBJECT_ID_COUNTER uint64 = math.MaxUint64
 
-func (g *GameManager) VideoPlayerUpdate(rgb bool) {
-	err := LoadVideoPlayerFile()
+func UpdateFrame(rgb bool) {
+	err := LoadFrameFile()
 	if err != nil {
 		return
 	}
@@ -235,8 +316,8 @@ func (g *GameManager) VideoPlayerUpdate(rgb bool) {
 	GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_REMOVE, SCREEN_ENTITY_ID_LIST)
 	SCREEN_ENTITY_ID_LIST = make([]uint32, 0)
 	leftTopPos := &model.Vector{
-		X: BASE_POS.X + float64(float64(SCREEN_WIDTH)*SCREEN_DPI/2),
-		Y: BASE_POS.Y + float64(float64(SCREEN_HEIGHT)*SCREEN_DPI),
+		X: BASE_POS.X + float64(SCREEN_WIDTH)*SCREEN_DPI/2,
+		Y: BASE_POS.Y + float64(SCREEN_HEIGHT)*SCREEN_DPI,
 		Z: BASE_POS.Z,
 	}
 	for w := 0; w < SCREEN_WIDTH; w++ {

@@ -69,7 +69,7 @@ func (c *Controller) getClientVersionByName(versionName string) (int, string) {
 func (c *Controller) queryCurRegion(context *gin.Context) {
 	rspError := func() {
 		rspContentError := "CAESGE5vdCBGb3VuZCB2ZXJzaW9uIGNvbmZpZw=="
-		rspSignError := "TW9yZSBsb3ZlIGZvciBVQSBQYXRjaCBwbGF5ZXJz"
+		rspSignError := ""
 		rsp := &httpapi.QueryCurRegionRspJson{
 			Content: rspContentError,
 			Sign:    rspSignError,
@@ -100,7 +100,6 @@ func (c *Controller) queryCurRegion(context *gin.Context) {
 		_, _ = context.Writer.WriteString(regionCurrBase64)
 		return
 	}
-	logger.Debug("do hk4e 2.8 rsa logic")
 	keyId := context.Query("key_id")
 	encPubPrivKey, exist := c.encRsaKeyMap[keyId]
 	if !exist {

@@ -36,16 +36,16 @@ func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gate
 func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string, isReg bool, regPlayer *model.Player) {
 	logger.Info("user login, uid: %v", userId)
 	if isReg {
-		g.OnLoginOk(userId, regPlayer, clientSeq, gateAppId)
+		g.OnLoginOk(userId, clientSeq, gateAppId, true, regPlayer)
 		return
 	}
 	player, isRobot := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
 	if isRobot {
-		g.OnLoginOk(userId, player, clientSeq, gateAppId)
+		g.OnLoginOk(userId, clientSeq, gateAppId, false, player)
 	}
 }
 
-func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq uint32, gateAppId string) {
+func (g *GameManager) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isReg bool, player *model.Player) {
 	if player == nil {
 		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
@@ -67,6 +67,27 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	dbItem := player.GetDbItem()
 	dbItem.InitAllItem(player)
 
+	if isReg {
+		// 添加选定的主角
+		dbAvatar.AddAvatar(player, dbAvatar.MainCharAvatarId)
+		// 添加主角初始武器
+		avatarDataConfig := gdconf.GetAvatarDataById(int32(dbAvatar.MainCharAvatarId))
+		if avatarDataConfig == nil {
+			logger.Error("get avatar data config is nil, avatarId: %v", dbAvatar.MainCharAvatarId)
+			return
+		}
+		weaponId := uint64(g.snowflake.GenId())
+		dbWeapon := player.GetDbWeapon()
+		dbWeapon.AddWeapon(player, uint32(avatarDataConfig.InitialWeapon), weaponId)
+		weapon := dbWeapon.WeaponMap[weaponId]
+		dbAvatar.WearWeapon(dbAvatar.MainCharAvatarId, weapon)
+
+		dbTeam := player.GetDbTeam()
+		dbTeam.GetActiveTeam().SetAvatarIdList([]uint32{dbAvatar.MainCharAvatarId})
+
+		g.AcceptQuest(player, false)
+	}
+
 	// 确保玩家位置安全
 	player.Pos.X = player.SafePos.X
 	player.Pos.Y = player.SafePos.Y
@@ -80,9 +101,6 @@ func (g *GameManager) OnLoginOk(userId uint32, player *model.Player, clientSeq u
 	if userId < PlayerBaseUid {
 		return
 	}
-
-	// TODO DEBUG DEL
-	g.AcceptQuest(player, false)
 
 	g.LoginNotify(userId, player, clientSeq)
 
@@ -129,9 +147,69 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
+	USER_MANAGER.ChangeUserDbState(player, model.DbInsert)
 	USER_MANAGER.AddUser(player)
 	g.SendMsgToGate(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
 	g.OnLogin(userId, clientSeq, gateAppId, true, player)
+}
+
+func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {
+	player := new(model.Player)
+	player.PlayerID = userId
+	player.NickName = nickName
+	player.Signature = ""
+	player.HeadImage = mainCharAvatarId
+	player.Birthday = []uint8{0, 0}
+	player.NameCard = 210001
+	player.NameCardList = make([]uint32, 0)
+	player.FriendList = make(map[uint32]bool)
+	player.FriendApplyList = make(map[uint32]bool)
+	player.PropertiesMap = make(map[uint16]uint32)
+	player.FlyCloakList = make([]uint32, 0)
+	player.CostumeList = make([]uint32, 0)
+	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
+
+	player.SceneId = 3
+
+	player.NameCardList = append(player.NameCardList, 210001, 210042)
+
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL] = 0
+	player.PropertiesMap[constant.PLAYER_PROP_IS_SPRING_AUTO_USE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_SPRING_AUTO_USE_PERCENT] = 100
+	player.PropertiesMap[constant.PLAYER_PROP_IS_FLYABLE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_IS_TRANSFERABLE] = 1
+	player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA] = 24000
+	player.PropertiesMap[constant.PLAYER_PROP_CUR_PERSIST_STAMINA] = 24000
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_RESIN] = 160
+	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE] = 2
+	player.PropertiesMap[constant.PLAYER_PROP_IS_MP_MODE_AVAILABLE] = 1
+
+	sceneLuaConfig := gdconf.GetSceneLuaConfigById(int32(player.SceneId))
+	if sceneLuaConfig == nil {
+		logger.Error("get scene lua config is nil, sceneId: %v", player.SceneId)
+		return nil
+	}
+	player.SafePos = &model.Vector{
+		X: float64(sceneLuaConfig.SceneConfig.BornPos.X),
+		Y: float64(sceneLuaConfig.SceneConfig.BornPos.Y),
+		Z: float64(sceneLuaConfig.SceneConfig.BornPos.Z),
+	}
+	player.Pos = &model.Vector{
+		X: float64(sceneLuaConfig.SceneConfig.BornPos.X),
+		Y: float64(sceneLuaConfig.SceneConfig.BornPos.Y),
+		Z: float64(sceneLuaConfig.SceneConfig.BornPos.Z),
+	}
+	player.Rot = &model.Vector{
+		X: float64(sceneLuaConfig.SceneConfig.BornRot.X),
+		Y: float64(sceneLuaConfig.SceneConfig.BornRot.Y),
+		Z: float64(sceneLuaConfig.SceneConfig.BornRot.Z),
+	}
+
+	dbAvatar := player.GetDbAvatar()
+	dbAvatar.MainCharAvatarId = mainCharAvatarId
+
+	return player
 }
 
 func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
@@ -164,9 +242,9 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	playerLoginRsp := &proto.PlayerLoginRsp{
 		IsUseAbilityHash: true,
 		AbilityHashCode:  0,
-		GameBiz:          "hk4e_cn",
+		GameBiz:          "hk4e_global",
 		IsScOpen:         false,
-		RegisterCps:      "taptap",
+		RegisterCps:      "mihoyo",
 		CountryCode:      "CN",
 		Birthday:         "2000-01-01",
 		TotalTickTime:    0.0,
@@ -344,70 +422,4 @@ func (g *GameManager) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify
 		openStateUpdateNotify.OpenStateMap[uint32(v)] = 1
 	}
 	return openStateUpdateNotify
-}
-
-func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {
-	player := new(model.Player)
-	player.PlayerID = userId
-	player.NickName = nickName
-	player.Signature = ""
-	player.HeadImage = mainCharAvatarId
-	player.Birthday = []uint8{0, 0}
-	player.NameCard = 210001
-	player.NameCardList = make([]uint32, 0)
-	player.NameCardList = append(player.NameCardList, 210001, 210042)
-
-	player.FriendList = make(map[uint32]bool)
-	player.FriendApplyList = make(map[uint32]bool)
-
-	player.SceneId = 3
-
-	player.PropertiesMap = make(map[uint16]uint32)
-	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL] = 1
-	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL] = 0
-	player.PropertiesMap[constant.PLAYER_PROP_IS_SPRING_AUTO_USE] = 1
-	player.PropertiesMap[constant.PLAYER_PROP_SPRING_AUTO_USE_PERCENT] = 100
-	player.PropertiesMap[constant.PLAYER_PROP_IS_FLYABLE] = 1
-	player.PropertiesMap[constant.PLAYER_PROP_IS_TRANSFERABLE] = 1
-	player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA] = 24000
-	player.PropertiesMap[constant.PLAYER_PROP_CUR_PERSIST_STAMINA] = 24000
-	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_RESIN] = 160
-	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE] = 2
-	player.PropertiesMap[constant.PLAYER_PROP_IS_MP_MODE_AVAILABLE] = 1
-
-	player.FlyCloakList = make([]uint32, 0)
-	player.CostumeList = make([]uint32, 0)
-
-	player.SafePos = &model.Vector{X: 2747, Y: 194, Z: -1719}
-	player.Pos = &model.Vector{X: 2747, Y: 194, Z: -1719}
-	player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
-
-	dbAvatar := player.GetDbAvatar()
-	dbAvatar.MainCharAvatarId = mainCharAvatarId
-
-	player.GameObjectGuidMap = make(map[uint64]model.GameObject)
-	player.GCGInfo = model.NewGCGInfo()
-
-	// 添加选定的主角
-	dbAvatar.AddAvatar(player, mainCharAvatarId)
-	// 添加主角初始武器
-	avatarDataConfig := gdconf.GetAvatarDataById(int32(mainCharAvatarId))
-	if avatarDataConfig == nil {
-		logger.Error("config is nil, mainCharAvatarId: %v", mainCharAvatarId)
-		return nil
-	}
-	weaponId := uint64(g.snowflake.GenId())
-	dbWeapon := player.GetDbWeapon()
-	dbWeapon.AddWeapon(player, uint32(avatarDataConfig.InitialWeapon), weaponId)
-	weapon := dbWeapon.WeaponMap[weaponId]
-	dbAvatar.WearWeapon(mainCharAvatarId, weapon)
-
-	dbTeam := player.GetDbTeam()
-	dbTeam.GetActiveTeam().SetAvatarIdList([]uint32{mainCharAvatarId})
-
-	player.ChatMsgMap = make(map[uint32][]*model.ChatMsg)
-
-	g.AcceptQuest(player, false)
-
-	return player
 }

@@ -2,6 +2,7 @@ package game
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"hk4e/common/mq"
@@ -22,6 +23,10 @@ const (
 	UserOfflineSaveToDbFinish              // 玩家离线保存完成
 	ReloadGameDataConfig                   // 执行热更表
 	ReloadGameDataConfigFinish             // 热更表完成
+)
+
+const (
+	UserCopyGoroutineLimit = 4
 )
 
 type LocalEvent struct {
@@ -62,9 +67,9 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	case LoadLoginUserFromDbFinish:
 		playerLoginInfo := localEvent.Msg.(*PlayerLoginInfo)
 		if playerLoginInfo.Player != nil {
-			USER_MANAGER.playerMap[playerLoginInfo.Player.PlayerID] = playerLoginInfo.Player
+			USER_MANAGER.AddUser(playerLoginInfo.Player)
 		}
-		GAME_MANAGER.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.Player, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId)
+		GAME_MANAGER.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId, false, playerLoginInfo.Player)
 	case CheckUserExistOnRegFromDbFinish:
 		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)
 		GAME_MANAGER.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
@@ -73,7 +78,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	case RunUserCopyAndSave:
 		startTime := time.Now().UnixNano()
 		playerList := make(PlayerLastSaveTimeSortList, 0)
-		for _, player := range USER_MANAGER.playerMap {
+		for _, player := range USER_MANAGER.GetAllOnlineUserList() {
 			if player.PlayerID < PlayerBaseUid {
 				continue
 			}
@@ -84,32 +89,65 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		insertPlayerList := make([][]byte, 0)
 		updatePlayerList := make([][]byte, 0)
 		saveCount := 0
-		for _, player := range playerList {
+		times := len(playerList) / UserCopyGoroutineLimit
+		if times == 0 && len(playerList) > 0 {
+			times = 1
+		}
+		for index := 0; index < times; index++ {
 			totalCostTime := time.Now().UnixNano() - startTime
-			if totalCostTime > time.Millisecond.Nanoseconds()*50 {
-				// 总耗时超过50ms就中止本轮保存
-				logger.Debug("user copy loop overtime exit, total cost time: %v ns", totalCostTime)
+			if totalCostTime > time.Millisecond.Nanoseconds()*10 {
+				// 总耗时超过10ms就中止本轮保存
+				logger.Info("user copy loop overtime exit, total cost time: %v ns", totalCostTime)
 				break
 			}
-			playerData, err := msgpack.Marshal(player)
-			if err != nil {
-				logger.Error("marshal player data error: %v", err)
-				continue
+			// 分批次并发序列化玩家数据
+			oncePlayerListEndIndex := 0
+			if index < times-1 {
+				oncePlayerListEndIndex = (index + 1) * UserCopyGoroutineLimit
+			} else {
+				oncePlayerListEndIndex = len(playerList)
 			}
-			switch player.DbState {
-			case model.DbNone:
-				break
-			case model.DbInsert:
-				insertPlayerList = append(insertPlayerList, playerData)
-				USER_MANAGER.playerMap[player.PlayerID].DbState = model.DbNormal
-				player.LastSaveTime = uint32(time.Now().UnixMilli())
-				saveCount++
-			case model.DbDelete:
-				delete(USER_MANAGER.playerMap, player.PlayerID)
-			case model.DbNormal:
-				updatePlayerList = append(updatePlayerList, playerData)
-				player.LastSaveTime = uint32(time.Now().UnixMilli())
-				saveCount++
+			oncePlayerList := playerList[index*UserCopyGoroutineLimit : oncePlayerListEndIndex]
+			var playerDataMapLock sync.Mutex
+			playerDataMap := make(map[uint32][]byte)
+			var wg sync.WaitGroup
+			for _, player := range oncePlayerList {
+				wg.Add(1)
+				go func(player *model.Player) {
+					defer func() {
+						wg.Done()
+					}()
+					playerData, err := msgpack.Marshal(player)
+					if err != nil {
+						logger.Error("marshal player data error: %v", err)
+						return
+					}
+					playerDataMapLock.Lock()
+					playerDataMap[player.PlayerID] = playerData
+					playerDataMapLock.Unlock()
+				}(player)
+			}
+			wg.Wait()
+			for _, player := range oncePlayerList {
+				playerData, exist := playerDataMap[player.PlayerID]
+				if !exist {
+					continue
+				}
+				switch player.DbState {
+				case model.DbNone:
+					break
+				case model.DbInsert:
+					insertPlayerList = append(insertPlayerList, playerData)
+					player.DbState = model.DbNormal
+					player.LastSaveTime = uint32(time.Now().UnixMilli())
+					saveCount++
+				case model.DbDelete:
+					USER_MANAGER.DeleteUser(player.PlayerID)
+				case model.DbNormal:
+					updatePlayerList = append(updatePlayerList, playerData)
+					player.LastSaveTime = uint32(time.Now().UnixMilli())
+					saveCount++
+				}
 			}
 		}
 		saveUserData := &SaveUserData{
@@ -120,10 +158,10 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		if localEvent.EventId == ExitRunUserCopyAndSave {
 			saveUserData.exitSave = true
 		}
-		USER_MANAGER.saveUserChan <- saveUserData
+		USER_MANAGER.GetSaveUserChan() <- saveUserData
 		endTime := time.Now().UnixNano()
 		costTime := endTime - startTime
-		logger.Debug("run save user copy cost time: %v ns, save user count: %v", costTime, saveCount)
+		logger.Info("run save user copy cost time: %v ns, save user count: %v", costTime, saveCount)
 		if localEvent.EventId == ExitRunUserCopyAndSave {
 			// 在此阻塞掉主协程 不再进行任何消息和任务的处理
 			select {}
@@ -167,7 +205,10 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		}()
 	case ReloadGameDataConfigFinish:
 		gdconf.ReplaceGameDataConfig()
-		// TODO 参考更表一样改成异步加载
+		startTime := time.Now().UnixNano()
 		WORLD_MANAGER.LoadSceneBlockAoiMap()
+		endTime := time.Now().UnixNano()
+		costTime := endTime - startTime
+		logger.Info("run [LoadSceneBlockAoiMap], cost time: %v ns", costTime)
 	}
 }

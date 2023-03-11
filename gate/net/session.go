@@ -457,7 +457,6 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	serverSeedUint64 := timeRand.Uint64()
 	session.seed = serverSeedUint64
 	if req.KeyId != 0 {
-		logger.Debug("do hk4e 2.8 rsa logic, uid: %v", uid)
 		session.useMagicSeed = true
 		keyId := strconv.Itoa(int(req.KeyId))
 		encPubPrivKey, exist := k.encRsaKeyMap[keyId]

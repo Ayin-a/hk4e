@@ -93,7 +93,7 @@ func (u *UserManager) CheckUserExistOnReg(userId uint32, req *proto.SetPlayerBor
 			if player != nil {
 				exist = true
 			}
-			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+			LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 				EventId: CheckUserExistOnRegFromDbFinish,
 				Msg: &PlayerRegInfo{
 					Exist:     exist,
@@ -113,7 +113,6 @@ func (u *UserManager) AddUser(player *model.Player) {
 	if player == nil {
 		return
 	}
-	u.ChangeUserDbState(player, model.DbInsert)
 	u.playerMap[player.PlayerID] = player
 }
 
@@ -139,15 +138,25 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId stri
 			u.DeleteUser(userId)
 		}
 		go func() {
+			// 加离线玩家数据分布式锁
+			ok := u.dao.DistLockSync(userId)
+			if !ok {
+				logger.Error("lock redis offline player data error, uid: %v", userId)
+				return
+			}
 			player := u.LoadUserFromDbSync(userId)
 			if player != nil {
 				u.SaveUserToRedisSync(player)
+			}
+			// 解离线玩家数据分布式锁
+			u.dao.DistUnlock(player.PlayerID)
+			if player != nil {
 				u.ChangeUserDbState(player, model.DbNormal)
 				player.ChatMsgMap = u.LoadUserChatMsgFromDbSync(userId)
 			} else {
 				logger.Error("can not find user from db, uid: %v", userId)
 			}
-			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+			LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 				EventId: LoadLoginUserFromDbFinish,
 				Msg: &PlayerLoginInfo{
 					UserId:    userId,
@@ -195,7 +204,7 @@ func (u *UserManager) OfflineUser(player *model.Player, changeGsInfo *ChangeGsIn
 		playerCopy.DbState = player.DbState
 		u.SaveUserToDbSync(playerCopy)
 		u.SaveUserToRedisSync(playerCopy)
-		LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+		LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 			EventId: UserOfflineSaveToDbFinish,
 			Msg: &PlayerOfflineInfo{
 				Player:       player,
@@ -322,7 +331,7 @@ func (u *UserManager) LoadGlobalPlayer(userId uint32) (player *model.Player, onl
 // 正常情况速度较快可以同步阻塞调用
 func (u *UserManager) LoadTempOfflineUser(userId uint32, lock bool) *model.Player {
 	player := u.GetOnlineUser(userId)
-	if player != nil && player.Online {
+	if player != nil {
 		logger.Error("not allow get a online player as offline player, uid: %v", userId)
 		return nil
 	}
@@ -343,7 +352,11 @@ func (u *UserManager) LoadTempOfflineUser(userId uint32, lock bool) *model.Playe
 			logger.Error("try to load a not exist uid, uid: %v", userId)
 			return nil
 		}
+		startTime := time.Now().UnixNano()
 		player = u.LoadUserFromDbSync(userId)
+		endTime := time.Now().UnixNano()
+		costTime := endTime - startTime
+		logger.Info("try to load player from db sync in game main loop, cost time: %v ns", costTime)
 		if player == nil {
 			// 玩家根本就不存在
 			logger.Error("try to load a not exist player from db, uid: %v", userId)
@@ -361,15 +374,19 @@ func (u *UserManager) LoadTempOfflineUser(userId uint32, lock bool) *model.Playe
 func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 	// 主协程同步写入redis
 	u.SaveUserToRedisSync(player)
-	// 解离线玩家数据分布式锁
-	u.dao.DistUnlock(player.PlayerID)
 	// 另一个协程异步的写回db
 	playerData, err := msgpack.Marshal(player)
 	if err != nil {
 		logger.Error("marshal player data error: %v", err)
+		// 解离线玩家数据分布式锁
+		u.dao.DistUnlock(player.PlayerID)
 		return
 	}
 	go func() {
+		defer func() {
+			// 解离线玩家数据分布式锁
+			u.dao.DistUnlock(player.PlayerID)
+		}()
 		playerCopy := new(model.Player)
 		err := msgpack.Unmarshal(playerData, playerCopy)
 		if err != nil {
@@ -383,6 +400,10 @@ func (u *UserManager) SaveTempOfflineUser(player *model.Player) {
 
 // db和redis相关操作
 
+func (u *UserManager) GetSaveUserChan() chan *SaveUserData {
+	return u.saveUserChan
+}
+
 type SaveUserData struct {
 	insertPlayerList [][]byte
 	updatePlayerList [][]byte
@@ -395,7 +416,7 @@ func (u *UserManager) saveUserHandle() {
 		for {
 			<-ticker.C
 			// 保存玩家数据
-			LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+			LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 				EventId: RunUserCopyAndSave,
 			}
 		}

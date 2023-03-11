@@ -2,9 +2,11 @@ package gdconf
 
 import (
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"hk4e/pkg/logger"
 
@@ -68,7 +70,53 @@ type Group struct {
 	LuaState      *lua.LState  `json:"-"`
 }
 
+const (
+	LuaStateLruKeepNum = 1000
+)
+
+type LuaStateLru struct {
+	GroupId    int32
+	AccessTime int64
+}
+
+type LuaStateLruList []*LuaStateLru
+
+func (l LuaStateLruList) Len() int {
+	return len(l)
+}
+
+func (l LuaStateLruList) Less(i, j int) bool {
+	return l[i].AccessTime < l[j].AccessTime
+}
+
+func (l LuaStateLruList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
+func LuaStateLruRemove() {
+	removeNum := len(CONF.LuaStateLruMap) - LuaStateLruKeepNum
+	if removeNum <= 0 {
+		return
+	}
+	luaStateLruList := make(LuaStateLruList, 0)
+	for _, luaStateLru := range CONF.LuaStateLruMap {
+		luaStateLruList = append(luaStateLruList, luaStateLru)
+	}
+	sort.Stable(luaStateLruList)
+	for i := 0; i < removeNum; i++ {
+		luaStateLru := luaStateLruList[i]
+		group := GetSceneGroup(luaStateLru.GroupId)
+		group.LuaState = nil
+		delete(CONF.LuaStateLruMap, luaStateLru.GroupId)
+	}
+	logger.Info("lua state lru remove finish, remove num: %v", removeNum)
+}
+
 func (g *Group) GetLuaState() *lua.LState {
+	CONF.LuaStateLruMap[g.Id] = &LuaStateLru{
+		GroupId:    g.Id,
+		AccessTime: time.Now().UnixMilli(),
+	}
 	if g.LuaState == nil {
 		g.LuaState = newLuaState(g.LuaStr)
 		scriptLib := g.LuaState.NewTable()
@@ -207,6 +255,8 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 func (g *GameDataConfig) loadSceneLuaConfig() {
 	OBJECT_ID_COUNTER = 0
 	g.SceneLuaConfigMap = make(map[int32]*SceneLuaConfig)
+	g.GroupMap = make(map[int32]*Group)
+	g.LuaStateLruMap = make(map[int32]*LuaStateLru)
 	sceneLuaPrefix := g.luaPrefix + "scene/"
 	for _, sceneData := range g.SceneDataMap {
 		sceneId := sceneData.SceneId
@@ -279,6 +329,7 @@ func (g *GameDataConfig) loadSceneLuaConfig() {
 					<-wc
 					wg.Done()
 				}()
+				g.GroupMap[group.Id] = group
 			}
 			wg.Wait()
 			sceneLuaConfig.BlockMap[block.Id] = block
@@ -315,29 +366,10 @@ func GetSceneLuaConfigMap() map[int32]*SceneLuaConfig {
 	return CONF.SceneLuaConfigMap
 }
 
-func GetSceneBlockConfig(sceneId int32, blockId int32) ([]*Monster, []*Npc, []*Gadget, bool) {
-	monsterList := make([]*Monster, 0)
-	npcList := make([]*Npc, 0)
-	gadgetList := make([]*Gadget, 0)
-	sceneConfig, exist := CONF.SceneLuaConfigMap[sceneId]
+func GetSceneGroup(groupId int32) *Group {
+	groupConfig, exist := CONF.GroupMap[groupId]
 	if !exist {
-		return nil, nil, nil, false
+		return nil
 	}
-	blockConfig, exist := sceneConfig.BlockMap[blockId]
-	if !exist {
-		return nil, nil, nil, false
-	}
-	for _, groupConfig := range blockConfig.GroupMap {
-		for _, monsterConfig := range groupConfig.MonsterList {
-			monsterList = append(monsterList, monsterConfig)
-		}
-		for _, npcConfig := range groupConfig.NpcList {
-			npcList = append(npcList, npcConfig)
-		}
-
-		for _, gadgetConfig := range groupConfig.GadgetList {
-			gadgetList = append(gadgetList, gadgetConfig)
-		}
-	}
-	return monsterList, npcList, gadgetList, true
+	return groupConfig
 }

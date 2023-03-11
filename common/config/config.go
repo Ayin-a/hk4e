@@ -48,6 +48,7 @@ type Hk4e struct {
 	GateTcpMqPort          int32  `toml:"gate_tcp_mq_port"`
 	LoginSdkUrl            string `toml:"login_sdk_url"`         // 网关登录验证token的sdk服务器地址 目前填dispatch的内网地址
 	LoadSceneLuaConfig     bool   `toml:"load_scene_lua_config"` // 是否加载场景详情LUA配置数据
+	DispatchUrl            string `toml:"dispatch_url"`          // 二级dispatch地址 将域名改为dispatch的外网地址
 }
 
 // MQ 消息队列

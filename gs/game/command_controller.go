@@ -338,7 +338,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 // ReloadConfigCommand 帮助命令
 func (c *CommandManager) ReloadConfigCommand(cmd *CommandMessage) {
-	LOCAL_EVENT_MANAGER.localEventChan <- &LocalEvent{
+	LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
 		EventId: ReloadGameDataConfig,
 	}
 

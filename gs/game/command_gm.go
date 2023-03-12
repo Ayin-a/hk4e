@@ -1,9 +1,12 @@
 package game
 
 import (
+	"encoding/base64"
+
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )
 
@@ -134,4 +137,47 @@ func (c *CommandManager) GMAddUserAllEvery(userId uint32, itemCount uint32, weap
 	c.GMAddUserAllCostume(userId)
 	// 给予玩家所有风之翼
 	c.GMAddUserAllFlycloak(userId)
+}
+
+func (c *CommandManager) ChangePlayerCmdPerm(userId uint32, cmdPerm uint8) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	player.CmdPerm = cmdPerm
+}
+
+func (c *CommandManager) ReloadGameDataConfig() {
+	LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
+		EventId: ReloadGameDataConfig,
+	}
+}
+
+func (c *CommandManager) XLuaDebug(userId uint32, luacBase64 string) {
+	logger.Debug("xlua debug, uid: %v, luac: %v", userId, luacBase64)
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	// 只有在线玩家主动开启之后才能发送
+	if !player.XLuaDebug {
+		logger.Error("player xlua debug not enable, uid: %v", userId)
+		return
+	}
+	luac, err := base64.StdEncoding.DecodeString(luacBase64)
+	if err != nil {
+		logger.Error("decode luac error: %v", err)
+		return
+	}
+	GAME_MANAGER.SendMsg(cmd.WindSeedClientNotify, player.PlayerID, 0, &proto.WindSeedClientNotify{
+		Notify: &proto.WindSeedClientNotify_AreaNotify_{
+			AreaNotify: &proto.WindSeedClientNotify_AreaNotify{
+				AreaCode: luac,
+				AreaId:   1,
+				AreaType: 1,
+			},
+		},
+	})
 }

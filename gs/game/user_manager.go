@@ -149,7 +149,7 @@ func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId stri
 				u.SaveUserToRedisSync(player)
 			}
 			// 解离线玩家数据分布式锁
-			u.dao.DistUnlock(player.PlayerID)
+			u.dao.DistUnlock(userId)
 			if player != nil {
 				u.ChangeUserDbState(player, model.DbNormal)
 				player.ChatMsgMap = u.LoadUserChatMsgFromDbSync(userId)

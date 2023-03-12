@@ -52,6 +52,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.registerMessage(OpenStateUpdateNotify, &proto.OpenStateUpdateNotify{}) // 游戏功能模块开放状态更新通知
 	c.registerMessage(PlayerTimeNotify, &proto.PlayerTimeNotify{})           // 玩家累计在线时长通知
 	c.registerMessage(ServerTimeNotify, &proto.ServerTimeNotify{})           // 服务器时间通知
+	c.registerMessage(WindSeedClientNotify, &proto.WindSeedClientNotify{})   // 客户端XLUA调试通知
 
 	// 场景
 	c.registerMessage(PlayerSetPauseReq, &proto.PlayerSetPauseReq{})                           // 玩家暂停请求

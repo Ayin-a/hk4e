@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"hk4e/gs/model"
@@ -68,15 +69,14 @@ func (c *CommandManager) InitRouter() {
 	{
 		// 权限等级 0: 普通玩家
 		c.RegisterRouter(CommandPermNormal, c.HelpCommand, "help")
-		c.RegisterRouter(CommandPermNormal, c.OpCommand, "op")
 		c.RegisterRouter(CommandPermNormal, c.TeleportCommand, "teleport", "tp")
 		c.RegisterRouter(CommandPermNormal, c.GiveCommand, "give", "item")
 		// c.RegisterRouter(CommandPermNormal, c.GcgCommand, "gcg")
+		c.RegisterRouter(CommandPermNormal, c.XLuaDebugCommand, "xluadebug")
 	}
 	// GM命令
 	{
 		// 权限等级 1: GM 1级
-		c.RegisterRouter(CommandPermGM, c.ReloadConfigCommand, "reloadconfig")
 	}
 }
 
@@ -134,6 +134,15 @@ func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
 	if cmd.FuncName != "" {
 		logger.Info("run gm cmd, FuncName: %v, Param: %v", cmd.FuncName, cmd.Param)
 		// TODO 反射调用command_gm.go中的函数并反射解析传入参数类型
+		if cmd.FuncName == "ReloadGameDataConfig" && len(cmd.Param) == 0 {
+			c.ReloadGameDataConfig()
+		} else if cmd.FuncName == "XLuaDebug" && len(cmd.Param) == 2 {
+			uid, err := strconv.Atoi(cmd.Param[0])
+			if err != nil {
+				return
+			}
+			c.XLuaDebug(uint32(uid), cmd.Param[1])
+		}
 		return
 	}
 
@@ -217,9 +226,9 @@ func (c *CommandManager) ExecCommand(cmd *CommandMessage) {
 
 	// 判断玩家的权限是否符合要求
 	player, ok := executor.(*model.Player)
-	if ok && player.IsGM < uint8(cmdPerm) {
-		logger.Debug("exec command permission denied, uid: %v, isGM: %v", player.PlayerID, player.IsGM)
-		c.SendMessage(player, "权限不足，该命令需要%v级权限。\n你目前的权限等级：%v", cmdPerm, player.IsGM)
+	if ok && player.CmdPerm < uint8(cmdPerm) {
+		logger.Debug("exec command permission denied, uid: %v, CmdPerm: %v", player.PlayerID, player.CmdPerm)
+		c.SendMessage(player, "权限不足，该命令需要%v级权限。\n你目前的权限等级：%v", cmdPerm, player.CmdPerm)
 		return
 	}
 

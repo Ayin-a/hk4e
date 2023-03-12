@@ -18,18 +18,6 @@ func (c *CommandManager) HelpCommand(cmd *CommandMessage) {
 	)
 }
 
-// OpCommand 给予权限命令
-func (c *CommandManager) OpCommand(cmd *CommandMessage) {
-	player, ok := cmd.Executor.(*model.Player)
-	if !ok {
-		c.SendMessage(cmd.Executor, "只有玩家才能执行此命令。")
-		return
-	}
-
-	player.IsGM = 1
-	c.SendMessage(cmd.Executor, "权限修改完毕，现在你是GM啦~")
-}
-
 // TeleportCommand 传送玩家命令
 // tp [--u <uid>] [--s <sceneId>] {--t <targetUid> --x <posX> | --y <posY> | --z <posZ>}
 func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
@@ -336,20 +324,16 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	}
 }
 
-// ReloadConfigCommand 帮助命令
-func (c *CommandManager) ReloadConfigCommand(cmd *CommandMessage) {
-	LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
-		EventId: ReloadGameDataConfig,
-	}
-
-	c.SendMessage(cmd.Executor, "成功发送重载配置请求。")
-}
-
 // GcgCommand Gcg测试命令
 func (c *CommandManager) GcgCommand(cmd *CommandMessage) {
 	player := cmd.Executor.(*model.Player)
-
 	GAME_MANAGER.GCGStartChallenge(player)
-
 	c.SendMessage(cmd.Executor, "收到命令")
+}
+
+// XLuaDebugCommand 主动开启客户端XLUA调试命令
+func (c *CommandManager) XLuaDebugCommand(cmd *CommandMessage) {
+	player := cmd.Executor.(*model.Player)
+	player.XLuaDebug = true
+	c.SendMessage(cmd.Executor, "XLua Debug Enable")
 }

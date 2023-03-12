@@ -42,7 +42,7 @@ type Player struct {
 	FlyCloakList    []uint32           // 风之翼列表
 	CostumeList     []uint32           // 角色衣装列表
 	SceneId         uint32             // 场景
-	IsGM            uint8              // 管理员权限等级
+	CmdPerm         uint8              // 玩家命令权限等级
 	SafePos         *Vector            // 在陆地时的坐标
 	Pos             *Vector            // 坐标
 	Rot             *Vector            // 朝向
@@ -78,6 +78,7 @@ type Player struct {
 	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
 	GCGCurGameGuid        uint32                                   `bson:"-" msgpack:"-"` // GCG玩家所在的游戏guid
 	GCGInfo               *GCGInfo                                 `bson:"-" msgpack:"-"` // 七圣召唤信息
+	XLuaDebug             bool                                     `bson:"-" msgpack:"-"` // 是否开启客户端XLUA调试
 	// 特殊数据
 	ChatMsgMap map[uint32][]*ChatMsg `bson:"-" msgpack:"-"` // 聊天信息 数据量偏大 只从db读写 不保存到redis
 }

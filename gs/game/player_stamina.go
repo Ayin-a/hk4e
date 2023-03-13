@@ -4,9 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"hk4e/common/config"
 	"hk4e/common/constant"
-	"hk4e/common/utils"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/endec"
@@ -23,22 +21,10 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
 		// 大剑重击 或 持续技能 耐力消耗
 		costStamina := new(proto.AbilityMixinCostStamina)
-		if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-			clientProtoObj := g.GetClientProtoObjByName("AbilityMixinCostStamina")
-			if clientProtoObj == nil {
-				logger.Error("get client proto obj is nil")
-				return
-			}
-			ok := utils.UnmarshalProtoObj(costStamina, clientProtoObj, entry.AbilityData)
-			if !ok {
-				return
-			}
-		} else {
-			err := pb.Unmarshal(entry.AbilityData, costStamina)
-			if err != nil {
-				logger.Error("parse AbilityMixinCostStamina error: %v", err)
-				return
-			}
+		err := pb.Unmarshal(entry.AbilityData, costStamina)
+		if err != nil {
+			logger.Error("parse AbilityMixinCostStamina error: %v", err)
+			return
 		}
 		// 处理持续耐力消耗
 		g.SkillSustainStamina(player, costStamina.IsSwim)

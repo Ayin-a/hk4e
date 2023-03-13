@@ -121,7 +121,7 @@ func (m *MessageQueue) recvHandler() {
 			}
 			if netMsg.EventId == NormalMsg {
 				// protobuf PayloadMessage
-				payloadMessage := m.cmdProtoMap.GetProtoObjByCmdId(gameMsg.CmdId)
+				payloadMessage := m.cmdProtoMap.GetProtoObjCacheByCmdId(gameMsg.CmdId)
 				if payloadMessage == nil {
 					logger.Error("get protobuf obj by cmd id error: %v", err)
 					continue

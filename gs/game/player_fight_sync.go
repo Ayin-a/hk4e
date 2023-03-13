@@ -3,9 +3,7 @@ package game
 import (
 	"math"
 
-	"hk4e/common/config"
 	"hk4e/common/constant"
-	"hk4e/common/utils"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
@@ -19,47 +17,37 @@ import (
 
 var cmdProtoMap *cmd.CmdProtoMap = nil
 
-func DoForward[IET model.InvokeEntryType](player *model.Player, req pb.Message, copyFieldList []string, forwardField string, invokeHandler *model.InvokeHandler[IET]) {
+func DoForward[IET model.InvokeEntryType](player *model.Player, invokeHandler *model.InvokeHandler[IET],
+	cmdId uint16, newNtf pb.Message, forwardField string,
+	srcNtf pb.Message, copyFieldList []string) {
 	if cmdProtoMap == nil {
 		cmdProtoMap = cmd.NewCmdProtoMap()
 	}
-	cmdId := cmdProtoMap.GetCmdIdByProtoObj(req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
 	}
-	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
-		ntf := cmdProtoMap.GetProtoObjByCmdId(cmdId)
+	if srcNtf != nil && copyFieldList != nil {
 		for _, fieldName := range copyFieldList {
-			reflection.CopyStructField(ntf, req, fieldName)
+			reflection.CopyStructField(newNtf, srcNtf, fieldName)
 		}
+	}
+	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
 		for _, v := range world.GetAllPlayer() {
-			GAME_MANAGER.SendMsg(cmdId, v.PlayerID, player.ClientSeq, ntf)
+			GAME_MANAGER.SendMsg(cmdId, v.PlayerID, player.ClientSeq, newNtf)
 		}
 	}
 	if invokeHandler.AllLen() > 0 {
-		ntf := cmdProtoMap.GetProtoObjByCmdId(cmdId)
-		for _, fieldName := range copyFieldList {
-			reflection.CopyStructField(ntf, req, fieldName)
-		}
-		reflection.SetStructFieldValue(ntf, forwardField, invokeHandler.EntryListForwardAll)
-		GAME_MANAGER.SendToWorldA(world, cmdId, player.ClientSeq, ntf)
+		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardAll)
+		GAME_MANAGER.SendToWorldA(world, cmdId, player.ClientSeq, newNtf)
 	}
 	if invokeHandler.AllExceptCurLen() > 0 {
-		ntf := cmdProtoMap.GetProtoObjByCmdId(cmdId)
-		for _, fieldName := range copyFieldList {
-			reflection.CopyStructField(ntf, req, fieldName)
-		}
-		reflection.SetStructFieldValue(ntf, forwardField, invokeHandler.EntryListForwardAllExceptCur)
-		GAME_MANAGER.SendToWorldAEC(world, cmdId, player.ClientSeq, ntf, player.PlayerID)
+		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardAllExceptCur)
+		GAME_MANAGER.SendToWorldAEC(world, cmdId, player.ClientSeq, newNtf, player.PlayerID)
 	}
 	if invokeHandler.HostLen() > 0 {
-		ntf := cmdProtoMap.GetProtoObjByCmdId(cmdId)
-		for _, fieldName := range copyFieldList {
-			reflection.CopyStructField(ntf, req, fieldName)
-		}
-		reflection.SetStructFieldValue(ntf, forwardField, invokeHandler.EntryListForwardHost)
-		GAME_MANAGER.SendToWorldH(world, cmdId, player.ClientSeq, ntf)
+		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardHost)
+		GAME_MANAGER.SendToWorldH(world, cmdId, player.ClientSeq, newNtf)
 	}
 }
 
@@ -69,8 +57,12 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	DoForward[proto.CombatInvokeEntry](player, &proto.CombatInvocationsNotify{}, []string{}, "InvokeList", player.CombatInvokeHandler)
-	DoForward[proto.AbilityInvokeEntry](player, &proto.AbilityInvocationsNotify{}, []string{}, "Invokes", player.AbilityInvokeHandler)
+	DoForward[proto.CombatInvokeEntry](player, player.CombatInvokeHandler,
+		cmd.CombatInvocationsNotify, new(proto.CombatInvocationsNotify), "InvokeList",
+		nil, nil)
+	DoForward[proto.AbilityInvokeEntry](player, player.AbilityInvokeHandler,
+		cmd.AbilityInvocationsNotify, new(proto.AbilityInvocationsNotify), "Invokes",
+		nil, nil)
 	player.CombatInvokeHandler.Clear()
 	player.AbilityInvokeHandler.Clear()
 }
@@ -80,7 +72,6 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	ntf := req
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -90,9 +81,9 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 		logger.Error("scene is nil, sceneId: %v", player.SceneId)
 		return
 	}
-	ntf.OpIdx = scene.GetMeeoIndex()
+	req.OpIdx = scene.GetMeeoIndex()
 	scene.SetMeeoIndex(scene.GetMeeoIndex() + 1)
-	g.SendToWorldA(world, cmd.MassiveEntityElementOpBatchNotify, player.ClientSeq, ntf)
+	g.SendToWorldA(world, cmd.MassiveEntityElementOpBatchNotify, player.ClientSeq, req)
 }
 
 func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
@@ -113,22 +104,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
 			hitInfo := new(proto.EvtBeingHitInfo)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := g.GetClientProtoObjByName("EvtBeingHitInfo")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
-				if !ok {
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(entry.CombatData, hitInfo)
-				if err != nil {
-					logger.Error("parse EvtBeingHitInfo error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(entry.CombatData, hitInfo)
+			if err != nil {
+				logger.Error("parse EvtBeingHitInfo error: %v", err)
+				continue
 			}
 			attackResult := hitInfo.AttackResult
 			if attackResult == nil {
@@ -171,22 +150,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := g.GetClientProtoObjByName("EntityMoveInfo")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(entityMoveInfo, clientProtoObj, entry.CombatData)
-				if !ok {
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
-				if err != nil {
-					logger.Error("parse EntityMoveInfo error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
+			if err != nil {
+				logger.Error("parse EntityMoveInfo error: %v", err)
+				continue
 			}
 			motionInfo := entityMoveInfo.MotionInfo
 			if motionInfo.Pos == nil || motionInfo.Rot == nil {
@@ -530,7 +497,9 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		// logger.Debug("ClientAbilityInitFinishNotify: %v", entry)
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
-	DoForward[proto.AbilityInvokeEntry](player, &proto.ClientAbilityInitFinishNotify{}, []string{"EntityId"}, "Invokes", invokeHandler)
+	DoForward[proto.AbilityInvokeEntry](player, invokeHandler,
+		cmd.ClientAbilityInitFinishNotify, new(proto.ClientAbilityInitFinishNotify), "Invokes",
+		req, []string{"EntityId"})
 }
 
 func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
@@ -544,7 +513,9 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
-	DoForward[proto.AbilityInvokeEntry](player, req, []string{"EntityId", "IsInitHash"}, "Invokes", invokeHandler)
+	DoForward[proto.AbilityInvokeEntry](player, invokeHandler,
+		cmd.ClientAbilityChangeNotify, new(proto.ClientAbilityChangeNotify), "Invokes",
+		req, []string{"IsInitHash", "EntityId"})
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -554,23 +525,10 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 		switch abilityInvokeEntry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_META_ADD_NEW_ABILITY:
 			abilityMetaAddAbility := new(proto.AbilityMetaAddAbility)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaAddAbility")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(abilityMetaAddAbility, clientProtoObj, abilityInvokeEntry.AbilityData)
-				if !ok {
-					logger.Error("AbilityMetaAddAbility proto error")
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaAddAbility)
-				if err != nil {
-					logger.Error("parse AbilityMetaAddAbility error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaAddAbility)
+			if err != nil {
+				logger.Error("parse AbilityMetaAddAbility error: %v", err)
+				continue
 			}
 			worldAvatar := world.GetWorldAvatarByEntityId(abilityInvokeEntry.EntityId)
 			if worldAvatar == nil {
@@ -584,23 +542,10 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 			worldAvatar.SetAbilityList(abilityList)
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 			abilityMetaModifierChange := new(proto.AbilityMetaModifierChange)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := g.GetClientProtoObjByName("AbilityMetaModifierChange")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(abilityMetaModifierChange, clientProtoObj, abilityInvokeEntry.AbilityData)
-				if !ok {
-					logger.Error("AbilityMetaModifierChange proto error")
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaModifierChange)
-				if err != nil {
-					logger.Error("parse AbilityMetaModifierChange error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(abilityInvokeEntry.AbilityData, abilityMetaModifierChange)
+			if err != nil {
+				logger.Error("parse AbilityMetaModifierChange error: %v", err)
+				continue
 			}
 			abilityAppliedModifier := &proto.AbilityAppliedModifier{
 				ModifierLocalId:           abilityMetaModifierChange.ModifierLocalId,

@@ -217,14 +217,9 @@ func ProtoEncode(protoMsg *ProtoMsg,
 	}
 	// payload msg
 	if protoMsg.PayloadMessage != nil {
-		cmdId, protoData := EncodeProtoToPayload(protoMsg.PayloadMessage, serverCmdProtoMap)
-		if cmdId == 0 || protoData == nil {
+		protoData := EncodeProtoToPayload(protoMsg.PayloadMessage, serverCmdProtoMap)
+		if protoData == nil {
 			logger.Error("encode proto data is nil")
-			return nil
-		}
-		if cmdId != 65535 && cmdId != protoMsg.CmdId {
-			logger.Error("cmd id is not match with proto obj, src cmd id: %v, found cmd id: %v",
-				protoMsg.CmdId, cmdId)
 			return nil
 		}
 		kcpMsg.ProtoData = protoData
@@ -279,7 +274,7 @@ func ProtoEncode(protoMsg *ProtoMsg,
 }
 
 func DecodePayloadToProto(cmdId uint16, protoData []byte, serverCmdProtoMap *cmd.CmdProtoMap) (protoObj pb.Message) {
-	protoObj = serverCmdProtoMap.GetProtoObjByCmdId(cmdId)
+	protoObj = serverCmdProtoMap.GetProtoObjCacheByCmdId(cmdId)
 	if protoObj == nil {
 		logger.Error("get new proto object is nil")
 		return nil
@@ -292,15 +287,14 @@ func DecodePayloadToProto(cmdId uint16, protoData []byte, serverCmdProtoMap *cmd
 	return protoObj
 }
 
-func EncodeProtoToPayload(protoObj pb.Message, serverCmdProtoMap *cmd.CmdProtoMap) (cmdId uint16, protoData []byte) {
-	cmdId = serverCmdProtoMap.GetCmdIdByProtoObj(protoObj)
+func EncodeProtoToPayload(protoObj pb.Message, serverCmdProtoMap *cmd.CmdProtoMap) (protoData []byte) {
 	var err error = nil
 	protoData, err = pb.Marshal(protoObj)
 	if err != nil {
 		logger.Error("marshal proto object err: %v", err)
-		return 0, nil
+		return nil
 	}
-	return cmdId, protoData
+	return protoData
 }
 
 func GetClientProtoObjByName(protoObjName string, clientCmdProtoMap *client_proto.ClientCmdProtoMap) pb.Message {

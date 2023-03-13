@@ -1,14 +1,10 @@
 package engine
 
 import (
-	"reflect"
 	"time"
 
-	"hk4e/common/config"
 	"hk4e/common/constant"
 	"hk4e/common/mq"
-	"hk4e/common/utils"
-	"hk4e/gate/client_proto"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
@@ -23,7 +19,6 @@ type FightEngine struct {
 func NewFightEngine(messageQueue *mq.MessageQueue) (r *FightEngine) {
 	r = new(FightEngine)
 	r.messageQueue = messageQueue
-	initClientCmdProtoMap()
 	go r.fightHandle()
 	return r
 }
@@ -228,22 +223,10 @@ func (f *FightRoutine) attackHandle(gameMsg *mq.GameMsg) {
 				continue
 			}
 			hitInfo := new(proto.EvtBeingHitInfo)
-			if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-				clientProtoObj := GetClientProtoObjByName("EvtBeingHitInfo")
-				if clientProtoObj == nil {
-					logger.Error("get client proto obj is nil")
-					continue
-				}
-				ok := utils.UnmarshalProtoObj(hitInfo, clientProtoObj, entry.CombatData)
-				if !ok {
-					continue
-				}
-			} else {
-				err := pb.Unmarshal(entry.CombatData, hitInfo)
-				if err != nil {
-					logger.Error("parse EvtBeingHitInfo error: %v", err)
-					continue
-				}
+			err := pb.Unmarshal(entry.CombatData, hitInfo)
+			if err != nil {
+				logger.Error("parse EvtBeingHitInfo error: %v", err)
+				continue
 			}
 			attackResult := hitInfo.AttackResult
 			if attackResult == nil {
@@ -298,24 +281,4 @@ func (f *FightRoutine) getAllPlayer(entityMap map[uint32]*Entity) []uint32 {
 		uidList = append(uidList, uid)
 	}
 	return uidList
-}
-
-var ClientCmdProtoMap *client_proto.ClientCmdProtoMap
-
-func initClientCmdProtoMap() {
-	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-		ClientCmdProtoMap = client_proto.NewClientCmdProtoMap()
-	}
-}
-
-func GetClientProtoObjByName(protoObjName string) pb.Message {
-	fn := ClientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
-	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
-	obj := ret[0].Interface()
-	if obj == nil {
-		logger.Error("try to get a not exist proto obj, protoObjName: %v", protoObjName)
-		return nil
-	}
-	clientProtoObj := obj.(pb.Message)
-	return clientProtoObj
 }

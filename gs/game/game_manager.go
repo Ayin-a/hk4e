@@ -2,13 +2,10 @@ package game
 
 import (
 	"encoding/json"
-	"reflect"
 	"runtime"
 	"time"
 
-	"hk4e/common/config"
 	"hk4e/common/mq"
-	"hk4e/gate/client_proto"
 	"hk4e/gate/kcp"
 	"hk4e/gdconf"
 	"hk4e/gs/dao"
@@ -49,13 +46,12 @@ var ONLINE_PLAYER_NUM int32 = 0 // 当前在线玩家数
 var SELF *model.Player
 
 type GameManager struct {
-	dao               *dao.Dao
-	snowflake         *alg.SnowflakeWorker
-	clientCmdProtoMap *client_proto.ClientCmdProtoMap
-	gsId              uint32
-	gsAppid           string
-	mainGsAppid       string
-	ai                *model.Player // 本服的Ai玩家对象
+	dao         *dao.Dao
+	snowflake   *alg.SnowflakeWorker
+	gsId        uint32
+	gsAppid     string
+	mainGsAppid string
+	ai          *model.Player // 本服的Ai玩家对象
 }
 
 func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string) (r *GameManager) {
@@ -63,11 +59,6 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))
-	if config.GetConfig().Hk4e.ClientProtoProxyEnable {
-		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
-		// 反射调用的方法在启动时测试是否正常防止中途panic
-		r.GetClientProtoObjByName("PingReq")
-	}
 	r.gsId = gsId
 	r.gsAppid = gsAppid
 	r.mainGsAppid = mainGsAppid
@@ -289,11 +280,17 @@ func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint3
 		logger.Error("payload msg is nil, stack: %v", logger.Stack())
 		return
 	}
+	// 在这里直接序列化成二进制数据 防止发送的消息内包含各种游戏数据指针 而造成并发读写的问题
+	payloadMessageData, err := pb.Marshal(payloadMsg)
+	if err != nil {
+		logger.Error("parse payload msg to bin error: %v, stack: %v", err, logger.Stack())
+		return
+	}
 	gameMsg := &mq.GameMsg{
-		UserId:         userId,
-		CmdId:          cmdId,
-		ClientSeq:      clientSeq,
-		PayloadMessage: payloadMsg,
+		UserId:             userId,
+		CmdId:              cmdId,
+		ClientSeq:          clientSeq,
+		PayloadMessageData: payloadMessageData,
 	}
 	MESSAGE_QUEUE.SendToGate(gateAppId, &mq.NetMsg{
 		MsgType: mq.MsgTypeGame,
@@ -406,16 +403,4 @@ func (g *GameManager) KickPlayer(userId uint32, reason uint32) {
 			KickReason: reason,
 		},
 	})
-}
-
-func (g *GameManager) GetClientProtoObjByName(protoObjName string) pb.Message {
-	fn := g.clientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
-	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
-	obj := ret[0].Interface()
-	if obj == nil {
-		logger.Error("try to get a not exist proto obj, protoObjName: %v", protoObjName)
-		return nil
-	}
-	clientProtoObj := obj.(pb.Message)
-	return clientProtoObj
 }

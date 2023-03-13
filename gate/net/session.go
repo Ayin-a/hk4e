@@ -23,6 +23,8 @@ import (
 	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
+
+	pb "google.golang.org/protobuf/proto"
 )
 
 const (
@@ -80,7 +82,8 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		rsp.HeadMessage = k.getHeadMsg(protoMsg.HeadMessage.ClientSequenceId)
 		rsp.PayloadMessage = pingRsp
 		k.localMsgOutput <- rsp
-		logger.Debug("convId: %v, RTO: %v, SRTT: %v, RTTVar: %v", protoMsg.ConvId, session.conn.GetRTO(), session.conn.GetSRTT(), session.conn.GetSRTTVar())
+		logger.Debug("convId: %v, RTO: %v, SRTT: %v, RTTVar: %v",
+			protoMsg.ConvId, session.conn.GetRTO(), session.conn.GetSRTT(), session.conn.GetSRTTVar())
 		if connState != ConnActive {
 			return
 		}
@@ -108,13 +111,20 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			logger.Error("conn not active so drop packet, cmdId: %v, userId: %v, convId: %v", protoMsg.CmdId, userId, protoMsg.ConvId)
 			return
 		}
+		gameMsg := new(mq.GameMsg)
+		gameMsg.UserId = userId
+		gameMsg.CmdId = protoMsg.CmdId
+		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
+		// 在这里直接序列化成二进制数据 终结PayloadMessage的生命周期并回收进缓存池
+		payloadMessageData, err := pb.Marshal(protoMsg.PayloadMessage)
+		if err != nil {
+			logger.Error("parse payload msg to bin error: %v, stack: %v", err, logger.Stack())
+			return
+		}
+		k.serverCmdProtoMap.PutProtoObjCache(protoMsg.CmdId, protoMsg.PayloadMessage)
+		gameMsg.PayloadMessageData = payloadMessageData
 		// 转发到寻路服务器
 		if session.pathfindingServerAppId != "" && (protoMsg.CmdId == cmd.QueryPathReq || protoMsg.CmdId == cmd.ObstacleModifyNotify) {
-			gameMsg := new(mq.GameMsg)
-			gameMsg.UserId = userId
-			gameMsg.CmdId = protoMsg.CmdId
-			gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-			gameMsg.PayloadMessage = protoMsg.PayloadMessage
 			k.messageQueue.SendToPathfinding(session.pathfindingServerAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeGame,
 				EventId: mq.NormalMsg,
@@ -124,11 +134,6 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		}
 		// 转发到战斗服务器
 		if session.fightServerAppId != "" && protoMsg.CmdId == cmd.CombatInvocationsNotify {
-			gameMsg := new(mq.GameMsg)
-			gameMsg.UserId = userId
-			gameMsg.CmdId = protoMsg.CmdId
-			gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-			gameMsg.PayloadMessage = protoMsg.PayloadMessage
 			k.messageQueue.SendToFight(session.fightServerAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeGame,
 				EventId: mq.NormalMsg,
@@ -136,11 +141,6 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			})
 		}
 		// 转发到GS
-		gameMsg := new(mq.GameMsg)
-		gameMsg.UserId = userId
-		gameMsg.CmdId = protoMsg.CmdId
-		gameMsg.ClientSeq = protoMsg.HeadMessage.ClientSequenceId
-		gameMsg.PayloadMessage = protoMsg.PayloadMessage
 		k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
 			MsgType: mq.MsgTypeGame,
 			EventId: mq.NormalMsg,

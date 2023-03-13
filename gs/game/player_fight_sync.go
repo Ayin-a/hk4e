@@ -15,6 +15,8 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// TODO 暂时只做3.2协议的兼容了 在GS这边处理不同版本的协议太烦人了 有机会全部改到GATE那边处理 GS所有接收和发送的都应该是3.2版本的协议
+
 var cmdProtoMap *cmd.CmdProtoMap = nil
 
 func DoForward[IET model.InvokeEntryType](player *model.Player, invokeHandler *model.InvokeHandler[IET],
@@ -218,21 +220,20 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("parse EvtAnimatorParameterInfo error: %v", err)
 				continue
 			}
-			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
-
+			logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
 			// 这是否?
-			if evtAnimatorParameterInfo.IsServerCache {
-				evtAnimatorParameterInfo.IsServerCache = false
-				// TODO 暂时只做3.2协议的兼容了 在GS这边处理不同版本的协议太烦人了 有机会全部改到GATE那边处理 GS所有接收和发送的都应该是3.2版本的协议
-				newCombatData, err := pb.Marshal(evtAnimatorParameterInfo)
-				if err != nil {
-					logger.Error("build EvtAnimatorParameterInfo error: %v", err)
-					continue
-				}
-				entry.CombatData = newCombatData
+			evtAnimatorParameterInfo.IsServerCache = false
+			newCombatData, err := pb.Marshal(evtAnimatorParameterInfo)
+			if err != nil {
+				logger.Error("build EvtAnimatorParameterInfo error: %v", err)
+				continue
 			}
-
+			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
+			g.SendToWorldAEC(world, cmd.EvtAnimatorParameterNotify, player.ClientSeq, &proto.EvtAnimatorParameterNotify{
+				AnimatorParamInfo: evtAnimatorParameterInfo,
+				ForwardType:       entry.ForwardType,
+			}, player.PlayerID)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
@@ -241,7 +242,20 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				continue
 			}
 			logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
+			// 试试看?
+			evtAnimatorStateChangedInfo.HandleAnimatorStateImmediately = true
+			evtAnimatorStateChangedInfo.ForceSync = true
+			newCombatData, err := pb.Marshal(evtAnimatorStateChangedInfo)
+			if err != nil {
+				logger.Error("build EvtAnimatorParameterInfo error: %v", err)
+				continue
+			}
+			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
+			g.SendToWorldAEC(world, cmd.EvtAnimatorStateChangedNotify, player.ClientSeq, &proto.EvtAnimatorStateChangedNotify{
+				ForwardType:                 entry.ForwardType,
+				EvtAnimatorStateChangedInfo: evtAnimatorStateChangedInfo,
+			}, player.PlayerID)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		}
@@ -453,34 +467,30 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-
 	for _, entry := range req.Invokes {
 		// logger.Debug("AbilityInvocationsNotify: %v", entry, player.PlayerID)
-
-		// switch entry.ArgumentType {
-		// case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_META_MODIFIER_CHANGE:
-		//	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-		//	worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
-		//	if worldAvatar != nil {
-		//		for _, ability := range worldAvatar.abilityList {
-		//			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
-		//				logger.Error("A: %v", ability)
-		//			}
-		//		}
-		//		for _, modifier := range worldAvatar.modifierList {
-		//			if modifier.InstancedAbilityId == entry.Head.InstancedAbilityId {
-		//				logger.Error("B: %v", modifier)
-		//			}
-		//		}
-		//		for _, modifier := range worldAvatar.modifierList {
-		//			if modifier.InstancedModifierId == entry.Head.InstancedModifierId {
-		//				logger.Error("C: %v", modifier)
-		//			}
-		//		}
-		//	}
-		// case proto.AbilityInvokeArgument_ABILITY_INVOKE_ARGUMENT_NONE:
-		// }
-
+		switch entry.ArgumentType {
+		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
+			world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+			worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
+			if worldAvatar != nil {
+				for _, ability := range worldAvatar.abilityList {
+					if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
+						// logger.Error("A: %v", ability)
+					}
+				}
+				for _, modifier := range worldAvatar.modifierList {
+					if modifier.InstancedAbilityId == entry.Head.InstancedAbilityId {
+						// logger.Error("B: %v", modifier)
+					}
+				}
+				for _, modifier := range worldAvatar.modifierList {
+					if modifier.InstancedModifierId == entry.Head.InstancedModifierId {
+						// logger.Error("C: %v", modifier)
+					}
+				}
+			}
+		}
 		// 处理耐力消耗
 		g.HandleAbilityStamina(player, entry)
 		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)

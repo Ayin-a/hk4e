@@ -373,6 +373,9 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 	req := payloadMsg.(*proto.SceneEntityDrownReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	scene := world.GetSceneById(player.SceneId)
 	scene.DestroyEntity(req.EntityId)
 

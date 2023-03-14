@@ -8,15 +8,13 @@ import (
 	"hk4e/protocol/proto"
 )
 
-// AddUserPlayerExp 基于玩家冒险阅历
-func (g *GameManager) AddUserPlayerExp(userId uint32, expCount uint32) {
+// HandlePlayerExpAdd 玩家冒险阅历增加处理
+func (g *GameManager) HandlePlayerExpAdd(userId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	// 玩家增加冒险阅历
-	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_EXP] += expCount
 	// 玩家升级
 	for {
 		playerLevel := player.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL]

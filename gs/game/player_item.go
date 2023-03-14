@@ -29,30 +29,43 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	return allItemDataConfig
 }
 
-// AddUserItem 玩家添加物品
-func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint bool, hintReason uint16) {
+func (g *GameManager) GetPlayerItemCount(userId uint32, itemId uint32) uint32 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
-		return
+		return 0
 	}
+	prop, ok := constant.VIRTUAL_ITEM_PROP[itemId]
+	if ok {
+		value := player.PropertiesMap[prop]
+		return value
+	} else {
+		dbItem := player.GetDbItem()
+		value := dbItem.GetItemCount(itemId)
+		return value
+	}
+}
+
+// AddUserItem 玩家添加物品
+func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint bool, hintReason uint16) bool {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return false
+	}
+	dbItem := player.GetDbItem()
 	playerPropNotify := &proto.PlayerPropNotify{
 		PropMap: make(map[uint32]*proto.PropValue),
 	}
-	dbItem := player.GetDbItem()
-	for _, userItem := range itemList {
-		// 物品为虚拟物品则另外处理
-		switch userItem.ItemId {
-		case constant.ITEM_ID_RESIN, constant.ITEM_ID_LEGENDARY_KEY, constant.ITEM_ID_HCOIN, constant.ITEM_ID_SCOIN,
-			constant.ITEM_ID_MCOIN, constant.ITEM_ID_HOME_COIN:
-			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
-			prop, ok := constant.VIRTUAL_ITEM_PROP[userItem.ItemId]
-			if !ok {
-				continue
-			}
-			// 角色属性物品数量增加
-			player.PropertiesMap[prop] += userItem.ChangeCount
-
+	storeItemChangeNotify := &proto.StoreItemChangeNotify{
+		StoreType: proto.StoreType_STORE_PACK,
+		ItemList:  make([]*proto.Item, 0),
+	}
+	for _, changeItem := range itemList {
+		prop, exist := constant.VIRTUAL_ITEM_PROP[changeItem.ItemId]
+		if exist {
+			// 物品为虚拟物品 角色属性物品数量增加
+			player.PropertiesMap[prop] += changeItem.ChangeCount
 			playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
 				Type: uint32(prop),
 				Val:  int64(player.PropertiesMap[prop]),
@@ -60,36 +73,35 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint 
 					Ival: int64(player.PropertiesMap[prop]),
 				},
 			}
-		case constant.ITEM_ID_PLAYER_EXP:
-			// 冒险阅历
-			g.AddUserPlayerExp(userId, userItem.ChangeCount)
-		default:
-			// 普通物品直接进背包
-			dbItem.AddItem(player, userItem.ItemId, userItem.ChangeCount)
+			// 特殊属性变化处理函数
+			switch changeItem.ItemId {
+			case constant.ITEM_ID_PLAYER_EXP:
+				// 冒险阅历
+				g.HandlePlayerExpAdd(userId)
+			}
+		} else {
+			// 物品为普通物品 直接进背包
+			// 校验背包物品容量 目前物品包括材料和家具
+			if dbItem.GetItemMapLen() > constant.STORE_PACK_LIMIT_MATERIAL+constant.STORE_PACK_LIMIT_FURNITURE {
+				return false
+			}
+			dbItem.AddItem(player, changeItem.ItemId, changeItem.ChangeCount)
 		}
-	}
-	if len(playerPropNotify.PropMap) > 0 {
-		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
-	}
-
-	storeItemChangeNotify := &proto.StoreItemChangeNotify{
-		StoreType: proto.StoreType_STORE_PACK,
-		ItemList:  make([]*proto.Item, 0),
-	}
-	for _, userItem := range itemList {
 		pbItem := &proto.Item{
-			ItemId: userItem.ItemId,
-			Guid:   dbItem.GetItemGuid(userItem.ItemId),
+			ItemId: changeItem.ItemId,
+			Guid:   dbItem.GetItemGuid(changeItem.ItemId),
 			Detail: &proto.Item_Material{
 				Material: &proto.Material{
-					Count: dbItem.GetItemCount(player, userItem.ItemId),
+					Count: dbItem.GetItemCount(changeItem.ItemId),
 				},
 			},
 		}
 		storeItemChangeNotify.ItemList = append(storeItemChangeNotify.ItemList, pbItem)
 	}
+	if len(playerPropNotify.PropMap) > 0 {
+		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
+	}
 	g.SendMsg(cmd.StoreItemChangeNotify, userId, player.ClientSeq, storeItemChangeNotify)
-
 	if isHint {
 		if hintReason == 0 {
 			hintReason = uint16(proto.ActionReasonType_ACTION_REASON_SUBFIELD_DROP)
@@ -98,44 +110,46 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint 
 			Reason:   uint32(hintReason),
 			ItemList: make([]*proto.ItemHint, 0),
 		}
-		for _, userItem := range itemList {
+		for _, changeItem := range itemList {
 			itemAddHintNotify.ItemList = append(itemAddHintNotify.ItemList, &proto.ItemHint{
-				ItemId: userItem.ItemId,
-				Count:  userItem.ChangeCount,
+				ItemId: changeItem.ItemId,
+				Count:  changeItem.ChangeCount,
 				IsNew:  false,
 			})
 		}
 		g.SendMsg(cmd.ItemAddHintNotify, userId, player.ClientSeq, itemAddHintNotify)
 	}
+	return true
 }
 
-func (g *GameManager) CostUserItem(userId uint32, itemList []*ChangeItem) {
+func (g *GameManager) CostUserItem(userId uint32, itemList []*ChangeItem) bool {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
-		return
+		return false
 	}
+	dbItem := player.GetDbItem()
 	playerPropNotify := &proto.PlayerPropNotify{
 		PropMap: make(map[uint32]*proto.PropValue),
 	}
-	dbItem := player.GetDbItem()
-	for _, userItem := range itemList {
-		// 物品为虚拟物品则另外处理
-		switch userItem.ItemId {
-		case constant.ITEM_ID_RESIN, constant.ITEM_ID_LEGENDARY_KEY, constant.ITEM_ID_HCOIN, constant.ITEM_ID_SCOIN,
-			constant.ITEM_ID_MCOIN, constant.ITEM_ID_HOME_COIN:
-			// 树脂 传说任务钥匙 原石 摩拉 创世结晶 洞天宝钱
-			prop, ok := constant.VIRTUAL_ITEM_PROP[userItem.ItemId]
-			if !ok {
-				continue
-			}
-			// 角色属性物品数量减少
-			if player.PropertiesMap[prop] < userItem.ChangeCount {
-				player.PropertiesMap[prop] = 0
-			} else {
-				player.PropertiesMap[prop] -= userItem.ChangeCount
-			}
-
+	storeItemChangeNotify := &proto.StoreItemChangeNotify{
+		StoreType: proto.StoreType_STORE_PACK,
+		ItemList:  make([]*proto.Item, 0),
+	}
+	storeItemDelNotify := &proto.StoreItemDelNotify{
+		StoreType: proto.StoreType_STORE_PACK,
+		GuidList:  make([]uint64, 0),
+	}
+	for _, changeItem := range itemList {
+		// 检查剩余道具数量
+		count := g.GetPlayerItemCount(player.PlayerID, changeItem.ItemId)
+		if count < changeItem.ChangeCount {
+			return false
+		}
+		prop, exist := constant.VIRTUAL_ITEM_PROP[changeItem.ItemId]
+		if exist {
+			// 物品为虚拟物品 角色属性物品数量减少
+			player.PropertiesMap[prop] -= changeItem.ChangeCount
 			playerPropNotify.PropMap[uint32(prop)] = &proto.PropValue{
 				Type: uint32(prop),
 				Val:  int64(player.PropertiesMap[prop]),
@@ -143,53 +157,42 @@ func (g *GameManager) CostUserItem(userId uint32, itemList []*ChangeItem) {
 					Ival: int64(player.PropertiesMap[prop]),
 				},
 			}
-		case constant.ITEM_ID_PLAYER_EXP:
-			// 冒险阅历应该也没人会去扣吧?
-		default:
-			// 普通物品直接扣除
-			dbItem.CostItem(player, userItem.ItemId, userItem.ChangeCount)
+			// 特殊属性变化处理函数
+			switch changeItem.ItemId {
+			case constant.ITEM_ID_PLAYER_EXP:
+				// 冒险阅历应该也没人会去扣吧?
+				g.HandlePlayerExpAdd(userId)
+			}
+		} else {
+			// 物品为普通物品 直接扣除
+			dbItem.CostItem(player, changeItem.ItemId, changeItem.ChangeCount)
 		}
-	}
-	if len(playerPropNotify.PropMap) > 0 {
-		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
+		count = g.GetPlayerItemCount(player.PlayerID, changeItem.ItemId)
+		if count > 0 {
+			pbItem := &proto.Item{
+				ItemId: changeItem.ItemId,
+				Guid:   dbItem.GetItemGuid(changeItem.ItemId),
+				Detail: &proto.Item_Material{
+					Material: &proto.Material{
+						Count: count,
+					},
+				},
+			}
+			storeItemChangeNotify.ItemList = append(storeItemChangeNotify.ItemList, pbItem)
+		} else if count == 0 {
+			storeItemDelNotify.GuidList = append(storeItemDelNotify.GuidList, dbItem.GetItemGuid(changeItem.ItemId))
+		}
 	}
 
-	storeItemChangeNotify := &proto.StoreItemChangeNotify{
-		StoreType: proto.StoreType_STORE_PACK,
-		ItemList:  make([]*proto.Item, 0),
-	}
-	for _, userItem := range itemList {
-		count := dbItem.GetItemCount(player, userItem.ItemId)
-		if count == 0 {
-			continue
-		}
-		pbItem := &proto.Item{
-			ItemId: userItem.ItemId,
-			Guid:   dbItem.GetItemGuid(userItem.ItemId),
-			Detail: &proto.Item_Material{
-				Material: &proto.Material{
-					Count: count,
-				},
-			},
-		}
-		storeItemChangeNotify.ItemList = append(storeItemChangeNotify.ItemList, pbItem)
+	if len(playerPropNotify.PropMap) > 0 {
+		g.SendMsg(cmd.PlayerPropNotify, userId, player.ClientSeq, playerPropNotify)
 	}
 	if len(storeItemChangeNotify.ItemList) > 0 {
 		g.SendMsg(cmd.StoreItemChangeNotify, userId, player.ClientSeq, storeItemChangeNotify)
 	}
-
-	storeItemDelNotify := &proto.StoreItemDelNotify{
-		StoreType: proto.StoreType_STORE_PACK,
-		GuidList:  make([]uint64, 0),
-	}
-	for _, userItem := range itemList {
-		count := dbItem.GetItemCount(player, userItem.ItemId)
-		if count > 0 {
-			continue
-		}
-		storeItemDelNotify.GuidList = append(storeItemDelNotify.GuidList, dbItem.GetItemGuid(userItem.ItemId))
-	}
 	if len(storeItemDelNotify.GuidList) > 0 {
 		g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)
 	}
+
+	return true
 }

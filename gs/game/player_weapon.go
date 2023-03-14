@@ -124,13 +124,6 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		logger.Error("weapon config cost coin error, itemId: %v", weapon.ItemId)
 		return
 	}
-	// 摩拉数量是否足够
-	dbItem := player.GetDbItem()
-	if dbItem.GetItemCount(player, constant.ITEM_ID_SCOIN) < weaponConfig.AwakenCoinCostList[weapon.Refinement] {
-		logger.Error("item count not enough, itemId: %v", constant.ITEM_ID_SCOIN)
-		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
-		return
-	}
 	// 一星二星的武器不能精炼
 	if weaponConfig.EquipLevel < constant.WEAPON_AWAKEN_MIN_EQUIPLEVEL {
 		logger.Error("weapon equip level le 3, itemId: %v", weapon.ItemId)
@@ -208,24 +201,24 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 			return
 		}
 		// 消耗作为精炼材料的道具
-		g.CostUserItem(player.PlayerID, []*ChangeItem{
-			{
-				ItemId:      item.ItemId,
-				ChangeCount: 1,
-			},
-		})
+		ok = g.CostUserItem(player.PlayerID, []*ChangeItem{{ItemId: item.ItemId, ChangeCount: 1}})
+		if !ok {
+			logger.Error("item count not enough, uid: %v", player.PlayerID)
+			g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+			return
+		}
 	default:
 		logger.Error("weapon awaken item type error, itemType: %v", itemDataConfig.Type)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{})
 		return
 	}
 	// 消耗摩拉
-	g.CostUserItem(player.PlayerID, []*ChangeItem{
-		{
-			ItemId:      constant.ITEM_ID_SCOIN,
-			ChangeCount: weaponConfig.AwakenCoinCostList[weapon.Refinement],
-		},
-	})
+	ok = g.CostUserItem(player.PlayerID, []*ChangeItem{{ItemId: constant.ITEM_ID_SCOIN, ChangeCount: weaponConfig.AwakenCoinCostList[weapon.Refinement]}})
+	if !ok {
+		logger.Error("item count not enough, uid: %v", player.PlayerID)
+		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)
+		return
+	}
 
 	weaponAwakenRsp := &proto.WeaponAwakenRsp{
 		AvatarGuid:              0,
@@ -313,9 +306,8 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		ChangeCount: uint32(weaponPromoteConfig.CostCoin),
 	})
 	// 突破材料以及摩拉是否足够
-	dbItem := player.GetDbItem()
 	for _, item := range costItemList {
-		if dbItem.GetItemCount(player, item.ItemId) < item.ChangeCount {
+		if g.GetPlayerItemCount(player.PlayerID, item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ITEM_ID_SCOIN {
@@ -332,7 +324,14 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	// 消耗突破材料和摩拉
-	g.CostUserItem(player.PlayerID, costItemList)
+	ok = g.CostUserItem(player.PlayerID, costItemList)
+	if !ok {
+		if !ok {
+			logger.Error("item count not enough, uid: %v", player.PlayerID)
+			g.SendError(cmd.WeaponPromoteRsp, player, &proto.WeaponPromoteRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+			return
+		}
+	}
 
 	// 突破前的信息
 	oldPromote := weapon.Promote
@@ -582,9 +581,8 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		ChangeCount: coinCost,
 	})
 	// 校验物品是否足够
-	dbItem := player.GetDbItem()
 	for _, item := range costItemList {
-		if dbItem.GetItemCount(player, item.ItemId) < item.ChangeCount {
+		if g.GetPlayerItemCount(player.PlayerID, item.ItemId) < item.ChangeCount {
 			logger.Error("item count not enough, itemId: %v", item.ItemId)
 			// 摩拉的错误提示与材料不同
 			if item.ItemId == constant.ITEM_ID_SCOIN {
@@ -617,7 +615,12 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 		costWeaponIdList = append(costWeaponIdList, foodWeapon.WeaponId)
 	}
 	// 消耗升级材料和摩拉
-	g.CostUserItem(player.PlayerID, costItemList)
+	ok = g.CostUserItem(player.PlayerID, costItemList)
+	if !ok {
+		logger.Error("item count not enough, uid: %v", player.PlayerID)
+		g.SendError(cmd.WeaponUpgradeRsp, player, &proto.WeaponUpgradeRsp{}, proto.Retcode_RET_ITEM_COUNT_NOT_ENOUGH)
+		return
+	}
 	// 消耗作为升级材料的武器
 	g.CostUserWeapon(player.PlayerID, costWeaponIdList)
 	// 武器升级前的信息

@@ -8,6 +8,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const (
+	MaxQueryChatMsgLen = 1000 // 最大可查询聊天记录条数
 )
 
 func (d *Dao) InsertPlayer(player *model.Player) error {
@@ -250,6 +255,8 @@ func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 	find, err := db.Find(
 		context.TODO(),
 		bson.D{{"$or", []bson.D{{{"ToUid", uid}}, {{"Uid", uid}}}}},
+		options.Find().SetLimit(MaxQueryChatMsgLen),
+		options.Find().SetSort(bson.M{"Time": -1}),
 	)
 	if err != nil {
 		return nil, err

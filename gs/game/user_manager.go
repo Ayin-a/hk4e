@@ -82,7 +82,8 @@ type PlayerRegInfo struct {
 }
 
 // CheckUserExistOnReg 玩家注册检查是否已存在
-func (u *UserManager) CheckUserExistOnReg(userId uint32, req *proto.SetPlayerBornDataReq, clientSeq uint32, gateAppId string) (exist bool, asyncWait bool) {
+func (u *UserManager) CheckUserExistOnReg(userId uint32,
+	req *proto.SetPlayerBornDataReq, clientSeq uint32, gateAppId string) (exist bool, asyncWait bool) {
 	_, exist = u.playerMap[userId]
 	if exist {
 		return true, false

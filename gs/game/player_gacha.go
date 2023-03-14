@@ -220,12 +220,10 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 	}
 
 	// 先扣掉粉球或蓝球再进行抽卡
-	g.CostUserItem(player.PlayerID, []*ChangeItem{
-		{
-			ItemId:      costItemId,
-			ChangeCount: gachaTimes,
-		},
-	})
+	ok := g.CostUserItem(player.PlayerID, []*ChangeItem{{ItemId: costItemId, ChangeCount: gachaTimes}})
+	if !ok {
+		return
+	}
 
 	doGachaRsp := &proto.DoGachaRsp{
 		GachaType:       gachaType,
@@ -272,8 +270,7 @@ func (g *GameManager) DoGachaReq(player *model.Player, payloadMsg pb.Message) {
 				g.AddUserAvatar(player.PlayerID, avatarId)
 			} else {
 				constellationItemId := itemId + 100
-				dbItem := player.GetDbItem()
-				if dbItem.GetItemCount(player, constellationItemId) < 6 {
+				if g.GetPlayerItemCount(player.PlayerID, constellationItemId) < 6 {
 					g.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: constellationItemId, ChangeCount: 1}}, false, 0)
 				}
 			}

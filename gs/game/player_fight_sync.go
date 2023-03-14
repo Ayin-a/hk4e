@@ -230,10 +230,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-			g.SendToWorldAEC(world, cmd.EvtAnimatorParameterNotify, player.ClientSeq, &proto.EvtAnimatorParameterNotify{
-				AnimatorParamInfo: evtAnimatorParameterInfo,
-				ForwardType:       entry.ForwardType,
-			}, player.PlayerID)
+			// g.SendToWorldAEC(world, cmd.EvtAnimatorParameterNotify, player.ClientSeq, &proto.EvtAnimatorParameterNotify{
+			// 	AnimatorParamInfo: evtAnimatorParameterInfo,
+			// 	ForwardType:       entry.ForwardType,
+			// }, player.PlayerID)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
@@ -252,10 +252,10 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-			g.SendToWorldAEC(world, cmd.EvtAnimatorStateChangedNotify, player.ClientSeq, &proto.EvtAnimatorStateChangedNotify{
-				ForwardType:                 entry.ForwardType,
-				EvtAnimatorStateChangedInfo: evtAnimatorStateChangedInfo,
-			}, player.PlayerID)
+			// g.SendToWorldAEC(world, cmd.EvtAnimatorStateChangedNotify, player.ClientSeq, &proto.EvtAnimatorStateChangedNotify{
+			// 	ForwardType:                 entry.ForwardType,
+			// 	EvtAnimatorStateChangedInfo: evtAnimatorStateChangedInfo,
+			// }, player.PlayerID)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		}

@@ -1,7 +1,5 @@
 package model
 
-import "hk4e/common/constant"
-
 type DbItem struct {
 	ItemMap map[uint32]*Item // 道具仓库
 }
@@ -37,28 +35,21 @@ func (i *DbItem) GetItemGuid(itemId uint32) uint64 {
 	return itemInfo.Guid
 }
 
-func (i *DbItem) GetItemCount(player *Player, itemId uint32) uint32 {
-	prop, ok := constant.VIRTUAL_ITEM_PROP[itemId]
-	if ok {
-		value := player.PropertiesMap[prop]
-		return value
-	} else {
-		itemInfo := i.ItemMap[itemId]
-		if itemInfo == nil {
-			return 0
-		}
-		return itemInfo.Count
+func (i *DbItem) GetItemCount(itemId uint32) uint32 {
+	itemInfo := i.ItemMap[itemId]
+	if itemInfo == nil {
+		return 0
 	}
+	return itemInfo.Count
+}
+
+func (i *DbItem) GetItemMapLen() int {
+	return len(i.ItemMap)
 }
 
 func (i *DbItem) AddItem(player *Player, itemId uint32, count uint32) {
 	itemInfo := i.ItemMap[itemId]
 	if itemInfo == nil {
-		// 该物品为新物品时校验背包物品容量
-		// 目前物品包括材料和家具
-		if len(i.ItemMap) > constant.STORE_PACK_LIMIT_MATERIAL+constant.STORE_PACK_LIMIT_FURNITURE {
-			return
-		}
 		itemInfo = &Item{
 			ItemId: itemId,
 			Count:  0,
@@ -76,14 +67,12 @@ func (i *DbItem) CostItem(player *Player, itemId uint32, count uint32) {
 		return
 	}
 	if itemInfo.Count < count {
-		itemInfo.Count = 0
-	} else {
-		itemInfo.Count -= count
+		return
 	}
+	itemInfo.Count -= count
+	i.ItemMap[itemId] = itemInfo
 	if itemInfo.Count == 0 {
 		delete(i.ItemMap, itemId)
 		delete(player.GameObjectGuidMap, itemInfo.Guid)
-	} else {
-		i.ItemMap[itemId] = itemInfo
 	}
 }

@@ -65,6 +65,10 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	mainPropId := uint32(reliquaryMainConfig.MainPropId)
 	// 玩家添加圣遗物
 	dbReliquary := player.GetDbReliquary()
+	// 校验背包圣遗物容量
+	if dbReliquary.GetReliquaryMapLen() > constant.STORE_PACK_LIMIT_RELIQUARY {
+		return 0
+	}
 	dbReliquary.AddReliquary(player, itemId, reliquaryId, mainPropId)
 	reliquary := dbReliquary.GetReliquary(reliquaryId)
 	if reliquary == nil {

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 )
@@ -30,6 +29,10 @@ type Weapon struct {
 	Refinement  uint8    // 精炼等阶
 	AvatarId    uint32   // 装备角色id
 	Guid        uint64   `bson:"-" msgpack:"-"`
+}
+
+func (w *DbWeapon) GetWeaponMapLen() int {
+	return len(w.WeaponMap)
 }
 
 func (w *DbWeapon) InitAllWeapon(player *Player) {
@@ -63,10 +66,6 @@ func (w *DbWeapon) GetWeapon(weaponId uint64) *Weapon {
 }
 
 func (w *DbWeapon) AddWeapon(player *Player, itemId uint32, weaponId uint64) {
-	// 校验背包武器容量
-	if len(w.WeaponMap) > constant.STORE_PACK_LIMIT_WEAPON {
-		return
-	}
 	itemDataConfig := gdconf.GetItemDataById(int32(itemId))
 	if itemDataConfig == nil {
 		logger.Error("weapon config is nil, itemId: %v", itemId)

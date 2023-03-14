@@ -15,8 +15,6 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-// TODO 暂时只做3.2协议的兼容了 在GS这边处理不同版本的协议太烦人了 有机会全部改到GATE那边处理 GS所有接收和发送的都应该是3.2版本的协议
-
 var cmdProtoMap *cmd.CmdProtoMap = nil
 
 func DoForward[IET model.InvokeEntryType](player *model.Player, invokeHandler *model.InvokeHandler[IET],

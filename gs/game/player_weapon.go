@@ -33,6 +33,10 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	}
 	weaponId := uint64(g.snowflake.GenId())
 	dbWeapon := player.GetDbWeapon()
+	// 校验背包武器容量
+	if dbWeapon.GetWeaponMapLen() > constant.STORE_PACK_LIMIT_WEAPON {
+		return 0
+	}
 	dbWeapon.AddWeapon(player, itemId, weaponId)
 	weapon := dbWeapon.GetWeapon(weaponId)
 	if weapon == nil {

@@ -256,7 +256,7 @@ func (d *Dao) QueryChatMsgListByUid(uid uint32) ([]*model.ChatMsg, error) {
 		context.TODO(),
 		bson.D{{"$or", []bson.D{{{"ToUid", uid}}, {{"Uid", uid}}}}},
 		options.Find().SetLimit(MaxQueryChatMsgLen),
-		options.Find().SetSort(bson.M{"Time": -1}),
+		options.Find().SetSort(bson.M{"Time": 1}),
 	)
 	if err != nil {
 		return nil, err

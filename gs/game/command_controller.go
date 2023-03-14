@@ -9,6 +9,8 @@ import (
 	"hk4e/gs/model"
 )
 
+// 玩家游戏内GM命令格式解析模块
+
 // HelpCommand 帮助命令
 func (c *CommandManager) HelpCommand(cmd *CommandMessage) {
 	c.SendMessage(cmd.Executor,
@@ -158,13 +160,13 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 			c.SendMessage(cmd.Executor, "已将玩家 UID：%v 请求加入目标玩家 UID：%v 的世界。", player.PlayerID, targetUid)
 		} else {
 			// 传送玩家至目标玩家的位置
-			c.GMTeleportPlayer(player.PlayerID, target.SceneId, target.Pos.X, target.Pos.Y, target.Pos.Z)
+			c.gmCmd.GMTeleportPlayer(player.PlayerID, target.SceneId, target.Pos.X, target.Pos.Y, target.Pos.Z)
 			// 发送消息给执行者
 			c.SendMessage(cmd.Executor, "已将玩家 UID：%v 传送至 目标玩家 UID：%v。", player.PlayerID, targetUid)
 		}
 	} else {
 		// 传送玩家至指定的位置
-		c.GMTeleportPlayer(player.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
+		c.gmCmd.GMTeleportPlayer(player.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
 		// 发送消息给执行者
 		c.SendMessage(cmd.Executor, "已将玩家 UID：%v 传送至 场景：%v, X：%.2f, Y：%.2f, Z：%.2f。", player.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
 	}
@@ -247,7 +249,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		_, ok := GAME_MANAGER.GetAllItemDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家物品
-			c.GMAddUserItem(player.PlayerID, id, count)
+			c.gmCmd.GMAddUserItem(player.PlayerID, id, count)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
@@ -255,7 +257,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		_, ok = GAME_MANAGER.GetAllWeaponDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家武器
-			c.GMAddUserWeapon(player.PlayerID, id, count)
+			c.gmCmd.GMAddUserWeapon(player.PlayerID, id, count)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 武器 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 
@@ -264,7 +266,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		_, ok = GAME_MANAGER.GetAllReliquaryDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家圣遗物
-			c.GMAddUserReliquary(player.PlayerID, id, count)
+			c.gmCmd.GMAddUserReliquary(player.PlayerID, id, count)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 圣遗物 物品ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 
@@ -273,21 +275,21 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家角色
-			c.GMAddUserAvatar(player.PlayerID, id)
+			c.gmCmd.GMAddUserAvatar(player.PlayerID, id)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 角色ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
 		// 判断是否为时装
 		if gdconf.GetAvatarCostumeDataById(int32(id)) != nil {
-			// 给予玩家角色
-			c.GMAddUserCostume(player.PlayerID, id)
+			// 给予玩家时装
+			c.gmCmd.GMAddUserCostume(player.PlayerID, id)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 时装ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
 		// 判断是否为风之翼
 		if gdconf.GetAvatarFlycloakDataById(int32(id)) != nil {
-			// 给予玩家角色
-			c.GMAddUserFlycloak(player.PlayerID, id)
+			// 给予玩家风之翼
+			c.gmCmd.GMAddUserFlycloak(player.PlayerID, id)
 			c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 风之翼ID：%v 数量：%v。", player.PlayerID, id, count)
 			return
 		}
@@ -295,31 +297,31 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 		c.SendMessage(cmd.Executor, "ID：%v 不存在。", id)
 	case "item", "物品":
 		// 给予玩家所有物品
-		c.GMAddUserAllItem(player.PlayerID, count)
+		c.gmCmd.GMAddUserAllItem(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有物品 数量：%v。", player.PlayerID, count)
 	case "weapon", "武器":
 		// 给予玩家所有武器
-		c.GMAddUserAllWeapon(player.PlayerID, count)
+		c.gmCmd.GMAddUserAllWeapon(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有武器 数量：%v。", player.PlayerID, count)
 	case "reliquary", "圣遗物":
 		// 给予玩家所有圣遗物
-		c.GMAddUserAllReliquary(player.PlayerID, count)
+		c.gmCmd.GMAddUserAllReliquary(player.PlayerID, count)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有圣遗物 数量：%v。", player.PlayerID, count)
 	case "avatar", "角色":
 		// 给予玩家所有角色
-		c.GMAddUserAllAvatar(player.PlayerID)
+		c.gmCmd.GMAddUserAllAvatar(player.PlayerID)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有角色。", player.PlayerID)
 	case "costume", "时装":
-		// 给予玩家所有角色
-		c.GMAddUserAllCostume(player.PlayerID)
+		// 给予玩家所有时装
+		c.gmCmd.GMAddUserAllCostume(player.PlayerID)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有时装。", player.PlayerID)
 	case "flycloak", "风之翼":
-		// 给予玩家所有角色
-		c.GMAddUserAllFlycloak(player.PlayerID)
+		// 给予玩家所有风之翼
+		c.gmCmd.GMAddUserAllFlycloak(player.PlayerID)
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有风之翼。", player.PlayerID)
 	case "all", "全部":
 		// 给予玩家所有内容
-		c.GMAddUserAllEvery(player.PlayerID, count, count) // TODO 武器额外获取数量
+		c.gmCmd.GMAddUserAllEvery(player.PlayerID, count) // TODO 武器额外获取数量
 		c.SendMessage(cmd.Executor, "已给予玩家 UID：%v, 所有内容。", player.PlayerID)
 	}
 }

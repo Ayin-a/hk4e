@@ -64,6 +64,7 @@ func ProtoDecode(kcpMsg *KcpMsg,
 		if len(delList) != 0 {
 			logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
 		}
+		ConvClientPbDataToServer(serverProtoObj, clientCmdProtoMap)
 		serverProtoData, err := pb.Marshal(serverProtoObj)
 		if err != nil {
 			logger.Error("marshal server proto error: %v", err)
@@ -175,6 +176,7 @@ func ProtoDecodePayloadLoop(cmdId uint16, protoData []byte, protoMessageList *[]
 				if len(delList) != 0 {
 					logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
 				}
+				ConvClientPbDataToServer(serverProtoObj, clientCmdProtoMap)
 				serverProtoData, err := pb.Marshal(serverProtoObj)
 				if err != nil {
 					logger.Error("marshal server proto error: %v", err)
@@ -257,6 +259,7 @@ func ProtoEncode(protoMsg *ProtoMsg,
 		if len(delList) != 0 {
 			logger.Error("delete field name list: %v, cmdName: %v", delList, cmdName)
 		}
+		ConvServerPbDataToClient(clientProtoObj, clientCmdProtoMap)
 		clientProtoData, err := pb.Marshal(clientProtoObj)
 		if err != nil {
 			logger.Error("marshal client proto error: %v", err)
@@ -297,8 +300,14 @@ func EncodeProtoToPayload(protoObj pb.Message, serverCmdProtoMap *cmd.CmdProtoMa
 	return protoData
 }
 
+// 网关客户端协议代理相关反射方法
+
 func GetClientProtoObjByName(protoObjName string, clientCmdProtoMap *client_proto.ClientCmdProtoMap) pb.Message {
 	fn := clientCmdProtoMap.RefValue.MethodByName("GetClientProtoObjByName")
+	if !fn.IsValid() {
+		logger.Error("fn is nil")
+		return nil
+	}
 	ret := fn.Call([]reflect.Value{reflect.ValueOf(protoObjName)})
 	obj := ret[0].Interface()
 	if obj == nil {
@@ -307,4 +316,136 @@ func GetClientProtoObjByName(protoObjName string, clientCmdProtoMap *client_prot
 	}
 	clientProtoObj := obj.(pb.Message)
 	return clientProtoObj
+}
+
+func ConvClientPbDataToServerCore(protoObjName string, serverProtoObj pb.Message, clientProtoData *[]byte, clientCmdProtoMap *client_proto.ClientCmdProtoMap) {
+	clientProtoObj := GetClientProtoObjByName(protoObjName, clientCmdProtoMap)
+	if clientProtoObj == nil {
+		return
+	}
+	err := pb.Unmarshal(*clientProtoData, clientProtoObj)
+	if err != nil {
+		return
+	}
+	_, err = object.CopyProtoBufSameField(serverProtoObj, clientProtoObj)
+	if err != nil {
+		return
+	}
+	serverProtoData, err := pb.Marshal(serverProtoObj)
+	if err != nil {
+		return
+	}
+	*clientProtoData = serverProtoData
+}
+
+func ConvServerPbDataToClientCore(protoObjName string, serverProtoObj pb.Message, serverProtoData *[]byte, clientCmdProtoMap *client_proto.ClientCmdProtoMap) {
+	err := pb.Unmarshal(*serverProtoData, serverProtoObj)
+	if err != nil {
+		return
+	}
+	clientProtoObj := GetClientProtoObjByName(protoObjName, clientCmdProtoMap)
+	if clientProtoObj == nil {
+		return
+	}
+	_, err = object.CopyProtoBufSameField(clientProtoObj, serverProtoObj)
+	if err != nil {
+		return
+	}
+	clientProtoData, err := pb.Marshal(clientProtoObj)
+	if err != nil {
+		return
+	}
+	*serverProtoData = clientProtoData
+}
+
+// 在GS侧进行pb.Unmarshal解析二级pb数据前 请先在这里添加相关代码
+
+func ConvClientPbDataToServer(protoObj pb.Message, clientCmdProtoMap *client_proto.ClientCmdProtoMap) pb.Message {
+	switch protoObj.(type) {
+	case *proto.CombatInvocationsNotify:
+		ntf := protoObj.(*proto.CombatInvocationsNotify)
+		for _, entry := range ntf.InvokeList {
+			switch entry.ArgumentType {
+			case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
+				serverProtoObj := new(proto.EvtBeingHitInfo)
+				ConvClientPbDataToServerCore("EvtBeingHitInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_ENTITY_MOVE:
+				serverProtoObj := new(proto.EntityMoveInfo)
+				ConvClientPbDataToServerCore("EntityMoveInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_COMBAT_ANIMATOR_PARAMETER_CHANGED:
+				serverProtoObj := new(proto.EvtAnimatorParameterInfo)
+				ConvClientPbDataToServerCore("EvtAnimatorParameterInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
+				serverProtoObj := new(proto.EvtAnimatorStateChangedInfo)
+				ConvClientPbDataToServerCore("EvtAnimatorStateChangedInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			}
+		}
+	case *proto.AbilityInvocationsNotify:
+		ntf := protoObj.(*proto.AbilityInvocationsNotify)
+		for _, entry := range ntf.Invokes {
+			switch entry.ArgumentType {
+			case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
+				serverProtoObj := new(proto.AbilityMixinCostStamina)
+				ConvClientPbDataToServerCore("AbilityMixinCostStamina", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			}
+		}
+	case *proto.ClientAbilityChangeNotify:
+		ntf := protoObj.(*proto.ClientAbilityChangeNotify)
+		for _, entry := range ntf.Invokes {
+			switch entry.ArgumentType {
+			case proto.AbilityInvokeArgument_ABILITY_META_ADD_NEW_ABILITY:
+				serverProtoObj := new(proto.AbilityMetaAddAbility)
+				ConvClientPbDataToServerCore("AbilityMetaAddAbility", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
+				serverProtoObj := new(proto.AbilityMetaModifierChange)
+				ConvClientPbDataToServerCore("AbilityMetaModifierChange", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			}
+		}
+	}
+	return protoObj
+}
+
+func ConvServerPbDataToClient(protoObj pb.Message, clientCmdProtoMap *client_proto.ClientCmdProtoMap) pb.Message {
+	switch protoObj.(type) {
+	case *proto.CombatInvocationsNotify:
+		ntf := protoObj.(*proto.CombatInvocationsNotify)
+		for _, entry := range ntf.InvokeList {
+			switch entry.ArgumentType {
+			case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
+				serverProtoObj := new(proto.EvtBeingHitInfo)
+				ConvServerPbDataToClientCore("EvtBeingHitInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_ENTITY_MOVE:
+				serverProtoObj := new(proto.EntityMoveInfo)
+				ConvServerPbDataToClientCore("EntityMoveInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_COMBAT_ANIMATOR_PARAMETER_CHANGED:
+				serverProtoObj := new(proto.EvtAnimatorParameterInfo)
+				ConvServerPbDataToClientCore("EvtAnimatorParameterInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
+				serverProtoObj := new(proto.EvtAnimatorStateChangedInfo)
+				ConvServerPbDataToClientCore("EvtAnimatorStateChangedInfo", serverProtoObj, &entry.CombatData, clientCmdProtoMap)
+			}
+		}
+	case *proto.AbilityInvocationsNotify:
+		ntf := protoObj.(*proto.AbilityInvocationsNotify)
+		for _, entry := range ntf.Invokes {
+			switch entry.ArgumentType {
+			case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
+				serverProtoObj := new(proto.AbilityMixinCostStamina)
+				ConvServerPbDataToClientCore("AbilityMixinCostStamina", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			}
+		}
+	case *proto.ClientAbilityChangeNotify:
+		ntf := protoObj.(*proto.ClientAbilityChangeNotify)
+		for _, entry := range ntf.Invokes {
+			switch entry.ArgumentType {
+			case proto.AbilityInvokeArgument_ABILITY_META_ADD_NEW_ABILITY:
+				serverProtoObj := new(proto.AbilityMetaAddAbility)
+				ConvServerPbDataToClientCore("AbilityMetaAddAbility", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
+				serverProtoObj := new(proto.AbilityMetaModifierChange)
+				ConvServerPbDataToClientCore("AbilityMetaModifierChange", serverProtoObj, &entry.AbilityData, clientCmdProtoMap)
+			}
+		}
+	}
+	return protoObj
 }

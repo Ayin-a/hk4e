@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"hk4e/pkg/logger"
 )
 
-// 命令管理器
+// GM命令管理器模块
 
 // CommandPerm 命令权限等级
 // 0 为普通玩家 数越大权限越大
@@ -42,6 +43,8 @@ type CommandManager struct {
 	commandFuncRouter map[string]CommandFunc // 记录命令处理函数
 	commandPermMap    map[string]CommandPerm // 记录命令对应的权限
 	commandTextInput  chan *CommandMessage   // 传输要处理的命令文本
+	gmCmd             *GMCmd
+	gmCmdRefValue     reflect.Value
 }
 
 // NewCommandManager 新建命令管理器
@@ -50,6 +53,8 @@ func NewCommandManager() *CommandManager {
 	// 初始化
 	r.commandTextInput = make(chan *CommandMessage, 1000)
 	r.InitRouter() // 初始化路由
+	r.gmCmd = new(GMCmd)
+	r.gmCmdRefValue = reflect.ValueOf(r.gmCmd)
 	return r
 }
 
@@ -128,21 +133,117 @@ func (c *CommandManager) InputCommand(executor any, text string) {
 	c.commandTextInput <- &CommandMessage{Executor: executor, Text: text}
 }
 
+func (c *CommandManager) CallGMCmd(funcName string, paramList []string) bool {
+	fn := c.gmCmdRefValue.MethodByName(funcName)
+	if !fn.IsValid() {
+		return false
+	}
+	if fn.Type().NumIn() != len(paramList) {
+		return false
+	}
+	in := make([]reflect.Value, fn.Type().NumIn())
+	for i := 0; i < fn.Type().NumIn(); i++ {
+		kind := fn.Type().In(i).Kind()
+		param := paramList[i]
+		var value reflect.Value
+		switch kind {
+		case reflect.Int:
+			val, err := strconv.ParseInt(param, 10, 64)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(int(val))
+		case reflect.Uint:
+			val, err := strconv.ParseUint(param, 10, 64)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(uint(val))
+		case reflect.Int8:
+			val, err := strconv.ParseInt(param, 10, 8)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(int8(val))
+		case reflect.Uint8:
+			val, err := strconv.ParseUint(param, 10, 8)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(uint8(val))
+		case reflect.Int16:
+			val, err := strconv.ParseInt(param, 10, 16)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(int16(val))
+		case reflect.Uint16:
+			val, err := strconv.ParseUint(param, 10, 16)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(uint16(val))
+		case reflect.Int32:
+			val, err := strconv.ParseInt(param, 10, 32)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(int32(val))
+		case reflect.Uint32:
+			val, err := strconv.ParseUint(param, 10, 32)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(uint32(val))
+		case reflect.Int64:
+			val, err := strconv.ParseInt(param, 10, 64)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(val)
+		case reflect.Uint64:
+			val, err := strconv.ParseUint(param, 10, 64)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(val)
+		case reflect.Float32:
+			val, err := strconv.ParseFloat(param, 32)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(float32(val))
+		case reflect.Float64:
+			val, err := strconv.ParseFloat(param, 64)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(val)
+		case reflect.Bool:
+			val, err := strconv.ParseBool(param)
+			if err != nil {
+				return false
+			}
+			value = reflect.ValueOf(val)
+		case reflect.String:
+			value = reflect.ValueOf(param)
+		default:
+			return false
+		}
+		in[i] = value
+	}
+	fn.Call(in)
+	return true
+}
+
 // HandleCommand 处理命令
 // 主协程接收到命令消息后执行
 func (c *CommandManager) HandleCommand(cmd *CommandMessage) {
+	// 直接执行GM函数
 	if cmd.FuncName != "" {
 		logger.Info("run gm cmd, FuncName: %v, Param: %v", cmd.FuncName, cmd.Param)
-		// TODO 反射调用command_gm.go中的函数并反射解析传入参数类型
-		if cmd.FuncName == "ReloadGameDataConfig" && len(cmd.Param) == 0 {
-			c.ReloadGameDataConfig()
-		} else if cmd.FuncName == "XLuaDebug" && len(cmd.Param) == 2 {
-			uid, err := strconv.Atoi(cmd.Param[0])
-			if err != nil {
-				return
-			}
-			c.XLuaDebug(uint32(uid), cmd.Param[1])
-		}
+		// 反射调用command_gm.go中的函数并反射解析传入参数类型
+		c.CallGMCmd(cmd.FuncName, cmd.Param)
 		return
 	}
 

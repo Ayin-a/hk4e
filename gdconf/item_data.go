@@ -11,9 +11,9 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-// ItemData 统一道具配置表
+// ItemData 道具分类分表整合配置表
 type ItemData struct {
-	// 公共字段
+	// 公共表头字段
 	ItemId    int32  `csv:"ItemId"`              // ID
 	Type      int32  `csv:"Type,omitempty"`      // 类型
 	Weight    int32  `csv:"Weight,omitempty"`    // 重量

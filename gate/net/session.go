@@ -288,6 +288,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 						// 唤醒存在的顶号登录流程
 						logger.Info("awake interrupt login, uid: %v", serverMsg.UserId)
 						kickFinishNotifyChan <- true
+						delete(reLoginRemoteKickRegMap, serverMsg.UserId)
 					}
 				}
 			}
@@ -373,13 +374,21 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			ConvId:  oldSession.conn.GetConv(),
 			EventId: KcpConnRelogin,
 		}
-		kickFinishNotifyChan := make(chan bool)
+		kickFinishNotifyChan := make(chan bool, 1)
 		k.reLoginRemoteKickRegChan <- &RemoteKick{
 			userId:               uid,
 			kickFinishNotifyChan: kickFinishNotifyChan,
 		}
 		logger.Info("run local interrupt login wait, uid: %v", uid)
-		<-kickFinishNotifyChan
+		timer := time.NewTimer(time.Second * 10)
+		select {
+		case <-timer.C:
+			logger.Error("local interrupt login wait timeout, uid: %v", uid)
+			timer.Stop()
+			loginFailClose()
+			return nil
+		case <-kickFinishNotifyChan:
+		}
 	}
 	k.globalGsOnlineMapLock.RLock()
 	_, exist := k.globalGsOnlineMap[uid]
@@ -395,13 +404,21 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			ConnCtrlMsg: connCtrlMsg,
 		})
 		// 注册回调通知
-		kickFinishNotifyChan := make(chan bool)
+		kickFinishNotifyChan := make(chan bool, 1)
 		k.reLoginRemoteKickRegChan <- &RemoteKick{
 			userId:               uid,
 			kickFinishNotifyChan: kickFinishNotifyChan,
 		}
 		logger.Info("run global interrupt login wait, uid: %v", uid)
-		<-kickFinishNotifyChan
+		timer := time.NewTimer(time.Second * 10)
+		select {
+		case <-timer.C:
+			logger.Error("global interrupt login wait timeout, uid: %v", uid)
+			timer.Stop()
+			loginFailClose()
+			return nil
+		case <-kickFinishNotifyChan:
+		}
 	}
 	// 关联玩家uid和连接信息
 	session.userId = uid

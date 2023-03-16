@@ -4,7 +4,6 @@ import pb "google.golang.org/protobuf/proto"
 
 const (
 	MsgTypeGame     = iota // 来自客户端的游戏消息
-	MsgTypeFight           // 战斗服务器消息
 	MsgTypeConnCtrl        // GATE客户端连接信息消息
 	MsgTypeServer          // 服务器之间转发的消息
 )
@@ -16,7 +15,6 @@ type NetMsg struct {
 	AppId             string `msgpack:"-"`
 	Topic             string `msgpack:"-"`
 	GameMsg           *GameMsg
-	FightMsg          *FightMsg
 	ConnCtrlMsg       *ConnCtrlMsg
 	ServerMsg         *ServerMsg
 	OriginServerType  string
@@ -51,22 +49,6 @@ type ConnCtrlMsg struct {
 }
 
 const (
-	AddFightRoutine       = iota // 添加战斗实例
-	DelFightRoutine              // 删除战斗实例
-	FightRoutineAddEntity        // 战斗实例添加实体
-	FightRoutineDelEntity        // 战斗实例删除实体
-)
-
-type FightMsg struct {
-	FightRoutineId  uint32
-	EntityId        uint32
-	FightPropMap    map[uint32]float32
-	Uid             uint32
-	AvatarGuid      uint64
-	GateServerAppId string
-}
-
-const (
 	ServerAppidBindNotify             = iota // 玩家连接绑定的各个服务器appid通知
 	ServerUserOnlineStateChangeNotify        // 广播玩家上线和离线状态以及所在GS的appid
 	ServerUserGsChangeNotify                 // 跨服玩家迁移通知
@@ -77,14 +59,14 @@ const (
 )
 
 type ServerMsg struct {
-	FightServerAppId string
-	UserId           uint32
-	IsOnline         bool
-	GameServerAppId  string
-	JoinHostUserId   uint32
-	UserMpInfo       *UserMpInfo
-	ChatMsgInfo      *ChatMsgInfo
-	AddFriendInfo    *AddFriendInfo
+	AnticheatServerAppId string
+	UserId               uint32
+	IsOnline             bool
+	GameServerAppId      string
+	JoinHostUserId       uint32
+	UserMpInfo           *UserMpInfo
+	ChatMsgInfo          *ChatMsgInfo
+	AddFriendInfo        *AddFriendInfo
 }
 
 type OriginInfo struct {

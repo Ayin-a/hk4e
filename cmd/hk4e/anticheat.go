@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 
-	"hk4e/fight/app"
+	"hk4e/anticheat/app"
 
 	"github.com/spf13/cobra"
 )
 
-func FightCmd() *cobra.Command {
+func AnticheatCmd() *cobra.Command {
 	var cfg string
 	c := &cobra.Command{
-		Use:   "fight",
-		Short: "fight server",
+		Use:   "anticheat",
+		Short: "anticheat server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return app.Run(context.Background(), cfg)
 		},

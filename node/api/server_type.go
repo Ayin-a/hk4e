@@ -3,6 +3,6 @@ package api
 const (
 	GATE        = "GATE"
 	GS          = "GS"
-	FIGHT       = "FIGHT"
+	ANTICHEAT   = "ANTICHEAT"
 	PATHFINDING = "PATHFINDING"
 )

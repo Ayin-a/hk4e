@@ -1,28 +1,19 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // SceneTagData 场景标签配置表
 type SceneTagData struct {
-	SceneTagId int32 `csv:"SceneTagId"`        // ID
-	SceneId    int32 `csv:"SceneId,omitempty"` // 场景ID
+	SceneTagId int32 `csv:"ID"`
+	SceneId    int32 `csv:"场景ID,omitempty"`
 }
 
 func (g *GameDataConfig) loadSceneTagData() {
 	g.SceneTagDataMap = make(map[int32]*SceneTagData)
-	data := g.readCsvFileData("SceneTagData.csv")
-	var sceneTagDataList []*SceneTagData
-	err := csvutil.Unmarshal(data, &sceneTagDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	sceneTagDataList := make([]*SceneTagData, 0)
+	readTable[SceneTagData](g.tablePrefix+"SceneTagData.txt", &sceneTagDataList)
 	for _, sceneTagData := range sceneTagDataList {
 		// list -> map
 		g.SceneTagDataMap[sceneTagData.SceneTagId] = sceneTagData

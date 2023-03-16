@@ -1,30 +1,21 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // ReliquaryAffixData 圣遗物追加属性配置表
 type ReliquaryAffixData struct {
-	AppendPropId      int32 `csv:"AppendPropId"`                // 追加属性ID
-	AppendPropDepotId int32 `csv:"AppendPropDepotId,omitempty"` // 追加属性库ID
-	PropType          int32 `csv:"PropType,omitempty"`          // 属性类别
-	RandomWeight      int32 `csv:"RandomWeight,omitempty"`      // 随机权重
+	AppendPropId      int32 `csv:"追加属性ID"`
+	AppendPropDepotId int32 `csv:"追加属性库ID,omitempty"`
+	PropType          int32 `csv:"属性类别,omitempty"`
+	RandomWeight      int32 `csv:"随机权重,omitempty"`
 }
 
 func (g *GameDataConfig) loadReliquaryAffixData() {
 	g.ReliquaryAffixDataMap = make(map[int32]map[int32]*ReliquaryAffixData)
-	data := g.readCsvFileData("ReliquaryAffixData.csv")
-	var reliquaryAffixDataList []*ReliquaryAffixData
-	err := csvutil.Unmarshal(data, &reliquaryAffixDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	reliquaryAffixDataList := make([]*ReliquaryAffixData, 0)
+	readTable[ReliquaryAffixData](g.tablePrefix+"ReliquaryAffixData.txt", &reliquaryAffixDataList)
 	for _, reliquaryAffixData := range reliquaryAffixDataList {
 		// 通过主属性库ID找到
 		_, ok := g.ReliquaryAffixDataMap[reliquaryAffixData.AppendPropDepotId]

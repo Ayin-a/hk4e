@@ -3,7 +3,6 @@ package game
 import (
 	"time"
 
-	"hk4e/common/mq"
 	"hk4e/gate/kcp"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
@@ -136,7 +135,7 @@ func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg
 	g.SendMsg(cmd.SetEntityClientDataNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, joinHostUserId uint32) {
+func (g *GameManager) ServerAppidBindNotify(userId uint32, anticheatAppId string, joinHostUserId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -151,18 +150,10 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, fightAppId string, jo
 		g.JoinOtherWorld(player, hostPlayer)
 		return
 	}
-	logger.Debug("server appid bind notify, uid: %v, fightAppId: %v", userId, fightAppId)
-	player.FightAppId = fightAppId
+	logger.Debug("server appid bind notify, uid: %v, anticheatAppId: %v", userId, anticheatAppId)
+	player.AnticheatAppId = anticheatAppId
 	// 创建世界
 	world := WORLD_MANAGER.CreateWorld(player)
-	MESSAGE_QUEUE.SendToFight(fightAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.AddFightRoutine,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId:  world.GetId(),
-			GateServerAppId: player.GateAppId,
-		},
-	})
 	world.AddPlayer(player, player.SceneId)
 	player.WorldId = world.GetId()
 	// 进入场景

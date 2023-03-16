@@ -1,10 +1,14 @@
 package gdconf
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +16,7 @@ import (
 	"hk4e/common/constant"
 	"hk4e/pkg/logger"
 
+	"github.com/jszwec/csvutil"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -22,9 +27,10 @@ var CONF_RELOAD *GameDataConfig = nil
 
 type GameDataConfig struct {
 	// 配置表路径前缀
-	csvPrefix  string
-	jsonPrefix string
-	luaPrefix  string
+	tablePrefix string
+	jsonPrefix  string
+	luaPrefix   string
+	extPrefix   string
 	// 配置表数据
 	AvatarDataMap           map[int32]*AvatarData                   // 角色
 	AvatarSkillDataMap      map[int32]*AvatarSkillData              // 角色技能
@@ -89,13 +95,13 @@ func (g *GameDataConfig) loadAll() {
 		panic(info)
 	}
 
-	g.csvPrefix = pathPrefix + "/csv"
-	dirInfo, err = os.Stat(g.csvPrefix)
+	g.tablePrefix = pathPrefix + "/txt"
+	dirInfo, err = os.Stat(g.tablePrefix)
 	if err != nil || !dirInfo.IsDir() {
-		info := fmt.Sprintf("open game data config csv dir error: %v", err)
+		info := fmt.Sprintf("open game data config txt dir error: %v", err)
 		panic(info)
 	}
-	g.csvPrefix += "/"
+	g.tablePrefix += "/"
 
 	g.jsonPrefix = pathPrefix + "/json"
 	dirInfo, err = os.Stat(g.jsonPrefix)
@@ -112,6 +118,14 @@ func (g *GameDataConfig) loadAll() {
 		panic(info)
 	}
 	g.luaPrefix += "/"
+
+	g.extPrefix = pathPrefix + "/ext"
+	dirInfo, err = os.Stat(g.extPrefix)
+	if err != nil || !dirInfo.IsDir() {
+		info := fmt.Sprintf("open game data config ext dir error: %v", err)
+		panic(info)
+	}
+	g.extPrefix += "/"
 
 	g.load()
 }
@@ -147,8 +161,38 @@ func (g *GameDataConfig) load() {
 	g.loadTriggerData()        // 场景LUA触发器
 }
 
-func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
-	fileData, err := os.ReadFile(g.csvPrefix + fileName)
+// CSV相关
+
+func splitStringArray(str string) []string {
+	if str == "" {
+		return make([]string, 0)
+	} else if strings.Contains(str, ";") {
+		return strings.Split(str, ";")
+	} else if strings.Contains(str, ",") {
+		return strings.Split(str, ",")
+	} else {
+		return []string{str}
+	}
+}
+
+type IntArray []int32
+
+func (a *IntArray) UnmarshalCSV(data []byte) error {
+	str := string(data)
+	str = strings.ReplaceAll(str, " ", "")
+	intStrList := splitStringArray(str)
+	for _, intStr := range intStrList {
+		v, err := strconv.ParseInt(intStr, 10, 32)
+		if err != nil {
+			panic(err)
+		}
+		*a = append(*a, int32(v))
+	}
+	return nil
+}
+
+func readExtCsv[T any](tablePath string, table *[]*T) {
+	fileData, err := os.ReadFile(tablePath)
 	if err != nil {
 		info := fmt.Sprintf("open file error: %v", err)
 		panic(info)
@@ -160,8 +204,41 @@ func (g *GameDataConfig) readCsvFileData(fileName string) []byte {
 	standardCsvData := make([]byte, 0)
 	standardCsvData = append(standardCsvData, fileData[:index1]...)
 	standardCsvData = append(standardCsvData, fileData[index3+(index2+1)+(index1+1):]...)
-	return standardCsvData
+	err = csvutil.Unmarshal(standardCsvData, table)
+	if err != nil {
+		info := fmt.Sprintf("parse file error: %v", err)
+		panic(info)
+	}
 }
+
+func readTable[T any](tablePath string, table *[]*T) {
+	fileData, err := os.ReadFile(tablePath)
+	if err != nil {
+		info := fmt.Sprintf("open file error: %v", err)
+		panic(info)
+	}
+	reader := csv.NewReader(bytes.NewBuffer(fileData))
+	reader.Comma = '\t'
+	dec, err := csvutil.NewDecoder(reader)
+	if err != nil {
+		info := fmt.Sprintf("create decoder error: %v", err)
+		panic(info)
+	}
+	for {
+		t := new(T)
+		err := dec.Decode(t)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			info := fmt.Sprintf("decode file error: %v", err)
+			panic(info)
+		}
+		*table = append(*table, t)
+	}
+}
+
+// LUA相关
 
 type ScriptLibFunc struct {
 	fnName string

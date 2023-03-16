@@ -143,7 +143,7 @@ func (m *MessageQueue) sendHandler() {
 	gateTcpMqInstMap := map[string]map[string]*GateTcpMqInst{
 		api.GATE:        make(map[string]*GateTcpMqInst),
 		api.GS:          make(map[string]*GateTcpMqInst),
-		api.FIGHT:       make(map[string]*GateTcpMqInst),
+		api.ANTICHEAT:   make(map[string]*GateTcpMqInst),
 		api.PATHFINDING: make(map[string]*GateTcpMqInst),
 	}
 	for {
@@ -293,8 +293,8 @@ func (m *MessageQueue) gateTcpMqHandshake(conn net.Conn) {
 		inst.serverType = api.GATE
 	case api.GS:
 		inst.serverType = api.GS
-	case api.FIGHT:
-		inst.serverType = api.FIGHT
+	case api.ANTICHEAT:
+		inst.serverType = api.ANTICHEAT
 	case api.PATHFINDING:
 		inst.serverType = api.PATHFINDING
 	default:

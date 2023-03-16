@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"hk4e/common/constant"
-	"hk4e/common/mq"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -163,17 +162,6 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		},
 	}
 	s.CreateEntity(entity, 0)
-	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.FightRoutineAddEntity,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId: s.world.id,
-			EntityId:       entity.id,
-			FightPropMap:   entity.fightProp,
-			Uid:            entity.avatarEntity.uid,
-			AvatarGuid:     dbAvatar.AvatarMap[avatarId].Guid,
-		},
-	})
 	return entity.id
 }
 
@@ -220,15 +208,6 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 		objectId: objectId,
 	}
 	s.CreateEntity(entity, objectId)
-	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.FightRoutineAddEntity,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId: s.world.id,
-			EntityId:       entity.id,
-			FightPropMap:   entity.fightProp,
-		},
-	})
 	return entity.id
 }
 
@@ -420,14 +399,6 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 	}
 	delete(s.entityMap, entity.id)
 	delete(s.objectIdEntityMap, entity.objectId)
-	MESSAGE_QUEUE.SendToFight(s.world.owner.FightAppId, &mq.NetMsg{
-		MsgType: mq.MsgTypeFight,
-		EventId: mq.FightRoutineDelEntity,
-		FightMsg: &mq.FightMsg{
-			FightRoutineId: s.world.id,
-			EntityId:       entity.id,
-		},
-	})
 }
 
 func (s *Scene) GetEntity(entityId uint32) *Entity {

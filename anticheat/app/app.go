@@ -11,7 +11,6 @@ import (
 	"hk4e/common/config"
 	"hk4e/common/mq"
 	"hk4e/common/rpc"
-	"hk4e/fight/engine"
 	"hk4e/node/api"
 	"hk4e/pkg/logger"
 )
@@ -29,7 +28,7 @@ func Run(ctx context.Context, configFile string) error {
 
 	// 注册到节点服务器
 	rsp, err := client.Discovery.RegisterServer(context.TODO(), &api.RegisterServerReq{
-		ServerType: api.FIGHT,
+		ServerType: api.ANTICHEAT,
 	})
 	if err != nil {
 		return err
@@ -40,7 +39,7 @@ func Run(ctx context.Context, configFile string) error {
 		for {
 			<-ticker.C
 			_, err := client.Discovery.KeepaliveServer(context.TODO(), &api.KeepaliveServerReq{
-				ServerType: api.FIGHT,
+				ServerType: api.ANTICHEAT,
 				AppId:      APPID,
 			})
 			if err != nil {
@@ -50,21 +49,19 @@ func Run(ctx context.Context, configFile string) error {
 	}()
 	defer func() {
 		_, _ = client.Discovery.CancelServer(context.TODO(), &api.CancelServerReq{
-			ServerType: api.FIGHT,
+			ServerType: api.ANTICHEAT,
 			AppId:      APPID,
 		})
 	}()
 
-	logger.InitLogger("fight_" + APPID)
-	logger.Warn("fight start, appid: %v", APPID)
+	logger.InitLogger("anticheat_" + APPID)
+	logger.Warn("anticheat start, appid: %v", APPID)
 	defer func() {
 		logger.CloseLogger()
 	}()
 
-	messageQueue := mq.NewMessageQueue(api.FIGHT, APPID, client)
+	messageQueue := mq.NewMessageQueue(api.ANTICHEAT, APPID, client)
 	defer messageQueue.Close()
-
-	_ = engine.NewFightEngine(messageQueue)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
@@ -76,7 +73,7 @@ func Run(ctx context.Context, configFile string) error {
 			logger.Warn("get a signal %s", s.String())
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
-				logger.Warn("fight exit, appid: %v", APPID)
+				logger.Warn("anticheat exit, appid: %v", APPID)
 				return nil
 			case syscall.SIGHUP:
 			default:

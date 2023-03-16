@@ -31,7 +31,7 @@
 * Docker >= 20.10
 * Docker Compose >= 1.29
 
-#### 本项目未使用CGO构建，理论上Windows、Linux、MaxOS系统都可以编译运行
+#### 本项目未使用CGO构建，理论上Windows、Linux、macOS系统都可以编译运行
 
 ## 快速启动
 
@@ -60,7 +60,6 @@ make docker_build  # 构建镜像
 * 启动
 
 ```shell
-make gen_csv # 生成配置表
 cd docker
 # 启动前请先确保各服务器的配置文件正确(如docker/node/bin/application.toml)
 docker-compose up -d # 启动服务器
@@ -77,8 +76,8 @@ docker-compose up -d # 启动服务器
 * node 节点服务器 (仅单节点 有状态)
 * dispatch 登录服务器 (可多节点 无状态)
 * gate 网关服务器 (可多节点 有状态)
-* fight 战斗服务器 (可多节点 有状态 非必要 未启动由gs接管)
-* pathfinding 寻路服务器 (可多节点 无状态 非必要 未启动由gs接管)
+* anticheat 反作弊服务器 (可多节点 有状态 尚不完善非必要启动)
+* pathfinding 寻路服务器 (可多节点 无状态 尚不完善非必要启动)
 * gs 游戏服务器 (可多节点 有状态)
 * gm 游戏管理服务器 (仅单节点 无状态)
 

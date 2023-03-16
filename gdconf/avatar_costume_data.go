@@ -1,28 +1,19 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // AvatarCostumeData 角色时装配置表
 type AvatarCostumeData struct {
-	CostumeID int32 `csv:"CostumeID"`        // 时装ID
-	ItemID    int32 `csv:"ItemID,omitempty"` // 道具ID
+	CostumeID int32 `csv:"时装ID"`
+	ItemID    int32 `csv:"道具ID,omitempty"`
 }
 
 func (g *GameDataConfig) loadAvatarCostumeData() {
 	g.AvatarCostumeDataMap = make(map[int32]*AvatarCostumeData)
-	data := g.readCsvFileData("AvatarCostumeData.csv")
-	var avatarCostumeDataList []*AvatarCostumeData
-	err := csvutil.Unmarshal(data, &avatarCostumeDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	avatarCostumeDataList := make([]*AvatarCostumeData, 0)
+	readTable[AvatarCostumeData](g.tablePrefix+"AvatarCostumeData.txt", &avatarCostumeDataList)
 	for _, avatarCostumeData := range avatarCostumeDataList {
 		// 屏蔽默认时装
 		if avatarCostumeData.ItemID == 0 {

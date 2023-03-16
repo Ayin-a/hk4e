@@ -162,7 +162,7 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 			xorKey:                 k.dispatchKey,
 			changeXorKeyFin:        false,
 			gsServerAppId:          "",
-			fightServerAppId:       "",
+			anticheatServerAppId:   "",
 			pathfindingServerAppId: "",
 			changeGameServer:       false,
 			joinHostUserId:         0,
@@ -278,7 +278,7 @@ type Session struct {
 	xorKey                 []byte
 	changeXorKeyFin        bool
 	gsServerAppId          string
-	fightServerAppId       string
+	anticheatServerAppId   string
 	pathfindingServerAppId string
 	changeGameServer       bool
 	joinHostUserId         uint32

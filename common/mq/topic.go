@@ -35,9 +35,9 @@ func (m *MessageQueue) SendToGs(appId string, netMsg *NetMsg) {
 	m.netMsgInput <- netMsg
 }
 
-func (m *MessageQueue) SendToFight(appId string, netMsg *NetMsg) {
-	netMsg.Topic = m.getTopic(api.FIGHT, appId)
-	netMsg.ServerType = api.FIGHT
+func (m *MessageQueue) SendToAnticheat(appId string, netMsg *NetMsg) {
+	netMsg.Topic = m.getTopic(api.ANTICHEAT, appId)
+	netMsg.ServerType = api.ANTICHEAT
 	netMsg.AppId = appId
 	originServerType, originServerAppId := m.getOriginServer()
 	netMsg.OriginServerType = originServerType

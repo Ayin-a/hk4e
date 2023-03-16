@@ -124,7 +124,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 确保获取消耗的摩拉索引不越界
-	if int(weapon.Refinement) >= len(weaponConfig.AwakenCoinCostList) {
+	if int(weapon.Refinement) >= len(weaponConfig.AwakenCoinCost) {
 		logger.Error("weapon config cost coin error, itemId: %v", weapon.ItemId)
 		return
 	}
@@ -217,7 +217,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 		return
 	}
 	// 消耗摩拉
-	ok = g.CostUserItem(player.PlayerID, []*ChangeItem{{ItemId: constant.ITEM_ID_SCOIN, ChangeCount: weaponConfig.AwakenCoinCostList[weapon.Refinement]}})
+	ok = g.CostUserItem(player.PlayerID, []*ChangeItem{{ItemId: constant.ITEM_ID_SCOIN, ChangeCount: uint32(weaponConfig.AwakenCoinCost[weapon.Refinement])}})
 	if !ok {
 		logger.Error("item count not enough, uid: %v", player.PlayerID)
 		g.SendError(cmd.WeaponAwakenRsp, player, &proto.WeaponAwakenRsp{}, proto.Retcode_RET_SCOIN_NOT_ENOUGH)

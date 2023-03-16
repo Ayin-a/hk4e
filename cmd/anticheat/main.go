@@ -7,7 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"hk4e/fight/app"
+	"hk4e/anticheat/app"
 	"hk4e/pkg/statsviz_serve"
 )
 

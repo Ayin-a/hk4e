@@ -1,30 +1,21 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // WorldAreaData 世界区域配置表
 type WorldAreaData struct {
-	WorldAreaId int32 `csv:"WorldAreaId"`       // 条目ID
-	SceneId     int32 `csv:"SceneId,omitempty"` // 场景ID
-	AreaId1     int32 `csv:"AreaId1,omitempty"` // 一级区域ID
-	AreaId2     int32 `csv:"AreaId2,omitempty"` // 二级区域ID
+	WorldAreaId int32 `csv:"条目ID"`
+	SceneId     int32 `csv:"场景ID,omitempty"`
+	AreaId1     int32 `csv:"一级区域ID,omitempty"`
+	AreaId2     int32 `csv:"二级区域ID,omitempty"`
 }
 
 func (g *GameDataConfig) loadWorldAreaData() {
 	g.WorldAreaDataMap = make(map[int32]*WorldAreaData)
-	data := g.readCsvFileData("WorldAreaData.csv")
-	var worldAreaDataList []*WorldAreaData
-	err := csvutil.Unmarshal(data, &worldAreaDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	worldAreaDataList := make([]*WorldAreaData, 0)
+	readTable[WorldAreaData](g.tablePrefix+"WorldAreaData.txt", &worldAreaDataList)
 	for _, worldAreaData := range worldAreaDataList {
 		// list -> map
 		g.WorldAreaDataMap[worldAreaData.WorldAreaId] = worldAreaData

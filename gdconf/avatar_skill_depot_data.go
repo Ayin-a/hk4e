@@ -8,28 +8,27 @@ import (
 	"hk4e/pkg/logger"
 
 	"github.com/hjson/hjson-go/v4"
-	"github.com/jszwec/csvutil"
 )
 
 // AvatarSkillDepotData 角色技能库配置表
 type AvatarSkillDepotData struct {
-	AvatarSkillDepotId                int32  `csv:"AvatarSkillDepotId"`                          // ID
-	EnergySkill                       int32  `csv:"EnergySkill,omitempty"`                       // 充能技能
-	Skill1                            int32  `csv:"Skill1,omitempty"`                            // 技能1
-	Skill2                            int32  `csv:"Skill2,omitempty"`                            // 技能2
-	Skill3                            int32  `csv:"Skill3,omitempty"`                            // 技能3
-	Skill4                            int32  `csv:"Skill4,omitempty"`                            // 技能4
-	ProudSkill1GroupId                int32  `csv:"ProudSkill1GroupId,omitempty"`                // 固有得意技组1ID
-	ProudSkill1NeedAvatarPromoteLevel int32  `csv:"ProudSkill1NeedAvatarPromoteLevel,omitempty"` // 固有得意技组1激活所需角色突破等级
-	ProudSkill2GroupId                int32  `csv:"ProudSkill2GroupId,omitempty"`                // 固有得意技组2ID
-	ProudSkill2NeedAvatarPromoteLevel int32  `csv:"ProudSkill2NeedAvatarPromoteLevel,omitempty"` // 固有得意技组2激活所需角色突破等级
-	ProudSkill3GroupId                int32  `csv:"ProudSkill3GroupId,omitempty"`                // 固有得意技组3ID
-	ProudSkill3NeedAvatarPromoteLevel int32  `csv:"ProudSkill3NeedAvatarPromoteLevel,omitempty"` // 固有得意技组3激活所需角色突破等级
-	ProudSkill4GroupId                int32  `csv:"ProudSkill4GroupId,omitempty"`                // 固有得意技组4ID
-	ProudSkill4NeedAvatarPromoteLevel int32  `csv:"ProudSkill4NeedAvatarPromoteLevel,omitempty"` // 固有得意技组4激活所需角色突破等级
-	ProudSkill5GroupId                int32  `csv:"ProudSkill5GroupId,omitempty"`                // 固有得意技组5ID
-	ProudSkill5NeedAvatarPromoteLevel int32  `csv:"ProudSkill5NeedAvatarPromoteLevel,omitempty"` // 固有得意技组5激活所需角色突破等级
-	SkillDepotAbilityGroup            string `csv:"SkillDepotAbilityGroup,omitempty"`            // AbilityGroup
+	AvatarSkillDepotId                int32  `csv:"ID"`
+	EnergySkill                       int32  `csv:"充能技能,omitempty"`
+	Skill1                            int32  `csv:"技能1,omitempty"`
+	Skill2                            int32  `csv:"技能2,omitempty"`
+	Skill3                            int32  `csv:"技能3,omitempty"`
+	Skill4                            int32  `csv:"技能4,omitempty"`
+	ProudSkill1GroupId                int32  `csv:"固有得意技组1ID,omitempty"`
+	ProudSkill1NeedAvatarPromoteLevel int32  `csv:"固有得意技组1激活所需角色突破等级,omitempty"`
+	ProudSkill2GroupId                int32  `csv:"固有得意技组2ID,omitempty"`
+	ProudSkill2NeedAvatarPromoteLevel int32  `csv:"固有得意技组2激活所需角色突破等级,omitempty"`
+	ProudSkill3GroupId                int32  `csv:"固有得意技组3ID,omitempty"`
+	ProudSkill3NeedAvatarPromoteLevel int32  `csv:"固有得意技组3激活所需角色突破等级,omitempty"`
+	ProudSkill4GroupId                int32  `csv:"固有得意技组4ID,omitempty"`
+	ProudSkill4NeedAvatarPromoteLevel int32  `csv:"固有得意技组4激活所需角色突破等级,omitempty"`
+	ProudSkill5GroupId                int32  `csv:"固有得意技组5ID,omitempty"`
+	ProudSkill5NeedAvatarPromoteLevel int32  `csv:"固有得意技组5激活所需角色突破等级,omitempty"`
+	SkillDepotAbilityGroup            string `csv:"AbilityGroup,omitempty"`
 
 	Skills                  []int32
 	InherentProudSkillOpens []*InherentProudSkillOpens
@@ -43,14 +42,8 @@ type InherentProudSkillOpens struct {
 
 func (g *GameDataConfig) loadAvatarSkillDepotData() {
 	g.AvatarSkillDepotDataMap = make(map[int32]*AvatarSkillDepotData)
-	data := g.readCsvFileData("AvatarSkillDepotData.csv")
-	var avatarSkillDepotDataList []*AvatarSkillDepotData
-	err := csvutil.Unmarshal(data, &avatarSkillDepotDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
-
+	avatarSkillDepotDataList := make([]*AvatarSkillDepotData, 0)
+	readTable[AvatarSkillDepotData](g.tablePrefix+"AvatarSkillDepotData.txt", &avatarSkillDepotDataList)
 	playerElementsFilePath := g.jsonPrefix + "ability_group/AbilityGroup_Other_PlayerElementAbility.json"
 	playerElementsFile, err := os.ReadFile(playerElementsFilePath)
 	if err != nil {

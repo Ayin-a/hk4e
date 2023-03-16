@@ -420,13 +420,6 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	if world.GetOwner().PlayerID == player.PlayerID {
 		// 房主离开销毁世界
 		WORLD_MANAGER.DestroyWorld(world.GetId())
-		MESSAGE_QUEUE.SendToFight(world.GetOwner().FightAppId, &mq.NetMsg{
-			MsgType: mq.MsgTypeFight,
-			EventId: mq.DelFightRoutine,
-			FightMsg: &mq.FightMsg{
-				FightRoutineId: world.GetId(),
-			},
-		})
 		return
 	}
 	if world.GetMultiplayer() && world.GetWorldPlayerNum() > 0 {

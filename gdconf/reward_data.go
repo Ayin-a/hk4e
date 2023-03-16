@@ -1,47 +1,38 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // RewardData 奖励配置表
 type RewardData struct {
-	RewardID         int32 `csv:"RewardID"`                   // 奖励ID
-	RewardItem1ID    int32 `csv:"RewardItem1ID,omitempty"`    // Reward道具1ID
-	RewardItem1Count int32 `csv:"RewardItem1Count,omitempty"` // Reward道具1数量
-	RewardItem2ID    int32 `csv:"RewardItem2ID,omitempty"`    // Reward道具2ID
-	RewardItem2Count int32 `csv:"RewardItem2Count,omitempty"` // Reward道具2数量
-	RewardItem3ID    int32 `csv:"RewardItem3ID,omitempty"`    // Reward道具3ID
-	RewardItem3Count int32 `csv:"RewardItem3Count,omitempty"` // Reward道具3数量
-	RewardItem4ID    int32 `csv:"RewardItem4ID,omitempty"`    // Reward道具4ID
-	RewardItem4Count int32 `csv:"RewardItem4Count,omitempty"` // Reward道具4数量
-	RewardItem5ID    int32 `csv:"RewardItem5ID,omitempty"`    // Reward道具5ID
-	RewardItem5Count int32 `csv:"RewardItem5Count,omitempty"` // Reward道具5数量
-	RewardItem6ID    int32 `csv:"RewardItem6ID,omitempty"`    // Reward道具6ID
-	RewardItem6Count int32 `csv:"RewardItem6Count,omitempty"` // Reward道具6数量
-	RewardItem7ID    int32 `csv:"RewardItem7ID,omitempty"`    // Reward道具7ID
-	RewardItem7Count int32 `csv:"RewardItem7Count,omitempty"` // Reward道具7数量
-	RewardItem8ID    int32 `csv:"RewardItem8ID,omitempty"`    // Reward道具8ID
-	RewardItem8Count int32 `csv:"RewardItem8Count,omitempty"` // Reward道具8数量
-	RewardItem9ID    int32 `csv:"RewardItem9ID,omitempty"`    // Reward道具9ID
-	RewardItem9Count int32 `csv:"RewardItem9Count,omitempty"` // Reward道具9数量
+	RewardID         int32 `csv:"RewardID"`
+	RewardItem1ID    int32 `csv:"Reward道具1ID,omitempty"`
+	RewardItem1Count int32 `csv:"Reward道具1数量,omitempty"`
+	RewardItem2ID    int32 `csv:"Reward道具2ID,omitempty"`
+	RewardItem2Count int32 `csv:"Reward道具2数量,omitempty"`
+	RewardItem3ID    int32 `csv:"Reward道具3ID,omitempty"`
+	RewardItem3Count int32 `csv:"Reward道具3数量,omitempty"`
+	RewardItem4ID    int32 `csv:"Reward道具4ID,omitempty"`
+	RewardItem4Count int32 `csv:"Reward道具4数量,omitempty"`
+	RewardItem5ID    int32 `csv:"Reward道具5ID,omitempty"`
+	RewardItem5Count int32 `csv:"Reward道具5数量,omitempty"`
+	RewardItem6ID    int32 `csv:"Reward道具6ID,omitempty"`
+	RewardItem6Count int32 `csv:"Reward道具6数量,omitempty"`
+	RewardItem7ID    int32 `csv:"Reward道具7ID,omitempty"`
+	RewardItem7Count int32 `csv:"Reward道具7数量,omitempty"`
+	RewardItem8ID    int32 `csv:"Reward道具8ID,omitempty"`
+	RewardItem8Count int32 `csv:"Reward道具8数量,omitempty"`
+	RewardItem9ID    int32 `csv:"Reward道具9ID,omitempty"`
+	RewardItem9Count int32 `csv:"Reward道具9数量,omitempty"`
 
 	RewardItemMap map[uint32]uint32
 }
 
 func (g *GameDataConfig) loadRewardData() {
 	g.RewardDataMap = make(map[int32]*RewardData)
-	data := g.readCsvFileData("RewardData.csv")
-	var rewardDataList []*RewardData
-	err := csvutil.Unmarshal(data, &rewardDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	rewardDataList := make([]*RewardData, 0)
+	readTable[RewardData](g.tablePrefix+"RewardData.txt", &rewardDataList)
 	for _, rewardData := range rewardDataList {
 		// list -> map
 		// 奖励物品整合

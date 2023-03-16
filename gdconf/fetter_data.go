@@ -1,31 +1,22 @@
 package gdconf
 
 import (
-	"fmt"
-
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // FetterData 角色资料解锁配置表
 type FetterData struct {
-	FetterId int32 `csv:"FetterId"` // ID
-	AvatarId int32 `csv:"AvatarId"` // 角色ID
+	FetterId int32 `csv:"ID"`
+	AvatarId int32 `csv:"角色ID"`
 }
 
 func (g *GameDataConfig) loadFetterData() {
 	g.FetterDataMap = make(map[int32]*FetterData)
 	g.FetterDataAvatarIdMap = make(map[int32][]int32)
-	fileNameList := []string{"FettersData.csv", "FetterDataStory.csv", "FetterDataIformation.csv", "PhotographExpressionName.csv", "PhotographPoseName.csv"}
+	fileNameList := []string{"FettersData.txt", "FetterDataStory.txt", "FetterDataIformation.txt", "PhotographExpressionName.txt", "PhotographPoseName.txt"}
 	for _, fileName := range fileNameList {
-		data := g.readCsvFileData(fileName)
-		var fetterDataList []*FetterData
-		err := csvutil.Unmarshal(data, &fetterDataList)
-		if err != nil {
-			info := fmt.Sprintf("parse file error: %v", err)
-			panic(info)
-		}
+		fetterDataList := make([]*FetterData, 0)
+		readTable[FetterData](g.tablePrefix+fileName, &fetterDataList)
 		for _, fetterData := range fetterDataList {
 			// list -> map
 			g.FetterDataMap[fetterData.FetterId] = fetterData

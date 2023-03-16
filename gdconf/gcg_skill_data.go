@@ -7,18 +7,16 @@ import (
 	"hk4e/pkg/logger"
 
 	"github.com/hjson/hjson-go/v4"
-
-	"github.com/jszwec/csvutil"
 )
 
 // GCGSkillData 卡牌技能配置表
 type GCGSkillData struct {
-	SkillId    int32  `csv:"SkillId"`              // ID
-	ConfigJson string `csv:"ConfigJson,omitempty"` // 效果config
-	CostType1  int32  `csv:"CostType1,omitempty"`  // 消耗的元素骰子类型1
-	CostValue1 int32  `csv:"CostValue1,omitempty"` // 消耗的元素骰子数量1
-	CostType2  int32  `csv:"CostType2,omitempty"`  // 消耗的元素骰子类型2
-	CostValue2 int32  `csv:"CostValue2,omitempty"` // 消耗的元素骰子数量2
+	SkillId    int32  `csv:"ID"`
+	ConfigJson string `csv:"效果JSON文件,omitempty"`
+	CostType1  int32  `csv:"[技能费用]1类型,omitempty"`
+	CostValue1 int32  `csv:"[技能费用]1值,omitempty"`
+	CostType2  int32  `csv:"[技能费用]2类型,omitempty"`
+	CostValue2 int32  `csv:"[技能费用]2值,omitempty"`
 
 	CostMap     map[uint32]uint32 // 技能骰子消耗列表
 	Damage      uint32            // 技能伤害
@@ -36,13 +34,8 @@ type ConfigSkillEffectValue struct {
 
 func (g *GameDataConfig) loadGCGSkillData() {
 	g.GCGSkillDataMap = make(map[int32]*GCGSkillData)
-	data := g.readCsvFileData("GCGSkillData.csv")
-	var gcgSkillDataList []*GCGSkillData
-	err := csvutil.Unmarshal(data, &gcgSkillDataList)
-	if err != nil {
-		info := fmt.Sprintf("parse file error: %v", err)
-		panic(info)
-	}
+	gcgSkillDataList := make([]*GCGSkillData, 0)
+	readTable[GCGSkillData](g.tablePrefix+"GCGSkillData.txt", &gcgSkillDataList)
 	for _, gcgSkillData := range gcgSkillDataList {
 		// 技能消耗整合进CostMap
 		gcgSkillData.CostMap = map[uint32]uint32{

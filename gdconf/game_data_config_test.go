@@ -1,11 +1,9 @@
 package gdconf
 
 import (
-	"encoding/json"
 	"image"
 	"image/color"
 	"image/jpeg"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -17,79 +15,6 @@ import (
 	"github.com/hjson/hjson-go/v4"
 )
 
-type TableField struct {
-	FieldName  string `json:"field_name"`
-	FieldType  string `json:"field_type"`
-	OriginName string `json:"origin_name"`
-}
-
-type TableStructMapping struct {
-	TableName string        `json:"table_name"`
-	FieldList []*TableField `json:"field_list"`
-}
-
-// 生成最终服务器读取的配置表
-func TestGenGdCsv(t *testing.T) {
-	tableStructMappingList := make([]*TableStructMapping, 0)
-	configFileData, err := os.ReadFile("./table_struct_mapping.json")
-	if err != nil {
-		log.Printf("open config file error: %v", err)
-		return
-	}
-	err = json.Unmarshal(configFileData, &tableStructMappingList)
-	if err != nil {
-		log.Printf("parse config file error: %v", err)
-		return
-	}
-	for _, tableStructMapping := range tableStructMappingList {
-		txtFileData, err := os.ReadFile("./game_data_config/txt/" + tableStructMapping.TableName + ".txt")
-		if err != nil {
-			log.Printf("read txt file error: %v", err)
-			continue
-		}
-		// 转换txt配置表格式为csv
-		originCsv := string(txtFileData)
-		originCsv = strings.ReplaceAll(originCsv, "\r\n", "\n")
-		originCsv = strings.ReplaceAll(originCsv, "\r", "\n")
-		originCsv = strings.ReplaceAll(originCsv, ",", "#")
-		originCsv = strings.ReplaceAll(originCsv, ";", "#")
-		originCsv = strings.ReplaceAll(originCsv, "\t", ",")
-		originCsvLineList := strings.Split(originCsv, "\n")
-		if len(originCsvLineList) == 0 {
-			log.Printf("origin csv file is empty")
-			continue
-		}
-		originCsvHeadList := strings.Split(originCsvLineList[0], ",")
-		if len(originCsvHeadList) == 0 {
-			log.Printf("origin csv file head is empty")
-			continue
-		}
-		fieldNameHead := ""
-		fieldTypeHead := ""
-		for index, originCsvHead := range originCsvHeadList {
-			for _, tableField := range tableStructMapping.FieldList {
-				if originCsvHead == tableField.OriginName {
-					// 字段名匹配成功
-					fieldNameHead += tableField.FieldName
-					fieldTypeHead += tableField.FieldType
-				}
-			}
-			if index < len(originCsvHeadList)-1 {
-				fieldNameHead += ","
-				fieldTypeHead += ","
-			}
-		}
-		fieldNameHead += "\n"
-		fieldTypeHead += "\n"
-		gdCsvFile := fieldNameHead + fieldTypeHead + originCsv
-		err = os.WriteFile("./game_data_config/csv/"+tableStructMapping.TableName+".csv", []byte(gdCsvFile), 0644)
-		if err != nil {
-			log.Printf("write gd csv file error: %v", err)
-			continue
-		}
-	}
-}
-
 // 测试初始化加载配置表
 func TestInitGameDataConfig(t *testing.T) {
 	config.InitConfig("./bin/application.toml")
@@ -99,7 +24,7 @@ func TestInitGameDataConfig(t *testing.T) {
 	}()
 	logger.Info("start load conf")
 	InitGameDataConfig()
-	logger.Info("load conf finish, conf: %v", CONF)
+	logger.Info("load conf finish")
 	time.Sleep(time.Second)
 }
 

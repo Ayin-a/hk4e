@@ -2,8 +2,6 @@ package gdconf
 
 import (
 	"hk4e/pkg/logger"
-
-	"github.com/jszwec/csvutil"
 )
 
 // 当初写卡池算法的时候临时建立的表 以后再做迁移吧
@@ -25,13 +23,8 @@ func (g *GameDataConfig) loadDropGroupData() {
 	g.DropGroupDataMap = make(map[int32]*DropGroupData)
 	fileNameList := []string{"DropGachaAvatarUp.csv", "DropGachaWeaponUp.csv", "DropGachaNormal.csv"}
 	for _, fileName := range fileNameList {
-		data := g.readCsvFileData("../ext/" + fileName)
-		var dropList []*Drop
-		err := csvutil.Unmarshal(data, &dropList)
-		if err != nil {
-			logger.Error("parse file error: %v", err)
-			return
-		}
+		dropList := make([]*Drop, 0)
+		readExtCsv[Drop](g.extPrefix+fileName, &dropList)
 		for _, drop := range dropList {
 			dropGroupData, exist := g.DropGroupDataMap[drop.DropId]
 			if !exist {

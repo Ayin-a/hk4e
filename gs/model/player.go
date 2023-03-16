@@ -75,7 +75,7 @@ type Player struct {
 	CombatInvokeHandler   *InvokeHandler[proto.CombatInvokeEntry]  `bson:"-" msgpack:"-"` // combat转发器
 	AbilityInvokeHandler  *InvokeHandler[proto.AbilityInvokeEntry] `bson:"-" msgpack:"-"` // ability转发器
 	GateAppId             string                                   `bson:"-" msgpack:"-"` // 网关服务器的appid
-	FightAppId            string                                   `bson:"-" msgpack:"-"` // 战斗服务器的appid
+	AnticheatAppId        string                                   `bson:"-" msgpack:"-"` // 反作弊服务器的appid
 	GCGCurGameGuid        uint32                                   `bson:"-" msgpack:"-"` // GCG玩家所在的游戏guid
 	GCGInfo               *GCGInfo                                 `bson:"-" msgpack:"-"` // 七圣召唤信息
 	XLuaDebug             bool                                     `bson:"-" msgpack:"-"` // 是否开启客户端XLUA调试

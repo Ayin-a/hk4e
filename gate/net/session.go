@@ -132,9 +132,9 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 			})
 			return
 		}
-		// 转发到战斗服务器
-		if session.fightServerAppId != "" && protoMsg.CmdId == cmd.CombatInvocationsNotify {
-			k.messageQueue.SendToFight(session.fightServerAppId, &mq.NetMsg{
+		// 转发到反作弊服务器
+		if session.anticheatServerAppId != "" && protoMsg.CmdId == cmd.CombatInvocationsNotify {
+			k.messageQueue.SendToAnticheat(session.anticheatServerAppId, &mq.NetMsg{
 				MsgType: mq.MsgTypeGame,
 				EventId: mq.NormalMsg,
 				GameMsg: gameMsg,
@@ -182,7 +182,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 				session.changeGameServer = false
 				session.joinHostUserId = 0
 			} else {
-				serverMsg.FightServerAppId = session.fightServerAppId
+				serverMsg.AnticheatServerAppId = session.anticheatServerAppId
 			}
 			k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{
 				MsgType:   mq.MsgTypeServer,
@@ -255,7 +255,7 @@ func (k *KcpConnectManager) sendMsgHandle() {
 						continue
 					}
 					session.gsServerAppId = serverMsg.GameServerAppId
-					session.fightServerAppId = ""
+					session.anticheatServerAppId = ""
 					session.changeGameServer = true
 					session.joinHostUserId = serverMsg.JoinHostUserId
 					// 网关代发登录请求到新的GS
@@ -434,13 +434,13 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		return nil
 	}
 	session.gsServerAppId = gsServerAppId.AppId
-	fightServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
-		ServerType: api.FIGHT,
+	anticheatServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
+		ServerType: api.ANTICHEAT,
 	})
 	if err != nil {
-		logger.Error("get fight server appid error: %v, uid: %v", err, uid)
+		logger.Error("get anticheat server appid error: %v, uid: %v", err, uid)
 	}
-	session.fightServerAppId = fightServerAppId.AppId
+	session.anticheatServerAppId = anticheatServerAppId.AppId
 	pathfindingServerAppId, err := k.discovery.GetServerAppId(context.TODO(), &api.GetServerAppIdReq{
 		ServerType: api.PATHFINDING,
 	})
@@ -449,7 +449,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 	}
 	session.pathfindingServerAppId = pathfindingServerAppId.AppId
 	logger.Debug("session gs appid: %v, uid: %v", session.gsServerAppId, uid)
-	logger.Debug("session fight appid: %v, uid: %v", session.fightServerAppId, uid)
+	logger.Debug("session anticheat appid: %v, uid: %v", session.anticheatServerAppId, uid)
 	logger.Debug("session pathfinding appid: %v, uid: %v", session.pathfindingServerAppId, uid)
 	// 返回响应
 	rsp := new(proto.GetPlayerTokenRsp)

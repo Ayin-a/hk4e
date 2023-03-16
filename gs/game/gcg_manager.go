@@ -383,7 +383,7 @@ func (g *GCGGame) GiveCharCard(controller *GCGController, charId uint32) {
 	// SkillMap
 	for _, skillId := range gcgCharConfig.SkillList {
 		skillInfo := &GCGSkillInfo{
-			skillId: skillId,
+			skillId: uint32(skillId),
 		}
 		cardInfo.skillList = append(cardInfo.skillList, skillInfo)
 	}

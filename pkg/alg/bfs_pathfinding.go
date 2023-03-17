@@ -1,8 +1,6 @@
-package pfalg
+package alg
 
-import (
-	"hk4e/pkg/alg"
-)
+// 广度优先搜索寻路
 
 const (
 	NODE_NONE = iota
@@ -166,7 +164,7 @@ func (b *BFS) GetPath() []*PathNode {
 }
 
 func (b *BFS) Pathfinding() []MeshVector {
-	queue := alg.NewALQueue[*PathNode]()
+	queue := NewALQueue[*PathNode]()
 	b.startPathNode.visit = true
 	queue.EnQueue(b.startPathNode)
 	for queue.Len() > 0 {

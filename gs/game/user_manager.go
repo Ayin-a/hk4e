@@ -1,6 +1,8 @@
 package game
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"hk4e/gs/dao"
@@ -19,10 +21,11 @@ import (
 // 玩家定时保存 写入db和redis
 
 type UserManager struct {
-	dao             *dao.Dao                 // db对象
-	playerMap       map[uint32]*model.Player // 内存玩家数据
-	saveUserChan    chan *SaveUserData       // 用于主协程发送玩家数据给定时保存协程
-	remotePlayerMap map[uint32]string        // 远程玩家 key:userId value:玩家所在gs的appid
+	dao                 *dao.Dao                 // db对象
+	playerMap           map[uint32]*model.Player // 内存玩家数据
+	saveUserChan        chan *SaveUserData       // 用于主协程发送玩家数据给定时保存协程
+	remotePlayerMap     map[uint32]string        // 远程玩家 key:userId value:玩家所在gs的appid
+	remotePlayerMapLock sync.RWMutex
 }
 
 func NewUserManager(dao *dao.Dao) (r *UserManager) {
@@ -32,6 +35,8 @@ func NewUserManager(dao *dao.Dao) (r *UserManager) {
 	r.saveUserChan = make(chan *SaveUserData) // 无缓冲区chan 避免主协程在写入时被迫加锁
 	r.remotePlayerMap = make(map[uint32]string)
 	go r.saveUserHandle()
+	r.syncRemotePlayerMap()
+	go r.autoSyncRemotePlayerMap()
 	return r
 }
 
@@ -251,8 +256,39 @@ func (u *UserManager) ChangeUserDbState(player *model.Player, state int) {
 
 // 远程玩家相关操作
 
+func (u *UserManager) autoSyncRemotePlayerMap() {
+	ticker := time.NewTicker(time.Second * 60)
+	for {
+		<-ticker.C
+		u.syncRemotePlayerMap()
+	}
+}
+
+func (u *UserManager) syncRemotePlayerMap() {
+	rsp, err := GAME_MANAGER.discovery.GetGlobalGsOnlineMap(context.TODO(), nil)
+	if err != nil {
+		logger.Error("get global gs online map error: %v", err)
+		return
+	}
+	copyMap := make(map[uint32]string)
+	for k, v := range rsp.GlobalGsOnlineMap {
+		player, exist := u.playerMap[k]
+		if exist && player.Online {
+			continue
+		}
+		copyMap[k] = v
+	}
+	copyMapLen := len(copyMap)
+	u.remotePlayerMapLock.Lock()
+	u.remotePlayerMap = copyMap
+	u.remotePlayerMapLock.Unlock()
+	logger.Info("sync remote player map finish, len: %v", copyMapLen)
+}
+
 func (u *UserManager) GetRemoteUserOnlineState(userId uint32) bool {
+	u.remotePlayerMapLock.RLock()
 	_, exist := u.remotePlayerMap[userId]
+	u.remotePlayerMapLock.RUnlock()
 	if !exist {
 		return false
 	} else {
@@ -261,7 +297,9 @@ func (u *UserManager) GetRemoteUserOnlineState(userId uint32) bool {
 }
 
 func (u *UserManager) GetRemoteUserGsAppId(userId uint32) string {
+	u.remotePlayerMapLock.RLock()
 	appId, exist := u.remotePlayerMap[userId]
+	u.remotePlayerMapLock.RUnlock()
 	if !exist {
 		return ""
 	} else {
@@ -270,12 +308,14 @@ func (u *UserManager) GetRemoteUserGsAppId(userId uint32) string {
 }
 
 func (u *UserManager) SetRemoteUserOnlineState(userId uint32, isOnline bool, appId string) {
+	u.remotePlayerMapLock.Lock()
 	if isOnline {
 		u.remotePlayerMap[userId] = appId
 	} else {
 		delete(u.remotePlayerMap, userId)
 		u.DeleteUser(userId)
 	}
+	u.remotePlayerMapLock.Unlock()
 }
 
 // GetRemoteOnlineUserList 获取指定数量的远程在线玩家 玩家数据只读禁止修改
@@ -285,16 +325,22 @@ func (u *UserManager) GetRemoteOnlineUserList(total int) map[uint32]*model.Playe
 	}
 	onlinePlayerMap := make(map[uint32]*model.Player)
 	count := 0
+	userIdList := make([]uint32, 0)
+	u.remotePlayerMapLock.RLock()
 	for userId := range u.remotePlayerMap {
+		userIdList = append(userIdList, userId)
+		count++
+		if count >= total {
+			break
+		}
+	}
+	u.remotePlayerMapLock.RUnlock()
+	for _, userId := range userIdList {
 		player := u.LoadTempOfflineUser(userId, false)
 		if player == nil {
 			continue
 		}
 		onlinePlayerMap[player.PlayerID] = player
-		count++
-		if count >= total {
-			break
-		}
 	}
 	return onlinePlayerMap
 }

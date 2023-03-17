@@ -111,6 +111,8 @@ func (k *KcpConnectManager) run() {
 	go k.sendMsgHandle()
 	go k.acceptHandle(listener)
 	go k.gateNetInfo()
+	k.syncGlobalGsOnlineMap()
+	go k.autoSyncGlobalGsOnlineMap()
 }
 
 func (k *KcpConnectManager) Close() {
@@ -268,7 +270,7 @@ func (k *KcpConnectManager) enetHandle(listener *kcp.Listener) {
 	}
 }
 
-// Session 连接会话结构
+// Session 连接会话结构 只允许定义并发安全或者简单的基础数据结构
 type Session struct {
 	conn                   *kcp.UDPSession
 	connState              uint8
@@ -466,4 +468,29 @@ func (k *KcpConnectManager) DeleteSession(convId uint64, userId uint32) {
 	delete(k.sessionConvIdMap, convId)
 	delete(k.sessionUserIdMap, userId)
 	k.sessionMapLock.Unlock()
+}
+
+func (k *KcpConnectManager) autoSyncGlobalGsOnlineMap() {
+	ticker := time.NewTicker(time.Second * 60)
+	for {
+		<-ticker.C
+		k.syncGlobalGsOnlineMap()
+	}
+}
+
+func (k *KcpConnectManager) syncGlobalGsOnlineMap() {
+	rsp, err := k.discovery.GetGlobalGsOnlineMap(context.TODO(), nil)
+	if err != nil {
+		logger.Error("get global gs online map error: %v", err)
+		return
+	}
+	copyMap := make(map[uint32]string)
+	for k, v := range rsp.GlobalGsOnlineMap {
+		copyMap[k] = v
+	}
+	copyMapLen := len(copyMap)
+	k.globalGsOnlineMapLock.Lock()
+	k.globalGsOnlineMap = copyMap
+	k.globalGsOnlineMapLock.Unlock()
+	logger.Info("sync global gs online map finish, len: %v", copyMapLen)
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"hk4e/common/mq"
 	"hk4e/node/api"
 
 	"github.com/byebyebruce/natsrpc"
@@ -9,9 +10,11 @@ import (
 )
 
 type Service struct {
+	messageQueue     *mq.MessageQueue
+	discoveryService *DiscoveryService
 }
 
-func NewService(conn *nats.Conn) (*Service, error) {
+func NewService(conn *nats.Conn, messageQueue *mq.MessageQueue) (*Service, error) {
 	enc, err := nats.NewEncodedConn(conn, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
 		return nil, err
@@ -25,8 +28,36 @@ func NewService(conn *nats.Conn) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Service{}, nil
+	s := &Service{
+		messageQueue:     messageQueue,
+		discoveryService: discoveryService,
+	}
+	go s.BroadcastReceiver()
+	return s, nil
 }
 
 func (s *Service) Close() {
+}
+
+func (s *Service) BroadcastReceiver() {
+	for {
+		netMsg := <-s.messageQueue.GetNetMsg()
+		if netMsg.MsgType != mq.MsgTypeServer {
+			continue
+		}
+		if netMsg.EventId != mq.ServerUserOnlineStateChangeNotify {
+			continue
+		}
+		if netMsg.OriginServerType != api.GS {
+			continue
+		}
+		serverMsg := netMsg.ServerMsg
+		s.discoveryService.globalGsOnlineMapLock.Lock()
+		if serverMsg.IsOnline {
+			s.discoveryService.globalGsOnlineMap[serverMsg.UserId] = netMsg.OriginServerAppId
+		} else {
+			delete(s.discoveryService.globalGsOnlineMap, serverMsg.UserId)
+		}
+		s.discoveryService.globalGsOnlineMapLock.Unlock()
+	}
 }

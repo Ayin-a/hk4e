@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"hk4e/anticheat/handle"
 	"hk4e/common/config"
 	"hk4e/common/mq"
 	"hk4e/common/rpc"
@@ -62,6 +63,8 @@ func Run(ctx context.Context, configFile string) error {
 
 	messageQueue := mq.NewMessageQueue(api.ANTICHEAT, APPID, client)
 	defer messageQueue.Close()
+
+	handle.NewHandle(messageQueue)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)

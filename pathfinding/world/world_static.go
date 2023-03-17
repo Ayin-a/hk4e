@@ -5,18 +5,18 @@ import (
 	"encoding/gob"
 	"os"
 
-	"hk4e/pathfinding/pfalg"
+	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
 )
 
 type WorldStatic struct {
 	// x y z -> if terrain exist
-	terrain map[pfalg.MeshVector]bool
+	terrain map[alg.MeshVector]bool
 }
 
 func NewWorldStatic() (r *WorldStatic) {
 	r = new(WorldStatic)
-	r.terrain = make(map[pfalg.MeshVector]bool)
+	r.terrain = make(map[alg.MeshVector]bool)
 	return r
 }
 
@@ -52,7 +52,7 @@ func (w *WorldStatic) SaveTerrain() bool {
 }
 
 func (w *WorldStatic) GetTerrain(x int16, y int16, z int16) (exist bool) {
-	pos := pfalg.MeshVector{
+	pos := alg.MeshVector{
 		X: x,
 		Y: y,
 		Z: z,
@@ -62,7 +62,7 @@ func (w *WorldStatic) GetTerrain(x int16, y int16, z int16) (exist bool) {
 }
 
 func (w *WorldStatic) SetTerrain(x int16, y int16, z int16) {
-	pos := pfalg.MeshVector{
+	pos := alg.MeshVector{
 		X: x,
 		Y: y,
 		Z: z,
@@ -70,13 +70,13 @@ func (w *WorldStatic) SetTerrain(x int16, y int16, z int16) {
 	w.terrain[pos] = true
 }
 
-func (w *WorldStatic) Pathfinding(startPos pfalg.MeshVector, endPos pfalg.MeshVector) (bool, []pfalg.MeshVector) {
-	bfs := pfalg.NewBFS()
+func (w *WorldStatic) Pathfinding(startPos alg.MeshVector, endPos alg.MeshVector) (bool, []alg.MeshVector) {
+	bfs := alg.NewBFS()
 	bfs.InitMap(
 		w.terrain,
 		startPos,
 		endPos,
-		100,
+		0,
 	)
 	pathVectorList := bfs.Pathfinding()
 	if pathVectorList == nil {

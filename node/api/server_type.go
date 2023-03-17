@@ -5,4 +5,5 @@ const (
 	GS          = "GS"
 	ANTICHEAT   = "ANTICHEAT"
 	PATHFINDING = "PATHFINDING"
+	NODE        = "NODE"
 )

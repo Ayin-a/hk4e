@@ -240,14 +240,16 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.SendMsg(cmd.QuestListNotify, userId, clientSeq, g.PacketQuestListNotify(player))
 	// g.GCGLogin(player) // 发送GCG登录相关的通知包
 	playerLoginRsp := &proto.PlayerLoginRsp{
-		IsUseAbilityHash: true,
-		AbilityHashCode:  0,
-		GameBiz:          "hk4e_global",
-		IsScOpen:         false,
-		RegisterCps:      "mihoyo",
-		CountryCode:      "CN",
-		Birthday:         "2000-01-01",
-		TotalTickTime:    0.0,
+		IsUseAbilityHash:        true,
+		AbilityHashCode:         0,
+		IsEnableClientHashDebug: true,
+		IsScOpen:                false,
+		ScInfo:                  []byte{},
+		TotalTickTime:           0.0,
+		GameBiz:                 "hk4e_global",
+		RegisterCps:             "mihoyo",
+		CountryCode:             "US",
+		Birthday:                "2000-01-01",
 	}
 	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
 }

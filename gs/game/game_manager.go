@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hk4e/common/mq"
+	"hk4e/common/rpc"
 	"hk4e/gate/kcp"
 	"hk4e/gdconf"
 	"hk4e/gs/dao"
@@ -46,6 +47,7 @@ var ONLINE_PLAYER_NUM int32 = 0 // 当前在线玩家数
 var SELF *model.Player
 
 type GameManager struct {
+	discovery   *rpc.DiscoveryClient // node服务器客户端
 	dao         *dao.Dao
 	snowflake   *alg.SnowflakeWorker
 	gsId        uint32
@@ -54,8 +56,9 @@ type GameManager struct {
 	ai          *model.Player // 本服的Ai玩家对象
 }
 
-func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string) (r *GameManager) {
+func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string, discovery *rpc.DiscoveryClient) (r *GameManager) {
 	r = new(GameManager)
+	r.discovery = discovery
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
 	r.snowflake = alg.NewSnowflakeWorker(int64(gsId))

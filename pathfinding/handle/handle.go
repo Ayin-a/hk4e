@@ -25,34 +25,32 @@ func NewHandle(messageQueue *mq.MessageQueue) (r *Handle) {
 }
 
 func (h *Handle) run() {
-	for i := 0; i < 1; i++ {
-		go func() {
-			for {
-				netMsg := <-h.messageQueue.GetNetMsg()
-				if netMsg.MsgType != mq.MsgTypeGame {
-					continue
-				}
-				if netMsg.EventId != mq.NormalMsg {
-					continue
-				}
-				if netMsg.OriginServerType != api.GATE {
-					continue
-				}
-				gameMsg := netMsg.GameMsg
-				switch gameMsg.CmdId {
-				case cmd.QueryPathReq:
-					h.QueryPath(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
-				case cmd.ObstacleModifyNotify:
-					h.ObstacleModifyNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
-				}
+	go func() {
+		for {
+			netMsg := <-h.messageQueue.GetNetMsg()
+			if netMsg.MsgType != mq.MsgTypeGame {
+				continue
 			}
-		}()
-	}
+			if netMsg.EventId != mq.NormalMsg {
+				continue
+			}
+			if netMsg.OriginServerType != api.GATE {
+				continue
+			}
+			gameMsg := netMsg.GameMsg
+			switch gameMsg.CmdId {
+			case cmd.QueryPathReq:
+				h.QueryPath(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+			case cmd.ObstacleModifyNotify:
+				h.ObstacleModifyNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+			}
+		}
+	}()
 }
 
 // SendMsg 发送消息给客户端
 func (h *Handle) SendMsg(cmdId uint16, userId uint32, gateAppId string, payloadMsg pb.Message) {
-	if userId < 100000000 || payloadMsg == nil {
+	if payloadMsg == nil {
 		return
 	}
 	gameMsg := new(mq.GameMsg)

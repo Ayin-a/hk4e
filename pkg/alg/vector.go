@@ -65,3 +65,10 @@ func Vector3CrossProd(v1 *Vector3, v2 *Vector3) *Vector3 {
 	v3.Z = v1.X*v2.Y - v2.X*v1.Y
 	return v3
 }
+
+// MeshVector 网格向量
+type MeshVector struct {
+	X int16
+	Y int16
+	Z int16
+}

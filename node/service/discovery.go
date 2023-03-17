@@ -50,9 +50,11 @@ type ServerInstance struct {
 }
 
 type DiscoveryService struct {
-	regionEc2b        *random.Ec2b         // 全局区服密钥信息
-	serverInstanceMap map[string]*sync.Map // 全部服务器实例集合 key:服务器类型 value:服务器实例集合 -> key:appid value:服务器实例
-	serverAppIdMap    *sync.Map            // 服务器appid集合 key:appid value:是否存在
+	regionEc2b            *random.Ec2b         // 全局区服密钥信息
+	serverInstanceMap     map[string]*sync.Map // 全部服务器实例集合 key:服务器类型 value:服务器实例集合 -> key:appid value:服务器实例
+	serverAppIdMap        *sync.Map            // 服务器appid集合 key:appid value:是否存在
+	globalGsOnlineMap     map[uint32]string
+	globalGsOnlineMapLock sync.RWMutex
 }
 
 func NewDiscoveryService() *DiscoveryService {
@@ -65,6 +67,7 @@ func NewDiscoveryService() *DiscoveryService {
 	r.serverInstanceMap[api.ANTICHEAT] = new(sync.Map)
 	r.serverInstanceMap[api.PATHFINDING] = new(sync.Map)
 	r.serverAppIdMap = new(sync.Map)
+	r.globalGsOnlineMap = make(map[uint32]string)
 	go r.removeDeadServer()
 	return r
 }
@@ -278,6 +281,19 @@ func (s *DiscoveryService) GetMainGameServerAppId(ctx context.Context, req *api.
 	}
 	return &api.GetMainGameServerAppIdRsp{
 		AppId: appid,
+	}, nil
+}
+
+// GetGlobalGsOnlineMap 获取全服玩家GS在线列表
+func (s *DiscoveryService) GetGlobalGsOnlineMap(ctx context.Context, req *api.NullMsg) (*api.GetGlobalGsOnlineMapRsp, error) {
+	copyMap := make(map[uint32]string)
+	s.globalGsOnlineMapLock.RLock()
+	for k, v := range s.globalGsOnlineMap {
+		copyMap[k] = v
+	}
+	s.globalGsOnlineMapLock.RUnlock()
+	return &api.GetGlobalGsOnlineMapRsp{
+		GlobalGsOnlineMap: copyMap,
 	}, nil
 }
 

@@ -69,7 +69,7 @@ func NewMessageQueue(serverType string, appId string, rpcClient *rpc.Client) (r 
 	r.rpcClient = rpcClient
 	if serverType == api.GATE {
 		go r.runGateTcpMqServer()
-	} else {
+	} else if serverType == api.GS || serverType == api.ANTICHEAT || serverType == api.PATHFINDING {
 		go r.runGateTcpMqClient()
 	}
 	go r.recvHandler()

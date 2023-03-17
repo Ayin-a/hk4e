@@ -203,6 +203,11 @@ func (m *MessageQueue) sendHandler() {
 			netMsgDataTcp := make([]byte, 4+len(netMsgData))
 			binary.BigEndian.PutUint32(netMsgDataTcp, uint32(len(netMsgData)))
 			copy(netMsgDataTcp[4:], netMsgData)
+			err = inst.conn.SetWriteDeadline(time.Now().Add(time.Second))
+			if err != nil {
+				fallbackNatsMqSend()
+				continue
+			}
 			_, err = inst.conn.Write(netMsgDataTcp)
 			if err != nil {
 				// 发送失败关闭连接fallback回nats

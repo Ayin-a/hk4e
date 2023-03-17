@@ -33,9 +33,7 @@ func DoForward[IET model.InvokeEntryType](player *model.Player, invokeHandler *m
 		}
 	}
 	if invokeHandler.AllLen() == 0 && invokeHandler.AllExceptCurLen() == 0 && invokeHandler.HostLen() == 0 {
-		for _, v := range world.GetAllPlayer() {
-			GAME_MANAGER.SendMsg(cmdId, v.PlayerID, player.ClientSeq, newNtf)
-		}
+		return
 	}
 	if invokeHandler.AllLen() > 0 {
 		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardAll)

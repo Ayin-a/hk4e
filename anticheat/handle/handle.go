@@ -17,6 +17,7 @@ type Handle struct {
 func NewHandle(messageQueue *mq.MessageQueue) (r *Handle) {
 	r = new(Handle)
 	r.messageQueue = messageQueue
+	r.run()
 	return r
 }
 

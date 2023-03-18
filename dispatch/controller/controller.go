@@ -87,11 +87,11 @@ func (c *Controller) registerRouter() {
 		// 登录
 		// hk4e-sdk-os.hoyoverse.com
 		// 账号登录
-		engine.POST("/hk4e_global/mdk/shield/api/login", c.apiLogin)
+		engine.POST("/hk4e_:name/mdk/shield/api/login", c.apiLogin)
 		// token登录
-		engine.POST("/hk4e_global/mdk/shield/api/verify", c.apiVerify)
+		engine.POST("/hk4e_:name/mdk/shield/api/verify", c.apiVerify)
 		// 获取combo token
-		engine.POST("/hk4e_global/combo/granter/login/v2/login", c.v2Login)
+		engine.POST("/hk4e_:name/combo/granter/login/v2/login", c.v2Login)
 	}
 	{
 		// 日志
@@ -102,38 +102,55 @@ func (c *Controller) registerRouter() {
 		engine.POST("/crash/dataUpload", c.crashDataUpload)
 	}
 	{
+		// 收集数据
+		engine.GET("/device-fp/api/getExtList", c.deviceExtList)
+		engine.POST("/device-fp/api/getFp", c.deviceFp)
+	}
+	{
 		// 返回固定数据
 		// Windows
-		engine.GET("/hk4e_global/mdk/agreement/api/getAgreementInfos", c.getAgreementInfos)
-		engine.POST("/hk4e_global/combo/granter/api/compareProtocolVersion", c.postCompareProtocolVersion)
+		engine.GET("/hk4e_:name/mdk/agreement/api/getAgreementInfos", c.getAgreementInfos)
+		engine.POST("/hk4e_:name/combo/granter/api/compareProtocolVersion", c.postCompareProtocolVersion)
 		engine.POST("/account/risky/api/check", c.check)
 		engine.GET("/combo/box/api/config/sdk/combo", c.combo)
-		engine.GET("/hk4e_global/combo/granter/api/getConfig", c.getConfig)
-		engine.GET("/hk4e_global/mdk/shield/api/loadConfig", c.loadConfig)
+		engine.GET("/hk4e_:name/combo/granter/api/getConfig", c.getConfig)
+		engine.GET("/hk4e_:name/mdk/shield/api/loadConfig", c.loadConfig)
 		engine.POST("/data_abtest_api/config/experiment/list", c.list)
-		engine.GET("/admin/mi18n/plat_oversea/m2020030410/m2020030410-version.json", c.version10Json)
-		engine.GET("/admin/mi18n/plat_oversea/m2020030410/m2020030410-zh-cn.json", c.zhCN10Json)
-		engine.GET("/geetestV2.html", c.geetestV2)
 		// Android
 		engine.POST("/common/h5log/log/batch", c.batch)
-		engine.GET("/hk4e_global/combo/granter/api/getFont", c.getFont)
-		engine.GET("/admin/mi18n/plat_oversea/m202003049/m202003049-version.json", c.version9Json)
-		engine.GET("/admin/mi18n/plat_oversea/m202003049/m202003049-zh-cn.json", c.zhCN9Json)
-		engine.GET("/hk4e_global/combo/granter/api/compareProtocolVersion", c.getCompareProtocolVersion)
+		engine.GET("/hk4e_:name/combo/granter/api/getFont", c.getFont)
+	}
+	{
+		// 静态资源
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_oversea/m2020030410/m2020030410-version.json HTTP/1.1
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_oversea/m2020030410/m2020030410-zh-cn.json HTTP/1.1
+		engine.StaticFS("/admin/mi18n/plat_oversea/m2020030410", http.Dir("./static/m2020030410"))
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_os/m09291531181441/m09291531181441-version.json HTTP/1.1
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_os/m09291531181441/m09291531181441-zh-cn.json HTTP/1.1
+		engine.StaticFS("/admin/mi18n/plat_os/m09291531181441", http.Dir("./static/m09291531181441"))
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_oversea/m202003049/m202003049-version.json HTTP/1.1
+		// GET https://webstatic-sea.hoyoverse.com/admin/mi18n/plat_oversea/m202003049/m202003049-zh-cn.json HTTP/1.1
+		engine.StaticFS("/admin/mi18n/plat_oversea/m202003049", http.Dir("./static/m202003049"))
+	}
+	{
+		// geetest
+		engine.GET("/geetestV2.html", c.gtGeetestV2)
 		// Android geetest
-		engine.GET("/gettype.php", c.gettype)
-		engine.GET("/get.php", c.get)
-		engine.POST("/ajax.php", c.ajax)
-		engine.GET("/ajax.php", c.ajax)
-		engine.GET("/static/appweb/app3-index.html", c.app3Index)
-		engine.GET("/static/js/slide.7.8.6.js", c.slideJs)
-		engine.GET("/favicon.ico", c.faviconIco)
-		engine.GET("/static/js/gct.e7810b5b525994e2fb1f89135f8df14a.js", c.js)
-		engine.GET("/static/ant/style_https.1.2.6.css", c.css)
-		engine.GET("/pictures/gt/a330cf996/a330cf996.webp", c.webp)
-		engine.GET("/pictures/gt/a330cf996/bg/86f9db021.webp", c.bgWebp)
-		engine.GET("/pictures/gt/a330cf996/slice/86f9db021.png", c.slicePng)
-		engine.GET("/static/ant/sprite2x.1.2.6.png", c.sprite2xPng)
+		engine.GET("/favicon.ico", c.gtFaviconIco)
+		engine.GET("/gettype.php", c.gtGetType)
+		engine.GET("/get.php", c.gtGet)
+		engine.POST("/ajax.php", c.gtAjax)
+		engine.GET("/ajax.php", c.gtAjax)
+		// GET https://static.geetest.com/static/appweb/app3-index.html?gt=16bddce04c7385dbb7282778c29bba3e&challenge=616018607b6940f52fbd349004038686&lang=zh-CN&title=&type=slide&api_server=api-na.geetest.com&static_servers=static.geetest.com,%20dn-staticdown.qbox.me&width=100%&timeout=10000&debug=false&aspect_radio_voice=128&aspect_radio_slide=103&aspect_radio_beeline=50&aspect_radio_pencil=128&aspect_radio_click=128&voice=/static/js/voice.1.2.0.js&slide=/static/js/slide.7.8.6.js&beeline=/static/js/beeline.1.0.1.js&pencil=/static/js/pencil.1.0.3.js&click=/static/js/click.3.0.4.js HTTP/1.1
+		// GET https://static.geetest.com/static/js/slide.7.8.6.js HTTP/1.1
+		// GET https://static.geetest.com/static/js/gct.e7810b5b525994e2fb1f89135f8df14a.js HTTP/1.1
+		// GET https://static.geetest.com/static/ant/style_https.1.2.6.css HTTP/1.1
+		// GET https://static.geetest.com/pictures/gt/a330cf996/a330cf996.webp HTTP/1.1
+		// GET https://static.geetest.com/pictures/gt/a330cf996/bg/86f9db021.webp HTTP/1.1
+		// GET https://static.geetest.com/pictures/gt/a330cf996/slice/86f9db021.png HTTP/1.1
+		// GET https://static.geetest.com/static/ant/sprite2x.1.2.6.png HTTP/1.1
+		engine.StaticFS("/static", http.Dir("./static/geetest/static"))
+		engine.StaticFS("/pictures", http.Dir("./static/geetest/pictures"))
 	}
 	engine.Use(c.authorize())
 	engine.POST("/gate/token/verify", c.gateTokenVerify)

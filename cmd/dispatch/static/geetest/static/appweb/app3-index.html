@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+    <title>请通过以下验证</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        .title {
+            margin: 15px;
+            font-size: 18px;
+            line-height: 18px;
+            height: 18px;
+        }
+        #log {
+            margin: 10px;
+            display: none;
+            word-break: break-all;
+        }
+
+        #log.log {
+            display: block;
+        }
+
+        #log p {
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="captcha"></div>
+<div id="log"></div>
+<div id="loading">
+    <svg version="1.1" id="loader-1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="40px" height="40px" viewBox="0 0 50 50" style="enable-background:new 0 0 50 50;" xml:space="preserve">
+  <path fill="#c7c5c5" d="M43.935,25.145c0-10.318-8.364-18.683-18.683-18.683c-10.318,0-18.683,8.365-18.683,18.683h4.068c0-8.071,6.543-14.615,14.615-14.615c8.072,0,14.615,6.543,14.615,14.615H43.935z" transform="rotate(340 25 25)">
+    <animateTransform attributeType="xml" attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.6s" repeatCount="indefinite"></animateTransform>
+    </path>
+  </svg>
+</div>
+<script>
+    var debug = false;
+    var setDebug = function () {
+        debug = true;
+        logEle.className = 'log';
+    };
+    var log = function (str) {
+        if (!debug) {
+            return;
+        }
+        var p = document.createElement('p');
+        p.appendChild(document.createTextNode(str));
+        logEle.insertBefore(p, logEle.firstChild);
+    };
+    var captcha = document.getElementById('captcha');
+    var logEle = document.getElementById('log');
+    var loadingEle = document.getElementById('loading');
+    var head = document.getElementsByTagName('head')[0];
+    var query = location.href.split('?')[1];
+
+    if (!query) {
+        setDebug();
+        log('no query: ' + location.href);
+    }
+
+    var parse = function (str) {
+        var args = {};
+        var items = str.split('&');
+        for (var i = 0, len = items.length; i < len; i = i + 1) {
+            var temp = items[i].split('=');
+            args[temp[0]] = temp[1];
+        }
+        return args;
+    };
+
+
+    var args = parse(query);
+
+    if (args['title'] && args['title'] != "") {
+        var h3 = document.createElement('h3');
+        h3.className = 'title';
+        h3.appendChild(document.createTextNode(decodeURIComponent(args['title'])));
+        captcha.appendChild(h3);
+    }
+
+    if (!args['gt']
+        || !args['challenge']
+        || !args['type']
+        || !args[args['type']]) {
+        setDebug(true);
+        log('args error: ' + query);
+    }
+
+    if (args['debug'] === 'true'
+        || args['debug'] === '1') {
+        setDebug(true);
+        log(JSON.stringify(args));
+    }
+    if (debug) {
+        window.startTime = (new Date()).getTime();
+    }
+
+    var config = {
+        is_next: true,
+        mobile: true,
+        product: 'embed',
+        width: '100%',
+        https: location.protocol === 'https:'
+    };
+
+    for (var k in args) {
+        if (args.hasOwnProperty(k) &&
+            ['debug', 'title', 'static_servers', args['type']].indexOf(k) === -1) {
+            config[k] = args[k];
+        }
+    }
+
+    var js = args[args['type']];
+
+    var static_servers = ['static.geetest.com', 'dn-staticdown.qbox.me'];
+    if (args['static_servers']) {
+        static_servers = args['static_servers'].replace(/ /g, '').split(',');
+    }
+
+    var errorHandler = function (err) {
+        log('Error Ocurred.');
+        try {
+            if (typeof JSInterface !== 'undefined') {
+            	if (typeof JSInterface.gtError === 'function') {
+                	JSInterface.gtError();
+            	}
+	            if (typeof JSInterface.gt3Error === 'function') {
+	            	JSInterface.gt3Error(JSON.stringify(err))
+	            }
+            }
+            loadingEle.style.display = 'none'
+        } catch (e) {
+            log(e.name + ': ' + e.message);
+        }
+        try {
+            if (window.webkit
+                && window.webkit.messageHandlers) {
+            	err = err || {};
+	            err.error = '1';
+	            var message = JSON.stringify(err);
+            	if (window.webkit.messageHandlers.gtError) {
+	                window.webkit.messageHandlers.gtError.postMessage(message);
+            	}
+                if (window.webkit.messageHandlers.gt3Error) {
+	                window.webkit.messageHandlers.gt3Error.postMessage(message);
+                }
+            }
+        } catch (e) {
+            log(e.name + ': ' + e.message);
+        }
+    };
+
+    config.onError = errorHandler;
+
+    var handler = function (config) {
+        if (config.type === 'slide') {
+            config.type = 'slide3';
+        }
+        var captchaObj = new window.Geetest(config);
+
+        captchaObj.appendTo(captcha);
+
+        captchaObj.onSuccess(function () {
+            var result = JSON.stringify(captchaObj.getValidate());
+            log('Success validate: ' + result);
+            try {
+                if (typeof JSInterface !== 'undefined') {
+                    JSInterface.gtCallBack('1', result, 'Success');
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+            try {
+                if (window.webkit && window.webkit.messageHandlers) {
+                    message = JSON.stringify({
+                        code: '1',
+                        result: result,
+                        message: 'Success'
+                    });
+                    window.webkit.messageHandlers.wkWebview.postMessage(message);
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+        });
+        captchaObj.onFail(function () {
+            var result = JSON.stringify({
+                geetest_challenge: ""
+            });
+            try {
+                if (typeof JSInterface !== 'undefined') {
+                    JSInterface.gtCallBack('0', result, 'Fail');
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+            try {
+                if (window.webkit && window.webkit.messageHandlers) {
+                    message = JSON.stringify({
+                        code: '0',
+                        result: result,
+                        message: 'Fail'
+                    });
+                    window.webkit.messageHandlers.wkWebview.postMessage(message);
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+        });
+        captchaObj.onReady(function () {
+            log('load time: ' + ((new Date()).getTime() - (window.startTime || 0)));
+            log('Ready');
+            try {
+                loadingEle.style.display = 'none'
+                if (typeof JSInterface !== 'undefined') {
+                    JSInterface.gtReady();
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+            try {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gtReady) {
+                    message = JSON.stringify({
+                        ready: '0'
+                    });
+                    window.webkit.messageHandlers.gtReady.postMessage(message);
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+        });
+        captchaObj.onClose(function () {
+            log('Close');
+            try {
+                if (typeof JSInterface !== 'undefined') {
+                    JSInterface.gtClose();
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+            try {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gtClose) {
+                    window.webkit.messageHandlers.gtClose.postMessage(1);
+                }
+            } catch (e) {
+                log(e.name + ': ' + e.message);
+            }
+        });
+        captchaObj.onError(errorHandler);
+        if(typeof captchaObj.onChangeCaptcha === 'function'){
+            captchaObj.onChangeCaptcha(function (type) {
+                var notification = { aspect_radio: args[('aspect_radio_'+type)] }
+                try {
+                    if (typeof JSInterface !== 'undefined') {
+                        JSInterface.gtNotify(JSON.stringify(notification));
+                    }
+                } catch (e) {
+                    log(e.name + ': ' + e.message);
+                }
+                try {
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gtNotify) {
+                        window.webkit.messageHandlers.gtNotify.postMessage(JSON.stringify(notification));
+                    }
+                } catch (e) {
+                    log(e.name + ': ' + e.message);
+                }
+                loadingEle.style.display = 'block'
+                config.type = type
+                js = args[type]
+                init(js)
+            });
+        }
+    };
+
+    var normalizeDomain = function (domain) {
+        // return domain.replace(/^https?:\/\/|\/.*$/g, '');
+        // 将限制降弱些，注意中山大学的域名：uems.sysu.edu.cn/jwxt/geetest/
+        return domain.replace(/^https?:\/\/|\/$/g, '');
+    };
+    var normalizePath = function (path) {
+        path = path.replace(/\/+/g, '/');
+        if (path.indexOf('/') !== 0) {
+            path = '/' + path;
+        }
+        return path;
+    };
+
+    var loadJS = function (servers, path, test, callback) {
+        if (servers.length <= 0) {
+            callback(true);
+            return;
+        }
+        var s = document.createElement('script');
+        var loaded = false;
+        s.onload = s.onreadystatechange = function () {
+            if (!loaded &&
+                (!s.readyState
+                || s.readyState === "loaded"
+                || s.readyState === 'complete')) {
+                if (test()) {
+                    loaded = true;
+                    callback(null);
+                } else {
+                    loadJS(servers.slice(1), path, test, callback);
+                    head.removeChild(s);
+                }
+            }
+        };
+        s.onerror = function () {
+            loadJS(servers.slice(1), path, test, callback);
+            head.removeChild(s);
+        };
+        s.src = '//' + normalizeDomain(servers[0]) + normalizePath(path);
+        head.appendChild(s);
+    };
+
+    function init(js){
+        loadJS(static_servers, js, function () {
+            return window.Geetest;
+        }, function (err) {
+            if (err) {
+                log('load js err: static_servers=' + static_servers[0] + '&js=' + js);
+                errorHandler();
+                return;
+            }
+            handler(config);
+        });
+    }
+    init(js);
+</script>
+</body>
+</html>

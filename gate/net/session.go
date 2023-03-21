@@ -321,7 +321,7 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 		}
 	}
 	tokenVerifyRsp, err := httpclient.PostJson[controller.TokenVerifyRsp](
-		config.GetConfig().Hk4e.LoginSdkUrl+"/gate/token/verify?key=flswld",
+		config.GetConfig().Hk4e.LoginSdkUrl+"/gate/token/verify",
 		&controller.TokenVerifyReq{
 			AccountId:    req.AccountUid,
 			AccountToken: req.AccountToken,

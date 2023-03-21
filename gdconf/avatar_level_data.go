@@ -13,9 +13,8 @@ type AvatarLevelData struct {
 func (g *GameDataConfig) loadAvatarLevelData() {
 	g.AvatarLevelDataMap = make(map[int32]*AvatarLevelData)
 	avatarLevelDataList := make([]*AvatarLevelData, 0)
-	readTable[AvatarLevelData](g.tablePrefix+"AvatarLevelData.txt", &avatarLevelDataList)
+	readTable[AvatarLevelData](g.txtPrefix+"AvatarLevelData.txt", &avatarLevelDataList)
 	for _, avatarLevelData := range avatarLevelDataList {
-		// list -> map
 		g.AvatarLevelDataMap[avatarLevelData.Level] = avatarLevelData
 	}
 	logger.Info("AvatarLevelData count: %v", len(g.AvatarLevelDataMap))

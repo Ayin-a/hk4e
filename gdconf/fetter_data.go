@@ -16,9 +16,8 @@ func (g *GameDataConfig) loadFetterData() {
 	fileNameList := []string{"FettersData.txt", "FetterDataStory.txt", "FetterDataIformation.txt", "PhotographExpressionName.txt", "PhotographPoseName.txt"}
 	for _, fileName := range fileNameList {
 		fetterDataList := make([]*FetterData, 0)
-		readTable[FetterData](g.tablePrefix+fileName, &fetterDataList)
+		readTable[FetterData](g.txtPrefix+fileName, &fetterDataList)
 		for _, fetterData := range fetterDataList {
-			// list -> map
 			g.FetterDataMap[fetterData.FetterId] = fetterData
 			fetterIdList := g.FetterDataAvatarIdMap[fetterData.AvatarId]
 			if fetterIdList == nil {

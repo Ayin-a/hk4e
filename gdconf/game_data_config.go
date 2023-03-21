@@ -27,26 +27,24 @@ var CONF_RELOAD *GameDataConfig = nil
 
 type GameDataConfig struct {
 	// 配置表路径前缀
-	tablePrefix string
-	jsonPrefix  string
-	luaPrefix   string
-	extPrefix   string
+	txtPrefix  string
+	jsonPrefix string
+	luaPrefix  string
+	extPrefix  string
 	// 配置表数据
-	AvatarDataMap           map[int32]*AvatarData                   // 角色
-	AvatarSkillDataMap      map[int32]*AvatarSkillData              // 角色技能
-	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData         // 角色技能库
-	DropGroupDataMap        map[int32]*DropGroupData                // 掉落组
-	GCGCharDataMap          map[int32]*GCGCharData                  // 角色卡牌
-	GCGSkillDataMap         map[int32]*GCGSkillData                 // 卡牌技能
 	SceneDataMap            map[int32]*SceneData                    // 场景
-	ScenePointMap           map[int32]*ScenePoint                   // 场景传送点
-	SceneTagDataMap         map[int32]*SceneTagData                 // 场景标签
 	SceneLuaConfigMap       map[int32]*SceneLuaConfig               // 场景LUA配置
 	GroupMap                map[int32]*Group                        // 场景LUA区块group索引
 	LuaStateLruMap          map[int32]*LuaStateLru                  // 场景LUA虚拟机LRU内存淘汰
-	WorldAreaDataMap        map[int32]*WorldAreaData                // 世界区域
+	TriggerDataMap          map[int32]*TriggerData                  // 场景LUA触发器
+	ScenePointMap           map[int32]*ScenePoint                   // 场景传送点
+	SceneTagDataMap         map[int32]*SceneTagData                 // 场景标签
 	GatherDataMap           map[int32]*GatherData                   // 采集物
 	GatherDataPointTypeMap  map[int32]*GatherData                   // 采集物场景节点索引
+	WorldAreaDataMap        map[int32]*WorldAreaData                // 世界区域
+	AvatarDataMap           map[int32]*AvatarData                   // 角色
+	AvatarSkillDataMap      map[int32]*AvatarSkillData              // 角色技能
+	AvatarSkillDepotDataMap map[int32]*AvatarSkillDepotData         // 角色技能库
 	FetterDataMap           map[int32]*FetterData                   // 角色资料解锁
 	FetterDataAvatarIdMap   map[int32][]int32                       // 角色资料解锁角色id索引
 	ItemDataMap             map[int32]*ItemData                     // 统一道具
@@ -61,7 +59,12 @@ type GameDataConfig struct {
 	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData  // 圣遗物主属性
 	ReliquaryAffixDataMap   map[int32]map[int32]*ReliquaryAffixData // 圣遗物追加属性
 	QuestDataMap            map[int32]*QuestData                    // 任务
-	TriggerDataMap          map[int32]*TriggerData                  // 场景LUA触发器
+	DropDataMap             map[int32]*DropData                     // 掉落
+	MonsterDropDataMap      map[string]map[int32]*MonsterDropData   // 怪物掉落
+	ChestDropDataMap        map[string]map[int32]*ChestDropData     // 宝箱掉落
+	GCGCharDataMap          map[int32]*GCGCharData                  // 七圣召唤角色卡牌
+	GCGSkillDataMap         map[int32]*GCGSkillData                 // 七圣召唤卡牌技能
+	GachaDropGroupDataMap   map[int32]*GachaDropGroupData           // 卡池掉落组 临时的
 }
 
 func InitGameDataConfig() {
@@ -95,13 +98,13 @@ func (g *GameDataConfig) loadAll() {
 		panic(info)
 	}
 
-	g.tablePrefix = pathPrefix + "/txt"
-	dirInfo, err = os.Stat(g.tablePrefix)
+	g.txtPrefix = pathPrefix + "/txt"
+	dirInfo, err = os.Stat(g.txtPrefix)
 	if err != nil || !dirInfo.IsDir() {
 		info := fmt.Sprintf("open game data config txt dir error: %v", err)
 		panic(info)
 	}
-	g.tablePrefix += "/"
+	g.txtPrefix += "/"
 
 	g.jsonPrefix = pathPrefix + "/json"
 	dirInfo, err = os.Stat(g.jsonPrefix)
@@ -131,34 +134,35 @@ func (g *GameDataConfig) loadAll() {
 }
 
 func (g *GameDataConfig) load() {
+	g.loadSceneData()            // 场景
+	g.loadSceneLuaConfig()       // 场景LUA配置
+	g.loadTriggerData()          // 场景LUA触发器
+	g.loadScenePoint()           // 场景传送点
+	g.loadSceneTagData()         // 场景标签
+	g.loadGatherData()           // 采集物
+	g.loadWorldAreaData()        // 世界区域
 	g.loadAvatarData()           // 角色
 	g.loadAvatarSkillData()      // 角色技能
 	g.loadAvatarSkillDepotData() // 角色技能库
-	g.loadDropGroupData()        // 掉落组 卡池 临时的
-	g.loadGCGCharData()          // 角色卡牌
-	g.loadGCGSkillData()         // 卡牌技能
-	g.loadSceneData()            // 场景
-	g.loadScenePoint()           // 场景传送点
-	g.loadSceneTagData()         // 场景地图图标
-	if config.GetConfig().Hk4e.LoadSceneLuaConfig {
-		g.loadSceneLuaConfig() // 场景LUA配置
-	}
-	g.loadWorldAreaData()      // 世界区域
-	g.loadGatherData()         // 采集物
-	g.loadFetterData()         // 角色资料解锁
-	g.loadItemData()           // 统一道具
-	g.loadAvatarLevelData()    // 角色等级
-	g.loadAvatarPromoteData()  // 角色突破
-	g.loadPlayerLevelData()    // 玩家等级
-	g.loadWeaponLevelData()    // 武器等级
-	g.loadWeaponPromoteData()  // 武器突破
-	g.loadRewardData()         // 奖励
-	g.loadAvatarCostumeData()  // 角色时装
-	g.loadAvatarFlycloakData() // 角色风之翼
-	g.loadReliquaryMainData()  // 圣遗物主属性
-	g.loadReliquaryAffixData() // 圣遗物追加属性
-	g.loadQuestData()          // 任务
-	g.loadTriggerData()        // 场景LUA触发器
+	g.loadFetterData()           // 角色资料解锁
+	g.loadItemData()             // 统一道具
+	g.loadAvatarLevelData()      // 角色等级
+	g.loadAvatarPromoteData()    // 角色突破
+	g.loadPlayerLevelData()      // 玩家等级
+	g.loadWeaponLevelData()      // 武器等级
+	g.loadWeaponPromoteData()    // 武器突破
+	g.loadRewardData()           // 奖励
+	g.loadAvatarCostumeData()    // 角色时装
+	g.loadAvatarFlycloakData()   // 角色风之翼
+	g.loadReliquaryMainData()    // 圣遗物主属性
+	g.loadReliquaryAffixData()   // 圣遗物追加属性
+	g.loadQuestData()            // 任务
+	g.loadDropData()             // 掉落
+	g.loadMonsterDropData()      // 怪物掉落
+	g.loadChestDropData()        // 宝箱掉落
+	g.loadGCGCharData()          // 七圣召唤角色卡牌
+	g.loadGCGSkillData()         // 七圣召唤卡牌技能
+	g.loadGachaDropGroupData()   // 卡池掉落组 临时的
 }
 
 // CSV相关
@@ -187,6 +191,22 @@ func (a *IntArray) UnmarshalCSV(data []byte) error {
 			panic(err)
 		}
 		*a = append(*a, int32(v))
+	}
+	return nil
+}
+
+type FloatArray []float32
+
+func (a *FloatArray) UnmarshalCSV(data []byte) error {
+	str := string(data)
+	str = strings.ReplaceAll(str, " ", "")
+	floatStrList := splitStringArray(str)
+	for _, floatStr := range floatStrList {
+		v, err := strconv.ParseFloat(floatStr, 32)
+		if err != nil {
+			panic(err)
+		}
+		*a = append(*a, float32(v))
 	}
 	return nil
 }
@@ -260,6 +280,9 @@ func initLuaState(luaState *lua.LState) {
 	luaState.SetField(eventType, "EVENT_NONE", lua.LNumber(constant.LUA_EVENT_NONE))
 	luaState.SetField(eventType, "EVENT_ENTER_REGION", lua.LNumber(constant.LUA_EVENT_ENTER_REGION))
 	luaState.SetField(eventType, "EVENT_LEAVE_REGION", lua.LNumber(constant.LUA_EVENT_LEAVE_REGION))
+	luaState.SetField(eventType, "EVENT_ANY_MONSTER_DIE", lua.LNumber(constant.LUA_EVENT_ANY_MONSTER_DIE))
+	luaState.SetField(eventType, "EVENT_ANY_MONSTER_LIVE", lua.LNumber(constant.LUA_EVENT_ANY_MONSTER_LIVE))
+	luaState.SetField(eventType, "EVENT_QUEST_START", lua.LNumber(constant.LUA_EVENT_QUEST_START))
 
 	entityType := luaState.NewTable()
 	luaState.SetGlobal("EntityType", entityType)
@@ -287,11 +310,17 @@ func initLuaState(luaState *lua.LState) {
 
 	gadgetState := luaState.NewTable()
 	luaState.SetGlobal("GadgetState", gadgetState)
-	luaState.SetField(gadgetState, "NONE", lua.LNumber(0))
+	luaState.SetField(gadgetState, "Default", lua.LNumber(constant.GADGET_STATE_DEFAULT))
+	luaState.SetField(gadgetState, "ChestLocked", lua.LNumber(constant.GADGET_STATE_CHEST_LOCKED))
+	luaState.SetField(gadgetState, "GearStart", lua.LNumber(constant.GADGET_STATE_GEAR_START))
+	luaState.SetField(gadgetState, "GearStop", lua.LNumber(constant.GADGET_STATE_GEAR_STOP))
 
 	visionLevelType := luaState.NewTable()
 	luaState.SetGlobal("VisionLevelType", visionLevelType)
-	luaState.SetField(visionLevelType, "NONE", lua.LNumber(0))
+	luaState.SetField(visionLevelType, "VISION_LEVEL_NEARBY", lua.LNumber(1))
+	luaState.SetField(visionLevelType, "VISION_LEVEL_NORMAL", lua.LNumber(2))
+	luaState.SetField(visionLevelType, "VISION_LEVEL_REMOTE", lua.LNumber(3))
+	luaState.SetField(visionLevelType, "VISION_LEVEL_LITTLE_REMOTE", lua.LNumber(4))
 }
 
 func newLuaState(luaStr string) *lua.LState {

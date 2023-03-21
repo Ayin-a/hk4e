@@ -15,14 +15,13 @@ type ReliquaryMainData struct {
 func (g *GameDataConfig) loadReliquaryMainData() {
 	g.ReliquaryMainDataMap = make(map[int32]map[int32]*ReliquaryMainData)
 	reliquaryMainDataList := make([]*ReliquaryMainData, 0)
-	readTable[ReliquaryMainData](g.tablePrefix+"ReliquaryMainData.txt", &reliquaryMainDataList)
+	readTable[ReliquaryMainData](g.txtPrefix+"ReliquaryMainData.txt", &reliquaryMainDataList)
 	for _, reliquaryMainData := range reliquaryMainDataList {
 		// 通过主属性库ID找到
 		_, ok := g.ReliquaryMainDataMap[reliquaryMainData.MainPropDepotId]
 		if !ok {
 			g.ReliquaryMainDataMap[reliquaryMainData.MainPropDepotId] = make(map[int32]*ReliquaryMainData)
 		}
-		// list -> map
 		g.ReliquaryMainDataMap[reliquaryMainData.MainPropDepotId][reliquaryMainData.MainPropId] = reliquaryMainData
 	}
 	logger.Info("ReliquaryMainData count: %v", len(g.ReliquaryMainDataMap))

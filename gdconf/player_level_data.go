@@ -13,9 +13,8 @@ type PlayerLevelData struct {
 func (g *GameDataConfig) loadPlayerLevelData() {
 	g.PlayerLevelDataMap = make(map[int32]*PlayerLevelData)
 	playerLevelDataList := make([]*PlayerLevelData, 0)
-	readTable[PlayerLevelData](g.tablePrefix+"PlayerLevelData.txt", &playerLevelDataList)
+	readTable[PlayerLevelData](g.txtPrefix+"PlayerLevelData.txt", &playerLevelDataList)
 	for _, playerLevelData := range playerLevelDataList {
-		// list -> map
 		g.PlayerLevelDataMap[playerLevelData.Level] = playerLevelData
 	}
 	logger.Info("PlayerLevelData count: %v", len(g.PlayerLevelDataMap))

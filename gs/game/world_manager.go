@@ -717,14 +717,14 @@ func (w *World) RemoveWaitPlayer(uid uint32) {
 
 func (w *World) CreateScene(sceneId uint32) *Scene {
 	scene := &Scene{
-		id:                sceneId,
-		world:             w,
-		playerMap:         make(map[uint32]*model.Player),
-		entityMap:         make(map[uint32]*Entity),
-		objectIdEntityMap: make(map[uint64]*Entity),
-		gameTime:          18 * 60,
-		createTime:        time.Now().UnixMilli(),
-		meeoIndex:         0,
+		id:         sceneId,
+		world:      w,
+		playerMap:  make(map[uint32]*model.Player),
+		entityMap:  make(map[uint32]*Entity),
+		groupMap:   make(map[uint32]*Group),
+		gameTime:   18 * 60,
+		createTime: time.Now().UnixMilli(),
+		meeoIndex:  0,
 	}
 	w.sceneMap[sceneId] = scene
 	return scene

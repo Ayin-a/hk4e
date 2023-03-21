@@ -17,9 +17,8 @@ type AvatarSkillData struct {
 func (g *GameDataConfig) loadAvatarSkillData() {
 	g.AvatarSkillDataMap = make(map[int32]*AvatarSkillData)
 	avatarSkillDataList := make([]*AvatarSkillData, 0)
-	readTable[AvatarSkillData](g.tablePrefix+"AvatarSkillData.txt", &avatarSkillDataList)
+	readTable[AvatarSkillData](g.txtPrefix+"AvatarSkillData.txt", &avatarSkillDataList)
 	for _, avatarSkillData := range avatarSkillDataList {
-		// list -> map
 		g.AvatarSkillDataMap[avatarSkillData.AvatarSkillId] = avatarSkillData
 	}
 	logger.Info("AvatarSkillData count: %v", len(g.AvatarSkillDataMap))

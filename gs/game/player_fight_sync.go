@@ -167,6 +167,11 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 					X: float64(motionInfo.Pos.X),
 					Y: float64(motionInfo.Pos.Y),
 					Z: float64(motionInfo.Pos.Z),
+				})
+				g.TriggerCheck(player, player.Pos, &model.Vector{
+					X: float64(motionInfo.Pos.X),
+					Y: float64(motionInfo.Pos.Y),
+					Z: float64(motionInfo.Pos.Z),
 				}, sceneEntity.GetId())
 				// 更新玩家的位置信息
 				player.Pos.X = float64(motionInfo.Pos.X)
@@ -258,7 +263,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	}
 }
 
-func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector, entityId uint32) {
+func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get player world is nil, uid: %v", player.PlayerID)
@@ -281,167 +286,162 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 	oldVisionGroupMap := make(map[uint32]*gdconf.Group)
 	oldGroupList := aoiManager.GetObjectListByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
 	for groupId, groupAny := range oldGroupList {
-		group := groupAny.(*gdconf.Group)
-		distance2D := math.Sqrt(math.Pow(oldPos.X-float64(group.Pos.X), 2.0) + math.Pow(oldPos.Z-float64(group.Pos.Z), 2.0))
+		groupConfig := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt((oldPos.X-float64(groupConfig.Pos.X))*(oldPos.X-float64(groupConfig.Pos.X)) +
+			(oldPos.Z-float64(groupConfig.Pos.Z))*(oldPos.Z-float64(groupConfig.Pos.Z)))
 		if distance2D > ENTITY_LOD {
 			continue
 		}
-		if group.DynamicLoad {
+		if groupConfig.DynamicLoad {
 			continue
 		}
-		oldVisionGroupMap[uint32(groupId)] = group
+		oldVisionGroupMap[uint32(groupId)] = groupConfig
 	}
 	// 新位置视野范围内的group
 	newVisionGroupMap := make(map[uint32]*gdconf.Group)
 	newGroupList := aoiManager.GetObjectListByPos(float32(newPos.X), 0.0, float32(newPos.Z))
 	for groupId, groupAny := range newGroupList {
-		group := groupAny.(*gdconf.Group)
-		distance2D := math.Sqrt(math.Pow(newPos.X-float64(group.Pos.X), 2.0) + math.Pow(newPos.Z-float64(group.Pos.Z), 2.0))
+		groupConfig := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt((newPos.X-float64(groupConfig.Pos.X))*(newPos.X-float64(groupConfig.Pos.X)) +
+			(newPos.Z-float64(groupConfig.Pos.Z))*(newPos.Z-float64(groupConfig.Pos.Z)))
 		if distance2D > ENTITY_LOD {
 			continue
 		}
-		if group.DynamicLoad {
+		if groupConfig.DynamicLoad {
 			continue
 		}
-		newVisionGroupMap[uint32(groupId)] = group
+		newVisionGroupMap[uint32(groupId)] = groupConfig
 	}
 	// 消失的场景实体
 	delEntityIdList := make([]uint32, 0)
-	for groupId, group := range oldVisionGroupMap {
+	for groupId, groupConfig := range oldVisionGroupMap {
 		_, exist := newVisionGroupMap[groupId]
 		if exist {
 			continue
 		}
 		// 旧有新没有的group即为消失的
-		for _, monster := range group.MonsterList {
-			entity := scene.GetEntityByObjectId(monster.ObjectId)
-			if entity == nil {
-				continue
-			}
-			scene.DestroyEntity(entity.GetId())
+		group := scene.GetGroupById(groupId)
+		for _, entity := range group.GetAllEntity() {
 			delEntityIdList = append(delEntityIdList, entity.GetId())
 		}
-		for _, npc := range group.NpcList {
-			entity := scene.GetEntityByObjectId(npc.ObjectId)
-			if entity == nil {
-				continue
-			}
-			scene.DestroyEntity(entity.GetId())
-			delEntityIdList = append(delEntityIdList, entity.GetId())
-		}
-		for _, gadget := range group.GadgetList {
-			entity := scene.GetEntityByObjectId(gadget.ObjectId)
-			if entity == nil {
-				continue
-			}
-			scene.DestroyEntity(entity.GetId())
-			delEntityIdList = append(delEntityIdList, entity.GetId())
-		}
+		g.RemoveGroup(scene, groupConfig)
 	}
 	// 出现的场景实体
 	addEntityIdList := make([]uint32, 0)
-	for groupId, group := range newVisionGroupMap {
+	for groupId, groupConfig := range newVisionGroupMap {
 		_, exist := oldVisionGroupMap[groupId]
 		if exist {
 			continue
 		}
 		// 新有旧没有的group即为出现的
-		for _, monster := range group.MonsterList {
-			entityId := g.CreateConfigEntity(scene, monster.ObjectId, monster)
-			addEntityIdList = append(addEntityIdList, entityId)
-		}
-		for _, npc := range group.NpcList {
-			entityId := g.CreateConfigEntity(scene, npc.ObjectId, npc)
-			addEntityIdList = append(addEntityIdList, entityId)
-		}
-		for _, gadget := range group.GadgetList {
-			entityId := g.CreateConfigEntity(scene, gadget.ObjectId, gadget)
-			addEntityIdList = append(addEntityIdList, entityId)
+		g.AddSceneGroup(scene, groupConfig)
+		group := scene.GetGroupById(groupId)
+		for _, entity := range group.GetAllEntity() {
+			addEntityIdList = append(addEntityIdList, entity.GetId())
 		}
 	}
 	// 同步客户端消失和出现的场景实体
 	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
 	g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
-	// 场景区域触发器
-	for _, group := range newVisionGroupMap {
-		for _, region := range group.RegionList {
-			shape := alg.NewShape()
-			switch uint8(region.Shape) {
-			case constant.REGION_SHAPE_SPHERE:
-				shape.NewSphere(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z}, region.Radius)
-			case constant.REGION_SHAPE_CUBIC:
-				shape.NewCubic(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
-					&alg.Vector3{X: region.Size.X, Y: region.Size.Y, Z: region.Size.Z})
-			case constant.REGION_SHAPE_CYLINDER:
-				shape.NewCylinder(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
-					region.Radius, region.Height)
-			case constant.REGION_SHAPE_POLYGON:
-				vector2PointArray := make([]*alg.Vector2, 0)
-				for _, vector := range region.PointArray {
-					// z就是y
-					vector2PointArray = append(vector2PointArray, &alg.Vector2{X: vector.X, Z: vector.Y})
-				}
-				shape.NewPolygon(&alg.Vector3{X: region.Pos.X, Y: region.Pos.Y, Z: region.Pos.Z},
-					vector2PointArray, region.Height)
-			}
-			oldPosInRegion := shape.Contain(&alg.Vector3{
-				X: float32(oldPos.X),
-				Y: float32(oldPos.Y),
-				Z: float32(oldPos.Z),
-			})
-			newPosInRegion := shape.Contain(&alg.Vector3{
-				X: float32(newPos.X),
-				Y: float32(newPos.Y),
-				Z: float32(newPos.Z),
-			})
-			if !oldPosInRegion && newPosInRegion {
-				logger.Debug("player enter region: %v, uid: %v", region, player.PlayerID)
-				for _, trigger := range group.TriggerList {
-					if trigger.Event != constant.LUA_EVENT_ENTER_REGION {
-						continue
+}
+
+// TriggerCheck 场景区域触发器检测
+func (g *GameManager) TriggerCheck(player *model.Player, oldPos *model.Vector, newPos *model.Vector, entityId uint32) {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		logger.Error("get player world is nil, uid: %v", player.PlayerID)
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	for groupId, group := range scene.GetAllGroup() {
+		groupConfig := gdconf.GetSceneGroup(int32(groupId))
+		if groupConfig == nil {
+			continue
+		}
+		for suiteId := range group.GetAllSuite() {
+			suiteConfig := groupConfig.SuiteList[suiteId-1]
+			for _, regionConfigId := range suiteConfig.RegionConfigIdList {
+				regionConfig := groupConfig.RegionMap[regionConfigId]
+				shape := alg.NewShape()
+				switch uint8(regionConfig.Shape) {
+				case constant.REGION_SHAPE_SPHERE:
+					shape.NewSphere(&alg.Vector3{X: regionConfig.Pos.X, Y: regionConfig.Pos.Y, Z: regionConfig.Pos.Z}, regionConfig.Radius)
+				case constant.REGION_SHAPE_CUBIC:
+					shape.NewCubic(&alg.Vector3{X: regionConfig.Pos.X, Y: regionConfig.Pos.Y, Z: regionConfig.Pos.Z},
+						&alg.Vector3{X: regionConfig.Size.X, Y: regionConfig.Size.Y, Z: regionConfig.Size.Z})
+				case constant.REGION_SHAPE_CYLINDER:
+					shape.NewCylinder(&alg.Vector3{X: regionConfig.Pos.X, Y: regionConfig.Pos.Y, Z: regionConfig.Pos.Z},
+						regionConfig.Radius, regionConfig.Height)
+				case constant.REGION_SHAPE_POLYGON:
+					vector2PointArray := make([]*alg.Vector2, 0)
+					for _, vector := range regionConfig.PointArray {
+						// z就是y
+						vector2PointArray = append(vector2PointArray, &alg.Vector2{X: vector.X, Z: vector.Y})
 					}
-					if trigger.Condition != "" {
-						cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
-							&LuaCtx{uid: player.PlayerID},
-							&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
-						if !cond {
+					shape.NewPolygon(&alg.Vector3{X: regionConfig.Pos.X, Y: regionConfig.Pos.Y, Z: regionConfig.Pos.Z},
+						vector2PointArray, regionConfig.Height)
+				}
+				oldPosInRegion := shape.Contain(&alg.Vector3{
+					X: float32(oldPos.X),
+					Y: float32(oldPos.Y),
+					Z: float32(oldPos.Z),
+				})
+				newPosInRegion := shape.Contain(&alg.Vector3{
+					X: float32(newPos.X),
+					Y: float32(newPos.Y),
+					Z: float32(newPos.Z),
+				})
+				if !oldPosInRegion && newPosInRegion {
+					logger.Debug("player enter region: %v, uid: %v", regionConfig, player.PlayerID)
+					for _, triggerName := range suiteConfig.TriggerNameList {
+						triggerConfig := groupConfig.TriggerMap[triggerName]
+						if triggerConfig.Event != constant.LUA_EVENT_ENTER_REGION {
 							continue
 						}
-					}
-					logger.Debug("scene group trigger fire, trigger: %v, uid: %v", trigger, player.PlayerID)
-					if trigger.Action != "" {
-						logger.Debug("scene group trigger do action, trigger: %v, uid: %v", trigger, player.PlayerID)
-						ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
-							&LuaCtx{uid: player.PlayerID},
-							&LuaEvt{})
-						if !ok {
-							logger.Error("trigger action fail, trigger: %v, uid: %v", trigger, player.PlayerID)
+						if triggerConfig.Condition != "" {
+							cond := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Condition,
+								&LuaCtx{uid: player.PlayerID},
+								&LuaEvt{param1: regionConfig.ConfigId, targetEntityId: entityId})
+							if !cond {
+								continue
+							}
 						}
+						logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						if triggerConfig.Action != "" {
+							logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
+								&LuaCtx{uid: player.PlayerID},
+								&LuaEvt{})
+							if !ok {
+								logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							}
+						}
+						g.TriggerFire(player, triggerConfig)
 					}
-					g.TriggerFire(player, trigger)
-				}
-			} else if oldPosInRegion && !newPosInRegion {
-				logger.Debug("player leave region: %v, uid: %v", region, player.PlayerID)
-				for _, trigger := range group.TriggerList {
-					if trigger.Event != constant.LUA_EVENT_LEAVE_REGION {
-						continue
-					}
-					if trigger.Condition != "" {
-						cond := CallLuaFunc(group.GetLuaState(), trigger.Condition,
-							&LuaCtx{uid: player.PlayerID},
-							&LuaEvt{param1: region.ConfigId, targetEntityId: entityId})
-						if !cond {
+				} else if oldPosInRegion && !newPosInRegion {
+					logger.Debug("player leave region: %v, uid: %v", regionConfig, player.PlayerID)
+					for _, triggerName := range suiteConfig.TriggerNameList {
+						triggerConfig := groupConfig.TriggerMap[triggerName]
+						if triggerConfig.Event != constant.LUA_EVENT_LEAVE_REGION {
 							continue
 						}
-					}
-					logger.Debug("scene group trigger fire, trigger: %v, uid: %v", trigger, player.PlayerID)
-					if trigger.Action != "" {
-						logger.Debug("scene group trigger do action, trigger: %v, uid: %v", trigger, player.PlayerID)
-						ok := CallLuaFunc(group.GetLuaState(), trigger.Action,
-							&LuaCtx{uid: player.PlayerID},
-							&LuaEvt{})
-						if !ok {
-							logger.Error("trigger action fail, trigger: %v, uid: %v", trigger, player.PlayerID)
+						if triggerConfig.Condition != "" {
+							cond := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Condition,
+								&LuaCtx{uid: player.PlayerID},
+								&LuaEvt{param1: regionConfig.ConfigId, targetEntityId: entityId})
+							if !cond {
+								continue
+							}
+						}
+						logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						if triggerConfig.Action != "" {
+							logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
+								&LuaCtx{uid: player.PlayerID},
+								&LuaEvt{})
+							if !ok {
+								logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							}
 						}
 					}
 				}

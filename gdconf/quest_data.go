@@ -75,9 +75,8 @@ func (g *GameDataConfig) loadQuestData() {
 	fileNameList := []string{"QuestData.txt", "QuestData_Exported.txt"}
 	for _, fileName := range fileNameList {
 		questDataList := make([]*QuestData, 0)
-		readTable[QuestData](g.tablePrefix+fileName, &questDataList)
+		readTable[QuestData](g.txtPrefix+fileName, &questDataList)
 		for _, questData := range questDataList {
-			// list -> map
 			// 领取条件
 			questData.AcceptCondList = make([]*QuestCond, 0)
 			if questData.AcceptCondType1 != 0 {

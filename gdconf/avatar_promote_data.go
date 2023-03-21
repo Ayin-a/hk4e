@@ -26,9 +26,8 @@ type AvatarPromoteData struct {
 func (g *GameDataConfig) loadAvatarPromoteData() {
 	g.AvatarPromoteDataMap = make(map[int32]map[int32]*AvatarPromoteData)
 	avatarPromoteDataList := make([]*AvatarPromoteData, 0)
-	readTable[AvatarPromoteData](g.tablePrefix+"AvatarPromoteData.txt", &avatarPromoteDataList)
+	readTable[AvatarPromoteData](g.txtPrefix+"AvatarPromoteData.txt", &avatarPromoteDataList)
 	for _, avatarPromoteData := range avatarPromoteDataList {
-		// list -> map
 		_, ok := g.AvatarPromoteDataMap[avatarPromoteData.PromoteId]
 		if !ok {
 			g.AvatarPromoteDataMap[avatarPromoteData.PromoteId] = make(map[int32]*AvatarPromoteData)

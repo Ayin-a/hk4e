@@ -15,9 +15,8 @@ type WorldAreaData struct {
 func (g *GameDataConfig) loadWorldAreaData() {
 	g.WorldAreaDataMap = make(map[int32]*WorldAreaData)
 	worldAreaDataList := make([]*WorldAreaData, 0)
-	readTable[WorldAreaData](g.tablePrefix+"WorldAreaData.txt", &worldAreaDataList)
+	readTable[WorldAreaData](g.txtPrefix+"WorldAreaData.txt", &worldAreaDataList)
 	for _, worldAreaData := range worldAreaDataList {
-		// list -> map
 		g.WorldAreaDataMap[worldAreaData.WorldAreaId] = worldAreaData
 	}
 	logger.Info("WorldAreaData count: %v", len(g.WorldAreaDataMap))

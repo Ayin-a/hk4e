@@ -38,9 +38,8 @@ func (g *GameDataConfig) loadItemData() {
 	fileNameList := []string{"MaterialData.txt", "WeaponData.txt", "ReliquaryData.txt", "FurnitureExcelData.txt"}
 	for _, fileName := range fileNameList {
 		itemDataList := make([]*ItemData, 0)
-		readTable[ItemData](g.tablePrefix+fileName, &itemDataList)
+		readTable[ItemData](g.txtPrefix+fileName, &itemDataList)
 		for _, itemData := range itemDataList {
-			// list -> map
 			itemData.SkillAffix = make([]int32, 0)
 			if itemData.SkillAffix1 != 0 {
 				itemData.SkillAffix = append(itemData.SkillAffix, itemData.SkillAffix1)

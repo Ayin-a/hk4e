@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -47,7 +48,17 @@ func NewController(dao *dao.Dao, discovery *rpc.DiscoveryClient) (r *Controller)
 
 func (c *Controller) authorize() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		if context.Query("key") == "flswld" {
+		addr := context.ClientIP()
+		if addr == "" {
+			addr = context.Request.RemoteAddr
+		}
+		ip := net.ParseIP(addr)
+		ipv4 := ip.To4()
+		if ip.IsLoopback() ||
+			ipv4[0] == 10 ||
+			ipv4[0] == 169 && ipv4[1] == 254 ||
+			ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 ||
+			ipv4[0] == 192 && ipv4[1] == 168 {
 			context.Next()
 			return
 		}

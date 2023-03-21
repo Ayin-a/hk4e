@@ -4,12 +4,12 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
-	"math"
 	"os"
 	"sort"
 	"strconv"
 	"time"
 
+	"hk4e/common/constant"
 	"hk4e/pkg/logger"
 
 	"hk4e/gs/model"
@@ -297,8 +297,6 @@ func LoadFrameFile() error {
 	return nil
 }
 
-var OBJECT_ID_COUNTER uint64 = math.MaxUint64
-
 func UpdateFrame(rgb bool) {
 	err := LoadFrameFile()
 	if err != nil {
@@ -323,13 +321,12 @@ func UpdateFrame(rgb bool) {
 	for w := 0; w < SCREEN_WIDTH; w++ {
 		for h := 0; h < SCREEN_HEIGHT; h++ {
 			// 创建像素点
-			OBJECT_ID_COUNTER++
 			if rgb {
 				entityId := scene.CreateEntityGadgetNormal(&model.Vector{
 					X: leftTopPos.X - float64(w)*SCREEN_DPI,
 					Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 					Z: leftTopPos.Z,
-				}, new(model.Vector), uint32(FRAME_COLOR[w][h]), 271003, OBJECT_ID_COUNTER)
+				}, new(model.Vector), uint32(FRAME_COLOR[w][h]), 271003, uint32(constant.GADGET_STATE_DEFAULT), 0)
 				SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 			} else {
 				if !FRAME[w][h] {
@@ -337,7 +334,7 @@ func UpdateFrame(rgb bool) {
 						X: leftTopPos.X - float64(w)*SCREEN_DPI,
 						Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 						Z: leftTopPos.Z,
-					}, new(model.Vector), uint32(GADGET_ID), 271003, OBJECT_ID_COUNTER)
+					}, new(model.Vector), uint32(GADGET_ID), 271003, uint32(constant.GADGET_STATE_DEFAULT), 0)
 					SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 				}
 			}

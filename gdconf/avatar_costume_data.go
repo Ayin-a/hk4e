@@ -13,13 +13,12 @@ type AvatarCostumeData struct {
 func (g *GameDataConfig) loadAvatarCostumeData() {
 	g.AvatarCostumeDataMap = make(map[int32]*AvatarCostumeData)
 	avatarCostumeDataList := make([]*AvatarCostumeData, 0)
-	readTable[AvatarCostumeData](g.tablePrefix+"AvatarCostumeData.txt", &avatarCostumeDataList)
+	readTable[AvatarCostumeData](g.txtPrefix+"AvatarCostumeData.txt", &avatarCostumeDataList)
 	for _, avatarCostumeData := range avatarCostumeDataList {
 		// 屏蔽默认时装
 		if avatarCostumeData.ItemID == 0 {
 			continue
 		}
-		// list -> map
 		g.AvatarCostumeDataMap[avatarCostumeData.CostumeID] = avatarCostumeData
 	}
 	logger.Info("AvatarCostumeData count: %v", len(g.AvatarCostumeDataMap))

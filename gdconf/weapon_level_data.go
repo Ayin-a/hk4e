@@ -19,9 +19,8 @@ type WeaponLevelData struct {
 func (g *GameDataConfig) loadWeaponLevelData() {
 	g.WeaponLevelDataMap = make(map[int32]*WeaponLevelData)
 	weaponLevelDataList := make([]*WeaponLevelData, 0)
-	readTable[WeaponLevelData](g.tablePrefix+"WeaponLevelData.txt", &weaponLevelDataList)
+	readTable[WeaponLevelData](g.txtPrefix+"WeaponLevelData.txt", &weaponLevelDataList)
 	for _, weaponLevelData := range weaponLevelDataList {
-		// list -> map
 		weaponLevelData.ExpByStarMap = map[uint32]uint32{
 			1: uint32(weaponLevelData.ExpByStar1),
 			2: uint32(weaponLevelData.ExpByStar2),

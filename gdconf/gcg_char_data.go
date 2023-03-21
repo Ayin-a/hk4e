@@ -22,7 +22,7 @@ type GCGCharData struct {
 func (g *GameDataConfig) loadGCGCharData() {
 	g.GCGCharDataMap = make(map[int32]*GCGCharData)
 	gcgCharDataList := make([]*GCGCharData, 0)
-	readTable[GCGCharData](g.tablePrefix+"GCGCharData.txt", &gcgCharDataList)
+	readTable[GCGCharData](g.txtPrefix+"GCGCharData.txt", &gcgCharDataList)
 	for _, gcgCharData := range gcgCharDataList {
 		// 将TagId整合进TagList
 		gcgCharData.TagList = make([]uint32, 0, 5)
@@ -35,7 +35,6 @@ func (g *GameDataConfig) loadGCGCharData() {
 			}
 			gcgCharData.TagList = append(gcgCharData.TagList, uint32(tagId))
 		}
-		// list -> map
 		g.GCGCharDataMap[gcgCharData.CharId] = gcgCharData
 	}
 	logger.Info("GCGCharData count: %v", len(g.GCGCharDataMap))

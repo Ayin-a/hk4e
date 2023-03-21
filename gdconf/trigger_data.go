@@ -15,7 +15,7 @@ type TriggerData struct {
 func (g *GameDataConfig) loadTriggerData() {
 	g.TriggerDataMap = make(map[int32]*TriggerData)
 	triggerDataList := make([]*TriggerData, 0)
-	readTable[TriggerData](g.tablePrefix+"TriggerData.txt", &triggerDataList)
+	readTable[TriggerData](g.txtPrefix+"TriggerData.txt", &triggerDataList)
 	for _, triggerData := range triggerDataList {
 		g.TriggerDataMap[triggerData.TriggerId] = triggerData
 	}

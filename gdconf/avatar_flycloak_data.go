@@ -13,9 +13,8 @@ type AvatarFlycloakData struct {
 func (g *GameDataConfig) loadAvatarFlycloakData() {
 	g.AvatarFlycloakDataMap = make(map[int32]*AvatarFlycloakData)
 	avatarFlycloakDataList := make([]*AvatarFlycloakData, 0)
-	readTable[AvatarFlycloakData](g.tablePrefix+"AvatarFlycloakData.txt", &avatarFlycloakDataList)
+	readTable[AvatarFlycloakData](g.txtPrefix+"AvatarFlycloakData.txt", &avatarFlycloakDataList)
 	for _, avatarFlycloakData := range avatarFlycloakDataList {
-		// list -> map
 		g.AvatarFlycloakDataMap[avatarFlycloakData.FlycloakID] = avatarFlycloakData
 	}
 	logger.Info("AvatarFlycloakData count: %v", len(g.AvatarFlycloakDataMap))

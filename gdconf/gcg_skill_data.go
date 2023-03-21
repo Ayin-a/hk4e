@@ -35,7 +35,7 @@ type ConfigSkillEffectValue struct {
 func (g *GameDataConfig) loadGCGSkillData() {
 	g.GCGSkillDataMap = make(map[int32]*GCGSkillData)
 	gcgSkillDataList := make([]*GCGSkillData, 0)
-	readTable[GCGSkillData](g.tablePrefix+"GCGSkillData.txt", &gcgSkillDataList)
+	readTable[GCGSkillData](g.txtPrefix+"GCGSkillData.txt", &gcgSkillDataList)
 	for _, gcgSkillData := range gcgSkillDataList {
 		// 技能消耗整合进CostMap
 		gcgSkillData.CostMap = map[uint32]uint32{
@@ -97,7 +97,6 @@ func (g *GameDataConfig) loadGCGSkillData() {
 				}
 			}
 		}
-		// list -> map
 		g.GCGSkillDataMap[gcgSkillData.SkillId] = gcgSkillData
 	}
 	logger.Info("GCGSkillData count: %v", len(g.GCGSkillDataMap))

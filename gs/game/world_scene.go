@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -13,14 +14,40 @@ import (
 
 // Scene 场景数据结构
 type Scene struct {
-	id                uint32
-	world             *World
-	playerMap         map[uint32]*model.Player
-	entityMap         map[uint32]*Entity
-	objectIdEntityMap map[uint64]*Entity // 用于标识配置档里的唯一实体是否已被创建
-	gameTime          uint32             // 游戏内提瓦特大陆的时间
-	createTime        int64              // 场景创建时间
-	meeoIndex         uint32             // 客户端风元素染色同步协议的计数器
+	id         uint32
+	world      *World
+	playerMap  map[uint32]*model.Player
+	entityMap  map[uint32]*Entity
+	groupMap   map[uint32]*Group
+	gameTime   uint32 // 游戏内提瓦特大陆的时间
+	createTime int64  // 场景创建时间
+	meeoIndex  uint32 // 客户端风元素染色同步协议的计数器
+}
+
+type Group struct {
+	suiteMap map[uint8]*Suite
+}
+
+func (g *Group) GetAllSuite() map[uint8]*Suite {
+	return g.suiteMap
+}
+
+func (g *Group) GetAllEntity() map[uint32]*Entity {
+	entityMap := make(map[uint32]*Entity)
+	for _, suite := range g.suiteMap {
+		for _, entity := range suite.entityMap {
+			entityMap[entity.id] = entity
+		}
+	}
+	return entityMap
+}
+
+type Suite struct {
+	entityMap map[uint32]*Entity
+}
+
+func (s *Suite) GetAllEntity() map[uint32]*Entity {
+	return s.entityMap
 }
 
 func (s *Scene) GetId() uint32 {
@@ -37,6 +64,14 @@ func (s *Scene) GetAllPlayer() map[uint32]*model.Player {
 
 func (s *Scene) GetAllEntity() map[uint32]*Entity {
 	return s.entityMap
+}
+
+func (s *Scene) GetGroupById(groupId uint32) *Group {
+	return s.groupMap[groupId]
+}
+
+func (s *Scene) GetAllGroup() map[uint32]*Group {
+	return s.groupMap
 }
 
 func (s *Scene) GetGameTime() uint32 {
@@ -161,7 +196,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 			avatarId: avatarId,
 		},
 	}
-	s.CreateEntity(entity, 0)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
@@ -179,15 +214,11 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		fightProp:           nil,
 		entityType:          constant.ENTITY_TYPE_WEAPON,
 	}
-	s.CreateEntity(entity, 0)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, level uint8, fightProp map[uint32]float32, configId uint32, objectId uint64) uint32 {
-	_, exist := s.objectIdEntityMap[objectId]
-	if exist {
-		return 0
-	}
+func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, level uint8, fightProp map[uint32]float32, configId, groupId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_MONSTER)
 	entity := &Entity{
 		id:                  entityId,
@@ -205,17 +236,13 @@ func (s *Scene) CreateEntityMonster(pos, rot *model.Vector, monsterId uint32, le
 			monsterId: monsterId,
 		},
 		configId: configId,
-		objectId: objectId,
+		groupId:  groupId,
 	}
-	s.CreateEntity(entity, objectId)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId, configId uint32, objectId uint64) uint32 {
-	_, exist := s.objectIdEntityMap[objectId]
-	if exist {
-		return 0
-	}
+func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQuestId, blockId, configId, groupId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_NPC)
 	entity := &Entity{
 		id:                  entityId,
@@ -239,17 +266,13 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 			BlockId:       blockId,
 		},
 		configId: configId,
-		objectId: objectId,
+		groupId:  groupId,
 	}
-	s.CreateEntity(entity, objectId)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32, configId uint32, objectId uint64) uint32 {
-	_, exist := s.objectIdEntityMap[objectId]
-	if exist {
-		return 0
-	}
+func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId, gadgetState, configId, groupId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
@@ -267,21 +290,18 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId uint32
 		},
 		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
-			gadgetId:   gadgetId,
-			gadgetType: GADGET_TYPE_NORMAL,
+			gadgetId:    gadgetId,
+			gadgetState: gadgetState,
+			gadgetType:  GADGET_TYPE_NORMAL,
 		},
 		configId: configId,
-		objectId: objectId,
+		groupId:  groupId,
 	}
-	s.CreateEntity(entity, objectId)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32, gatherId uint32, configId uint32, objectId uint64) uint32 {
-	_, exist := s.objectIdEntityMap[objectId]
-	if exist {
-		return 0
-	}
+func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId, gadgetState, gatherId, configId, groupId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
@@ -299,20 +319,21 @@ func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId uint32
 		},
 		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
-			gadgetId:   gadgetId,
-			gadgetType: GADGET_TYPE_GATHER,
+			gadgetId:    gadgetId,
+			gadgetState: gadgetState,
+			gadgetType:  GADGET_TYPE_GATHER,
 			gadgetGatherEntity: &GadgetGatherEntity{
 				gatherId: gatherId,
 			},
 		},
 		configId: configId,
-		objectId: objectId,
+		groupId:  groupId,
 	}
-	s.CreateEntity(entity, objectId)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32, configId, campId, campType, ownerEntityId, targetEntityId, propOwnerEntityId uint32) {
+func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId, configId, campId, campType, ownerEntityId, targetEntityId, propOwnerEntityId uint32) {
 	entity := &Entity{
 		id:                  entityId,
 		scene:               s,
@@ -340,15 +361,10 @@ func (s *Scene) CreateEntityGadgetClient(pos, rot *model.Vector, entityId uint32
 			},
 		},
 	}
-	s.CreateEntity(entity, 0)
+	s.CreateEntity(entity)
 }
 
-func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, vehicleId uint32) uint32 {
-	player := USER_MANAGER.GetOnlineUser(uid)
-	if player == nil {
-		logger.Error("player is nil, uid: %v", uid)
-		return 0
-	}
+func (s *Scene) CreateEntityGadgetVehicle(player *model.Player, pos, rot *model.Vector, vehicleId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
@@ -377,17 +393,14 @@ func (s *Scene) CreateEntityGadgetVehicle(uid uint32, pos, rot *model.Vector, ve
 			},
 		},
 	}
-	s.CreateEntity(entity, 0)
+	s.CreateEntity(entity)
 	return entity.id
 }
 
-func (s *Scene) CreateEntity(entity *Entity, objectId uint64) {
+func (s *Scene) CreateEntity(entity *Entity) {
 	if len(s.entityMap) >= ENTITY_MAX_SEND_NUM && !ENTITY_NUM_UNLIMIT {
 		logger.Error("above max scene entity num limit: %v, id: %v, pos: %v", ENTITY_MAX_SEND_NUM, entity.id, entity.pos)
 		return
-	}
-	if objectId != 0 {
-		s.objectIdEntityMap[objectId] = entity
 	}
 	s.entityMap[entity.id] = entity
 }
@@ -398,15 +411,145 @@ func (s *Scene) DestroyEntity(entityId uint32) {
 		return
 	}
 	delete(s.entityMap, entity.id)
-	delete(s.objectIdEntityMap, entity.objectId)
 }
 
 func (s *Scene) GetEntity(entityId uint32) *Entity {
 	return s.entityMap[entityId]
 }
 
-func (s *Scene) GetEntityByObjectId(objectId uint64) *Entity {
-	return s.objectIdEntityMap[objectId]
+func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
+	groupConfig := gdconf.GetSceneGroup(int32(groupId))
+	if groupConfig == nil {
+		return
+	}
+	suiteConfig := groupConfig.SuiteList[suiteId-1]
+	suite := &Suite{
+		entityMap: make(map[uint32]*Entity),
+	}
+	for _, monsterConfigId := range suiteConfig.MonsterConfigIdList {
+		monster, exist := groupConfig.MonsterMap[monsterConfigId]
+		if !exist {
+			continue
+		}
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), monster)
+		entity := s.GetEntity(entityId)
+		suite.entityMap[entityId] = entity
+	}
+	for _, gadgetConfigId := range suiteConfig.GadgetConfigIdList {
+		gadget, exist := groupConfig.GadgetMap[gadgetConfigId]
+		if !exist {
+			continue
+		}
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), gadget)
+		entity := s.GetEntity(entityId)
+		suite.entityMap[entityId] = entity
+	}
+	for _, npc := range groupConfig.NpcMap {
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), npc)
+		entity := s.GetEntity(entityId)
+		suite.entityMap[entityId] = entity
+	}
+	group, exist := s.groupMap[groupId]
+	if !exist {
+		group = &Group{
+			suiteMap: make(map[uint8]*Suite),
+		}
+	}
+	group.suiteMap[suiteId] = suite
+}
+
+func (s *Scene) RemoveGroupSuite(groupId uint32, suiteId uint8) {
+	group := s.groupMap[groupId]
+	if group == nil {
+		return
+	}
+	suite := group.suiteMap[suiteId]
+	if suite == nil {
+		return
+	}
+	for _, entity := range suite.entityMap {
+		s.DestroyEntity(entity.id)
+	}
+	delete(group.suiteMap, suiteId)
+}
+
+// 创建配置表里的实体
+func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
+	switch entityConfig.(type) {
+	case *gdconf.Monster:
+		monster := entityConfig.(*gdconf.Monster)
+		return s.CreateEntityMonster(&model.Vector{
+			X: float64(monster.Pos.X),
+			Y: float64(monster.Pos.Y),
+			Z: float64(monster.Pos.Z),
+		}, &model.Vector{
+			X: float64(monster.Rot.X),
+			Y: float64(monster.Rot.Y),
+			Z: float64(monster.Rot.Z),
+		}, uint32(monster.MonsterId), uint8(monster.Level), getTempFightPropMap(), uint32(monster.ConfigId), groupId)
+	case *gdconf.Npc:
+		npc := entityConfig.(*gdconf.Npc)
+		return s.CreateEntityNpc(&model.Vector{
+			X: float64(npc.Pos.X),
+			Y: float64(npc.Pos.Y),
+			Z: float64(npc.Pos.Z),
+		}, &model.Vector{
+			X: float64(npc.Rot.X),
+			Y: float64(npc.Rot.Y),
+			Z: float64(npc.Rot.Z),
+		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), groupId)
+	case *gdconf.Gadget:
+		gadget := entityConfig.(*gdconf.Gadget)
+		// 70500000并不是实际的装置id 根据节点类型对应采集物配置表
+		if gadget.PointType != 0 && gadget.GadgetId == 70500000 {
+			gatherDataConfig := gdconf.GetGatherDataByPointType(gadget.PointType)
+			if gatherDataConfig == nil {
+				return 0
+			}
+			return s.CreateEntityGadgetGather(&model.Vector{
+				X: float64(gadget.Pos.X),
+				Y: float64(gadget.Pos.Y),
+				Z: float64(gadget.Pos.Z),
+			}, &model.Vector{
+				X: float64(gadget.Rot.X),
+				Y: float64(gadget.Rot.Y),
+				Z: float64(gadget.Rot.Z),
+			}, uint32(gatherDataConfig.GadgetId), uint32(constant.GADGET_STATE_DEFAULT), uint32(gatherDataConfig.GatherId), uint32(gadget.ConfigId), groupId)
+		} else {
+			return s.CreateEntityGadgetNormal(&model.Vector{
+				X: float64(gadget.Pos.X),
+				Y: float64(gadget.Pos.Y),
+				Z: float64(gadget.Pos.Z),
+			}, &model.Vector{
+				X: float64(gadget.Rot.X),
+				Y: float64(gadget.Rot.Y),
+				Z: float64(gadget.Rot.Z),
+			}, uint32(gadget.GadgetId), uint32(gadget.State), uint32(gadget.ConfigId), groupId)
+		}
+	default:
+		return 0
+	}
+}
+
+func getTempFightPropMap() map[uint32]float32 {
+	fpm := map[uint32]float32{
+		constant.FIGHT_PROP_CUR_HP:            float32(72.91699),
+		constant.FIGHT_PROP_PHYSICAL_SUB_HURT: float32(0.1),
+		constant.FIGHT_PROP_CUR_DEFENSE:       float32(505.0),
+		constant.FIGHT_PROP_CUR_ATTACK:        float32(45.679916),
+		constant.FIGHT_PROP_ICE_SUB_HURT:      float32(0.1),
+		constant.FIGHT_PROP_BASE_ATTACK:       float32(45.679916),
+		constant.FIGHT_PROP_MAX_HP:            float32(72.91699),
+		constant.FIGHT_PROP_FIRE_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_ELEC_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_WIND_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_ROCK_SUB_HURT:     float32(0.1),
+		constant.FIGHT_PROP_GRASS_SUB_HURT:    float32(0.1),
+		constant.FIGHT_PROP_WATER_SUB_HURT:    float32(0.1),
+		constant.FIGHT_PROP_BASE_HP:           float32(72.91699),
+		constant.FIGHT_PROP_BASE_DEFENSE:      float32(505.0),
+	}
+	return fpm
 }
 
 // Entity 场景实体数据结构
@@ -426,8 +569,8 @@ type Entity struct {
 	monsterEntity       *MonsterEntity
 	npcEntity           *NpcEntity
 	gadgetEntity        *GadgetEntity
-	configId            uint32 // 配置表相关
-	objectId            uint64
+	configId            uint32 // LUA配置相关
+	groupId             uint32
 }
 
 func (e *Entity) GetId() uint32 {
@@ -502,6 +645,10 @@ func (e *Entity) GetConfigId() uint32 {
 	return e.configId
 }
 
+func (e *Entity) GetGroupId() uint32 {
+	return e.groupId
+}
+
 type AvatarEntity struct {
 	uid      uint32
 	avatarId uint32
@@ -533,6 +680,7 @@ type NpcEntity struct {
 type GadgetEntity struct {
 	gadgetType          int
 	gadgetId            uint32
+	gadgetState         uint32
 	gadgetClientEntity  *GadgetClientEntity
 	gadgetGatherEntity  *GadgetGatherEntity
 	gadgetVehicleEntity *GadgetVehicleEntity
@@ -544,6 +692,10 @@ func (g *GadgetEntity) GetGadgetType() int {
 
 func (g *GadgetEntity) GetGadgetId() uint32 {
 	return g.gadgetId
+}
+
+func (g *GadgetEntity) GetGadgetState() uint32 {
+	return g.gadgetState
 }
 
 func (g *GadgetEntity) GetGadgetClientEntity() *GadgetClientEntity {

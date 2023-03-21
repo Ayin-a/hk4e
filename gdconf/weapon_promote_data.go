@@ -24,9 +24,8 @@ type WeaponPromoteData struct {
 func (g *GameDataConfig) loadWeaponPromoteData() {
 	g.WeaponPromoteDataMap = make(map[int32]map[int32]*WeaponPromoteData)
 	weaponPromoteDataList := make([]*WeaponPromoteData, 0)
-	readTable[WeaponPromoteData](g.tablePrefix+"WeaponPromoteData.txt", &weaponPromoteDataList)
+	readTable[WeaponPromoteData](g.txtPrefix+"WeaponPromoteData.txt", &weaponPromoteDataList)
 	for _, weaponPromoteData := range weaponPromoteDataList {
-		// list -> map
 		_, ok := g.WeaponPromoteDataMap[weaponPromoteData.PromoteId]
 		if !ok {
 			g.WeaponPromoteDataMap[weaponPromoteData.PromoteId] = make(map[int32]*WeaponPromoteData)

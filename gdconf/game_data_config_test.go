@@ -25,7 +25,7 @@ func TestInitGameDataConfig(t *testing.T) {
 	logger.Info("start load conf")
 	InitGameDataConfig()
 	logger.Info("load conf finish")
-	time.Sleep(time.Second)
+	time.Sleep(time.Minute)
 }
 
 func CheckJsonLoop(path string, errorJsonFileList *[]string, totalJsonFileCount *int) {

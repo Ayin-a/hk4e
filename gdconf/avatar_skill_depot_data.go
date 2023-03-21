@@ -43,7 +43,7 @@ type InherentProudSkillOpens struct {
 func (g *GameDataConfig) loadAvatarSkillDepotData() {
 	g.AvatarSkillDepotDataMap = make(map[int32]*AvatarSkillDepotData)
 	avatarSkillDepotDataList := make([]*AvatarSkillDepotData, 0)
-	readTable[AvatarSkillDepotData](g.tablePrefix+"AvatarSkillDepotData.txt", &avatarSkillDepotDataList)
+	readTable[AvatarSkillDepotData](g.txtPrefix+"AvatarSkillDepotData.txt", &avatarSkillDepotDataList)
 	playerElementsFilePath := g.jsonPrefix + "ability_group/AbilityGroup_Other_PlayerElementAbility.json"
 	playerElementsFile, err := os.ReadFile(playerElementsFilePath)
 	if err != nil {
@@ -113,7 +113,6 @@ func (g *GameDataConfig) loadAvatarSkillDepotData() {
 				}
 			}
 		}
-		// list -> map
 		g.AvatarSkillDepotDataMap[avatarSkillDepotData.AvatarSkillDepotId] = avatarSkillDepotData
 	}
 	logger.Info("AvatarSkillDepotData count: %v", len(g.AvatarSkillDepotDataMap))

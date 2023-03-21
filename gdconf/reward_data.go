@@ -32,9 +32,8 @@ type RewardData struct {
 func (g *GameDataConfig) loadRewardData() {
 	g.RewardDataMap = make(map[int32]*RewardData)
 	rewardDataList := make([]*RewardData, 0)
-	readTable[RewardData](g.tablePrefix+"RewardData.txt", &rewardDataList)
+	readTable[RewardData](g.txtPrefix+"RewardData.txt", &rewardDataList)
 	for _, rewardData := range rewardDataList {
-		// list -> map
 		// 奖励物品整合
 		rewardData.RewardItemMap = map[uint32]uint32{
 			uint32(rewardData.RewardItem1ID): uint32(rewardData.RewardItem1Count),

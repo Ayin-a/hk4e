@@ -13,9 +13,8 @@ type SceneData struct {
 func (g *GameDataConfig) loadSceneData() {
 	g.SceneDataMap = make(map[int32]*SceneData)
 	sceneDataList := make([]*SceneData, 0)
-	readTable[SceneData](g.tablePrefix+"SceneData.txt", &sceneDataList)
+	readTable[SceneData](g.txtPrefix+"SceneData.txt", &sceneDataList)
 	for _, sceneData := range sceneDataList {
-		// list -> map
 		g.SceneDataMap[sceneData.SceneId] = sceneData
 	}
 	logger.Info("SceneData count: %v", len(g.SceneDataMap))

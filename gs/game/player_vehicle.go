@@ -59,7 +59,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 	// 创建载具实体
 	pos := &model.Vector{X: float64(req.Pos.X), Y: float64(req.Pos.Y), Z: float64(req.Pos.Z)}
 	rot := &model.Vector{X: float64(req.Rot.X), Y: float64(req.Rot.Y), Z: float64(req.Rot.Z)}
-	entityId := scene.CreateEntityGadgetVehicle(player.PlayerID, pos, rot, req.VehicleId)
+	entityId := scene.CreateEntityGadgetVehicle(player, pos, rot, req.VehicleId)
 	if entityId == 0 {
 		logger.Error("vehicle entityId is 0, uid: %v", player.PlayerID)
 		g.SendError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})

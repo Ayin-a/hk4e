@@ -43,7 +43,7 @@ type ConfigAvatarAbility struct {
 func (g *GameDataConfig) loadAvatarData() {
 	g.AvatarDataMap = make(map[int32]*AvatarData)
 	avatarDataList := make([]*AvatarData, 0)
-	readTable[AvatarData](g.tablePrefix+"AvatarData.txt", &avatarDataList)
+	readTable[AvatarData](g.txtPrefix+"AvatarData.txt", &avatarDataList)
 	for _, avatarData := range avatarDataList {
 		// 读取战斗config解析技能并转化为哈希码
 		fileData, err := os.ReadFile(g.jsonPrefix + "avatar/" + avatarData.ConfigJson + ".json")
@@ -72,7 +72,6 @@ func (g *GameDataConfig) loadAvatarData() {
 				avatarData.PromoteRewardMap[uint32(promoteLevel)] = uint32(rewardId)
 			}
 		}
-		// list -> map
 		g.AvatarDataMap[avatarData.AvatarId] = avatarData
 	}
 	logger.Info("AvatarData count: %v", len(g.AvatarDataMap))

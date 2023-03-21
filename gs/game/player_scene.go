@@ -242,6 +242,21 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	player.SceneLoadState = model.SceneInitFinish
 }
 
+func (g *GameManager) AddSceneGroup(scene *Scene, groupConfig *gdconf.Group) {
+	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
+	if initSuiteId > len(groupConfig.SuiteList) {
+		return
+	}
+	scene.AddGroupSuite(uint32(groupConfig.Id), uint8(initSuiteId))
+}
+
+func (g *GameManager) RemoveGroup(scene *Scene, groupConfig *gdconf.Group) {
+	group := scene.GetGroupById(uint32(groupConfig.Id))
+	for suiteId := range group.GetAllSuite() {
+		scene.RemoveGroupSuite(uint32(groupConfig.Id), suiteId)
+	}
+}
+
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("player enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -275,22 +290,15 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 		objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
 		for _, groupAny := range objectList {
 			group := groupAny.(*gdconf.Group)
-			distance2D := math.Sqrt(math.Pow(player.Pos.X-float64(group.Pos.X), 2.0) + math.Pow(player.Pos.Z-float64(group.Pos.Z), 2.0))
+			distance2D := math.Sqrt((player.Pos.X-float64(group.Pos.X))*(player.Pos.X-float64(group.Pos.X)) +
+				(player.Pos.Z-float64(group.Pos.Z))*(player.Pos.Z-float64(group.Pos.Z)))
 			if distance2D > ENTITY_LOD {
 				continue
 			}
 			if group.DynamicLoad {
 				continue
 			}
-			for _, monster := range group.MonsterList {
-				g.CreateConfigEntity(scene, monster.ObjectId, monster)
-			}
-			for _, npc := range group.NpcList {
-				g.CreateConfigEntity(scene, npc.ObjectId, npc)
-			}
-			for _, gadget := range group.GadgetList {
-				g.CreateConfigEntity(scene, gadget.ObjectId, gadget)
-			}
+			g.AddSceneGroup(scene, group)
 		}
 	}
 	if player.SceneJump {
@@ -383,64 +391,6 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 		EntityId: req.EntityId,
 	}
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
-}
-
-// CreateConfigEntity 创建配置表里的实体
-func (g *GameManager) CreateConfigEntity(scene *Scene, objectId uint64, entityConfig any) uint32 {
-	switch entityConfig.(type) {
-	case *gdconf.Monster:
-		monster := entityConfig.(*gdconf.Monster)
-		return scene.CreateEntityMonster(&model.Vector{
-			X: float64(monster.Pos.X),
-			Y: float64(monster.Pos.Y),
-			Z: float64(monster.Pos.Z),
-		}, &model.Vector{
-			X: float64(monster.Rot.X),
-			Y: float64(monster.Rot.Y),
-			Z: float64(monster.Rot.Z),
-		}, uint32(monster.MonsterId), uint8(monster.Level), g.GetTempFightPropMap(), uint32(monster.ConfigId), objectId)
-	case *gdconf.Npc:
-		npc := entityConfig.(*gdconf.Npc)
-		return scene.CreateEntityNpc(&model.Vector{
-			X: float64(npc.Pos.X),
-			Y: float64(npc.Pos.Y),
-			Z: float64(npc.Pos.Z),
-		}, &model.Vector{
-			X: float64(npc.Rot.X),
-			Y: float64(npc.Rot.Y),
-			Z: float64(npc.Rot.Z),
-		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), objectId)
-	case *gdconf.Gadget:
-		gadget := entityConfig.(*gdconf.Gadget)
-		// 70500000并不是实际的装置id 根据节点类型对应采集物配置表
-		if gadget.PointType != 0 && gadget.GadgetId == 70500000 {
-			gatherDataConfig := gdconf.GetGatherDataByPointType(gadget.PointType)
-			if gatherDataConfig == nil {
-				return 0
-			}
-			return scene.CreateEntityGadgetGather(&model.Vector{
-				X: float64(gadget.Pos.X),
-				Y: float64(gadget.Pos.Y),
-				Z: float64(gadget.Pos.Z),
-			}, &model.Vector{
-				X: float64(gadget.Rot.X),
-				Y: float64(gadget.Rot.Y),
-				Z: float64(gadget.Rot.Z),
-			}, uint32(gatherDataConfig.GadgetId), uint32(gatherDataConfig.GatherId), uint32(gadget.ConfigId), objectId)
-		} else {
-			return scene.CreateEntityGadgetNormal(&model.Vector{
-				X: float64(gadget.Pos.X),
-				Y: float64(gadget.Pos.Y),
-				Z: float64(gadget.Pos.Z),
-			}, &model.Vector{
-				X: float64(gadget.Rot.X),
-				Y: float64(gadget.Rot.Y),
-				Z: float64(gadget.Rot.Z),
-			}, uint32(gadget.GadgetId), uint32(gadget.ConfigId), objectId)
-		}
-	default:
-		return 0
-	}
 }
 
 func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
@@ -550,8 +500,8 @@ func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene 
 			continue
 		}
 		g.SendMsg(cmd.SceneEntityAppearNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, sceneEntityAppearNotify)
-		// logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
-		// 	scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
+		logger.Debug("SceneEntityAppearNotify, uid: %v, type: %v, len: %v",
+			scenePlayer.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 	}
 }
 
@@ -561,8 +511,8 @@ func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visi
 		DisappearType: visionType,
 	}
 	g.SendMsg(cmd.SceneEntityDisappearNotify, player.PlayerID, player.ClientSeq, sceneEntityDisappearNotify)
-	// logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
-	// 	player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
+	logger.Debug("SceneEntityDisappearNotify, uid: %v, type: %v, len: %v",
+		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
 func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
@@ -995,9 +945,9 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGa
 	gadgetEntity := entity.GetGadgetEntity()
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId:         gadgetEntity.GetGadgetId(),
-		GroupId:          0,
+		GroupId:          entity.GetGroupId(),
 		ConfigId:         entity.GetConfigId(),
-		GadgetState:      0,
+		GadgetState:      gadgetEntity.GetGadgetState(),
 		IsEnableInteract: true,
 		AuthorityPeerId:  1,
 	}
@@ -1014,9 +964,9 @@ func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGa
 	}
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId:         gadgetEntity.GetGadgetId(),
-		GroupId:          0,
+		GroupId:          entity.GetGroupId(),
 		ConfigId:         entity.GetConfigId(),
-		GadgetState:      0,
+		GadgetState:      gadgetEntity.GetGadgetState(),
 		IsEnableInteract: true,
 		AuthorityPeerId:  1,
 		Content: &proto.SceneGadgetInfo_GatherGadget{
@@ -1070,25 +1020,4 @@ func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Play
 		DelEntityIdList: []uint32{scene.GetWorld().GetPlayerTeamEntityId(player)},
 	}
 	return delTeamEntityNotify
-}
-
-func (g *GameManager) GetTempFightPropMap() map[uint32]float32 {
-	fpm := map[uint32]float32{
-		constant.FIGHT_PROP_CUR_HP:            float32(72.91699),
-		constant.FIGHT_PROP_PHYSICAL_SUB_HURT: float32(0.1),
-		constant.FIGHT_PROP_CUR_DEFENSE:       float32(505.0),
-		constant.FIGHT_PROP_CUR_ATTACK:        float32(45.679916),
-		constant.FIGHT_PROP_ICE_SUB_HURT:      float32(0.1),
-		constant.FIGHT_PROP_BASE_ATTACK:       float32(45.679916),
-		constant.FIGHT_PROP_MAX_HP:            float32(72.91699),
-		constant.FIGHT_PROP_FIRE_SUB_HURT:     float32(0.1),
-		constant.FIGHT_PROP_ELEC_SUB_HURT:     float32(0.1),
-		constant.FIGHT_PROP_WIND_SUB_HURT:     float32(0.1),
-		constant.FIGHT_PROP_ROCK_SUB_HURT:     float32(0.1),
-		constant.FIGHT_PROP_GRASS_SUB_HURT:    float32(0.1),
-		constant.FIGHT_PROP_WATER_SUB_HURT:    float32(0.1),
-		constant.FIGHT_PROP_BASE_HP:           float32(72.91699),
-		constant.FIGHT_PROP_BASE_DEFENSE:      float32(505.0),
-	}
-	return fpm
 }

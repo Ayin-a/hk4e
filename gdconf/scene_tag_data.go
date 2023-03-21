@@ -13,9 +13,8 @@ type SceneTagData struct {
 func (g *GameDataConfig) loadSceneTagData() {
 	g.SceneTagDataMap = make(map[int32]*SceneTagData)
 	sceneTagDataList := make([]*SceneTagData, 0)
-	readTable[SceneTagData](g.tablePrefix+"SceneTagData.txt", &sceneTagDataList)
+	readTable[SceneTagData](g.txtPrefix+"SceneTagData.txt", &sceneTagDataList)
 	for _, sceneTagData := range sceneTagDataList {
-		// list -> map
 		g.SceneTagDataMap[sceneTagData.SceneTagId] = sceneTagData
 	}
 	logger.Info("SceneTagData count: %v", len(g.SceneTagDataMap))

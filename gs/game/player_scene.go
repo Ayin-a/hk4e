@@ -10,7 +10,6 @@ import (
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
-	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -23,24 +22,59 @@ const (
 )
 
 func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EnterSceneReadyReq)
 	logger.Debug("player enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+
+	enterSceneContext := world.GetEnterSceneContextByToken(req.EnterSceneToken)
+	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[enterSceneContext.OldSceneId]
+	if !exist {
+		logger.Error("player scene not exist in aoi, sceneId: %v, uid: %v", enterSceneContext.OldSceneId, player.PlayerID)
+		return
+	}
+	objectList := aoiManager.GetObjectListByPos(float32(enterSceneContext.OldPos.X), 0.0, float32(enterSceneContext.OldPos.Z))
+	delEntityIdList := make([]uint32, 0)
+	oldScene := world.GetSceneById(enterSceneContext.OldSceneId)
+	for _, groupAny := range objectList {
+		groupConfig := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt((player.Pos.X-float64(groupConfig.Pos.X))*(player.Pos.X-float64(groupConfig.Pos.X)) +
+			(player.Pos.Z-float64(groupConfig.Pos.Z))*(player.Pos.Z-float64(groupConfig.Pos.Z)))
+		if distance2D > ENTITY_LOD {
+			continue
+		}
+		if groupConfig.DynamicLoad {
+			continue
+		}
+		group := oldScene.GetGroupById(uint32(groupConfig.Id))
+		if group == nil {
+			continue
+		}
+		for _, entity := range group.GetAllEntity() {
+			delEntityIdList = append(delEntityIdList, entity.GetId())
+		}
+		if !world.GetMultiplayer() {
+			// 处理多人世界不同玩家不同位置的group卸载情况
+			g.RemoveGroup(oldScene, groupConfig)
+		}
+	}
+	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
 
 	enterScenePeerNotify := &proto.EnterScenePeerNotify{
 		DestSceneId:     player.SceneId,
 		PeerId:          world.GetPlayerPeerId(player),
 		HostPeerId:      world.GetPlayerPeerId(world.GetOwner()),
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: req.EnterSceneToken,
 	}
 	g.SendMsg(cmd.EnterScenePeerNotify, player.PlayerID, player.ClientSeq, enterScenePeerNotify)
 
 	enterSceneReadyRsp := &proto.EnterSceneReadyRsp{
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: req.EnterSceneToken,
 	}
 	g.SendMsg(cmd.EnterSceneReadyRsp, player.PlayerID, player.ClientSeq, enterSceneReadyRsp)
 }
 
 func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.SceneInitFinishReq)
 	logger.Debug("player scene init finish, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -136,7 +170,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 		activeAvatarId := world.GetPlayerActiveAvatarId(player)
 		playerEnterSceneInfoNotify := &proto.PlayerEnterSceneInfoNotify{
 			CurAvatarEntityId: world.GetPlayerWorldAvatarEntityId(player, activeAvatarId),
-			EnterSceneToken:   player.EnterSceneToken,
+			EnterSceneToken:   req.EnterSceneToken,
 			TeamEnterInfo: &proto.TeamEnterSceneInfo{
 				TeamEntityId:        world.GetPlayerTeamEntityId(player),
 				TeamAbilityInfo:     empty,
@@ -235,30 +269,15 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.DungeonDataNotify, player.PlayerID, player.ClientSeq, &proto.DungeonDataNotify{})
 
 	SceneInitFinishRsp := &proto.SceneInitFinishRsp{
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: req.EnterSceneToken,
 	}
 	g.SendMsg(cmd.SceneInitFinishRsp, player.PlayerID, player.ClientSeq, SceneInitFinishRsp)
 
 	player.SceneLoadState = model.SceneInitFinish
 }
 
-func (g *GameManager) AddSceneGroup(scene *Scene, groupConfig *gdconf.Group) {
-	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
-	if initSuiteId > len(groupConfig.SuiteList) {
-		logger.Error("invalid init suite id: %v", initSuiteId)
-		return
-	}
-	scene.AddGroupSuite(uint32(groupConfig.Id), uint8(initSuiteId))
-}
-
-func (g *GameManager) RemoveGroup(scene *Scene, groupConfig *gdconf.Group) {
-	group := scene.GetGroupById(uint32(groupConfig.Id))
-	for suiteId := range group.GetAllSuite() {
-		scene.RemoveGroupSuite(uint32(groupConfig.Id), suiteId)
-	}
-}
-
 func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EnterSceneDoneReq)
 	logger.Debug("player enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -288,39 +307,35 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 
 	// 加载附近的group
 	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[scene.GetId()]
-	addEntityIdList := make([]uint32, 0)
-	if exist {
-		objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
-		for _, groupAny := range objectList {
-			groupConfig := groupAny.(*gdconf.Group)
-			distance2D := math.Sqrt((player.Pos.X-float64(groupConfig.Pos.X))*(player.Pos.X-float64(groupConfig.Pos.X)) +
-				(player.Pos.Z-float64(groupConfig.Pos.Z))*(player.Pos.Z-float64(groupConfig.Pos.Z)))
-			if distance2D > ENTITY_LOD {
-				continue
-			}
-			if groupConfig.DynamicLoad {
-				continue
-			}
-			g.AddSceneGroup(scene, groupConfig)
-			group := scene.GetGroupById(uint32(groupConfig.Id))
-			for _, entity := range group.GetAllEntity() {
-				addEntityIdList = append(addEntityIdList, entity.GetId())
-			}
-		}
+	if !exist {
+		logger.Error("player scene not exist in aoi, sceneId: %v, uid: %v", scene.GetId(), player.PlayerID)
+		return
 	}
-	entityIdList := make([]uint32, 0)
+	objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
+	for _, groupAny := range objectList {
+		groupConfig := groupAny.(*gdconf.Group)
+		distance2D := math.Sqrt((player.Pos.X-float64(groupConfig.Pos.X))*(player.Pos.X-float64(groupConfig.Pos.X)) +
+			(player.Pos.Z-float64(groupConfig.Pos.Z))*(player.Pos.Z-float64(groupConfig.Pos.Z)))
+		if distance2D > ENTITY_LOD {
+			continue
+		}
+		if groupConfig.DynamicLoad {
+			continue
+		}
+		g.AddSceneGroup(scene, groupConfig)
+	}
 	if player.SceneJump {
 		visionType = proto.VisionType_VISION_MEET
-		entityMap := scene.GetAllEntity()
-		for _, entity := range entityMap {
-			if entity.GetId() == activeAvatarEntityId {
-				continue
-			}
-			entityIdList = append(entityIdList, entity.GetId())
-		}
 	} else {
 		visionType = proto.VisionType_VISION_TRANSPORT
-		entityIdList = addEntityIdList
+	}
+	entityIdList := make([]uint32, 0)
+	entityMap := scene.GetAllEntity()
+	for _, entity := range entityMap {
+		if entity.GetId() == activeAvatarEntityId {
+			continue
+		}
+		entityIdList = append(entityIdList, entity.GetId())
 	}
 	g.AddSceneEntityNotify(player, visionType, entityIdList, false, false)
 
@@ -331,7 +346,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.SceneAreaWeatherNotify, player.PlayerID, player.ClientSeq, sceneAreaWeatherNotify)
 
 	enterSceneDoneRsp := &proto.EnterSceneDoneRsp{
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: req.EnterSceneToken,
 	}
 	g.SendMsg(cmd.EnterSceneDoneRsp, player.PlayerID, player.ClientSeq, enterSceneDoneRsp)
 
@@ -351,10 +366,11 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 }
 
 func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.PostEnterSceneReq)
 	logger.Debug("player post enter scene, uid: %v", player.PlayerID)
 
 	postEnterSceneRsp := &proto.PostEnterSceneRsp{
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: req.EnterSceneToken,
 	}
 	g.SendMsg(cmd.PostEnterSceneRsp, player.PlayerID, player.ClientSeq, postEnterSceneRsp)
 }
@@ -384,7 +400,6 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.ChangeGameTimeRsp, player.PlayerID, player.ClientSeq, changeGameTimeRsp)
 }
 
-// SceneEntityDrownReq 实体溺水请求
 func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneEntityDrownReq)
 
@@ -401,6 +416,18 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
 }
 
+func (g *GameManager) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.NpcTalkReq)
+	rsp := &proto.NpcTalkRsp{
+		CurTalkId:   req.TalkId,
+		NpcEntityId: req.NpcEntityId,
+		EntityId:    req.EntityId,
+	}
+	g.SendMsg(cmd.EnterSceneReadyRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
+var SceneTransactionSeq uint32 = 0
+
 func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -408,24 +435,24 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 		logger.Error("scene is nil, sceneId: %v", player.SceneId)
 		return new(proto.PlayerEnterSceneNotify)
 	}
-	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		SceneId:                player.SceneId,
 		Pos:                    &proto.Vector{X: float32(player.Pos.X), Y: float32(player.Pos.Y), Z: float32(player.Pos.Z)},
 		SceneBeginTime:         uint64(scene.GetSceneCreateTime()),
 		Type:                   enterType,
 		TargetUid:              player.PlayerID,
-		EnterSceneToken:        player.EnterSceneToken,
+		EnterSceneToken:        world.enterSceneToken,
 		WorldLevel:             player.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL],
 		EnterReason:            uint32(proto.EnterReason_ENTER_REASON_LOGIN),
 		IsFirstLoginEnterScene: true,
 		WorldType:              1,
 		SceneTagIdList:         make([]uint32, 0),
 	}
+	SceneTransactionSeq++
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +
 		strconv.Itoa(int(player.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
-		"296359"
+		strconv.Itoa(int(SceneTransactionSeq))
 	for _, sceneTagDataConfig := range gdconf.GetSceneTagDataMap() {
 		if uint32(sceneTagDataConfig.SceneId) == player.SceneId {
 			playerEnterSceneNotify.SceneTagIdList = append(playerEnterSceneNotify.SceneTagIdList, uint32(sceneTagDataConfig.SceneTagId))
@@ -460,7 +487,14 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 		logger.Error("scene is nil, sceneId: %v", player.SceneId)
 		return new(proto.PlayerEnterSceneNotify)
 	}
-	player.EnterSceneToken = uint32(random.GetRandomInt32(5000, 50000))
+	enterSceneToken := world.AddEnterSceneContext(&EnterSceneContext{
+		OldSceneId: prevSceneId,
+		OldPos: &model.Vector{
+			X: prevPos.X,
+			Y: prevPos.Y,
+			Z: prevPos.Z,
+		},
+	})
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		PrevSceneId:     prevSceneId,
 		PrevPos:         &proto.Vector{X: float32(prevPos.X), Y: float32(prevPos.Y), Z: float32(prevPos.Z)},
@@ -469,23 +503,44 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 		SceneBeginTime:  uint64(scene.GetSceneCreateTime()),
 		Type:            enterType,
 		TargetUid:       targetPlayer.PlayerID,
-		EnterSceneToken: player.EnterSceneToken,
+		EnterSceneToken: enterSceneToken,
 		WorldLevel:      targetPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_WORLD_LEVEL],
 		EnterReason:     enterReason,
 		WorldType:       1,
 		DungeonId:       dungeonId,
 		SceneTagIdList:  make([]uint32, 0),
 	}
+	SceneTransactionSeq++
 	playerEnterSceneNotify.SceneTransaction = strconv.Itoa(int(player.SceneId)) + "-" +
 		strconv.Itoa(int(targetPlayer.PlayerID)) + "-" +
 		strconv.Itoa(int(time.Now().Unix())) + "-" +
-		"296359"
+		strconv.Itoa(int(SceneTransactionSeq))
 	for _, sceneTagDataConfig := range gdconf.GetSceneTagDataMap() {
 		if uint32(sceneTagDataConfig.SceneId) == player.SceneId {
 			playerEnterSceneNotify.SceneTagIdList = append(playerEnterSceneNotify.SceneTagIdList, uint32(sceneTagDataConfig.SceneTagId))
 		}
 	}
 	return playerEnterSceneNotify
+}
+
+func (g *GameManager) AddSceneGroup(scene *Scene, groupConfig *gdconf.Group) {
+	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
+	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
+		logger.Error("invalid init suite id: %v", initSuiteId)
+		return
+	}
+	scene.AddGroupSuite(uint32(groupConfig.Id), uint8(initSuiteId))
+}
+
+func (g *GameManager) RemoveGroup(scene *Scene, groupConfig *gdconf.Group) {
+	group := scene.GetGroupById(uint32(groupConfig.Id))
+	if group == nil {
+		logger.Error("group not exist, groupId: %v", groupConfig.Id)
+		return
+	}
+	for suiteId := range group.GetAllSuite() {
+		scene.RemoveGroupSuite(uint32(groupConfig.Id), suiteId)
+	}
 }
 
 func (g *GameManager) AddSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityList []*proto.SceneEntityInfo) {

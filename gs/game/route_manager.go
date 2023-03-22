@@ -140,6 +140,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.SetEquipLockStateReq, GAME_MANAGER.SetEquipLockStateReq)
 	r.registerRouter(cmd.TakeoffEquipReq, GAME_MANAGER.TakeoffEquipReq)
 	r.registerRouter(cmd.AddQuestContentProgressReq, GAME_MANAGER.AddQuestContentProgressReq)
+	r.registerRouter(cmd.NpcTalkReq, GAME_MANAGER.NpcTalkReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

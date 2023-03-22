@@ -116,6 +116,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(DungeonDataNotify, func() any { return new(proto.DungeonDataNotify) })                           // 地牢副本相关
 	c.regMsg(SceneAudioNotify, func() any { return new(proto.SceneAudioNotify) })                             // 场景风物之琴音乐同步通知
 	c.regMsg(BeginCameraSceneLookNotify, func() any { return new(proto.BeginCameraSceneLookNotify) })         // 场景镜头注目通知
+	c.regMsg(NpcTalkReq, func() any { return new(proto.NpcTalkReq) })                                         // NPC对话请求
+	c.regMsg(NpcTalkRsp, func() any { return new(proto.NpcTalkRsp) })                                         // NPC对话响应
 
 	// 战斗与同步
 	c.regMsg(AvatarFightPropNotify, func() any { return new(proto.AvatarFightPropNotify) })                         // 角色战斗属性通知
@@ -222,24 +224,25 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(DoGachaRsp, func() any { return new(proto.DoGachaRsp) })           // 抽卡响应
 
 	// 角色
-	c.regMsg(AvatarDataNotify, func() any { return new(proto.AvatarDataNotify) })                       // 角色信息通知
-	c.regMsg(AvatarAddNotify, func() any { return new(proto.AvatarAddNotify) })                         // 角色新增通知
-	c.regMsg(AvatarLifeStateChangeNotify, func() any { return new(proto.AvatarLifeStateChangeNotify) }) // 角色存活状态改变通知
-	c.regMsg(AvatarUpgradeReq, func() any { return new(proto.AvatarUpgradeReq) })                       // 角色升级请求
-	c.regMsg(AvatarUpgradeRsp, func() any { return new(proto.AvatarUpgradeRsp) })                       // 角色升级通知
-	c.regMsg(AvatarPropNotify, func() any { return new(proto.AvatarPropNotify) })                       // 角色属性表更新通知
-	c.regMsg(AvatarPromoteReq, func() any { return new(proto.AvatarPromoteReq) })                       // 角色突破请求
-	c.regMsg(AvatarPromoteRsp, func() any { return new(proto.AvatarPromoteRsp) })                       // 角色突破响应
-	c.regMsg(AvatarPromoteGetRewardReq, func() any { return new(proto.AvatarPromoteGetRewardReq) })     // 角色突破获取奖励请求
-	c.regMsg(AvatarPromoteGetRewardRsp, func() any { return new(proto.AvatarPromoteGetRewardRsp) })     // 角色突破获取奖励响应
-	c.regMsg(AvatarChangeCostumeReq, func() any { return new(proto.AvatarChangeCostumeReq) })           // 角色换装请求
-	c.regMsg(AvatarChangeCostumeRsp, func() any { return new(proto.AvatarChangeCostumeRsp) })           // 角色换装响应
-	c.regMsg(AvatarChangeCostumeNotify, func() any { return new(proto.AvatarChangeCostumeNotify) })     // 角色换装通知
-	c.regMsg(AvatarGainCostumeNotify, func() any { return new(proto.AvatarGainCostumeNotify) })         // 角色获得时装通知
-	c.regMsg(AvatarWearFlycloakReq, func() any { return new(proto.AvatarWearFlycloakReq) })             // 角色换风之翼请求
-	c.regMsg(AvatarWearFlycloakRsp, func() any { return new(proto.AvatarWearFlycloakRsp) })             // 角色换风之翼响应
-	c.regMsg(AvatarFlycloakChangeNotify, func() any { return new(proto.AvatarFlycloakChangeNotify) })   // 角色换风之翼通知
-	c.regMsg(AvatarGainFlycloakNotify, func() any { return new(proto.AvatarGainFlycloakNotify) })       // 角色获得风之翼通知
+	c.regMsg(AvatarDataNotify, func() any { return new(proto.AvatarDataNotify) })                         // 角色信息通知
+	c.regMsg(AvatarAddNotify, func() any { return new(proto.AvatarAddNotify) })                           // 角色新增通知
+	c.regMsg(AvatarLifeStateChangeNotify, func() any { return new(proto.AvatarLifeStateChangeNotify) })   // 角色存活状态改变通知
+	c.regMsg(AvatarUpgradeReq, func() any { return new(proto.AvatarUpgradeReq) })                         // 角色升级请求
+	c.regMsg(AvatarUpgradeRsp, func() any { return new(proto.AvatarUpgradeRsp) })                         // 角色升级通知
+	c.regMsg(AvatarPropNotify, func() any { return new(proto.AvatarPropNotify) })                         // 角色属性表更新通知
+	c.regMsg(AvatarPromoteReq, func() any { return new(proto.AvatarPromoteReq) })                         // 角色突破请求
+	c.regMsg(AvatarPromoteRsp, func() any { return new(proto.AvatarPromoteRsp) })                         // 角色突破响应
+	c.regMsg(AvatarPromoteGetRewardReq, func() any { return new(proto.AvatarPromoteGetRewardReq) })       // 角色突破获取奖励请求
+	c.regMsg(AvatarPromoteGetRewardRsp, func() any { return new(proto.AvatarPromoteGetRewardRsp) })       // 角色突破获取奖励响应
+	c.regMsg(AvatarChangeCostumeReq, func() any { return new(proto.AvatarChangeCostumeReq) })             // 角色换装请求
+	c.regMsg(AvatarChangeCostumeRsp, func() any { return new(proto.AvatarChangeCostumeRsp) })             // 角色换装响应
+	c.regMsg(AvatarChangeCostumeNotify, func() any { return new(proto.AvatarChangeCostumeNotify) })       // 角色换装通知
+	c.regMsg(AvatarGainCostumeNotify, func() any { return new(proto.AvatarGainCostumeNotify) })           // 角色获得时装通知
+	c.regMsg(AvatarWearFlycloakReq, func() any { return new(proto.AvatarWearFlycloakReq) })               // 角色换风之翼请求
+	c.regMsg(AvatarWearFlycloakRsp, func() any { return new(proto.AvatarWearFlycloakRsp) })               // 角色换风之翼响应
+	c.regMsg(AvatarFlycloakChangeNotify, func() any { return new(proto.AvatarFlycloakChangeNotify) })     // 角色换风之翼通知
+	c.regMsg(AvatarGainFlycloakNotify, func() any { return new(proto.AvatarGainFlycloakNotify) })         // 角色获得风之翼通知
+	c.regMsg(AvatarSkillDepotChangeNotify, func() any { return new(proto.AvatarSkillDepotChangeNotify) }) // 角色技能库切换通知 主角切元素
 
 	// 背包与道具
 	c.regMsg(PlayerStoreNotify, func() any { return new(proto.PlayerStoreNotify) })           // 玩家背包数据通知

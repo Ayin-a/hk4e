@@ -327,7 +327,10 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		for _, entity := range group.GetAllEntity() {
 			delEntityIdList = append(delEntityIdList, entity.GetId())
 		}
-		g.RemoveGroup(scene, groupConfig)
+		if !world.GetMultiplayer() {
+			// 处理多人世界不同玩家不同位置的group卸载情况
+			g.RemoveGroup(scene, groupConfig)
+		}
 	}
 	// 出现的场景实体
 	addEntityIdList := make([]uint32, 0)
@@ -339,6 +342,9 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		// 新有旧没有的group即为出现的
 		g.AddSceneGroup(scene, groupConfig)
 		group := scene.GetGroupById(groupId)
+		if group == nil {
+			continue
+		}
 		for _, entity := range group.GetAllEntity() {
 			addEntityIdList = append(addEntityIdList, entity.GetId())
 		}

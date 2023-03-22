@@ -56,7 +56,6 @@ type Player struct {
 	DbWorld         *DbWorld           // 大世界
 	// 在线数据 请随意 记得加忽略字段的tag
 	LastSaveTime          uint32                                   `bson:"-" msgpack:"-"` // 上一次保存时间
-	EnterSceneToken       uint32                                   `bson:"-" msgpack:"-"` // 世界进入令牌
 	DbState               int                                      `bson:"-" msgpack:"-"` // 数据库存档状态
 	WorldId               uint32                                   `bson:"-" msgpack:"-"` // 所在的世界id
 	GameObjectGuidCounter uint64                                   `bson:"-" msgpack:"-"` // 游戏对象guid计数器

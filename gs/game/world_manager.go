@@ -8,6 +8,7 @@ import (
 	"hk4e/gs/model"
 	"hk4e/pkg/alg"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/proto"
 )
 
@@ -47,19 +48,21 @@ func (w *WorldManager) GetAllWorld() map[uint32]*World {
 func (w *WorldManager) CreateWorld(owner *model.Player) *World {
 	worldId := uint32(w.snowflake.GenId())
 	world := &World{
-		id:                  worldId,
-		owner:               owner,
-		playerMap:           make(map[uint32]*model.Player),
-		sceneMap:            make(map[uint32]*Scene),
-		entityIdCounter:     0,
-		worldLevel:          0,
-		multiplayer:         false,
-		mpLevelEntityId:     0,
-		chatMsgList:         make([]*proto.ChatInfo, 0),
-		playerFirstEnterMap: make(map[uint32]int64),
-		waitEnterPlayerMap:  make(map[uint32]int64),
-		multiplayerTeam:     CreateMultiplayerTeam(),
-		peerList:            make([]*model.Player, 0),
+		id:                   worldId,
+		owner:                owner,
+		playerMap:            make(map[uint32]*model.Player),
+		sceneMap:             make(map[uint32]*Scene),
+		enterSceneToken:      uint32(random.GetRandomInt32(5000, 50000)),
+		enterSceneContextMap: make(map[uint32]*EnterSceneContext),
+		entityIdCounter:      0,
+		worldLevel:           0,
+		multiplayer:          false,
+		mpLevelEntityId:      0,
+		chatMsgList:          make([]*proto.ChatInfo, 0),
+		playerFirstEnterMap:  make(map[uint32]int64),
+		waitEnterPlayerMap:   make(map[uint32]int64),
+		multiplayerTeam:      CreateMultiplayerTeam(),
+		peerList:             make([]*model.Player, 0),
 	}
 	world.mpLevelEntityId = world.GetNextWorldEntityId(constant.ENTITY_TYPE_MP_LEVEL)
 	w.worldMap[worldId] = world
@@ -200,21 +203,29 @@ func (w *WorldManager) GetMultiplayerWorldNum() uint32 {
 	return w.multiplayerWorldNum
 }
 
+// EnterSceneContext 场景切换上下文数据结构
+type EnterSceneContext struct {
+	OldSceneId uint32
+	OldPos     *model.Vector
+}
+
 // World 世界数据结构
 type World struct {
-	id                  uint32
-	owner               *model.Player
-	playerMap           map[uint32]*model.Player
-	sceneMap            map[uint32]*Scene
-	entityIdCounter     uint32 // 世界的实体id生成计数器
-	worldLevel          uint8  // 世界等级
-	multiplayer         bool   // 是否多人世界
-	mpLevelEntityId     uint32
-	chatMsgList         []*proto.ChatInfo // 世界聊天消息列表
-	playerFirstEnterMap map[uint32]int64  // 玩家第一次进入世界的时间 key:uid value:进入时间
-	waitEnterPlayerMap  map[uint32]int64  // 进入世界的玩家等待列表 key:uid value:开始时间
-	multiplayerTeam     *MultiplayerTeam
-	peerList            []*model.Player // 玩家编号列表
+	id                   uint32
+	owner                *model.Player
+	playerMap            map[uint32]*model.Player
+	sceneMap             map[uint32]*Scene
+	enterSceneToken      uint32
+	enterSceneContextMap map[uint32]*EnterSceneContext // 场景切换上下文 key:EnterSceneToken value:EnterSceneContext
+	entityIdCounter      uint32                        // 世界的实体id生成计数器
+	worldLevel           uint8                         // 世界等级
+	multiplayer          bool                          // 是否多人世界
+	mpLevelEntityId      uint32                        // 多人世界等级实体id
+	chatMsgList          []*proto.ChatInfo             // 世界聊天消息列表
+	playerFirstEnterMap  map[uint32]int64              // 玩家第一次进入世界的时间 key:uid value:进入时间
+	waitEnterPlayerMap   map[uint32]int64              // 进入世界的玩家等待列表 key:uid value:开始时间
+	multiplayerTeam      *MultiplayerTeam              // 多人队伍
+	peerList             []*model.Player               // 玩家编号列表
 }
 
 func (w *World) GetId() uint32 {
@@ -231,6 +242,20 @@ func (w *World) GetAllPlayer() map[uint32]*model.Player {
 
 func (w *World) GetAllScene() map[uint32]*Scene {
 	return w.sceneMap
+}
+
+func (w *World) GetEnterSceneToken() uint32 {
+	return w.enterSceneToken
+}
+
+func (w *World) GetEnterSceneContextByToken(token uint32) *EnterSceneContext {
+	return w.enterSceneContextMap[token]
+}
+
+func (w *World) AddEnterSceneContext(ctx *EnterSceneContext) uint32 {
+	w.enterSceneToken += 100
+	w.enterSceneContextMap[w.enterSceneToken] = ctx
+	return w.enterSceneToken
 }
 
 func (w *World) GetWorldLevel() uint8 {

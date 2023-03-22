@@ -397,7 +397,12 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 		logger.Error("get scene group config is nil, groupId: %v", groupId)
 		return
 	}
-	suiteConfig := groupConfig.SuiteList[suiteId-1]
+	suiteIndex := suiteId - 1
+	if int(suiteIndex) >= len(groupConfig.SuiteList) {
+		logger.Error("invalid suiteId: %v", suiteId)
+		return
+	}
+	suiteConfig := groupConfig.SuiteList[suiteIndex]
 	suite := &Suite{
 		entityMap: make(map[uint32]*Entity),
 	}
@@ -431,6 +436,7 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 		group = &Group{
 			suiteMap: make(map[uint8]*Suite),
 		}
+		s.groupMap[groupId] = group
 	}
 	group.suiteMap[suiteId] = suite
 }

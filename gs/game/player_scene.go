@@ -245,6 +245,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 func (g *GameManager) AddSceneGroup(scene *Scene, groupConfig *gdconf.Group) {
 	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
 	if initSuiteId > len(groupConfig.SuiteList) {
+		logger.Error("invalid init suite id: %v", initSuiteId)
 		return
 	}
 	scene.AddGroupSuite(uint32(groupConfig.Id), uint8(initSuiteId))
@@ -285,34 +286,41 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	activeAvatarEntityId := world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)
 	g.AddSceneEntityNotify(player, visionType, []uint32{activeAvatarEntityId}, true, false)
 
+	// 加载附近的group
 	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[scene.GetId()]
+	addEntityIdList := make([]uint32, 0)
 	if exist {
 		objectList := aoiManager.GetObjectListByPos(float32(player.Pos.X), 0.0, float32(player.Pos.Z))
 		for _, groupAny := range objectList {
-			group := groupAny.(*gdconf.Group)
-			distance2D := math.Sqrt((player.Pos.X-float64(group.Pos.X))*(player.Pos.X-float64(group.Pos.X)) +
-				(player.Pos.Z-float64(group.Pos.Z))*(player.Pos.Z-float64(group.Pos.Z)))
+			groupConfig := groupAny.(*gdconf.Group)
+			distance2D := math.Sqrt((player.Pos.X-float64(groupConfig.Pos.X))*(player.Pos.X-float64(groupConfig.Pos.X)) +
+				(player.Pos.Z-float64(groupConfig.Pos.Z))*(player.Pos.Z-float64(groupConfig.Pos.Z)))
 			if distance2D > ENTITY_LOD {
 				continue
 			}
-			if group.DynamicLoad {
+			if groupConfig.DynamicLoad {
 				continue
 			}
-			g.AddSceneGroup(scene, group)
+			g.AddSceneGroup(scene, groupConfig)
+			group := scene.GetGroupById(uint32(groupConfig.Id))
+			for _, entity := range group.GetAllEntity() {
+				addEntityIdList = append(addEntityIdList, entity.GetId())
+			}
 		}
 	}
+	entityIdList := make([]uint32, 0)
 	if player.SceneJump {
 		visionType = proto.VisionType_VISION_MEET
+		entityMap := scene.GetAllEntity()
+		for _, entity := range entityMap {
+			if entity.GetId() == activeAvatarEntityId {
+				continue
+			}
+			entityIdList = append(entityIdList, entity.GetId())
+		}
 	} else {
 		visionType = proto.VisionType_VISION_TRANSPORT
-	}
-	entityMap := scene.GetAllEntity()
-	entityIdList := make([]uint32, 0)
-	for _, entity := range entityMap {
-		if entity.GetId() == activeAvatarEntityId {
-			continue
-		}
-		entityIdList = append(entityIdList, entity.GetId())
+		entityIdList = addEntityIdList
 	}
 	g.AddSceneEntityNotify(player, visionType, entityIdList, false, false)
 

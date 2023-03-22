@@ -321,6 +321,9 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		}
 		// 旧有新没有的group即为消失的
 		group := scene.GetGroupById(groupId)
+		if group == nil {
+			continue
+		}
 		for _, entity := range group.GetAllEntity() {
 			delEntityIdList = append(delEntityIdList, entity.GetId())
 		}

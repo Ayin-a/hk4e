@@ -17,37 +17,11 @@ type Scene struct {
 	id         uint32
 	world      *World
 	playerMap  map[uint32]*model.Player
-	entityMap  map[uint32]*Entity
-	groupMap   map[uint32]*Group
-	gameTime   uint32 // 游戏内提瓦特大陆的时间
-	createTime int64  // 场景创建时间
-	meeoIndex  uint32 // 客户端风元素染色同步协议的计数器
-}
-
-type Group struct {
-	suiteMap map[uint8]*Suite
-}
-
-func (g *Group) GetAllSuite() map[uint8]*Suite {
-	return g.suiteMap
-}
-
-func (g *Group) GetAllEntity() map[uint32]*Entity {
-	entityMap := make(map[uint32]*Entity)
-	for _, suite := range g.suiteMap {
-		for _, entity := range suite.entityMap {
-			entityMap[entity.id] = entity
-		}
-	}
-	return entityMap
-}
-
-type Suite struct {
-	entityMap map[uint32]*Entity
-}
-
-func (s *Suite) GetAllEntity() map[uint32]*Entity {
-	return s.entityMap
+	entityMap  map[uint32]*Entity // 场景中全部的实体
+	groupMap   map[uint32]*Group  // 场景中按group->suite分类的实体
+	gameTime   uint32             // 游戏内提瓦特大陆的时间
+	createTime int64              // 场景创建时间
+	meeoIndex  uint32             // 客户端风元素染色同步协议的计数器
 }
 
 func (s *Scene) GetId() uint32 {
@@ -420,6 +394,7 @@ func (s *Scene) GetEntity(entityId uint32) *Entity {
 func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 	groupConfig := gdconf.GetSceneGroup(int32(groupId))
 	if groupConfig == nil {
+		logger.Error("get scene group config is nil, groupId: %v", groupId)
 		return
 	}
 	suiteConfig := groupConfig.SuiteList[suiteId-1]
@@ -429,6 +404,7 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 	for _, monsterConfigId := range suiteConfig.MonsterConfigIdList {
 		monster, exist := groupConfig.MonsterMap[monsterConfigId]
 		if !exist {
+			logger.Error("monster config not exist, monsterConfigId: %v", monsterConfigId)
 			continue
 		}
 		entityId := s.createConfigEntity(uint32(groupConfig.Id), monster)
@@ -438,6 +414,7 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 	for _, gadgetConfigId := range suiteConfig.GadgetConfigIdList {
 		gadget, exist := groupConfig.GadgetMap[gadgetConfigId]
 		if !exist {
+			logger.Error("gadget config not exist, gadgetConfigId: %v", gadgetConfigId)
 			continue
 		}
 		entityId := s.createConfigEntity(uint32(groupConfig.Id), gadget)
@@ -461,10 +438,12 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 func (s *Scene) RemoveGroupSuite(groupId uint32, suiteId uint8) {
 	group := s.groupMap[groupId]
 	if group == nil {
+		logger.Error("group not exist, groupId: %v", groupId)
 		return
 	}
 	suite := group.suiteMap[suiteId]
 	if suite == nil {
+		logger.Error("suite not exist, suiteId: %v", suiteId)
 		return
 	}
 	for _, entity := range suite.entityMap {
@@ -531,6 +510,7 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 	}
 }
 
+// TODO 临时写死
 func getTempFightPropMap() map[uint32]float32 {
 	fpm := map[uint32]float32{
 		constant.FIGHT_PROP_CUR_HP:            float32(72.91699),
@@ -550,6 +530,40 @@ func getTempFightPropMap() map[uint32]float32 {
 		constant.FIGHT_PROP_BASE_DEFENSE:      float32(505.0),
 	}
 	return fpm
+}
+
+type Group struct {
+	suiteMap map[uint8]*Suite
+}
+
+type Suite struct {
+	entityMap map[uint32]*Entity
+}
+
+func (g *Group) GetSuiteById(suiteId uint8) *Suite {
+	return g.suiteMap[suiteId]
+}
+
+func (g *Group) GetAllSuite() map[uint8]*Suite {
+	return g.suiteMap
+}
+
+func (g *Group) GetAllEntity() map[uint32]*Entity {
+	entityMap := make(map[uint32]*Entity)
+	for _, suite := range g.suiteMap {
+		for _, entity := range suite.entityMap {
+			entityMap[entity.id] = entity
+		}
+	}
+	return entityMap
+}
+
+func (s *Suite) GetEntityById(entityId uint32) *Entity {
+	return s.entityMap[entityId]
+}
+
+func (s *Suite) GetAllEntity() map[uint32]*Entity {
+	return s.entityMap
 }
 
 // Entity 场景实体数据结构

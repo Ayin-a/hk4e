@@ -118,6 +118,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(BeginCameraSceneLookNotify, func() any { return new(proto.BeginCameraSceneLookNotify) })         // 场景镜头注目通知
 	c.regMsg(NpcTalkReq, func() any { return new(proto.NpcTalkReq) })                                         // NPC对话请求
 	c.regMsg(NpcTalkRsp, func() any { return new(proto.NpcTalkRsp) })                                         // NPC对话响应
+	c.regMsg(GroupSuiteNotify, func() any { return new(proto.GroupSuiteNotify) })                             // 场景小组加载通知
+	c.regMsg(GroupUnloadNotify, func() any { return new(proto.GroupUnloadNotify) })                           // 场景组卸载通知
 
 	// 战斗与同步
 	c.regMsg(AvatarFightPropNotify, func() any { return new(proto.AvatarFightPropNotify) })                         // 角色战斗属性通知
@@ -136,6 +138,10 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(EvtDestroyGadgetNotify, func() any { return new(proto.EvtDestroyGadgetNotify) })                       // 销毁实体通知
 	c.regMsg(EvtAnimatorParameterNotify, func() any { return new(proto.EvtAnimatorParameterNotify) })               // 动画参数通知
 	c.regMsg(EvtAnimatorStateChangedNotify, func() any { return new(proto.EvtAnimatorStateChangedNotify) })         // 动画状态通知
+	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })
+	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) })
+	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })
+	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })
 
 	// 队伍
 	c.regMsg(ChangeAvatarReq, func() any { return new(proto.ChangeAvatarReq) })                             // 更换角色请求 切人
@@ -303,8 +309,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(GCGOperationReq, func() any { return new(proto.GCGOperationReq) })                               // GCG游戏客户端操作请求
 	c.regMsg(GCGOperationRsp, func() any { return new(proto.GCGOperationRsp) })                               // GCG游戏客户端操作响应
 	c.regMsg(GCGSkillPreviewNotify, func() any { return new(proto.GCGSkillPreviewNotify) })                   // GCG游戏技能预览通知
-
-	// // TODO 客户端开始GCG游戏
+	// TODO 客户端开始GCG游戏
 	c.regMsg(GCGStartChallengeByCheckRewardReq, func() any { return new(proto.GCGStartChallengeByCheckRewardReq) }) // GCG开始挑战来自检测奖励请求
 	c.regMsg(GCGStartChallengeByCheckRewardRsp, func() any { return new(proto.GCGStartChallengeByCheckRewardRsp) }) // GCG开始挑战来自检测奖励响应
 	c.regMsg(GCGStartChallengeReq, func() any { return new(proto.GCGStartChallengeReq) })                           // GCG开始挑战请求
@@ -327,13 +332,6 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(TowerAllDataRsp, func() any { return new(proto.TowerAllDataRsp) })                       // 深渊数据响应
 	c.regMsg(ServerAnnounceNotify, func() any { return new(proto.ServerAnnounceNotify) })             // 服务器公告通知
 	c.regMsg(ServerAnnounceRevokeNotify, func() any { return new(proto.ServerAnnounceRevokeNotify) }) // 服务器公告撤销通知
-
-	// TODO
-	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })
-	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) })
-	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })
-	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })
-	c.regMsg(GetRegionSearchReq, func() any { return new(proto.GetRegionSearchReq) })
 }
 
 func (c *CmdProtoMap) regMsg(cmdId uint16, protoObjNewFunc func() any) {

@@ -141,6 +141,10 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.TakeoffEquipReq, GAME_MANAGER.TakeoffEquipReq)
 	r.registerRouter(cmd.AddQuestContentProgressReq, GAME_MANAGER.AddQuestContentProgressReq)
 	r.registerRouter(cmd.NpcTalkReq, GAME_MANAGER.NpcTalkReq)
+	r.registerRouter(cmd.EvtAiSyncSkillCdNotify, GAME_MANAGER.EvtAiSyncSkillCdNotify)
+	r.registerRouter(cmd.EvtAiSyncCombatThreatInfoNotify, GAME_MANAGER.EvtAiSyncCombatThreatInfoNotify)
+	r.registerRouter(cmd.EntityConfigHashNotify, GAME_MANAGER.EntityConfigHashNotify)
+	r.registerRouter(cmd.MonsterAIConfigHashNotify, GAME_MANAGER.MonsterAIConfigHashNotify)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

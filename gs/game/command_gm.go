@@ -143,6 +143,45 @@ func (g *GMCmd) GMAddUserAllEvery(userId, itemCount uint32) {
 	g.GMAddUserAllFlycloak(userId)
 }
 
+// GMAddQuest 添加任务
+func (g *GMCmd) GMAddQuest(userId uint32, questId uint32) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	dbQuest := player.GetDbQuest()
+	dbQuest.AddQuest(questId)
+	ntf := &proto.QuestListUpdateNotify{
+		QuestList: make([]*proto.Quest, 0),
+	}
+	ntf.QuestList = append(ntf.QuestList, GAME_MANAGER.PacketQuest(player, questId))
+	GAME_MANAGER.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+}
+
+// GMForceFinishAllQuest 强制完成当前所有任务
+func (g *GMCmd) GMForceFinishAllQuest(userId uint32) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	dbQuest := player.GetDbQuest()
+	ntf := &proto.QuestListUpdateNotify{
+		QuestList: make([]*proto.Quest, 0),
+	}
+	for _, quest := range dbQuest.GetQuestMap() {
+		dbQuest.ForceFinishQuest(quest.QuestId)
+		pbQuest := GAME_MANAGER.PacketQuest(player, quest.QuestId)
+		if pbQuest == nil {
+			continue
+		}
+		ntf.QuestList = append(ntf.QuestList, pbQuest)
+	}
+	GAME_MANAGER.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+	GAME_MANAGER.AcceptQuest(player, true)
+}
+
 // 系统级GM指令
 
 func (g *GMCmd) ChangePlayerCmdPerm(userId uint32, cmdPerm uint8) {

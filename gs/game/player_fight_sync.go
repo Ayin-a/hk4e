@@ -112,7 +112,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("attackResult is nil")
 				continue
 			}
-			logger.Debug("run attack handler, attackResult: %v", attackResult)
+			// logger.Debug("run attack handler, attackResult: %v", attackResult)
 			target := scene.GetEntity(attackResult.DefenseId)
 			if target == nil {
 				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
@@ -221,7 +221,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("parse EvtAnimatorParameterInfo error: %v", err)
 				continue
 			}
-			logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
+			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
 			// 这是否?
 			evtAnimatorParameterInfo.IsServerCache = false
 			newCombatData, err := pb.Marshal(evtAnimatorParameterInfo)
@@ -242,7 +242,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
 				continue
 			}
-			logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
+			// logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
 			// 试试看?
 			evtAnimatorStateChangedInfo.HandleAnimatorStateImmediately = true
 			evtAnimatorStateChangedInfo.ForceSync = true
@@ -329,7 +329,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		}
 		if !world.GetMultiplayer() {
 			// 处理多人世界不同玩家不同位置的group卸载情况
-			g.RemoveGroup(scene, groupConfig)
+			g.RemoveGroup(player, scene, groupConfig)
 		}
 	}
 	// 出现的场景实体
@@ -340,7 +340,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 			continue
 		}
 		// 新有旧没有的group即为出现的
-		g.AddSceneGroup(scene, groupConfig)
+		g.AddSceneGroup(player, scene, groupConfig)
 		group := scene.GetGroupById(groupId)
 		if group == nil {
 			continue
@@ -350,8 +350,12 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		}
 	}
 	// 同步客户端消失和出现的场景实体
-	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
-	g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
+	if len(delEntityIdList) > 0 {
+		g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
+	}
+	if len(addEntityIdList) > 0 {
+		g.AddSceneEntityNotify(player, proto.VisionType_VISION_MEET, addEntityIdList, false, false)
+	}
 }
 
 // TriggerCheck 场景区域触发器检测
@@ -681,4 +685,24 @@ func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb
 	}
 	scene.DestroyEntity(req.EntityId)
 	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_MISS, []uint32{req.EntityId})
+}
+
+func (g *GameManager) EvtAiSyncSkillCdNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EvtAiSyncSkillCdNotify)
+	_ = req
+}
+
+func (g *GameManager) EvtAiSyncCombatThreatInfoNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EvtAiSyncCombatThreatInfoNotify)
+	_ = req
+}
+
+func (g *GameManager) EntityConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EntityConfigHashNotify)
+	_ = req
+}
+
+func (g *GameManager) MonsterAIConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.MonsterAIConfigHashNotify)
+	_ = req
 }

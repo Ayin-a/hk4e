@@ -277,18 +277,15 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 
 // VehicleRestoreStaminaHandler 处理载具持续回复耐力
 func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
-
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
 	}
-
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
 	// 获取玩家创建的载具实体
 	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
 	if entity == nil {
@@ -311,16 +308,15 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 
 // SustainStaminaHandler 处理持续耐力消耗
 func (g *GameManager) SustainStaminaHandler(player *model.Player) {
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
 	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
 	// 获取玩家处于的载具实体
 	entity := scene.GetEntity(player.VehicleInfo.InVehicleEntityId)
 	if entity == nil {
@@ -453,11 +449,10 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	}
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+	if world == nil {
 		return
 	}
+	scene := world.GetSceneById(player.SceneId)
 	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
 	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
 	if avatarEntity == nil {
@@ -489,22 +484,6 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 			Y: player.SafePos.Y,
 			Z: player.SafePos.Z,
 		}
-		// 获取最近角色实体的锚点
-		// TODO 阻塞优化 16ms我感觉有点慢
-		// for _, entry := range gdc.CONF.ScenePointEntries {
-		//	if entry.PointData == nil || entry.PointData.TranPos == nil {
-		//		continue
-		//	}
-		//	pointPos := &model.Vector{
-		//		X: entry.PointData.TranPos.X,
-		//		Y: entry.PointData.TranPos.Y,
-		//		Z: entry.PointData.TranPos.Z,
-		//	}
-		//	// 该坐标距离小于之前的则赋值
-		//	if player.SafePos.Distance(pointPos) < player.SafePos.Distance(pos) {
-		//		pos = pointPos
-		//	}
-		// }
 		// 传送玩家至安全位置
 		g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_REVIVAL), player.SceneId, pos, new(model.Vector), 0)
 	}

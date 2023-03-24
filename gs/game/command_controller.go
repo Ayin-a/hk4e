@@ -160,13 +160,13 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 			c.SendMessage(cmd.Executor, "已将玩家 UID：%v 请求加入目标玩家 UID：%v 的世界。", player.PlayerID, targetUid)
 		} else {
 			// 传送玩家至目标玩家的位置
-			c.gmCmd.GMTeleportPlayer(player.PlayerID, target.SceneId, target.Pos.X, target.Pos.Y, target.Pos.Z)
+			c.gmCmd.GMTeleportPlayer(player.PlayerID, target.SceneId, 0, target.Pos.X, target.Pos.Y, target.Pos.Z)
 			// 发送消息给执行者
 			c.SendMessage(cmd.Executor, "已将玩家 UID：%v 传送至 目标玩家 UID：%v。", player.PlayerID, targetUid)
 		}
 	} else {
 		// 传送玩家至指定的位置
-		c.gmCmd.GMTeleportPlayer(player.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
+		c.gmCmd.GMTeleportPlayer(player.PlayerID, sceneId, 0, pos.X, pos.Y, pos.Z)
 		// 发送消息给执行者
 		c.SendMessage(cmd.Executor, "已将玩家 UID：%v 传送至 场景：%v, X：%.2f, Y：%.2f, Z：%.2f。", player.PlayerID, sceneId, pos.X, pos.Y, pos.Z)
 	}

@@ -46,16 +46,18 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(ClientReconnectNotify, func() any { return new(proto.ClientReconnectNotify) })               // 在线重连通知
 
 	// 基础相关
-	c.regMsg(UnionCmdNotify, func() any { return new(proto.UnionCmdNotify) })               // 聚合消息
-	c.regMsg(PingReq, func() any { return new(proto.PingReq) })                             // ping请求
-	c.regMsg(PingRsp, func() any { return new(proto.PingRsp) })                             // ping响应
-	c.regMsg(WorldPlayerRTTNotify, func() any { return new(proto.WorldPlayerRTTNotify) })   // 世界玩家RTT时延
-	c.regMsg(PlayerDataNotify, func() any { return new(proto.PlayerDataNotify) })           // 玩家信息通知 昵称、属性表等
-	c.regMsg(PlayerPropNotify, func() any { return new(proto.PlayerPropNotify) })           // 玩家属性表通知
-	c.regMsg(OpenStateUpdateNotify, func() any { return new(proto.OpenStateUpdateNotify) }) // 游戏功能模块开放状态更新通知
-	c.regMsg(PlayerTimeNotify, func() any { return new(proto.PlayerTimeNotify) })           // 玩家累计在线时长通知
-	c.regMsg(ServerTimeNotify, func() any { return new(proto.ServerTimeNotify) })           // 服务器时间通知
-	c.regMsg(WindSeedClientNotify, func() any { return new(proto.WindSeedClientNotify) })   // 客户端XLUA调试通知
+	c.regMsg(UnionCmdNotify, func() any { return new(proto.UnionCmdNotify) })                         // 聚合消息
+	c.regMsg(PingReq, func() any { return new(proto.PingReq) })                                       // ping请求
+	c.regMsg(PingRsp, func() any { return new(proto.PingRsp) })                                       // ping响应
+	c.regMsg(WorldPlayerRTTNotify, func() any { return new(proto.WorldPlayerRTTNotify) })             // 世界玩家RTT时延
+	c.regMsg(PlayerDataNotify, func() any { return new(proto.PlayerDataNotify) })                     // 玩家信息通知 昵称、属性表等
+	c.regMsg(PlayerPropNotify, func() any { return new(proto.PlayerPropNotify) })                     // 玩家属性表通知
+	c.regMsg(OpenStateUpdateNotify, func() any { return new(proto.OpenStateUpdateNotify) })           // 游戏功能模块开放状态更新通知
+	c.regMsg(PlayerTimeNotify, func() any { return new(proto.PlayerTimeNotify) })                     // 玩家累计在线时长通知
+	c.regMsg(ServerTimeNotify, func() any { return new(proto.ServerTimeNotify) })                     // 服务器时间通知
+	c.regMsg(WindSeedClientNotify, func() any { return new(proto.WindSeedClientNotify) })             // 客户端XLUA调试通知
+	c.regMsg(ServerAnnounceNotify, func() any { return new(proto.ServerAnnounceNotify) })             // 服务器公告通知
+	c.regMsg(ServerAnnounceRevokeNotify, func() any { return new(proto.ServerAnnounceRevokeNotify) }) // 服务器公告撤销通知
 
 	// 场景
 	c.regMsg(PlayerSetPauseReq, func() any { return new(proto.PlayerSetPauseReq) })                           // 玩家暂停请求
@@ -75,6 +77,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(UnlockTransPointReq, func() any { return new(proto.UnlockTransPointReq) })                       // 解锁场景传送点请求
 	c.regMsg(UnlockTransPointRsp, func() any { return new(proto.UnlockTransPointRsp) })                       // 解锁场景传送点响应
 	c.regMsg(ScenePointUnlockNotify, func() any { return new(proto.ScenePointUnlockNotify) })                 // 场景传送点解锁通知
+	c.regMsg(MarkMapReq, func() any { return new(proto.MarkMapReq) })                                         // 标记地图请求
+	c.regMsg(MarkMapRsp, func() any { return new(proto.MarkMapRsp) })                                         // 标记地图响应
 	c.regMsg(QueryPathReq, func() any { return new(proto.QueryPathReq) })                                     // 寻路请求
 	c.regMsg(QueryPathRsp, func() any { return new(proto.QueryPathRsp) })                                     // 寻路响应
 	c.regMsg(GetScenePointReq, func() any { return new(proto.GetScenePointReq) })                             // 获取场景传送点请求
@@ -112,36 +116,42 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(SceneEntityDrownReq, func() any { return new(proto.SceneEntityDrownReq) })                       // 场景实体溺水请求
 	c.regMsg(SceneEntityDrownRsp, func() any { return new(proto.SceneEntityDrownRsp) })                       // 场景实体溺水响应
 	c.regMsg(ObstacleModifyNotify, func() any { return new(proto.ObstacleModifyNotify) })                     // 寻路阻挡变动通知
-	c.regMsg(DungeonWayPointNotify, func() any { return new(proto.DungeonWayPointNotify) })                   // 地牢副本相关
-	c.regMsg(DungeonDataNotify, func() any { return new(proto.DungeonDataNotify) })                           // 地牢副本相关
 	c.regMsg(SceneAudioNotify, func() any { return new(proto.SceneAudioNotify) })                             // 场景风物之琴音乐同步通知
 	c.regMsg(BeginCameraSceneLookNotify, func() any { return new(proto.BeginCameraSceneLookNotify) })         // 场景镜头注目通知
 	c.regMsg(NpcTalkReq, func() any { return new(proto.NpcTalkReq) })                                         // NPC对话请求
 	c.regMsg(NpcTalkRsp, func() any { return new(proto.NpcTalkRsp) })                                         // NPC对话响应
 	c.regMsg(GroupSuiteNotify, func() any { return new(proto.GroupSuiteNotify) })                             // 场景小组加载通知
 	c.regMsg(GroupUnloadNotify, func() any { return new(proto.GroupUnloadNotify) })                           // 场景组卸载通知
+	c.regMsg(DungeonEntryInfoReq, func() any { return new(proto.DungeonEntryInfoReq) })                       // 地牢信息请求
+	c.regMsg(DungeonEntryInfoRsp, func() any { return new(proto.DungeonEntryInfoRsp) })                       // 地牢信息响应
+	c.regMsg(PlayerEnterDungeonReq, func() any { return new(proto.PlayerEnterDungeonReq) })                   // 进入地牢请求
+	c.regMsg(PlayerEnterDungeonRsp, func() any { return new(proto.PlayerEnterDungeonRsp) })                   // 进入地牢响应
+	c.regMsg(PlayerQuitDungeonReq, func() any { return new(proto.PlayerQuitDungeonReq) })                     // 退出地牢请求
+	c.regMsg(PlayerQuitDungeonRsp, func() any { return new(proto.PlayerQuitDungeonRsp) })                     // 退出地牢响应
+	c.regMsg(DungeonDataNotify, func() any { return new(proto.DungeonDataNotify) })                           // 地牢数据通知
+	c.regMsg(DungeonWayPointNotify, func() any { return new(proto.DungeonWayPointNotify) })                   // 地牢路点通知
 
 	// 战斗与同步
 	c.regMsg(AvatarFightPropNotify, func() any { return new(proto.AvatarFightPropNotify) })                         // 角色战斗属性通知
 	c.regMsg(EntityFightPropUpdateNotify, func() any { return new(proto.EntityFightPropUpdateNotify) })             // 实体战斗属性更新通知
-	c.regMsg(CombatInvocationsNotify, func() any { return new(proto.CombatInvocationsNotify) })                     // 战斗通知 包含场景中实体的移动数据和伤害数据，多人游戏服务器转发
-	c.regMsg(AbilityInvocationsNotify, func() any { return new(proto.AbilityInvocationsNotify) })                   // 技能通知 多人游戏服务器转发
-	c.regMsg(ClientAbilityInitFinishNotify, func() any { return new(proto.ClientAbilityInitFinishNotify) })         // 客户端技能初始化完成通知 多人游戏服务器转发
-	c.regMsg(EvtDoSkillSuccNotify, func() any { return new(proto.EvtDoSkillSuccNotify) })                           // 释放技能成功事件通知
-	c.regMsg(ClientAbilityChangeNotify, func() any { return new(proto.ClientAbilityChangeNotify) })                 // 客户端技能改变通知
-	c.regMsg(MassiveEntityElementOpBatchNotify, func() any { return new(proto.MassiveEntityElementOpBatchNotify) }) // 风元素染色相关通知
-	c.regMsg(EvtAvatarEnterFocusNotify, func() any { return new(proto.EvtAvatarEnterFocusNotify) })                 // 进入弓箭蓄力瞄准状态通知
-	c.regMsg(EvtAvatarUpdateFocusNotify, func() any { return new(proto.EvtAvatarUpdateFocusNotify) })               // 弓箭蓄力瞄准状态移动通知
-	c.regMsg(EvtAvatarExitFocusNotify, func() any { return new(proto.EvtAvatarExitFocusNotify) })                   // 退出弓箭蓄力瞄准状态通知
-	c.regMsg(EvtEntityRenderersChangedNotify, func() any { return new(proto.EvtEntityRenderersChangedNotify) })     // 实体可视状态改变通知
+	c.regMsg(CombatInvocationsNotify, func() any { return new(proto.CombatInvocationsNotify) })                     // 客户端combat通知 服务器转发
+	c.regMsg(AbilityInvocationsNotify, func() any { return new(proto.AbilityInvocationsNotify) })                   // 客户端ability通知 服务器转发
+	c.regMsg(ClientAbilityInitFinishNotify, func() any { return new(proto.ClientAbilityInitFinishNotify) })         // 客户端ability初始化完成通知 服务器转发
+	c.regMsg(EvtDoSkillSuccNotify, func() any { return new(proto.EvtDoSkillSuccNotify) })                           // 释放技能成功通知
+	c.regMsg(ClientAbilityChangeNotify, func() any { return new(proto.ClientAbilityChangeNotify) })                 // 客户端ability变更通知 服务器转发
+	c.regMsg(MassiveEntityElementOpBatchNotify, func() any { return new(proto.MassiveEntityElementOpBatchNotify) }) // 风元素染色相关通知 服务器转发
+	c.regMsg(EvtAvatarEnterFocusNotify, func() any { return new(proto.EvtAvatarEnterFocusNotify) })                 // 进入弓箭蓄力瞄准状态通知 服务器转发
+	c.regMsg(EvtAvatarUpdateFocusNotify, func() any { return new(proto.EvtAvatarUpdateFocusNotify) })               // 弓箭蓄力瞄准状态移动通知 服务器转发
+	c.regMsg(EvtAvatarExitFocusNotify, func() any { return new(proto.EvtAvatarExitFocusNotify) })                   // 退出弓箭蓄力瞄准状态通知 服务器转发
+	c.regMsg(EvtEntityRenderersChangedNotify, func() any { return new(proto.EvtEntityRenderersChangedNotify) })     // 实体可视状态改变通知 服务器转发
 	c.regMsg(EvtCreateGadgetNotify, func() any { return new(proto.EvtCreateGadgetNotify) })                         // 创建实体通知
 	c.regMsg(EvtDestroyGadgetNotify, func() any { return new(proto.EvtDestroyGadgetNotify) })                       // 销毁实体通知
-	c.regMsg(EvtAnimatorParameterNotify, func() any { return new(proto.EvtAnimatorParameterNotify) })               // 动画参数通知
-	c.regMsg(EvtAnimatorStateChangedNotify, func() any { return new(proto.EvtAnimatorStateChangedNotify) })         // 动画状态通知
-	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })
-	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) })
-	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })
-	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })
+	// c.regMsg(EvtAnimatorParameterNotify, func() any { return new(proto.EvtAnimatorParameterNotify) })               // 动画参数通知
+	// c.regMsg(EvtAnimatorStateChangedNotify, func() any { return new(proto.EvtAnimatorStateChangedNotify) })         // 动画状态通知
+	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })                   // 通知
+	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) }) // 通知
+	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })                   // 通知
+	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })             // 通知
 
 	// 队伍
 	c.regMsg(ChangeAvatarReq, func() any { return new(proto.ChangeAvatarReq) })                             // 更换角色请求 切人
@@ -327,11 +337,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(QuestGlobalVarNotify, func() any { return new(proto.QuestGlobalVarNotify) })                               // 任务全局变量通知
 
 	// 乱七八糟
-	c.regMsg(MarkMapReq, func() any { return new(proto.MarkMapReq) })                                 // 标记地图请求
-	c.regMsg(TowerAllDataReq, func() any { return new(proto.TowerAllDataReq) })                       // 深渊数据请求
-	c.regMsg(TowerAllDataRsp, func() any { return new(proto.TowerAllDataRsp) })                       // 深渊数据响应
-	c.regMsg(ServerAnnounceNotify, func() any { return new(proto.ServerAnnounceNotify) })             // 服务器公告通知
-	c.regMsg(ServerAnnounceRevokeNotify, func() any { return new(proto.ServerAnnounceRevokeNotify) }) // 服务器公告撤销通知
+	c.regMsg(TowerAllDataReq, func() any { return new(proto.TowerAllDataReq) }) // 深渊数据请求
+	c.regMsg(TowerAllDataRsp, func() any { return new(proto.TowerAllDataRsp) }) // 深渊数据响应
 }
 
 func (c *CmdProtoMap) regMsg(cmdId uint16, protoObjNewFunc func() any) {

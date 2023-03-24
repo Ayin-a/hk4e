@@ -13,9 +13,10 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// 大地图模块 大世界相关的所有逻辑
+
 func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneTransToPointReq)
-
 	dbWorld := player.GetDbWorld()
 	dbScene := dbWorld.GetSceneById(req.SceneId)
 	if dbScene == nil {
@@ -32,9 +33,9 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 		g.SendError(cmd.SceneTransToPointRsp, player, &proto.SceneTransToPointRsp{}, proto.Retcode_RET_POINT_NOT_UNLOCKED)
 		return
 	}
+
 	// 传送玩家
-	sceneId := req.SceneId
-	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_TRANS_POINT), sceneId, &model.Vector{
+	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_TRANS_POINT), req.SceneId, &model.Vector{
 		X: pointDataConfig.TranPos.X,
 		Y: pointDataConfig.TranPos.Y,
 		Z: pointDataConfig.TranPos.Z,
@@ -112,9 +113,9 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 
 func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.MarkMapReq)
-	operation := req.Op
-	if operation == proto.MarkMapReq_ADD {
+	if req.Op == proto.MarkMapReq_ADD {
 		logger.Debug("user mark type: %v", req.Mark.PointType)
+		// 地图标点传送
 		if req.Mark.PointType == proto.MapMarkPointType_NPC {
 			posYInt, err := strconv.ParseInt(req.Mark.Name, 10, 64)
 			if err != nil {
@@ -129,6 +130,7 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 			}, new(model.Vector), 0)
 		}
 	}
+	g.SendMsg(cmd.MarkMapRsp, player.PlayerID, player.ClientSeq, &proto.MarkMapRsp{})
 }
 
 func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Message) {
@@ -176,6 +178,112 @@ func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.EnterWorldAreaRsp, player.PlayerID, player.ClientSeq, enterWorldAreaRsp)
 }
 
+func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.ChangeGameTimeReq)
+	gameTime := req.GameTime
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	scene := world.GetSceneById(player.SceneId)
+	if scene == nil {
+		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+		return
+	}
+	scene.ChangeGameTime(gameTime)
+
+	for _, scenePlayer := range scene.GetAllPlayer() {
+		playerGameTimeNotify := &proto.PlayerGameTimeNotify{
+			GameTime: scene.GetGameTime(),
+			Uid:      scenePlayer.PlayerID,
+		}
+		g.SendMsg(cmd.PlayerGameTimeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, playerGameTimeNotify)
+	}
+
+	changeGameTimeRsp := &proto.ChangeGameTimeRsp{
+		CurGameTime: scene.GetGameTime(),
+	}
+	g.SendMsg(cmd.ChangeGameTimeRsp, player.PlayerID, player.ClientSeq, changeGameTimeRsp)
+}
+
+func (g *GameManager) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.NpcTalkReq)
+	rsp := &proto.NpcTalkRsp{
+		CurTalkId:   req.TalkId,
+		NpcEntityId: req.NpcEntityId,
+		EntityId:    req.EntityId,
+	}
+	g.SendMsg(cmd.NpcTalkRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
+func (g *GameManager) DungeonEntryInfoReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.DungeonEntryInfoReq)
+	pointDataConfig := gdconf.GetScenePointBySceneIdAndPointId(int32(req.SceneId), int32(req.PointId))
+	if pointDataConfig == nil {
+		g.SendError(cmd.DungeonEntryInfoRsp, player, &proto.DungeonEntryInfoRsp{})
+		return
+	}
+
+	rsp := &proto.DungeonEntryInfoRsp{
+		DungeonEntryList: make([]*proto.DungeonEntryInfo, 0),
+		PointId:          req.PointId,
+	}
+	for _, dungeonId := range pointDataConfig.DungeonIds {
+		rsp.DungeonEntryList = append(rsp.DungeonEntryList, &proto.DungeonEntryInfo{
+			DungeonId: uint32(dungeonId),
+		})
+	}
+	g.SendMsg(cmd.DungeonEntryInfoRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
+func (g *GameManager) PlayerEnterDungeonReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.PlayerEnterDungeonReq)
+	dungeonDataConfig := gdconf.GetDungeonDataById(int32(req.DungeonId))
+	if dungeonDataConfig == nil {
+		logger.Error("get dungeon data config is nil, dungeonId: %v, uid: %v", req.DungeonId, player.PlayerID)
+		return
+	}
+	sceneLuaConfig := gdconf.GetSceneLuaConfigById(dungeonDataConfig.SceneId)
+	if sceneLuaConfig == nil {
+		logger.Error("get scene lua config is nil, sceneId: %v, uid: %v", dungeonDataConfig.SceneId, player.PlayerID)
+		return
+	}
+	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER), uint32(dungeonDataConfig.SceneId), &model.Vector{
+		X: float64(sceneLuaConfig.SceneConfig.BornPos.X),
+		Y: float64(sceneLuaConfig.SceneConfig.BornPos.Y),
+		Z: float64(sceneLuaConfig.SceneConfig.BornPos.Z),
+	}, &model.Vector{
+		X: float64(sceneLuaConfig.SceneConfig.BornRot.X),
+		Y: float64(sceneLuaConfig.SceneConfig.BornRot.Y),
+		Z: float64(sceneLuaConfig.SceneConfig.BornRot.Z),
+	}, req.DungeonId)
+
+	rsp := &proto.PlayerEnterDungeonRsp{
+		DungeonId: req.DungeonId,
+		PointId:   req.PointId,
+	}
+	g.SendMsg(cmd.PlayerEnterDungeonRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
+func (g *GameManager) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.PlayerQuitDungeonReq)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	ctx := world.GetLastEnterSceneContextBySceneIdAndUid(3, player.PlayerID)
+	if ctx == nil {
+		return
+	}
+	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_DUNGEON_QUIT), 3, &model.Vector{
+		X: ctx.OldPos.X,
+		Y: ctx.OldPos.Y,
+		Z: ctx.OldPos.Z,
+	}, new(model.Vector), 0)
+
+	rsp := &proto.PlayerQuitDungeonRsp{
+		PointId: req.PointId,
+	}
+	g.SendMsg(cmd.PlayerQuitDungeonRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
 // TeleportPlayer 传送玩家至地图上的某个位置
 func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
 	// 传送玩家
@@ -221,18 +329,16 @@ func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, s
 	player.Rot.Z = rot.Z
 
 	var enterType proto.EnterType
-	switch enterReason {
-	case uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER):
-		logger.Debug("player tp to dungeon scene, sceneId: %v, pos: %v", player.SceneId, player.Pos)
-		enterType = proto.EnterType_ENTER_DUNGEON
-	default:
-		if jumpScene {
-			logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-			enterType = proto.EnterType_ENTER_JUMP
-		} else {
-			logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
-			enterType = proto.EnterType_ENTER_GOTO
+	if jumpScene {
+		logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+		enterType = proto.EnterType_ENTER_JUMP
+		if enterReason == uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER) {
+			logger.Debug("player tp to dungeon scene, sceneId: %v, pos: %v", player.SceneId, player.Pos)
+			enterType = proto.EnterType_ENTER_DUNGEON
 		}
+	} else {
+		logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
+		enterType = proto.EnterType_ENTER_GOTO
 	}
 	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(enterReason), oldSceneId, oldPos, dungeonId)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)

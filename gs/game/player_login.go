@@ -187,7 +187,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 
 	sceneLuaConfig := gdconf.GetSceneLuaConfigById(int32(player.SceneId))
 	if sceneLuaConfig == nil {
-		logger.Error("get scene lua config is nil, sceneId: %v", player.SceneId)
+		logger.Error("get scene lua config is nil, sceneId: %v, uid: %v", player.SceneId, player.PlayerID)
 		return nil
 	}
 	player.SafePos = &model.Vector{

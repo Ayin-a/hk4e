@@ -207,6 +207,8 @@ func (w *WorldManager) GetMultiplayerWorldNum() uint32 {
 type EnterSceneContext struct {
 	OldSceneId uint32
 	OldPos     *model.Vector
+	OldRot     *model.Vector
+	Uid        uint32
 }
 
 // World 世界数据结构
@@ -256,6 +258,23 @@ func (w *World) AddEnterSceneContext(ctx *EnterSceneContext) uint32 {
 	w.enterSceneToken += 100
 	w.enterSceneContextMap[w.enterSceneToken] = ctx
 	return w.enterSceneToken
+}
+
+func (w *World) GetLastEnterSceneContextBySceneIdAndUid(sceneId uint32, uid uint32) *EnterSceneContext {
+	for token := w.enterSceneToken; token >= 5000; token -= 100 {
+		ctx, exist := w.enterSceneContextMap[token]
+		if !exist {
+			continue
+		}
+		if ctx.OldSceneId != sceneId {
+			continue
+		}
+		if ctx.Uid != uid {
+			continue
+		}
+		return ctx
+	}
+	return nil
 }
 
 func (w *World) GetWorldLevel() uint8 {

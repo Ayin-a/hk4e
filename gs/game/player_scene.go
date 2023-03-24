@@ -16,6 +16,8 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// 场景模块 场景组 小组 实体 管理相关
+
 const (
 	ENTITY_MAX_BATCH_SEND_NUM = 1000 // 单次同步的最大实体数量
 	ENTITY_LOD                = 100  // 实体加载视野距离
@@ -381,31 +383,6 @@ func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.PostEnterSceneRsp, player.PlayerID, player.ClientSeq, postEnterSceneRsp)
 }
 
-func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
-	req := payloadMsg.(*proto.ChangeGameTimeReq)
-	gameTime := req.GameTime
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
-	scene.ChangeGameTime(gameTime)
-
-	for _, scenePlayer := range scene.GetAllPlayer() {
-		playerGameTimeNotify := &proto.PlayerGameTimeNotify{
-			GameTime: scene.GetGameTime(),
-			Uid:      scenePlayer.PlayerID,
-		}
-		g.SendMsg(cmd.PlayerGameTimeNotify, scenePlayer.PlayerID, scenePlayer.ClientSeq, playerGameTimeNotify)
-	}
-
-	changeGameTimeRsp := &proto.ChangeGameTimeRsp{
-		CurGameTime: scene.GetGameTime(),
-	}
-	g.SendMsg(cmd.ChangeGameTimeRsp, player.PlayerID, player.ClientSeq, changeGameTimeRsp)
-}
-
 func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneEntityDrownReq)
 
@@ -414,22 +391,13 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	scene.DestroyEntity(req.EntityId)
+	entity := scene.GetEntity(req.EntityId)
+	scene.SetEntityLifeState(entity, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_DRAWN)
 
 	sceneEntityDrownRsp := &proto.SceneEntityDrownRsp{
 		EntityId: req.EntityId,
 	}
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
-}
-
-func (g *GameManager) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
-	req := payloadMsg.(*proto.NpcTalkReq)
-	rsp := &proto.NpcTalkRsp{
-		CurTalkId:   req.TalkId,
-		NpcEntityId: req.NpcEntityId,
-		EntityId:    req.EntityId,
-	}
-	g.SendMsg(cmd.NpcTalkRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
 var SceneTransactionSeq uint32 = 0
@@ -443,6 +411,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 	}
 	enterSceneToken := world.AddEnterSceneContext(&EnterSceneContext{
 		OldSceneId: 0,
+		Uid:        player.PlayerID,
 	})
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		SceneId:                player.SceneId,
@@ -503,6 +472,12 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 			Y: prevPos.Y,
 			Z: prevPos.Z,
 		},
+		OldRot: &model.Vector{
+			X: 0,
+			Y: 0,
+			Z: 0,
+		},
+		Uid: player.PlayerID,
 	})
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		PrevSceneId:     prevSceneId,

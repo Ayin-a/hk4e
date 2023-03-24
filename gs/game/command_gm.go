@@ -19,7 +19,7 @@ type GMCmd struct {
 // 玩家通用GM指令
 
 // GMTeleportPlayer 传送玩家
-func (g *GMCmd) GMTeleportPlayer(userId, sceneId uint32, posX, posY, posZ float64) {
+func (g *GMCmd) GMTeleportPlayer(userId, sceneId, dungeonId uint32, posX, posY, posZ float64) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -29,7 +29,7 @@ func (g *GMCmd) GMTeleportPlayer(userId, sceneId uint32, posX, posY, posZ float6
 		X: posX,
 		Y: posY,
 		Z: posZ,
-	}, new(model.Vector), 0)
+	}, new(model.Vector), dungeonId)
 }
 
 // GMAddUserItem 给予玩家物品

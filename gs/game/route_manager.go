@@ -145,6 +145,9 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.EvtAiSyncCombatThreatInfoNotify, GAME_MANAGER.EvtAiSyncCombatThreatInfoNotify)
 	r.registerRouter(cmd.EntityConfigHashNotify, GAME_MANAGER.EntityConfigHashNotify)
 	r.registerRouter(cmd.MonsterAIConfigHashNotify, GAME_MANAGER.MonsterAIConfigHashNotify)
+	r.registerRouter(cmd.DungeonEntryInfoReq, GAME_MANAGER.DungeonEntryInfoReq)
+	r.registerRouter(cmd.PlayerEnterDungeonReq, GAME_MANAGER.PlayerEnterDungeonReq)
+	r.registerRouter(cmd.PlayerQuitDungeonReq, GAME_MANAGER.PlayerQuitDungeonReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

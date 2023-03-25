@@ -28,24 +28,24 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 	logger.Debug("player enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 
-	enterSceneContext := world.GetEnterSceneContextByToken(req.EnterSceneToken)
-	if enterSceneContext == nil {
+	ctx := world.GetEnterSceneContextByToken(req.EnterSceneToken)
+	if ctx == nil {
 		logger.Error("get enter scene context is nil, uid: %v", player.PlayerID)
 		return
 	}
-	if enterSceneContext.OldSceneId != 0 {
-		aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[enterSceneContext.OldSceneId]
+	if ctx.OldSceneId != 0 {
+		aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[ctx.OldSceneId]
 		if !exist {
-			logger.Error("player scene not exist in aoi, sceneId: %v, uid: %v", enterSceneContext.OldSceneId, player.PlayerID)
+			logger.Error("player scene not exist in aoi, sceneId: %v, uid: %v", ctx.OldSceneId, player.PlayerID)
 			return
 		}
-		objectList := aoiManager.GetObjectListByPos(float32(enterSceneContext.OldPos.X), 0.0, float32(enterSceneContext.OldPos.Z))
+		objectList := aoiManager.GetObjectListByPos(float32(ctx.OldPos.X), 0.0, float32(ctx.OldPos.Z))
 		delEntityIdList := make([]uint32, 0)
-		oldScene := world.GetSceneById(enterSceneContext.OldSceneId)
+		oldScene := world.GetSceneById(ctx.OldSceneId)
 		for _, groupAny := range objectList {
 			groupConfig := groupAny.(*gdconf.Group)
-			distance2D := math.Sqrt((player.Pos.X-float64(groupConfig.Pos.X))*(player.Pos.X-float64(groupConfig.Pos.X)) +
-				(player.Pos.Z-float64(groupConfig.Pos.Z))*(player.Pos.Z-float64(groupConfig.Pos.Z)))
+			distance2D := math.Sqrt((ctx.OldPos.X-float64(groupConfig.Pos.X))*(ctx.OldPos.X-float64(groupConfig.Pos.X)) +
+				(ctx.OldPos.Z-float64(groupConfig.Pos.Z))*(ctx.OldPos.Z-float64(groupConfig.Pos.Z)))
 			if distance2D > ENTITY_LOD {
 				continue
 			}

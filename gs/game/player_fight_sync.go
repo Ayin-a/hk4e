@@ -101,24 +101,24 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	for _, entry := range req.InvokeList {
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
-			hitInfo := new(proto.EvtBeingHitInfo)
-			err := pb.Unmarshal(entry.CombatData, hitInfo)
+			evtBeingHitInfo := new(proto.EvtBeingHitInfo)
+			err := pb.Unmarshal(entry.CombatData, evtBeingHitInfo)
 			if err != nil {
 				logger.Error("parse EvtBeingHitInfo error: %v", err)
 				continue
 			}
-			attackResult := hitInfo.AttackResult
+			// logger.Debug("EvtBeingHitInfo: %v, ForwardType: %v", evtBeingHitInfo, entry.ForwardType)
+			attackResult := evtBeingHitInfo.AttackResult
 			if attackResult == nil {
 				logger.Error("attackResult is nil")
 				continue
 			}
-			// logger.Debug("run attack handler, attackResult: %v", attackResult)
 			target := scene.GetEntity(attackResult.DefenseId)
 			if target == nil {
 				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
 				continue
 			}
-			attackResult.Damage *= 10
+			attackResult.Damage *= 100
 			damage := attackResult.Damage
 			attackerId := attackResult.AttackerId
 			_ = attackerId
@@ -140,7 +140,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			if currHp == 0 && target.GetEntityType() != constant.ENTITY_TYPE_AVATAR {
 				scene.SetEntityLifeState(target, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
 			}
-			combatData, err := pb.Marshal(hitInfo)
+			combatData, err := pb.Marshal(evtBeingHitInfo)
 			if err != nil {
 				logger.Error("create combat invocations entity hit info error: %v", err)
 			}
@@ -153,6 +153,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				logger.Error("parse EntityMoveInfo error: %v", err)
 				continue
 			}
+			// logger.Debug("EntityMoveInfo: %v, ForwardType: %v", entityMoveInfo, entry.ForwardType)
 			motionInfo := entityMoveInfo.MotionInfo
 			if motionInfo.Pos == nil || motionInfo.Rot == nil {
 				continue
@@ -208,11 +209,11 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			sceneEntity.SetMoveState(uint16(motionInfo.State))
 			sceneEntity.SetLastMoveSceneTimeMs(entityMoveInfo.SceneTime)
 			sceneEntity.SetLastMoveReliableSeq(entityMoveInfo.ReliableSeq)
-
-			if motionInfo.State == proto.MotionState_MOTION_NOTIFY {
+			// 众里寻他千百度 蓦然回首 那人却在灯火阑珊处
+			if motionInfo.State == proto.MotionState_MOTION_NOTIFY || motionInfo.State == proto.MotionState_MOTION_FIGHT {
+				// 只要转发了这两个包的其中之一 客户端的动画就会被打断
 				continue
 			}
-
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_PARAMETER_CHANGED:
 			evtAnimatorParameterInfo := new(proto.EvtAnimatorParameterInfo)
@@ -222,19 +223,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				continue
 			}
 			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
-			// 这是否?
-			evtAnimatorParameterInfo.IsServerCache = false
-			newCombatData, err := pb.Marshal(evtAnimatorParameterInfo)
-			if err != nil {
-				logger.Error("build EvtAnimatorParameterInfo error: %v", err)
-				continue
-			}
-			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-			// g.SendToWorldAEC(world, cmd.EvtAnimatorParameterNotify, player.ClientSeq, &proto.EvtAnimatorParameterNotify{
-			// 	AnimatorParamInfo: evtAnimatorParameterInfo,
-			// 	ForwardType:       entry.ForwardType,
-			// }, player.PlayerID)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
@@ -243,20 +232,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				continue
 			}
 			// logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
-			// 试试看?
-			evtAnimatorStateChangedInfo.HandleAnimatorStateImmediately = true
-			evtAnimatorStateChangedInfo.ForceSync = true
-			newCombatData, err := pb.Marshal(evtAnimatorStateChangedInfo)
-			if err != nil {
-				logger.Error("build EvtAnimatorParameterInfo error: %v", err)
-				continue
-			}
-			entry.CombatData = newCombatData
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-			// g.SendToWorldAEC(world, cmd.EvtAnimatorStateChangedNotify, player.ClientSeq, &proto.EvtAnimatorStateChangedNotify{
-			// 	ForwardType:                 entry.ForwardType,
-			// 	EvtAnimatorStateChangedInfo: evtAnimatorStateChangedInfo,
-			// }, player.PlayerID)
 		default:
 			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		}

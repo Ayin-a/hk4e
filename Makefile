@@ -104,4 +104,8 @@ gen_proto:
 # 生成客户端协议代理功能所需的代码
 .PHONY: gen_client_proto
 gen_client_proto:
-	cd gate/client_proto && rm -rf client_proto_gen.go && go test -count=1 -v -run TestClientProtoGen .
+	cd gate/client_proto && \
+	rm -rf client_proto_gen.go && \
+	go test -count=1 -v -run TestClientProtoGen . && \
+	rm -rf proto/*.pb.go && \
+	find proto -name '*.proto' | xargs -n 1000 protoc --proto_path=proto --go_out=proto

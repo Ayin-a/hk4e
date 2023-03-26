@@ -39,6 +39,8 @@ func TestClientProtoGen(t *testing.T) {
 	fileData += "\n"
 	fileData += "func (c *ClientCmdProtoMap) LoadClientCmdIdAndCmdName() {\n"
 	for _, clientCmdLine := range clientCmdLineList {
+		// 清理空格以及换行符之类的
+		clientCmdLine = strings.TrimSpace(clientCmdLine)
 		if clientCmdLine == "" {
 			continue
 		}

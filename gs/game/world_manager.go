@@ -119,6 +119,7 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 		maxZ := int16(math.MinInt16)
 		blockXLen := int16(0)
 		blockZLen := int16(0)
+		ok := true
 		for _, blockConfig := range sceneLuaConfig.BlockMap {
 			if int16(blockConfig.BlockRange.Min.X) < minX {
 				minX = int16(blockConfig.BlockRange.Min.X)
@@ -138,32 +139,41 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 				blockXLen = xLen
 			} else {
 				if blockXLen != xLen {
-					logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
-					return
+					logger.Error("scene block x len not same, scene id: %v", sceneLuaConfig.Id)
+					ok = false
+					break
 				}
 			}
 			if blockZLen == 0 {
 				blockZLen = zLen
 			} else {
 				if blockZLen != zLen {
-					logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
-					return
+					logger.Error("scene block z len not same, scene id: %v", sceneLuaConfig.Id)
+					ok = false
+					break
 				}
 			}
 		}
-		numX := int16(0)
-		if (maxX-minX) != 0 && blockXLen != 0 {
-			numX = (maxX - minX) / blockXLen
-		} else {
-			logger.Error("config scene block size is zero, scene id: %v", sceneLuaConfig.Id)
-			return
+		if !ok {
+			continue
 		}
-		numZ := int16(0)
-		if (maxZ-minZ) != 0 && blockZLen != 0 {
-			numZ = (maxZ - minZ) / blockZLen
-		} else {
-			logger.Error("config scene block size is zero, scene id: %v", sceneLuaConfig.Id)
-			return
+		if blockXLen == 0 {
+			logger.Error("scene block x len is zero, scene id: %v", sceneLuaConfig.Id)
+			continue
+		}
+		numX := (maxX - minX) / blockXLen
+		if numX == 0 {
+			logger.Error("calc scene block x num is zero, scene id: %v, %v / %v", sceneLuaConfig.Id, maxX-minX, blockXLen)
+			continue
+		}
+		if blockZLen == 0 {
+			logger.Error("scene block z len is zero, scene id: %v", sceneLuaConfig.Id)
+			continue
+		}
+		numZ := (maxZ - minZ) / blockZLen
+		if numZ == 0 {
+			logger.Error("calc scene block z num is zero, scene id: %v, %v / %v", sceneLuaConfig.Id, maxZ-minZ, blockZLen)
+			continue
 		}
 		// 将每个block作为aoi格子 并在格子中放入block拥有的所有group
 		aoiManager := alg.NewAoiManager()

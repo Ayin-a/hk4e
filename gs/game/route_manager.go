@@ -148,6 +148,7 @@ func (r *RouteManager) initRoute() {
 	r.registerRouter(cmd.DungeonEntryInfoReq, GAME_MANAGER.DungeonEntryInfoReq)
 	r.registerRouter(cmd.PlayerEnterDungeonReq, GAME_MANAGER.PlayerEnterDungeonReq)
 	r.registerRouter(cmd.PlayerQuitDungeonReq, GAME_MANAGER.PlayerQuitDungeonReq)
+	r.registerRouter(cmd.GadgetInteractReq, GAME_MANAGER.GadgetInteractReq)
 }
 
 func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {

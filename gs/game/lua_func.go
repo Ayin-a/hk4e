@@ -192,6 +192,10 @@ func GetGroupMonsterCount(luaState *lua.LState) int {
 		return 1
 	}
 	group := scene.GetGroupById(uint32(groupId))
+	if group == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
 	monsterCount := 0
 	for _, entity := range group.GetAllEntity() {
 		if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
@@ -230,13 +234,19 @@ func ChangeGroupGadget(luaState *lua.LState) int {
 		return 1
 	}
 	group := scene.GetGroupById(uint32(groupId))
-	logger.Debug("%v", group)
+	if group == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
 	gadgetInfo, ok := luaState.Get(2).(*lua.LTable)
 	if !ok {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	logger.Debug("%v", gadgetInfo)
+	gadgetStateInfo := new(gdconf.Gadget)
+	gdconf.ParseLuaTableToObject(gadgetInfo, gadgetStateInfo)
+	entity := group.GetEntityByConfigId(uint32(gadgetStateInfo.ConfigId))
+	GAME_MANAGER.ChangeGadgetState(player, scene, entity.GetId(), uint32(gadgetStateInfo.State))
 	luaState.Push(lua.LNumber(0))
 	return 1
 }

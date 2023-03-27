@@ -130,6 +130,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(PlayerQuitDungeonRsp, func() any { return new(proto.PlayerQuitDungeonRsp) })                     // 退出地牢响应
 	c.regMsg(DungeonDataNotify, func() any { return new(proto.DungeonDataNotify) })                           // 地牢数据通知
 	c.regMsg(DungeonWayPointNotify, func() any { return new(proto.DungeonWayPointNotify) })                   // 地牢路点通知
+	c.regMsg(GadgetInteractReq, func() any { return new(proto.GadgetInteractReq) })                           // 物件交互请求
+	c.regMsg(GadgetInteractRsp, func() any { return new(proto.GadgetInteractRsp) })                           // 物件交互响应
+	c.regMsg(GadgetStateNotify, func() any { return new(proto.GadgetStateNotify) })                           // 物件状态更新通知
 
 	// 战斗与同步
 	c.regMsg(AvatarFightPropNotify, func() any { return new(proto.AvatarFightPropNotify) })                         // 角色战斗属性通知

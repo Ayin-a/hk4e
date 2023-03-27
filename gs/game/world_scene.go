@@ -508,6 +508,17 @@ func (g *Group) GetAllEntity() map[uint32]*Entity {
 	return entityMap
 }
 
+func (g *Group) GetEntityByConfigId(configId uint32) *Entity {
+	for _, suite := range g.suiteMap {
+		for _, entity := range suite.entityMap {
+			if entity.configId == configId {
+				return entity
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Suite) GetEntityById(entityId uint32) *Entity {
 	return s.entityMap[entityId]
 }
@@ -660,6 +671,10 @@ func (g *GadgetEntity) GetGadgetId() uint32 {
 
 func (g *GadgetEntity) GetGadgetState() uint32 {
 	return g.gadgetState
+}
+
+func (g *GadgetEntity) SetGadgetState(v uint32) {
+	g.gadgetState = v
 }
 
 func (g *GadgetEntity) GetGadgetClientEntity() *GadgetClientEntity {

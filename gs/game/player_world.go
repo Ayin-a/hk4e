@@ -284,6 +284,18 @@ func (g *GameManager) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.M
 	g.SendMsg(cmd.PlayerQuitDungeonRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
+func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.GadgetInteractReq)
+	logger.Debug("GadgetInteractReq: %+v, uid: %v", req, player.PlayerID)
+	rsp := &proto.GadgetInteractRsp{
+		GadgetEntityId: req.GadgetEntityId,
+		InteractType:   0,
+		OpType:         req.OpType,
+		GadgetId:       req.GadgetId,
+	}
+	g.SendMsg(cmd.GadgetInteractRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
 // TeleportPlayer 传送玩家至地图上的某个位置
 func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
 	// 传送玩家

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"time"
 
 	"hk4e/common/constant"
@@ -112,10 +113,10 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 	w.sceneBlockAoiMap = make(map[uint32]*alg.AoiManager)
 	for _, sceneLuaConfig := range gdconf.GetSceneLuaConfigMap() {
 		// 检查各block大小是否相同 并提取出block大小
-		minX := int16(0)
-		maxX := int16(0)
-		minZ := int16(0)
-		maxZ := int16(0)
+		minX := int16(math.MaxInt16)
+		maxX := int16(math.MinInt16)
+		minZ := int16(math.MaxInt16)
+		maxZ := int16(math.MinInt16)
 		blockXLen := int16(0)
 		blockZLen := int16(0)
 		for _, blockConfig := range sceneLuaConfig.BlockMap {

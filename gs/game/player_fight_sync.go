@@ -132,7 +132,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 			}
 			g.EntityFightPropUpdateNotifyBroadcast(world, target)
 			if currHp == 0 && target.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
-				g.KillEntity(scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
+				g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(evtBeingHitInfo)
 			if err != nil {

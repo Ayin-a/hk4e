@@ -353,7 +353,7 @@ func getSceneLuaConfigTable[T any](luaState *lua.LState, tableName string, objec
 	luaValue := luaState.GetGlobal(tableName)
 	table, ok := luaValue.(*lua.LTable)
 	if !ok {
-		logger.Debug("get lua table error, table name: %v, lua type: %v", tableName, luaValue.Type().String())
+		// logger.Debug("get lua table error, table name: %v, lua type: %v", tableName, luaValue.Type().String())
 		return true
 	}
 	tableObject := convLuaValueToGo(table)

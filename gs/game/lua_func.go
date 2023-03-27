@@ -16,6 +16,7 @@ type LuaCtx struct {
 	ownerUid       uint32
 	sourceEntityId uint32
 	targetEntityId uint32
+	groupId        uint32
 }
 
 type LuaEvt struct {
@@ -37,6 +38,7 @@ func CallLuaFunc(luaState *lua.LState, luaFuncName string, luaCtx *LuaCtx, luaEv
 	luaState.SetField(ctx, "owner_uid", lua.LNumber(luaCtx.ownerUid))
 	luaState.SetField(ctx, "source_entity_id", lua.LNumber(luaCtx.sourceEntityId))
 	luaState.SetField(ctx, "target_entity_id", lua.LNumber(luaCtx.targetEntityId))
+	luaState.SetField(ctx, "groupId", lua.LNumber(luaCtx.groupId))
 	evt := luaState.NewTable()
 	luaState.SetField(evt, "param1", lua.LNumber(luaEvt.param1))
 	luaState.SetField(evt, "param2", lua.LNumber(luaEvt.param2))
@@ -75,6 +77,8 @@ func RegLuaLibFunc() {
 	gdconf.RegScriptLibFunc("PrintLog", PrintLog)
 	gdconf.RegScriptLibFunc("PrintContextLog", PrintContextLog)
 	gdconf.RegScriptLibFunc("BeginCameraSceneLook", BeginCameraSceneLook)
+	gdconf.RegScriptLibFunc("GetGroupMonsterCount", GetGroupMonsterCount)
+	gdconf.RegScriptLibFunc("ChangeGroupGadget", ChangeGroupGadget)
 }
 
 func GetEntityType(luaState *lua.LState) int {
@@ -156,6 +160,83 @@ func BeginCameraSceneLook(luaState *lua.LState) int {
 	ntf := new(proto.BeginCameraSceneLookNotify)
 	gdconf.ParseLuaTableToObject(cameraLockInfo, ntf)
 	GAME_MANAGER.SendMsg(cmd.BeginCameraSceneLookNotify, player.PlayerID, player.ClientSeq, ntf)
+	luaState.Push(lua.LNumber(0))
+	return 1
+}
+
+func GetGroupMonsterCount(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	scene := world.GetSceneById(player.SceneId)
+	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	group := scene.GetGroupById(uint32(groupId))
+	monsterCount := 0
+	for _, entity := range group.GetAllEntity() {
+		if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
+			monsterCount++
+		}
+	}
+	luaState.Push(lua.LNumber(monsterCount))
+	return 1
+}
+
+func ChangeGroupGadget(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	scene := world.GetSceneById(player.SceneId)
+	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	group := scene.GetGroupById(uint32(groupId))
+	logger.Debug("%v", group)
+	gadgetInfo, ok := luaState.Get(2).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	logger.Debug("%v", gadgetInfo)
 	luaState.Push(lua.LNumber(0))
 	return 1
 }

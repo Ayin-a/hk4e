@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"runtime"
 	"time"
 
@@ -170,9 +169,10 @@ func (g *GameManager) gameMainLoop() {
 			logger.Error("!!! GAME MAIN LOOP PANIC !!!")
 			logger.Error("error: %v", err)
 			logger.Error("stack: %v", logger.Stack())
-			motherfuckerPlayerInfo, _ := json.Marshal(SELF)
-			logger.Error("the motherfucker player info: %v", string(motherfuckerPlayerInfo))
 			if SELF != nil {
+				logger.Error("the motherfucker player uid: %v", SELF.PlayerID)
+				// info, _ := json.Marshal(SELF)
+				// logger.Error("the motherfucker player info: %v", string(info))
 				GAME_MANAGER.KickPlayer(SELF.PlayerID, kcp.EnetServerKick)
 			}
 		}

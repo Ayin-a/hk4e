@@ -353,7 +353,7 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	g.KillEntity(scene, req.EntityId, proto.PlayerDieType_PLAYER_DIE_DRAWN)
+	g.KillEntity(player, scene, req.EntityId, proto.PlayerDieType_PLAYER_DIE_DRAWN)
 
 	sceneEntityDrownRsp := &proto.SceneEntityDrownRsp{
 		EntityId: req.EntityId,
@@ -538,8 +538,11 @@ func (g *GameManager) RevivePlayerAvatar(player *model.Player) {
 	g.SendToWorldA(world, cmd.AvatarLifeStateChangeNotify, 0, ntf)
 }
 
-func (g *GameManager) KillEntity(scene *Scene, entityId uint32, dieType proto.PlayerDieType) {
+func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId uint32, dieType proto.PlayerDieType) {
 	entity := scene.GetEntity(entityId)
+	if entity == nil {
+		return
+	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
 	// 设置血量
 	entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
@@ -551,10 +554,45 @@ func (g *GameManager) KillEntity(scene *Scene, entityId uint32, dieType proto.Pl
 		MoveReliableSeq: entity.lastMoveReliableSeq,
 	}
 	g.SendToWorldA(scene.world, cmd.LifeStateChangeNotify, 0, ntf)
-
+	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_DIE, []uint32{entity.id})
 	// 删除实体
 	scene.DestroyEntity(entity.id)
-	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_DIE, []uint32{entity.id})
+
+	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
+		for groupId, group := range scene.GetAllGroup() {
+			groupConfig := gdconf.GetSceneGroup(int32(groupId))
+			if groupConfig == nil {
+				continue
+			}
+			for suiteId := range group.GetAllSuite() {
+				suiteConfig := groupConfig.SuiteList[suiteId-1]
+				for _, triggerName := range suiteConfig.TriggerNameList {
+					triggerConfig := groupConfig.TriggerMap[triggerName]
+					if triggerConfig.Event != constant.LUA_EVENT_ANY_MONSTER_DIE {
+						continue
+					}
+					if triggerConfig.Condition != "" {
+						cond := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Condition,
+							&LuaCtx{uid: player.PlayerID},
+							&LuaEvt{targetEntityId: entityId})
+						if !cond {
+							continue
+						}
+					}
+					logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+					if triggerConfig.Action != "" {
+						logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
+							&LuaCtx{uid: player.PlayerID, groupId: entity.groupId},
+							&LuaEvt{})
+						if !ok {
+							logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (g *GameManager) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint32]*Entity {

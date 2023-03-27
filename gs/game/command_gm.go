@@ -182,6 +182,29 @@ func (g *GMCmd) GMForceFinishAllQuest(userId uint32) {
 	GAME_MANAGER.AcceptQuest(player, true)
 }
 
+func (g *GMCmd) GMUnlockAllPoint(userId uint32, sceneId uint32) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	dbWorld := player.GetDbWorld()
+	dbScene := dbWorld.GetSceneById(sceneId)
+	if dbScene == nil {
+		logger.Error("db scene is nil, uid: %v", sceneId)
+		return
+	}
+	scenePointMapConfig := gdconf.GetScenePointMapBySceneId(int32(sceneId))
+	for _, pointData := range scenePointMapConfig {
+		dbScene.UnlockPoint(uint32(pointData.Id))
+	}
+	GAME_MANAGER.SendMsg(cmd.ScenePointUnlockNotify, player.PlayerID, player.ClientSeq, &proto.ScenePointUnlockNotify{
+		SceneId:         sceneId,
+		PointList:       dbScene.GetUnlockPointList(),
+		UnhidePointList: nil,
+	})
+}
+
 // 系统级GM指令
 
 func (g *GMCmd) ChangePlayerCmdPerm(userId uint32, cmdPerm uint8) {

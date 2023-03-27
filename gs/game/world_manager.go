@@ -133,8 +133,8 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 			if int16(blockConfig.BlockRange.Max.Z) > maxZ {
 				maxZ = int16(blockConfig.BlockRange.Max.Z)
 			}
-			xLen := int16(blockConfig.BlockRange.Max.X - blockConfig.BlockRange.Min.X)
-			zLen := int16(blockConfig.BlockRange.Max.Z - blockConfig.BlockRange.Min.Z)
+			xLen := int16(blockConfig.BlockRange.Max.X) - int16(blockConfig.BlockRange.Min.X)
+			zLen := int16(blockConfig.BlockRange.Max.Z) - int16(blockConfig.BlockRange.Min.Z)
 			if blockXLen == 0 {
 				blockXLen = xLen
 			} else {
@@ -157,23 +157,19 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 		if !ok {
 			continue
 		}
+		numX := int16(0)
 		if blockXLen == 0 {
-			logger.Error("scene block x len is zero, scene id: %v", sceneLuaConfig.Id)
-			continue
+			logger.Debug("scene block x len is zero, scene id: %v", sceneLuaConfig.Id)
+			numX = 1
+		} else {
+			numX = (maxX - minX) / blockXLen
 		}
-		numX := (maxX - minX) / blockXLen
-		if numX == 0 {
-			logger.Error("calc scene block x num is zero, scene id: %v, %v / %v", sceneLuaConfig.Id, maxX-minX, blockXLen)
-			continue
-		}
+		numZ := int16(0)
 		if blockZLen == 0 {
-			logger.Error("scene block z len is zero, scene id: %v", sceneLuaConfig.Id)
-			continue
-		}
-		numZ := (maxZ - minZ) / blockZLen
-		if numZ == 0 {
-			logger.Error("calc scene block z num is zero, scene id: %v, %v / %v", sceneLuaConfig.Id, maxZ-minZ, blockZLen)
-			continue
+			logger.Debug("scene block z len is zero, scene id: %v", sceneLuaConfig.Id)
+			numZ = 1
+		} else {
+			numZ = (maxZ - minZ) / blockZLen
 		}
 		// 将每个block作为aoi格子 并在格子中放入block拥有的所有group
 		aoiManager := alg.NewAoiManager()

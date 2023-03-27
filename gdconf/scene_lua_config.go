@@ -239,7 +239,7 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 		return
 	}
 	if len(suiteLuaTableList) == 0 {
-		logger.Info("get suites object is nil, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
+		// logger.Debug("get suites object is nil, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 	}
 	group.SuiteList = make([]*Suite, 0)
 	for _, suiteLuaTable := range suiteLuaTableList {

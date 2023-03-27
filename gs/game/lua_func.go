@@ -191,8 +191,14 @@ func GetGroupMonsterCount(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
+	if groupId == 133003095 {
+		logger.Debug("==========a==========")
+	}
 	group := scene.GetGroupById(uint32(groupId))
 	if group == nil {
+		if groupId == 133003095 {
+			logger.Debug("==========b==========")
+		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
@@ -233,13 +239,22 @@ func ChangeGroupGadget(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
+	if groupId == 133003095 {
+		logger.Debug("==========c==========")
+	}
 	group := scene.GetGroupById(uint32(groupId))
 	if group == nil {
+		if groupId == 133003095 {
+			logger.Debug("==========d==========")
+		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
 	gadgetInfo, ok := luaState.Get(2).(*lua.LTable)
 	if !ok {
+		if groupId == 133003095 {
+			logger.Debug("==========e==========")
+		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
@@ -248,5 +263,8 @@ func ChangeGroupGadget(luaState *lua.LState) int {
 	entity := group.GetEntityByConfigId(uint32(gadgetStateInfo.ConfigId))
 	GAME_MANAGER.ChangeGadgetState(player, scene, entity.GetId(), uint32(gadgetStateInfo.State))
 	luaState.Push(lua.LNumber(0))
+	if groupId == 133003095 {
+		logger.Debug("==========f==========")
+	}
 	return 1
 }

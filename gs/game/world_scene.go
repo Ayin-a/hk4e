@@ -103,7 +103,7 @@ func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32
 		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
-		fightProp:           dbAvatar.AvatarMap[avatarId].FightPropMap, // 使用角色结构的数据
+		fightProp:           avatar.FightPropMap, // 使用角色结构的数据
 		entityType:          constant.ENTITY_TYPE_AVATAR,
 		avatarEntity: &AvatarEntity{
 			uid:      player.PlayerID,

@@ -556,8 +556,14 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	g.SendToWorldA(scene.world, cmd.LifeStateChangeNotify, 0, ntf)
 	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_DIE, []uint32{entity.id})
 	// 删除实体
-	scene.DestroyEntity(entity.id)
-
+	group := scene.GetGroupById(entity.groupId)
+	if group == nil {
+		logger.Error("get scene group is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
+		return
+	}
+	group.DestroyEntity(entity.GetId())
+	scene.DestroyEntity(entity.GetId())
+	// 怪物死亡触发器
 	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
 		if entity.groupId == 133003095 {
 			logger.Debug("==========1==========")
@@ -565,11 +571,6 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 		groupConfig := gdconf.GetSceneGroup(int32(entity.groupId))
 		if groupConfig == nil {
 			logger.Error("get group config is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
-			return
-		}
-		group := scene.GetGroupById(entity.groupId)
-		if group == nil {
-			logger.Error("get scene group is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
 			return
 		}
 		for suiteId := range group.GetAllSuite() {

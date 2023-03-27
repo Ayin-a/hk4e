@@ -519,6 +519,17 @@ func (g *Group) GetEntityByConfigId(configId uint32) *Entity {
 	return nil
 }
 
+func (g *Group) DestroyEntity(entityId uint32) {
+	for _, suite := range g.suiteMap {
+		for _, entity := range suite.entityMap {
+			if entity.id == entityId {
+				delete(suite.entityMap, entity.id)
+				return
+			}
+		}
+	}
+}
+
 func (s *Suite) GetEntityById(entityId uint32) *Entity {
 	return s.entityMap[entityId]
 }

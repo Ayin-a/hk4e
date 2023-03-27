@@ -365,14 +365,14 @@ func (g *GameManager) TriggerCheck(player *model.Player, oldPos *model.Vector, n
 								continue
 							}
 						}
-						logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						logger.Debug("scene group trigger fire, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 						if triggerConfig.Action != "" {
-							logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							logger.Debug("scene group trigger do action, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 							ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
 								&LuaCtx{uid: player.PlayerID},
 								&LuaEvt{})
 							if !ok {
-								logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+								logger.Error("trigger action fail, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 							}
 						}
 						g.TriggerFire(player, triggerConfig)
@@ -392,14 +392,14 @@ func (g *GameManager) TriggerCheck(player *model.Player, oldPos *model.Vector, n
 								continue
 							}
 						}
-						logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+						logger.Debug("scene group trigger fire, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 						if triggerConfig.Action != "" {
-							logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+							logger.Debug("scene group trigger do action, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 							ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
 								&LuaCtx{uid: player.PlayerID},
 								&LuaEvt{})
 							if !ok {
-								logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+								logger.Error("trigger action fail, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 							}
 						}
 					}

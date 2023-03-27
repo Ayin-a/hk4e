@@ -3,6 +3,7 @@ package game
 import (
 	"hk4e/common/constant"
 	"hk4e/gdconf"
+	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
 	"hk4e/protocol/cmd"
@@ -79,6 +80,8 @@ func RegLuaLibFunc() {
 	gdconf.RegScriptLibFunc("BeginCameraSceneLook", BeginCameraSceneLook)
 	gdconf.RegScriptLibFunc("GetGroupMonsterCount", GetGroupMonsterCount)
 	gdconf.RegScriptLibFunc("ChangeGroupGadget", ChangeGroupGadget)
+	gdconf.RegScriptLibFunc("SetGadgetStateByConfigId", SetGadgetStateByConfigId)
+	gdconf.RegScriptLibFunc("MarkPlayerAction", MarkPlayerAction)
 }
 
 func GetEntityType(luaState *lua.LState) int {
@@ -93,12 +96,7 @@ func GetQuestState(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
 		return 1
 	}
-	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
-		return 1
-	}
-	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	player := GetContextPlayer(ctx, luaState)
 	if player == nil {
 		luaState.Push(lua.LNumber(constant.QUEST_STATE_NONE))
 		return 1
@@ -142,12 +140,7 @@ func BeginCameraSceneLook(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	player := GetContextPlayer(ctx, luaState)
 	if player == nil {
 		luaState.Push(lua.LNumber(-1))
 		return 1
@@ -170,35 +163,13 @@ func GetGroupMonsterCount(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	player := GetContextPlayer(ctx, luaState)
 	if player == nil {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	scene := world.GetSceneById(player.SceneId)
-	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	if groupId == 133003095 {
-		logger.Debug("==========a==========")
-	}
-	group := scene.GetGroupById(uint32(groupId))
+	group := GetContextGroup(player, ctx, luaState)
 	if group == nil {
-		if groupId == 133003095 {
-			logger.Debug("==========b==========")
-		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
@@ -218,53 +189,94 @@ func ChangeGroupGadget(luaState *lua.LState) int {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	player := GetContextPlayer(ctx, luaState)
 	if player == nil {
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	scene := world.GetSceneById(player.SceneId)
-	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
-	if !ok {
-		luaState.Push(lua.LNumber(-1))
-		return 1
-	}
-	if groupId == 133003095 {
-		logger.Debug("==========c==========")
-	}
-	group := scene.GetGroupById(uint32(groupId))
+	group := GetContextGroup(player, ctx, luaState)
 	if group == nil {
-		if groupId == 133003095 {
-			logger.Debug("==========d==========")
-		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
 	gadgetInfo, ok := luaState.Get(2).(*lua.LTable)
 	if !ok {
-		if groupId == 133003095 {
-			logger.Debug("==========e==========")
-		}
 		luaState.Push(lua.LNumber(-1))
 		return 1
 	}
 	gadgetStateInfo := new(gdconf.Gadget)
 	gdconf.ParseLuaTableToObject(gadgetInfo, gadgetStateInfo)
 	entity := group.GetEntityByConfigId(uint32(gadgetStateInfo.ConfigId))
-	GAME_MANAGER.ChangeGadgetState(player, scene, entity.GetId(), uint32(gadgetStateInfo.State))
+	GAME_MANAGER.ChangeGadgetState(player, entity.GetId(), uint32(gadgetStateInfo.State))
 	luaState.Push(lua.LNumber(0))
-	if groupId == 133003095 {
-		logger.Debug("==========f==========")
-	}
 	return 1
+}
+
+func SetGadgetStateByConfigId(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := GetContextPlayer(ctx, luaState)
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	group := GetContextGroup(player, ctx, luaState)
+	if group == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	configId := luaState.ToInt(2)
+	state := luaState.ToInt(3)
+	entity := group.GetEntityByConfigId(uint32(configId))
+	GAME_MANAGER.ChangeGadgetState(player, entity.GetId(), uint32(state))
+	luaState.Push(lua.LNumber(0))
+	return 1
+}
+
+func MarkPlayerAction(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := GetContextPlayer(ctx, luaState)
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	param1 := luaState.ToInt(2)
+	param2 := luaState.ToInt(3)
+	param3 := luaState.ToInt(4)
+	logger.Debug("[MarkPlayerAction] [%v %v %v] uid: %v", param1, param2, param3, player.PlayerID)
+	luaState.Push(lua.LNumber(0))
+	return 1
+}
+
+func GetContextPlayer(ctx *lua.LTable, luaState *lua.LState) *model.Player {
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		return nil
+	}
+	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	return player
+}
+
+func GetContextGroup(player *model.Player, ctx *lua.LTable, luaState *lua.LState) *Group {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return nil
+	}
+	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
+	if !ok {
+		return nil
+	}
+	scene := world.GetSceneById(player.SceneId)
+	group := scene.GetGroupById(uint32(groupId))
+	if group == nil {
+		return nil
+	}
+	return group
 }

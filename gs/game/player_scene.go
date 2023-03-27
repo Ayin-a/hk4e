@@ -565,28 +565,16 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	scene.DestroyEntity(entity.GetId())
 	// 怪物死亡触发器
 	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
-		if entity.groupId == 133003095 {
-			logger.Debug("==========1==========")
-		}
 		groupConfig := gdconf.GetSceneGroup(int32(entity.groupId))
 		if groupConfig == nil {
 			logger.Error("get group config is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
 			return
 		}
 		for suiteId := range group.GetAllSuite() {
-			if entity.groupId == 133003095 {
-				logger.Debug("==========2==========")
-			}
 			suiteConfig := groupConfig.SuiteList[suiteId-1]
 			for _, triggerName := range suiteConfig.TriggerNameList {
-				if entity.groupId == 133003095 {
-					logger.Debug("==========3==========")
-				}
 				triggerConfig := groupConfig.TriggerMap[triggerName]
 				if triggerConfig.Event != constant.LUA_EVENT_ANY_MONSTER_DIE {
-					if entity.groupId == 133003095 {
-						logger.Debug("==========4==========")
-					}
 					continue
 				}
 				if triggerConfig.Condition != "" {
@@ -594,26 +582,17 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 						&LuaCtx{uid: player.PlayerID, groupId: entity.groupId},
 						&LuaEvt{})
 					if !cond {
-						if entity.groupId == 133003095 {
-							logger.Debug("==========5==========")
-						}
 						continue
 					}
 				}
-				logger.Debug("scene group trigger fire, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
-				if entity.groupId == 133003095 {
-					logger.Debug("==========6==========")
-				}
+				logger.Debug("scene group trigger fire, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 				if triggerConfig.Action != "" {
-					logger.Debug("scene group trigger do action, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
+					logger.Debug("scene group trigger do action, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 					ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
 						&LuaCtx{uid: player.PlayerID, groupId: entity.groupId},
 						&LuaEvt{})
 					if !ok {
-						logger.Error("trigger action fail, trigger: %v, uid: %v", triggerConfig, player.PlayerID)
-					}
-					if entity.groupId == 133003095 {
-						logger.Debug("==========7==========")
+						logger.Error("trigger action fail, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
 					}
 				}
 			}
@@ -621,7 +600,12 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	}
 }
 
-func (g *GameManager) ChangeGadgetState(player *model.Player, scene *Scene, entityId uint32, state uint32) {
+func (g *GameManager) ChangeGadgetState(player *model.Player, entityId uint32, state uint32) {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return

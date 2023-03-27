@@ -448,18 +448,6 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 		return
 	}
 
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		return
-	}
-	scene := world.GetSceneById(player.SceneId)
-	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
-	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
-	if avatarEntity == nil {
-		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.GetAvatarEntityId())
-		return
-	}
-
 	// TODO 耐力未完成的内容：
 	// 一直溺水回到距离最近的位置 ?
 	// 溺水队伍扣血
@@ -470,7 +458,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 	// 先传送玩家再设置角色存活否则同时设置会传送前显示角色实体
 	if player.StaminaInfo.DrownBackDelay > 20 && player.SceneLoadState == model.SceneEnterDone {
 		// 设置角色存活
-		scene.SetEntityLifeState(avatarEntity, constant.LIFE_STATE_REVIVE, proto.PlayerDieType_PLAYER_DIE_NONE)
+		g.RevivePlayerAvatar(player)
 		// 重置溺水返回时间
 		player.StaminaInfo.DrownBackDelay = 0
 	} else if player.StaminaInfo.DrownBackDelay == 20 {
@@ -500,24 +488,11 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 		return
 	}
 
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
-	activeAvatar := world.GetPlayerWorldAvatar(player, world.GetPlayerActiveAvatarId(player))
-	avatarEntity := scene.GetEntity(activeAvatar.GetAvatarEntityId())
-	if avatarEntity == nil {
-		logger.Error("avatar entity is nil, entityId: %v", activeAvatar.GetAvatarEntityId())
-		return
-	}
-
 	// 确保玩家正在游泳
 	if player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_DASH {
 		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
 		// 设置角色为死亡
-		scene.SetEntityLifeState(avatarEntity, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_DRAWN)
+		g.KillPlayerAvatar(player, proto.PlayerDieType_PLAYER_DIE_DRAWN)
 		// 溺水返回安全点 计时开始
 		player.StaminaInfo.DrownBackDelay = 1
 	}

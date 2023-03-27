@@ -16,7 +16,7 @@ import (
 
 const (
 	ENTITY_NUM_UNLIMIT        = true // 是否不限制场景内实体数量
-	ENTITY_MAX_SEND_NUM       = 500  // 场景内最大实体数量
+	ENTITY_MAX_SEND_NUM       = 1000 // 场景内最大实体数量
 	MAX_MULTIPLAYER_WORLD_NUM = 10   // 本服务器最大多人世界数量
 )
 
@@ -117,9 +117,7 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 		minZ := int16(0)
 		maxZ := int16(0)
 		blockXLen := int16(0)
-		blockYLen := int16(0)
 		blockZLen := int16(0)
-		ok := true
 		for _, blockConfig := range sceneLuaConfig.BlockMap {
 			if int16(blockConfig.BlockRange.Min.X) < minX {
 				minX = int16(blockConfig.BlockRange.Min.X)
@@ -134,54 +132,37 @@ func (w *WorldManager) LoadSceneBlockAoiMap() {
 				maxZ = int16(blockConfig.BlockRange.Max.Z)
 			}
 			xLen := int16(blockConfig.BlockRange.Max.X - blockConfig.BlockRange.Min.X)
-			yLen := int16(blockConfig.BlockRange.Max.Y - blockConfig.BlockRange.Min.Y)
 			zLen := int16(blockConfig.BlockRange.Max.Z - blockConfig.BlockRange.Min.Z)
 			if blockXLen == 0 {
 				blockXLen = xLen
 			} else {
 				if blockXLen != xLen {
-					ok = false
-					break
-				}
-			}
-			if blockYLen == 0 {
-				blockYLen = yLen
-			} else {
-				if blockYLen != yLen {
-					ok = false
-					break
+					logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
+					return
 				}
 			}
 			if blockZLen == 0 {
 				blockZLen = zLen
 			} else {
 				if blockZLen != zLen {
-					ok = false
-					break
+					logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
+					return
 				}
 			}
 		}
-		if !ok {
-			logger.Error("config scene block size not same, scene id: %v", sceneLuaConfig.Id)
-			continue
-		}
 		numX := int16(0)
-		if blockXLen != 0 {
+		if (maxX-minX) != 0 && blockXLen != 0 {
 			numX = (maxX - minX) / blockXLen
 		} else {
-			numX = 1
-		}
-		if numX == 0 {
-			numX = 1
+			logger.Error("config scene block size is zero, scene id: %v", sceneLuaConfig.Id)
+			return
 		}
 		numZ := int16(0)
-		if blockZLen != 0 {
+		if (maxZ-minZ) != 0 && blockZLen != 0 {
 			numZ = (maxZ - minZ) / blockZLen
 		} else {
-			numZ = 1
-		}
-		if numZ == 0 {
-			numZ = 1
+			logger.Error("config scene block size is zero, scene id: %v", sceneLuaConfig.Id)
+			return
 		}
 		// 将每个block作为aoi格子 并在格子中放入block拥有的所有group
 		aoiManager := alg.NewAoiManager()

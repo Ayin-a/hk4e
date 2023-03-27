@@ -1,8 +1,6 @@
 package game
 
 import (
-	"math"
-
 	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
@@ -132,13 +130,9 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 				}
 				fightProp[constant.FIGHT_PROP_CUR_HP] = currHp
 			}
-			entityFightPropUpdateNotify := &proto.EntityFightPropUpdateNotify{
-				FightPropMap: fightProp,
-				EntityId:     target.GetId(),
-			}
-			g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, player.ClientSeq, entityFightPropUpdateNotify)
-			if currHp == 0 && target.GetEntityType() != constant.ENTITY_TYPE_AVATAR {
-				scene.SetEntityLifeState(target, constant.LIFE_STATE_DEAD, proto.PlayerDieType_PLAYER_DIE_GM)
+			g.EntityFightPropUpdateNotifyBroadcast(world, target)
+			if currHp == 0 && target.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
+				g.KillEntity(scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
 			}
 			combatData, err := pb.Marshal(evtBeingHitInfo)
 			if err != nil {
@@ -258,72 +252,48 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		// 跨越了block格子
 		logger.Debug("player cross grid, oldGid: %v, newGid: %v, uid: %v", oldGid, newGid, player.PlayerID)
 	}
-	// 旧位置视野范围内的group
-	oldVisionGroupMap := make(map[uint32]*gdconf.Group)
-	oldGroupList := aoiManager.GetObjectListByPos(float32(oldPos.X), 0.0, float32(oldPos.Z))
-	for groupId, groupAny := range oldGroupList {
-		groupConfig := groupAny.(*gdconf.Group)
-		distance2D := math.Sqrt((oldPos.X-float64(groupConfig.Pos.X))*(oldPos.X-float64(groupConfig.Pos.X)) +
-			(oldPos.Z-float64(groupConfig.Pos.Z))*(oldPos.Z-float64(groupConfig.Pos.Z)))
-		if distance2D > ENTITY_LOD {
-			continue
-		}
-		if groupConfig.DynamicLoad {
-			continue
-		}
-		oldVisionGroupMap[uint32(groupId)] = groupConfig
-	}
-	// 新位置视野范围内的group
-	newVisionGroupMap := make(map[uint32]*gdconf.Group)
-	newGroupList := aoiManager.GetObjectListByPos(float32(newPos.X), 0.0, float32(newPos.Z))
-	for groupId, groupAny := range newGroupList {
-		groupConfig := groupAny.(*gdconf.Group)
-		distance2D := math.Sqrt((newPos.X-float64(groupConfig.Pos.X))*(newPos.X-float64(groupConfig.Pos.X)) +
-			(newPos.Z-float64(groupConfig.Pos.Z))*(newPos.Z-float64(groupConfig.Pos.Z)))
-		if distance2D > ENTITY_LOD {
-			continue
-		}
-		if groupConfig.DynamicLoad {
-			continue
-		}
-		newVisionGroupMap[uint32(groupId)] = groupConfig
-	}
-	// 消失的场景实体
-	delEntityIdList := make([]uint32, 0)
-	for groupId, groupConfig := range oldVisionGroupMap {
-		_, exist := newVisionGroupMap[groupId]
+	// 加载和卸载的group
+	oldNeighborGroupMap := g.GetNeighborGroup(player.SceneId, oldPos)
+	newNeighborGroupMap := g.GetNeighborGroup(player.SceneId, newPos)
+	for groupId, groupConfig := range oldNeighborGroupMap {
+		_, exist := newNeighborGroupMap[groupId]
 		if exist {
 			continue
 		}
-		// 旧有新没有的group即为消失的
-		group := scene.GetGroupById(groupId)
-		if group == nil {
-			continue
-		}
-		for _, entity := range group.GetAllEntity() {
-			delEntityIdList = append(delEntityIdList, entity.GetId())
-		}
+		// 旧有新没有的group即为卸载的
 		if !world.GetMultiplayer() {
 			// 处理多人世界不同玩家不同位置的group卸载情况
 			g.RemoveGroup(player, scene, groupConfig)
 		}
 	}
-	// 出现的场景实体
-	addEntityIdList := make([]uint32, 0)
-	for groupId, groupConfig := range newVisionGroupMap {
-		_, exist := oldVisionGroupMap[groupId]
+	for groupId, groupConfig := range newNeighborGroupMap {
+		_, exist := oldNeighborGroupMap[groupId]
 		if exist {
 			continue
 		}
-		// 新有旧没有的group即为出现的
+		// 新有旧没有的group即为加载的
 		g.AddSceneGroup(player, scene, groupConfig)
-		group := scene.GetGroupById(groupId)
-		if group == nil {
+	}
+	// 消失和出现的场景实体
+	oldVisionEntityMap := g.GetVisionEntity(scene, oldPos)
+	newVisionEntityMap := g.GetVisionEntity(scene, newPos)
+	delEntityIdList := make([]uint32, 0)
+	for entityId := range oldVisionEntityMap {
+		_, exist := newVisionEntityMap[entityId]
+		if exist {
 			continue
 		}
-		for _, entity := range group.GetAllEntity() {
-			addEntityIdList = append(addEntityIdList, entity.GetId())
+		// 旧有新没有的实体即为消失的
+		delEntityIdList = append(delEntityIdList, entityId)
+	}
+	addEntityIdList := make([]uint32, 0)
+	for entityId := range newVisionEntityMap {
+		_, exist := oldVisionEntityMap[entityId]
+		if exist {
+			continue
 		}
+		// 新有旧没有的实体即为出现的
+		addEntityIdList = append(addEntityIdList, entityId)
 	}
 	// 同步客户端消失和出现的场景实体
 	if len(delEntityIdList) > 0 {
@@ -452,11 +422,14 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	for _, entry := range req.Invokes {
 		// logger.Debug("AbilityInvocationsNotify: %v", entry, player.PlayerID)
 		switch entry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
-			world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 			worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
 			if worldAvatar != nil {
 				for _, ability := range worldAvatar.abilityList {
@@ -575,7 +548,6 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 		return
 	}
 	logger.Debug("EvtDoSkillSuccNotify: %v", req)
-
 	// 处理技能开始的耐力消耗
 	g.SkillStartStamina(player, req.CasterId, req.SkillId)
 }
@@ -585,7 +557,7 @@ func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtAvatarEnterFocusNotify: %v", req)
+	// logger.Debug("EvtAvatarEnterFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarEnterFocusNotify, player.ClientSeq, req)
 }
@@ -595,7 +567,7 @@ func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMs
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtAvatarUpdateFocusNotify: %v", req)
+	// logger.Debug("EvtAvatarUpdateFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarUpdateFocusNotify, player.ClientSeq, req)
 }
@@ -605,7 +577,7 @@ func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg 
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtAvatarExitFocusNotify: %v", req)
+	// logger.Debug("EvtAvatarExitFocusNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtAvatarExitFocusNotify, player.ClientSeq, req)
 }
@@ -615,7 +587,7 @@ func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payl
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtEntityRenderersChangedNotify: %v", req)
+	// logger.Debug("EvtEntityRenderersChangedNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	g.SendToWorldA(world, cmd.EvtEntityRenderersChangedNotify, player.ClientSeq, req)
 }
@@ -625,7 +597,7 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtCreateGadgetNotify: %v", req)
+	// logger.Debug("EvtCreateGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("world is nil, WorldId: %v", player.WorldId)
@@ -652,7 +624,7 @@ func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	logger.Debug("EvtDestroyGadgetNotify: %v", req)
+	// logger.Debug("EvtDestroyGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if scene == nil {

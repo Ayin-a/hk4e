@@ -8,7 +8,6 @@ import (
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 )
 
@@ -87,65 +86,6 @@ func (s *Scene) RemovePlayer(player *model.Player) {
 	}
 }
 
-func (s *Scene) SetEntityLifeState(entity *Entity, lifeState uint16, dieType proto.PlayerDieType) {
-	if entity.GetEntityType() == constant.ENTITY_TYPE_AVATAR {
-		// 获取玩家对象
-		player := USER_MANAGER.GetOnlineUser(entity.avatarEntity.uid)
-		if player == nil {
-			logger.Error("player is nil, uid: %v", entity.avatarEntity.uid)
-			return
-		}
-		// 获取角色
-		dbAvatar := player.GetDbAvatar()
-		avatar, ok := dbAvatar.AvatarMap[entity.avatarEntity.avatarId]
-		if !ok {
-			logger.Error("avatar is nil, avatarId: %v", avatar)
-			return
-		}
-		// 设置角色存活状态
-		if lifeState == constant.LIFE_STATE_REVIVE {
-			avatar.LifeState = constant.LIFE_STATE_ALIVE
-			// 设置血量
-			entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 110
-			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, constant.FIGHT_PROP_CUR_HP)
-		}
-
-		avatarLifeStateChangeNotify := &proto.AvatarLifeStateChangeNotify{
-			LifeState:       uint32(lifeState),
-			AttackTag:       "",
-			DieType:         dieType,
-			ServerBuffList:  nil,
-			MoveReliableSeq: entity.lastMoveReliableSeq,
-			SourceEntityId:  0,
-			AvatarGuid:      avatar.Guid,
-		}
-		GAME_MANAGER.SendToWorldA(s.world, cmd.AvatarLifeStateChangeNotify, 0, avatarLifeStateChangeNotify)
-	} else {
-		// 设置存活状态
-		entity.lifeState = lifeState
-
-		if lifeState == constant.LIFE_STATE_DEAD {
-			// 设置血量
-			entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
-			GAME_MANAGER.EntityFightPropUpdateNotifyBroadcast(s, entity, constant.FIGHT_PROP_CUR_HP)
-		}
-
-		lifeStateChangeNotify := &proto.LifeStateChangeNotify{
-			EntityId:        entity.id,
-			AttackTag:       "",
-			MoveReliableSeq: entity.lastMoveReliableSeq,
-			DieType:         dieType,
-			LifeState:       uint32(lifeState),
-			SourceEntityId:  0,
-		}
-		GAME_MANAGER.SendToWorldA(s.world, cmd.LifeStateChangeNotify, 0, lifeStateChangeNotify)
-
-		// 删除实体
-		s.DestroyEntity(entity.id)
-		GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(s, proto.VisionType_VISION_DIE, []uint32{entity.id})
-	}
-}
-
 func (s *Scene) CreateEntityAvatar(player *model.Player, avatarId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_AVATAR)
 	dbAvatar := player.GetDbAvatar()
@@ -185,8 +125,12 @@ func (s *Scene) CreateEntityWeapon() uint32 {
 		moveState:           uint16(proto.MotionState_MOTION_NONE),
 		lastMoveSceneTimeMs: 0,
 		lastMoveReliableSeq: 0,
-		fightProp:           nil,
-		entityType:          constant.ENTITY_TYPE_WEAPON,
+		fightProp: map[uint32]float32{
+			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
+			constant.FIGHT_PROP_BASE_HP: float32(1),
+		},
+		entityType: constant.ENTITY_TYPE_WEAPON,
 	}
 	s.CreateEntity(entity)
 	return entity.id

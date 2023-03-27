@@ -78,6 +78,9 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SetUpAvatarTeamReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	if world.GetMultiplayer() {
 		g.SendError(cmd.SetUpAvatarTeamRsp, player, &proto.SetUpAvatarTeamRsp{})
 		return

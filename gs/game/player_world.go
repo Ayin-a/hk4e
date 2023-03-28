@@ -307,28 +307,30 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 		logger.Error("get gadget data config is nil, gadgetId: %v, uid: %v", gadgetEntity.GetGadgetId(), player.PlayerID)
 		return
 	}
-	if gadgetDataConfig.CanInteract == 0 {
-		logger.Error("gadget can not be interact, gadgetId: %v, uid: %v", gadgetEntity.GetGadgetId(), player.PlayerID)
-		return
-	}
 	interactType := proto.InteractType_INTERACT_NONE
 	switch gadgetDataConfig.Type {
 	case constant.GADGET_TYPE_GADGET:
-		logger.Debug("==========GADGET_TYPE_GADGET==========")
 		// 掉落物捡起
 		interactType = proto.InteractType_INTERACT_PICK_ITEM
+		gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
+		g.AddUserItem(player.PlayerID, []*ChangeItem{{
+			ItemId:      gadgetNormalEntity.GetItemId(),
+			ChangeCount: 1,
+		}}, true, 0)
 		g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
 	case constant.GADGET_TYPE_ENERGY_BALL:
-		logger.Debug("==========GADGET_TYPE_ENERGY_BALL==========")
-		// 元素能量球吸收
+		// TODO 元素能量球吸收
 		interactType = proto.InteractType_INTERACT_PICK_ITEM
 	case constant.GADGET_TYPE_GATHER_OBJECT:
-		logger.Debug("==========GADGET_TYPE_GATHER_OBJECT==========")
 		// 采集物摘取
 		interactType = proto.InteractType_INTERACT_GATHER
+		gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
+		g.AddUserItem(player.PlayerID, []*ChangeItem{{
+			ItemId:      gadgetNormalEntity.GetItemId(),
+			ChangeCount: 1,
+		}}, true, 0)
 		g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
 	case constant.GADGET_TYPE_CHEST:
-		logger.Debug("==========GADGET_TYPE_CHEST==========")
 		// 宝箱开启
 		interactType = proto.InteractType_INTERACT_OPEN_CHEST
 		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
@@ -338,6 +340,8 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 				SceneId:  scene.GetId(),
 				ConfigId: entity.GetConfigId(),
 			})
+			// TODO
+			g.CreateGadget(player, 70600055, entity.pos, 104003)
 			g.ChangeGadgetState(player, scene.GetId(), constant.GADGET_STATE_CHEST_OPENED)
 			g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
 		}

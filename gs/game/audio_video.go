@@ -326,7 +326,7 @@ func UpdateFrame(rgb bool) {
 					X: leftTopPos.X - float64(w)*SCREEN_DPI,
 					Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 					Z: leftTopPos.Z,
-				}, new(model.Vector), uint32(FRAME_COLOR[w][h]), 271003, uint32(constant.GADGET_STATE_DEFAULT), 0)
+				}, new(model.Vector), uint32(FRAME_COLOR[w][h]), uint32(constant.GADGET_STATE_DEFAULT), nil, 0, 0)
 				SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 			} else {
 				if !FRAME[w][h] {
@@ -334,7 +334,7 @@ func UpdateFrame(rgb bool) {
 						X: leftTopPos.X - float64(w)*SCREEN_DPI,
 						Y: leftTopPos.Y - float64(h)*SCREEN_DPI,
 						Z: leftTopPos.Z,
-					}, new(model.Vector), uint32(GADGET_ID), 271003, uint32(constant.GADGET_STATE_DEFAULT), 0)
+					}, new(model.Vector), uint32(GADGET_ID), uint32(constant.GADGET_STATE_DEFAULT), nil, 0, 0)
 					SCREEN_ENTITY_ID_LIST = append(SCREEN_ENTITY_ID_LIST, entityId)
 				}
 			}

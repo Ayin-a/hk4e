@@ -9,7 +9,6 @@ type GadgetData struct {
 	GadgetId    int32 `csv:"ID"`
 	Type        int32 `csv:"类型,omitempty"`
 	DefaultCamp int32 `csv:"默认阵营,omitempty"`
-	CanInteract int32 `csv:"能否交互,omitempty"`
 }
 
 func (g *GameDataConfig) loadGadgetData() {

@@ -190,7 +190,7 @@ func (s *Scene) CreateEntityNpc(pos, rot *model.Vector, npcId, roomId, parentQue
 	return entity.id
 }
 
-func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId, gadgetState, configId, groupId uint32) uint32 {
+func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId, gadgetState uint32, gadgetNormalEntity *GadgetNormalEntity, configId, groupId uint32) uint32 {
 	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
 	entity := &Entity{
 		id:                  entityId,
@@ -208,41 +208,10 @@ func (s *Scene) CreateEntityGadgetNormal(pos, rot *model.Vector, gadgetId, gadge
 		},
 		entityType: constant.ENTITY_TYPE_GADGET,
 		gadgetEntity: &GadgetEntity{
-			gadgetId:    gadgetId,
-			gadgetState: gadgetState,
-			gadgetType:  GADGET_TYPE_NORMAL,
-		},
-		configId: configId,
-		groupId:  groupId,
-	}
-	s.CreateEntity(entity)
-	return entity.id
-}
-
-func (s *Scene) CreateEntityGadgetGather(pos, rot *model.Vector, gadgetId, gadgetState, gatherId, configId, groupId uint32) uint32 {
-	entityId := s.world.GetNextWorldEntityId(constant.ENTITY_TYPE_GADGET)
-	entity := &Entity{
-		id:                  entityId,
-		scene:               s,
-		lifeState:           constant.LIFE_STATE_ALIVE,
-		pos:                 pos,
-		rot:                 rot,
-		moveState:           uint16(proto.MotionState_MOTION_NONE),
-		lastMoveSceneTimeMs: 0,
-		lastMoveReliableSeq: 0,
-		fightProp: map[uint32]float32{
-			constant.FIGHT_PROP_CUR_HP:  math.MaxFloat32,
-			constant.FIGHT_PROP_MAX_HP:  math.MaxFloat32,
-			constant.FIGHT_PROP_BASE_HP: float32(1),
-		},
-		entityType: constant.ENTITY_TYPE_GADGET,
-		gadgetEntity: &GadgetEntity{
-			gadgetId:    gadgetId,
-			gadgetState: gadgetState,
-			gadgetType:  GADGET_TYPE_GATHER,
-			gadgetGatherEntity: &GadgetGatherEntity{
-				gatherId: gatherId,
-			},
+			gadgetId:           gadgetId,
+			gadgetState:        gadgetState,
+			gadgetType:         GADGET_TYPE_NORMAL,
+			gadgetNormalEntity: gadgetNormalEntity,
 		},
 		configId: configId,
 		groupId:  groupId,
@@ -407,26 +376,18 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 	switch entityConfig.(type) {
 	case *gdconf.Monster:
 		monster := entityConfig.(*gdconf.Monster)
-		return s.CreateEntityMonster(&model.Vector{
-			X: float64(monster.Pos.X),
-			Y: float64(monster.Pos.Y),
-			Z: float64(monster.Pos.Z),
-		}, &model.Vector{
-			X: float64(monster.Rot.X),
-			Y: float64(monster.Rot.Y),
-			Z: float64(monster.Rot.Z),
-		}, uint32(monster.MonsterId), uint8(monster.Level), getTempFightPropMap(), uint32(monster.ConfigId), groupId)
+		return s.CreateEntityMonster(
+			&model.Vector{X: float64(monster.Pos.X), Y: float64(monster.Pos.Y), Z: float64(monster.Pos.Z)},
+			&model.Vector{X: float64(monster.Rot.X), Y: float64(monster.Rot.Y), Z: float64(monster.Rot.Z)},
+			uint32(monster.MonsterId), uint8(monster.Level), getTempFightPropMap(), uint32(monster.ConfigId), groupId,
+		)
 	case *gdconf.Npc:
 		npc := entityConfig.(*gdconf.Npc)
-		return s.CreateEntityNpc(&model.Vector{
-			X: float64(npc.Pos.X),
-			Y: float64(npc.Pos.Y),
-			Z: float64(npc.Pos.Z),
-		}, &model.Vector{
-			X: float64(npc.Rot.X),
-			Y: float64(npc.Rot.Y),
-			Z: float64(npc.Rot.Z),
-		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), groupId)
+		return s.CreateEntityNpc(
+			&model.Vector{X: float64(npc.Pos.X), Y: float64(npc.Pos.Y), Z: float64(npc.Pos.Z)},
+			&model.Vector{X: float64(npc.Rot.X), Y: float64(npc.Rot.Y), Z: float64(npc.Rot.Z)},
+			uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), groupId,
+		)
 	case *gdconf.Gadget:
 		gadget := entityConfig.(*gdconf.Gadget)
 		// 70500000并不是实际的物件id 根据节点类型对应采集物配置表
@@ -435,25 +396,27 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 			if gatherDataConfig == nil {
 				return 0
 			}
-			return s.CreateEntityGadgetGather(&model.Vector{
-				X: float64(gadget.Pos.X),
-				Y: float64(gadget.Pos.Y),
-				Z: float64(gadget.Pos.Z),
-			}, &model.Vector{
-				X: float64(gadget.Rot.X),
-				Y: float64(gadget.Rot.Y),
-				Z: float64(gadget.Rot.Z),
-			}, uint32(gatherDataConfig.GadgetId), uint32(constant.GADGET_STATE_DEFAULT), uint32(gatherDataConfig.GatherId), uint32(gadget.ConfigId), groupId)
+			return s.CreateEntityGadgetNormal(
+				&model.Vector{X: float64(gadget.Pos.X), Y: float64(gadget.Pos.Y), Z: float64(gadget.Pos.Z)},
+				&model.Vector{X: float64(gadget.Rot.X), Y: float64(gadget.Rot.Y), Z: float64(gadget.Rot.Z)},
+				uint32(gatherDataConfig.GadgetId),
+				uint32(constant.GADGET_STATE_DEFAULT),
+				&GadgetNormalEntity{
+					itemId: uint32(gatherDataConfig.ItemId),
+				},
+				uint32(gadget.ConfigId),
+				groupId,
+			)
 		} else {
-			return s.CreateEntityGadgetNormal(&model.Vector{
-				X: float64(gadget.Pos.X),
-				Y: float64(gadget.Pos.Y),
-				Z: float64(gadget.Pos.Z),
-			}, &model.Vector{
-				X: float64(gadget.Rot.X),
-				Y: float64(gadget.Rot.Y),
-				Z: float64(gadget.Rot.Z),
-			}, uint32(gadget.GadgetId), uint32(gadget.State), uint32(gadget.ConfigId), groupId)
+			return s.CreateEntityGadgetNormal(
+				&model.Vector{X: float64(gadget.Pos.X), Y: float64(gadget.Pos.Y), Z: float64(gadget.Pos.Z)},
+				&model.Vector{X: float64(gadget.Rot.X), Y: float64(gadget.Rot.Y), Z: float64(gadget.Rot.Z)},
+				uint32(gadget.GadgetId),
+				uint32(gadget.State),
+				nil,
+				uint32(gadget.ConfigId),
+				groupId,
+			)
 		}
 	default:
 		return 0
@@ -663,12 +626,18 @@ type NpcEntity struct {
 	BlockId       uint32
 }
 
+const (
+	GADGET_TYPE_NORMAL = iota
+	GADGET_TYPE_CLIENT
+	GADGET_TYPE_VEHICLE // 载具
+)
+
 type GadgetEntity struct {
 	gadgetType          int
 	gadgetId            uint32
 	gadgetState         uint32
+	gadgetNormalEntity  *GadgetNormalEntity
 	gadgetClientEntity  *GadgetClientEntity
-	gadgetGatherEntity  *GadgetGatherEntity
 	gadgetVehicleEntity *GadgetVehicleEntity
 }
 
@@ -684,28 +653,29 @@ func (g *GadgetEntity) GetGadgetState() uint32 {
 	return g.gadgetState
 }
 
-func (g *GadgetEntity) SetGadgetState(v uint32) {
-	g.gadgetState = v
+func (g *GadgetEntity) SetGadgetState(state uint32) {
+	g.gadgetState = state
+}
+
+func (g *GadgetEntity) GetGadgetNormalEntity() *GadgetNormalEntity {
+	return g.gadgetNormalEntity
 }
 
 func (g *GadgetEntity) GetGadgetClientEntity() *GadgetClientEntity {
 	return g.gadgetClientEntity
 }
 
-func (g *GadgetEntity) GetGadgetGatherEntity() *GadgetGatherEntity {
-	return g.gadgetGatherEntity
-}
-
 func (g *GadgetEntity) GetGadgetVehicleEntity() *GadgetVehicleEntity {
 	return g.gadgetVehicleEntity
 }
 
-const (
-	GADGET_TYPE_NORMAL = iota
-	GADGET_TYPE_GATHER
-	GADGET_TYPE_CLIENT
-	GADGET_TYPE_VEHICLE // 载具
-)
+type GadgetNormalEntity struct {
+	itemId uint32
+}
+
+func (g *GadgetNormalEntity) GetItemId() uint32 {
+	return g.itemId
+}
 
 type GadgetClientEntity struct {
 	configId          uint32
@@ -738,14 +708,6 @@ func (g *GadgetClientEntity) GetTargetEntityId() uint32 {
 
 func (g *GadgetClientEntity) GetPropOwnerEntityId() uint32 {
 	return g.propOwnerEntityId
-}
-
-type GadgetGatherEntity struct {
-	gatherId uint32
-}
-
-func (g *GadgetGatherEntity) GetGatherId() uint32 {
-	return g.gatherId
 }
 
 type GadgetVehicleEntity struct {

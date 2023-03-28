@@ -262,7 +262,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 		// 旧有新没有的group即为卸载的
 		if !world.GetMultiplayer() {
 			// 处理多人世界不同玩家不同位置的group卸载情况
-			g.RemoveGroup(player, scene, groupConfig)
+			g.RemoveSceneGroup(player, scene, groupConfig)
 		}
 	}
 	for groupId, groupConfig := range newNeighborGroupMap {

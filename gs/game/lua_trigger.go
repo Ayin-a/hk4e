@@ -21,7 +21,6 @@ func (g *GameManager) SceneRegionTriggerCheck(player *model.Player, scene *Scene
 			for _, regionConfigId := range suiteConfig.RegionConfigIdList {
 				regionConfig := groupConfig.RegionMap[regionConfigId]
 				if regionConfig == nil {
-					logger.Error("get region config is nil, regionConfigId: %v, uid: %v", regionConfigId, player.PlayerID)
 					continue
 				}
 				shape := alg.NewShape()

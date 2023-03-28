@@ -41,6 +41,10 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 			delEntityIdList = append(delEntityIdList, entityId)
 		}
 		g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, delEntityIdList)
+		// 卸载旧位置附近的group
+		for _, groupConfig := range g.GetNeighborGroup(ctx.OldSceneId, ctx.OldPos) {
+			g.RemoveSceneGroup(player, oldScene, groupConfig)
+		}
 	}
 
 	enterScenePeerNotify := &proto.EnterScenePeerNotify{
@@ -543,10 +547,14 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	if entity == nil {
 		return
 	}
+	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
+		// 设置血量
+		entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
+		g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
+		// TODO
+		g.CreateGadget(player, 70600055, entity.pos, 104003)
+	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
-	// 设置血量
-	entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
-	g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
 	ntf := &proto.LifeStateChangeNotify{
 		EntityId:        entity.id,
 		LifeState:       uint32(entity.lifeState),
@@ -640,7 +648,7 @@ func (g *GameManager) AddSceneGroup(player *model.Player, scene *Scene, groupCon
 	g.SendMsg(cmd.GroupSuiteNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) RemoveGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
+func (g *GameManager) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
 	group := scene.GetGroupById(uint32(groupConfig.Id))
 	if group == nil {
 		logger.Error("group not exist, groupId: %v, uid: %v", groupConfig.Id, player.PlayerID)
@@ -654,6 +662,24 @@ func (g *GameManager) RemoveGroup(player *model.Player, scene *Scene, groupConfi
 	}
 	ntf.GroupList = append(ntf.GroupList, uint32(groupConfig.Id))
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
+}
+
+func (g *GameManager) CreateGadget(player *model.Player, gadgetId uint32, pos *model.Vector, itemId uint32) {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	entityId := scene.CreateEntityGadgetNormal(
+		pos, new(model.Vector),
+		gadgetId,
+		constant.GADGET_STATE_DEFAULT,
+		&GadgetNormalEntity{
+			itemId: itemId,
+		},
+		0, 0,
+	)
+	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
 }
 
 var SceneTransactionSeq uint32 = 0
@@ -1019,10 +1045,6 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
 			Gadget: g.PacketSceneGadgetInfoNormal(entity),
 		}
-	case GADGET_TYPE_GATHER:
-		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoGather(entity),
-		}
 	case GADGET_TYPE_CLIENT:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
 			Gadget: g.PacketSceneGadgetInfoClient(gadgetEntity.GetGadgetClientEntity()),
@@ -1109,23 +1131,9 @@ func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo 
 
 func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGadgetInfo {
 	gadgetEntity := entity.GetGadgetEntity()
-	sceneGadgetInfo := &proto.SceneGadgetInfo{
-		GadgetId:         gadgetEntity.GetGadgetId(),
-		GroupId:          entity.GetGroupId(),
-		ConfigId:         entity.GetConfigId(),
-		GadgetState:      gadgetEntity.GetGadgetState(),
-		IsEnableInteract: true,
-		AuthorityPeerId:  1,
-	}
-	return sceneGadgetInfo
-}
-
-func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGadgetInfo {
-	gadgetEntity := entity.GetGadgetEntity()
-	gatherEntity := gadgetEntity.GetGadgetGatherEntity()
-	gatherDataConfig := gdconf.GetGatherDataById(int32(gatherEntity.GetGatherId()))
-	if gatherDataConfig == nil {
-		logger.Error("gather data error, gatherId: %v", gatherEntity.GetGatherId())
+	gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
+	if gadgetDataConfig == nil {
+		logger.Error("get gadget data config is nil, gadgetId: %v", gadgetEntity.GetGadgetId())
 		return new(proto.SceneGadgetInfo)
 	}
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
@@ -1135,12 +1143,16 @@ func (g *GameManager) PacketSceneGadgetInfoGather(entity *Entity) *proto.SceneGa
 		GadgetState:      gadgetEntity.GetGadgetState(),
 		IsEnableInteract: true,
 		AuthorityPeerId:  1,
-		Content: &proto.SceneGadgetInfo_GatherGadget{
+	}
+	switch gadgetDataConfig.Type {
+	case constant.GADGET_TYPE_GATHER_OBJECT:
+		gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
+		sceneGadgetInfo.Content = &proto.SceneGadgetInfo_GatherGadget{
 			GatherGadget: &proto.GatherGadgetInfo{
-				ItemId:        uint32(gatherDataConfig.ItemId),
+				ItemId:        gadgetNormalEntity.GetItemId(),
 				IsForbidGuest: false,
 			},
-		},
+		}
 	}
 	return sceneGadgetInfo
 }

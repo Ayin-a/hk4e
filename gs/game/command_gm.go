@@ -182,6 +182,7 @@ func (g *GMCmd) GMForceFinishAllQuest(userId uint32) {
 	GAME_MANAGER.AcceptQuest(player, true)
 }
 
+// GMUnlockAllPoint 解锁场景全部传送点
 func (g *GMCmd) GMUnlockAllPoint(userId uint32, sceneId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
@@ -203,6 +204,20 @@ func (g *GMCmd) GMUnlockAllPoint(userId uint32, sceneId uint32) {
 		PointList:       dbScene.GetUnlockPointList(),
 		UnhidePointList: nil,
 	})
+}
+
+// GMCreateGadget 在玩家附近创建物件实体
+func (g *GMCmd) GMCreateGadget(userId uint32, gadgetId uint32, posX, posY, posZ float64, itemId uint32) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		logger.Error("player is nil, uid: %v", userId)
+		return
+	}
+	GAME_MANAGER.CreateGadget(player, gadgetId, &model.Vector{
+		X: posX,
+		Y: posY,
+		Z: posZ,
+	}, itemId)
 }
 
 // 系统级GM指令

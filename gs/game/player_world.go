@@ -335,14 +335,14 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 		interactType = proto.InteractType_INTERACT_OPEN_CHEST
 		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
 			// 宝箱交互结束 开启宝箱
+			// TODO
+			g.CreateGadget(player, entity.pos, 70600055, 104003, 1)
 			g.SendMsg(cmd.WorldChestOpenNotify, player.PlayerID, player.ClientSeq, &proto.WorldChestOpenNotify{
 				GroupId:  entity.GetGroupId(),
 				SceneId:  scene.GetId(),
 				ConfigId: entity.GetConfigId(),
 			})
-			// TODO
-			g.CreateGadget(player, 70600055, entity.pos, 104003)
-			g.ChangeGadgetState(player, scene.GetId(), constant.GADGET_STATE_CHEST_OPENED)
+			g.ChangeGadgetState(player, entity.GetId(), constant.GADGET_STATE_CHEST_OPENED)
 			g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
 		}
 	}

@@ -526,6 +526,10 @@ func (e *Entity) GetId() uint32 {
 	return e.id
 }
 
+func (e *Entity) GetScene() *Scene {
+	return e.scene
+}
+
 func (e *Entity) GetLifeState() uint16 {
 	return e.lifeState
 }
@@ -671,10 +675,15 @@ func (g *GadgetEntity) GetGadgetVehicleEntity() *GadgetVehicleEntity {
 
 type GadgetNormalEntity struct {
 	itemId uint32
+	count  uint32
 }
 
 func (g *GadgetNormalEntity) GetItemId() uint32 {
 	return g.itemId
+}
+
+func (g *GadgetNormalEntity) GetCount() uint32 {
+	return g.count
 }
 
 type GadgetClientEntity struct {

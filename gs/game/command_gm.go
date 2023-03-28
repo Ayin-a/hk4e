@@ -207,17 +207,17 @@ func (g *GMCmd) GMUnlockAllPoint(userId uint32, sceneId uint32) {
 }
 
 // GMCreateGadget 在玩家附近创建物件实体
-func (g *GMCmd) GMCreateGadget(userId uint32, gadgetId uint32, posX, posY, posZ float64, itemId uint32) {
+func (g *GMCmd) GMCreateGadget(userId uint32, posX, posY, posZ float64, gadgetId, itemId, count uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME_MANAGER.CreateGadget(player, gadgetId, &model.Vector{
+	GAME_MANAGER.CreateGadget(player, &model.Vector{
 		X: posX,
 		Y: posY,
 		Z: posZ,
-	}, itemId)
+	}, gadgetId, itemId, count)
 }
 
 // 系统级GM指令

@@ -10,6 +10,7 @@ import (
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/object"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -458,7 +459,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 				sceneEntityInfoNpc := g.PacketSceneEntityInfoNpc(scene, entity.GetId())
 				entityList = append(entityList, sceneEntityInfoNpc)
 			case constant.ENTITY_TYPE_GADGET:
-				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(scene, entity.GetId())
+				sceneEntityInfoGadget := g.PacketSceneEntityInfoGadget(player, scene, entity.GetId())
 				entityList = append(entityList, sceneEntityInfoGadget)
 			}
 		}
@@ -552,7 +553,7 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 		entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
 		g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
 		// TODO
-		g.CreateGadget(player, 70600055, entity.pos, 104003)
+		g.CreateGadget(player, entity.pos, 70600055, 104003, 10)
 	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
 	ntf := &proto.LifeStateChangeNotify{
@@ -580,14 +581,17 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 func (g *GameManager) ChangeGadgetState(player *model.Player, entityId uint32, state uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
+		logger.Error("get world is nil, worldId: %v", player.WorldId)
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
+		logger.Error("get entity is nil, entityId: %v", entityId)
 		return
 	}
 	if entity.GetEntityType() != constant.ENTITY_TYPE_GADGET {
+		logger.Error("entity is not gadget, entityId: %v", entityId)
 		return
 	}
 	gadgetEntity := entity.GetGadgetEntity()
@@ -664,18 +668,24 @@ func (g *GameManager) RemoveSceneGroup(player *model.Player, scene *Scene, group
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) CreateGadget(player *model.Player, gadgetId uint32, pos *model.Vector, itemId uint32) {
+func (g *GameManager) CreateGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
+		logger.Error("get world is nil, worldId: %v", player.WorldId)
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
+	pos.X += random.GetRandomFloat64(-5.0, 5.0)
+	pos.Z += random.GetRandomFloat64(-5.0, 5.0)
+	rot := new(model.Vector)
+	rot.Y = random.GetRandomFloat64(0.0, 360.0)
 	entityId := scene.CreateEntityGadgetNormal(
-		pos, new(model.Vector),
+		pos, rot,
 		gadgetId,
 		constant.GADGET_STATE_DEFAULT,
 		&GadgetNormalEntity{
 			itemId: itemId,
+			count:  count,
 		},
 		0, 0,
 	)
@@ -686,11 +696,11 @@ var SceneTransactionSeq uint32 = 0
 
 func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+	if world == nil {
+		logger.Error("get world is nil, worldId: %v", player.WorldId)
 		return new(proto.PlayerEnterSceneNotify)
 	}
+	scene := world.GetSceneById(player.SceneId)
 	enterSceneToken := world.AddEnterSceneContext(&EnterSceneContext{
 		OldSceneId: 0,
 		Uid:        player.PlayerID,
@@ -997,7 +1007,7 @@ func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *p
 	return sceneEntityInfo
 }
 
-func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
+func (g *GameManager) PacketSceneEntityInfoGadget(player *model.Player, scene *Scene, entityId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
@@ -1043,7 +1053,7 @@ func (g *GameManager) PacketSceneEntityInfoGadget(scene *Scene, entityId uint32)
 	switch gadgetEntity.GetGadgetType() {
 	case GADGET_TYPE_NORMAL:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
-			Gadget: g.PacketSceneGadgetInfoNormal(entity),
+			Gadget: g.PacketSceneGadgetInfoNormal(player, entity),
 		}
 	case GADGET_TYPE_CLIENT:
 		sceneEntityInfo.Entity = &proto.SceneEntityInfo_Gadget{
@@ -1129,7 +1139,7 @@ func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo 
 	return sceneNpcInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGadgetInfo {
+func (g *GameManager) PacketSceneGadgetInfoNormal(player *model.Player, entity *Entity) *proto.SceneGadgetInfo {
 	gadgetEntity := entity.GetGadgetEntity()
 	gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
 	if gadgetDataConfig == nil {
@@ -1144,9 +1154,22 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(entity *Entity) *proto.SceneGa
 		IsEnableInteract: true,
 		AuthorityPeerId:  1,
 	}
+	gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
+	dbItem := player.GetDbItem()
 	switch gadgetDataConfig.Type {
+	case constant.GADGET_TYPE_GADGET:
+		sceneGadgetInfo.Content = &proto.SceneGadgetInfo_TrifleItem{
+			TrifleItem: &proto.Item{
+				ItemId: gadgetNormalEntity.GetItemId(),
+				Guid:   dbItem.GetItemGuid(gadgetNormalEntity.GetItemId()),
+				Detail: &proto.Item_Material{
+					Material: &proto.Material{
+						Count: gadgetNormalEntity.GetCount(),
+					},
+				},
+			},
+		}
 	case constant.GADGET_TYPE_GATHER_OBJECT:
-		gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
 		sceneGadgetInfo.Content = &proto.SceneGadgetInfo_GatherGadget{
 			GatherGadget: &proto.GatherGadgetInfo{
 				ItemId:        gadgetNormalEntity.GetItemId(),

@@ -336,7 +336,7 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
 			// 宝箱交互结束 开启宝箱
 			// TODO
-			g.CreateGadget(player, entity.pos, 70600055, 104003, 1)
+			g.CreateDropGadget(player, entity.pos, 70600055, 104003, 1)
 			g.SendMsg(cmd.WorldChestOpenNotify, player.PlayerID, player.ClientSeq, &proto.WorldChestOpenNotify{
 				GroupId:  entity.GetGroupId(),
 				SceneId:  scene.GetId(),

@@ -402,7 +402,9 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 				uint32(gatherDataConfig.GadgetId),
 				uint32(constant.GADGET_STATE_DEFAULT),
 				&GadgetNormalEntity{
+					isDrop: false,
 					itemId: uint32(gatherDataConfig.ItemId),
+					count:  1,
 				},
 				uint32(gadget.ConfigId),
 				groupId,
@@ -413,7 +415,7 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 				&model.Vector{X: float64(gadget.Rot.X), Y: float64(gadget.Rot.Y), Z: float64(gadget.Rot.Z)},
 				uint32(gadget.GadgetId),
 				uint32(gadget.State),
-				nil,
+				new(GadgetNormalEntity),
 				uint32(gadget.ConfigId),
 				groupId,
 			)
@@ -426,21 +428,21 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 // TODO 临时写死
 func getTempFightPropMap() map[uint32]float32 {
 	fpm := map[uint32]float32{
-		constant.FIGHT_PROP_CUR_HP:            float32(72.91699),
+		constant.FIGHT_PROP_BASE_ATTACK:       float32(50.0),
+		constant.FIGHT_PROP_CUR_ATTACK:        float32(50.0),
+		constant.FIGHT_PROP_BASE_DEFENSE:      float32(500.0),
+		constant.FIGHT_PROP_CUR_DEFENSE:       float32(500.0),
+		constant.FIGHT_PROP_BASE_HP:           float32(100000.0),
+		constant.FIGHT_PROP_CUR_HP:            float32(100000.0),
+		constant.FIGHT_PROP_MAX_HP:            float32(100000.0),
 		constant.FIGHT_PROP_PHYSICAL_SUB_HURT: float32(0.1),
-		constant.FIGHT_PROP_CUR_DEFENSE:       float32(505.0),
-		constant.FIGHT_PROP_CUR_ATTACK:        float32(45.679916),
 		constant.FIGHT_PROP_ICE_SUB_HURT:      float32(0.1),
-		constant.FIGHT_PROP_BASE_ATTACK:       float32(45.679916),
-		constant.FIGHT_PROP_MAX_HP:            float32(72.91699),
 		constant.FIGHT_PROP_FIRE_SUB_HURT:     float32(0.1),
 		constant.FIGHT_PROP_ELEC_SUB_HURT:     float32(0.1),
 		constant.FIGHT_PROP_WIND_SUB_HURT:     float32(0.1),
 		constant.FIGHT_PROP_ROCK_SUB_HURT:     float32(0.1),
 		constant.FIGHT_PROP_GRASS_SUB_HURT:    float32(0.1),
 		constant.FIGHT_PROP_WATER_SUB_HURT:    float32(0.1),
-		constant.FIGHT_PROP_BASE_HP:           float32(72.91699),
-		constant.FIGHT_PROP_BASE_DEFENSE:      float32(505.0),
 	}
 	return fpm
 }
@@ -674,8 +676,13 @@ func (g *GadgetEntity) GetGadgetVehicleEntity() *GadgetVehicleEntity {
 }
 
 type GadgetNormalEntity struct {
+	isDrop bool
 	itemId uint32
 	count  uint32
+}
+
+func (g *GadgetNormalEntity) GetIsDrop() bool {
+	return g.isDrop
 }
 
 func (g *GadgetNormalEntity) GetItemId() uint32 {

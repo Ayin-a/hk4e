@@ -553,7 +553,7 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 		entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
 		g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
 		// TODO
-		g.CreateGadget(player, entity.pos, 70600055, 104003, 10)
+		g.CreateDropGadget(player, entity.pos, 70600055, 104003, 10)
 	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
 	ntf := &proto.LifeStateChangeNotify{
@@ -668,7 +668,7 @@ func (g *GameManager) RemoveSceneGroup(player *model.Player, scene *Scene, group
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) CreateGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
+func (g *GameManager) CreateDropGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get world is nil, worldId: %v", player.WorldId)
@@ -684,6 +684,7 @@ func (g *GameManager) CreateGadget(player *model.Player, pos *model.Vector, gadg
 		gadgetId,
 		constant.GADGET_STATE_DEFAULT,
 		&GadgetNormalEntity{
+			isDrop: true,
 			itemId: itemId,
 			count:  count,
 		},
@@ -1155,9 +1156,8 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(player *model.Player, entity *
 		AuthorityPeerId:  1,
 	}
 	gadgetNormalEntity := gadgetEntity.GetGadgetNormalEntity()
-	dbItem := player.GetDbItem()
-	switch gadgetDataConfig.Type {
-	case constant.GADGET_TYPE_GADGET:
+	if gadgetNormalEntity.GetIsDrop() {
+		dbItem := player.GetDbItem()
 		sceneGadgetInfo.Content = &proto.SceneGadgetInfo_TrifleItem{
 			TrifleItem: &proto.Item{
 				ItemId: gadgetNormalEntity.GetItemId(),
@@ -1169,7 +1169,7 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(player *model.Player, entity *
 				},
 			},
 		}
-	case constant.GADGET_TYPE_GATHER_OBJECT:
+	} else if gadgetDataConfig.Type == constant.GADGET_TYPE_GATHER_OBJECT {
 		sceneGadgetInfo.Content = &proto.SceneGadgetInfo_GatherGadget{
 			GatherGadget: &proto.GatherGadgetInfo{
 				ItemId:        gadgetNormalEntity.GetItemId(),

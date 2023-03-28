@@ -213,7 +213,7 @@ func (g *GMCmd) GMCreateGadget(userId uint32, posX, posY, posZ float64, gadgetId
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME_MANAGER.CreateGadget(player, &model.Vector{
+	GAME_MANAGER.CreateDropGadget(player, &model.Vector{
 		X: posX,
 		Y: posY,
 		Z: posZ,
@@ -263,4 +263,12 @@ func (g *GMCmd) XLuaDebug(userId uint32, luacBase64 string) {
 			},
 		},
 	})
+}
+
+func (g *GMCmd) PlayAudio() {
+	PlayAudio()
+}
+
+func (g *GMCmd) UpdateFrame(rgb bool) {
+	UpdateFrame(rgb)
 }

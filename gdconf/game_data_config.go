@@ -243,6 +243,7 @@ func readTable[T any](tablePath string, table *[]*T) {
 	}
 	reader := csv.NewReader(bytes.NewBuffer(fileData))
 	reader.Comma = '\t'
+	reader.LazyQuotes = true
 	dec, err := csvutil.NewDecoder(reader)
 	if err != nil {
 		info := fmt.Sprintf("create decoder error: %v", err)

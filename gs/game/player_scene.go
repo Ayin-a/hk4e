@@ -563,40 +563,9 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	}
 	group.DestroyEntity(entity.GetId())
 	scene.DestroyEntity(entity.GetId())
-	// 怪物死亡触发器
+	// 怪物死亡触发器检测
 	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
-		groupConfig := gdconf.GetSceneGroup(int32(entity.groupId))
-		if groupConfig == nil {
-			logger.Error("get group config is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
-			return
-		}
-		for suiteId := range group.GetAllSuite() {
-			suiteConfig := groupConfig.SuiteList[suiteId-1]
-			for _, triggerName := range suiteConfig.TriggerNameList {
-				triggerConfig := groupConfig.TriggerMap[triggerName]
-				if triggerConfig.Event != constant.LUA_EVENT_ANY_MONSTER_DIE {
-					continue
-				}
-				if triggerConfig.Condition != "" {
-					cond := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Condition,
-						&LuaCtx{uid: player.PlayerID, groupId: entity.groupId},
-						&LuaEvt{})
-					if !cond {
-						continue
-					}
-				}
-				logger.Debug("scene group trigger fire, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
-				if triggerConfig.Action != "" {
-					logger.Debug("scene group trigger do action, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
-					ok := CallLuaFunc(groupConfig.GetLuaState(), triggerConfig.Action,
-						&LuaCtx{uid: player.PlayerID, groupId: entity.groupId},
-						&LuaEvt{})
-					if !ok {
-						logger.Error("trigger action fail, trigger: %+v, uid: %v", triggerConfig, player.PlayerID)
-					}
-				}
-			}
-		}
+		g.MonsterDieTriggerCheck(player, entity.GetGroupId(), group)
 	}
 }
 

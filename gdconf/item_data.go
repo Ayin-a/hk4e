@@ -7,12 +7,11 @@ import (
 // ItemData 道具分类分表整合配置表
 type ItemData struct {
 	// 公共表头字段
-	ItemId    int32  `csv:"ID"`
-	Type      int32  `csv:"类型,omitempty"`
-	Weight    int32  `csv:"重量,omitempty"`
-	RankLevel int32  `csv:"排序权重,omitempty"`
-	GadgetId  int32  `csv:"物件ID,omitempty"`
-	Name      string `csv:"数值用类型,omitempty"`
+	ItemId    int32 `csv:"ID"`
+	Type      int32 `csv:"类型,omitempty"`
+	Weight    int32 `csv:"重量,omitempty"`
+	RankLevel int32 `csv:"排序权重,omitempty"`
+	GadgetId  int32 `csv:"物件ID,omitempty"`
 	// 材料
 	MaterialType int32  `csv:"材料类型,omitempty"`
 	Use1Param1   string `csv:"[使用]1参数1,omitempty"`

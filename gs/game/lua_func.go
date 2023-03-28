@@ -33,6 +33,7 @@ type LuaEvt struct {
 	targetEntityId uint32
 }
 
+// CallLuaFunc 调用LUA方法
 func CallLuaFunc(luaState *lua.LState, luaFuncName string, luaCtx *LuaCtx, luaEvt *LuaEvt) bool {
 	ctx := luaState.NewTable()
 	luaState.SetField(ctx, "uid", lua.LNumber(luaCtx.uid))
@@ -72,7 +73,36 @@ func CallLuaFunc(luaState *lua.LState, luaFuncName string, luaCtx *LuaCtx, luaEv
 	}
 }
 
-func RegLuaLibFunc() {
+// GetContextPlayer 获取上下文中的玩家对象
+func GetContextPlayer(ctx *lua.LTable, luaState *lua.LState) *model.Player {
+	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
+	if !ok {
+		return nil
+	}
+	player := USER_MANAGER.GetOnlineUser(uint32(uid))
+	return player
+}
+
+// GetContextGroup 获取上下文中的场景组对象
+func GetContextGroup(player *model.Player, ctx *lua.LTable, luaState *lua.LState) *Group {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return nil
+	}
+	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
+	if !ok {
+		return nil
+	}
+	scene := world.GetSceneById(player.SceneId)
+	group := scene.GetGroupById(uint32(groupId))
+	if group == nil {
+		return nil
+	}
+	return group
+}
+
+// RegLuaScriptLibFunc 注册LUA侧ScriptLib调用的Golang方法
+func RegLuaScriptLibFunc() {
 	gdconf.RegScriptLibFunc("GetEntityType", GetEntityType)
 	gdconf.RegScriptLibFunc("GetQuestState", GetQuestState)
 	gdconf.RegScriptLibFunc("PrintLog", PrintLog)
@@ -130,7 +160,7 @@ func PrintContextLog(luaState *lua.LState) int {
 		return 0
 	}
 	logInfo := luaState.ToString(2)
-	logger.Info("[LUA CTX LOG] %v [UID %v]", logInfo, uid)
+	logger.Info("[LUA CTX LOG] %v [UID: %v]", logInfo, uid)
 	return 0
 }
 
@@ -250,33 +280,7 @@ func MarkPlayerAction(luaState *lua.LState) int {
 	param1 := luaState.ToInt(2)
 	param2 := luaState.ToInt(3)
 	param3 := luaState.ToInt(4)
-	logger.Debug("[MarkPlayerAction] [%v %v %v] uid: %v", param1, param2, param3, player.PlayerID)
+	logger.Debug("[MarkPlayerAction] [%v %v %v] [UID: %v]", param1, param2, param3, player.PlayerID)
 	luaState.Push(lua.LNumber(0))
 	return 1
-}
-
-func GetContextPlayer(ctx *lua.LTable, luaState *lua.LState) *model.Player {
-	uid, ok := luaState.GetField(ctx, "uid").(lua.LNumber)
-	if !ok {
-		return nil
-	}
-	player := USER_MANAGER.GetOnlineUser(uint32(uid))
-	return player
-}
-
-func GetContextGroup(player *model.Player, ctx *lua.LTable, luaState *lua.LState) *Group {
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		return nil
-	}
-	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
-	if !ok {
-		return nil
-	}
-	scene := world.GetSceneById(player.SceneId)
-	group := scene.GetGroupById(uint32(groupId))
-	if group == nil {
-		return nil
-	}
-	return group
 }

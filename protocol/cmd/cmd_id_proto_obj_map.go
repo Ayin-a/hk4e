@@ -133,6 +133,7 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(GadgetInteractReq, func() any { return new(proto.GadgetInteractReq) })                           // 物件交互请求
 	c.regMsg(GadgetInteractRsp, func() any { return new(proto.GadgetInteractRsp) })                           // 物件交互响应
 	c.regMsg(GadgetStateNotify, func() any { return new(proto.GadgetStateNotify) })                           // 物件状态更新通知
+	c.regMsg(WorldChestOpenNotify, func() any { return new(proto.WorldChestOpenNotify) })                     // 宝箱开启通知
 
 	// 战斗与同步
 	c.regMsg(AvatarFightPropNotify, func() any { return new(proto.AvatarFightPropNotify) })                         // 角色战斗属性通知

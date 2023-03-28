@@ -429,7 +429,7 @@ func (s *Scene) createConfigEntity(groupId uint32, entityConfig any) uint32 {
 		}, uint32(npc.NpcId), 0, 0, 0, uint32(npc.ConfigId), groupId)
 	case *gdconf.Gadget:
 		gadget := entityConfig.(*gdconf.Gadget)
-		// 70500000并不是实际的装置id 根据节点类型对应采集物配置表
+		// 70500000并不是实际的物件id 根据节点类型对应采集物配置表
 		if gadget.PointType != 0 && gadget.GadgetId == 70500000 {
 			gatherDataConfig := gdconf.GetGatherDataByPointType(gadget.PointType)
 			if gatherDataConfig == nil {

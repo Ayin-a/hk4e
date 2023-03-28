@@ -286,12 +286,68 @@ func (g *GameManager) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.M
 
 func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.GadgetInteractReq)
-	logger.Debug("GadgetInteractReq: %+v, uid: %v", req, player.PlayerID)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		logger.Error("get world is nil, worldId: %v, uid: %v", player.WorldId, player.PlayerID)
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	entity := scene.GetEntity(req.GadgetEntityId)
+	if entity == nil {
+		logger.Error("get entity is nil, entityId: %v, uid: %v", req.GadgetEntityId, player.PlayerID)
+		return
+	}
+	if entity.GetEntityType() != constant.ENTITY_TYPE_GADGET {
+		logger.Error("entity type is not gadget, entityType: %v, uid: %v", entity.GetEntityType(), player.PlayerID)
+		return
+	}
+	gadgetEntity := entity.GetGadgetEntity()
+	gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
+	if gadgetDataConfig == nil {
+		logger.Error("get gadget data config is nil, gadgetId: %v, uid: %v", gadgetEntity.GetGadgetId(), player.PlayerID)
+		return
+	}
+	if gadgetDataConfig.CanInteract == 0 {
+		logger.Error("gadget can not be interact, gadgetId: %v, uid: %v", gadgetEntity.GetGadgetId(), player.PlayerID)
+		return
+	}
+	interactType := proto.InteractType_INTERACT_NONE
+	switch gadgetDataConfig.Type {
+	case constant.GADGET_TYPE_GADGET:
+		logger.Debug("==========GADGET_TYPE_GADGET==========")
+		// 掉落物捡起
+		interactType = proto.InteractType_INTERACT_PICK_ITEM
+		g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
+	case constant.GADGET_TYPE_ENERGY_BALL:
+		logger.Debug("==========GADGET_TYPE_ENERGY_BALL==========")
+		// 元素能量球吸收
+		interactType = proto.InteractType_INTERACT_PICK_ITEM
+	case constant.GADGET_TYPE_GATHER_OBJECT:
+		logger.Debug("==========GADGET_TYPE_GATHER_OBJECT==========")
+		// 采集物摘取
+		interactType = proto.InteractType_INTERACT_GATHER
+		g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
+	case constant.GADGET_TYPE_CHEST:
+		logger.Debug("==========GADGET_TYPE_CHEST==========")
+		// 宝箱开启
+		interactType = proto.InteractType_INTERACT_OPEN_CHEST
+		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
+			// 宝箱交互结束 开启宝箱
+			g.SendMsg(cmd.WorldChestOpenNotify, player.PlayerID, player.ClientSeq, &proto.WorldChestOpenNotify{
+				GroupId:  entity.GetGroupId(),
+				SceneId:  scene.GetId(),
+				ConfigId: entity.GetConfigId(),
+			})
+			g.ChangeGadgetState(player, scene.GetId(), constant.GADGET_STATE_CHEST_OPENED)
+			g.KillEntity(player, scene, entity.GetId(), proto.PlayerDieType_PLAYER_DIE_NONE)
+		}
+	}
+
 	rsp := &proto.GadgetInteractRsp{
 		GadgetEntityId: req.GadgetEntityId,
-		InteractType:   0,
-		OpType:         req.OpType,
 		GadgetId:       req.GadgetId,
+		OpType:         req.OpType,
+		InteractType:   interactType,
 	}
 	g.SendMsg(cmd.GadgetInteractRsp, player.PlayerID, player.ClientSeq, rsp)
 }

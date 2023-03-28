@@ -63,6 +63,7 @@ type GameDataConfig struct {
 	MonsterDropDataMap      map[string]map[int32]*MonsterDropData   // 怪物掉落
 	ChestDropDataMap        map[string]map[int32]*ChestDropData     // 宝箱掉落
 	DungeonDataMap          map[int32]*DungeonData                  // 地牢
+	GadgetDataMap           map[int32]*GadgetData                   // 物件
 	GCGCharDataMap          map[int32]*GCGCharData                  // 七圣召唤角色卡牌
 	GCGSkillDataMap         map[int32]*GCGSkillData                 // 七圣召唤卡牌技能
 	GachaDropGroupDataMap   map[int32]*GachaDropGroupData           // 卡池掉落组 临时的
@@ -162,6 +163,7 @@ func (g *GameDataConfig) load() {
 	g.loadMonsterDropData()      // 怪物掉落
 	g.loadChestDropData()        // 宝箱掉落
 	g.loadDungeonData()          // 地牢
+	g.loadGadgetData()           // 物件
 	g.loadGCGCharData()          // 七圣召唤角色卡牌
 	g.loadGCGSkillData()         // 七圣召唤卡牌技能
 	g.loadGachaDropGroupData()   // 卡池掉落组 临时的

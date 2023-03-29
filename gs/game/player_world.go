@@ -337,27 +337,7 @@ func (g *Game) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
 		// 宝箱交互结束 开启宝箱
 		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
 			// 随机掉落
-			sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
-			gadgetConfig := sceneGroupConfig.GadgetMap[int32(entity.GetConfigId())]
-			chestDropDataConfig := gdconf.GetChestDropDataByDropTagAndLevel(gadgetConfig.DropTag, gadgetConfig.Level)
-			if chestDropDataConfig == nil {
-				logger.Error("get chest drop data config is nil, gadgetConfig: %v, uid: %v", gadgetConfig, player.PlayerID)
-				return
-			}
-			dropDataConfig := gdconf.GetDropDataById(chestDropDataConfig.DropId)
-			if dropDataConfig == nil {
-				logger.Error("get drop data config is nil, dropId: %v, uid: %v", chestDropDataConfig.DropId, player.PlayerID)
-				return
-			}
-			totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(chestDropDataConfig.DropCount))
-			for itemId, count := range totalItemMap {
-				itemDataConfig := gdconf.GetItemDataById(int32(itemId))
-				if itemDataConfig == nil {
-					logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
-					continue
-				}
-				g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
-			}
+			g.chestDrop(player, entity)
 			// 更新宝箱状态
 			g.SendMsg(cmd.WorldChestOpenNotify, player.PlayerID, player.ClientSeq, &proto.WorldChestOpenNotify{
 				GroupId:  entity.GetGroupId(),
@@ -376,6 +356,54 @@ func (g *Game) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
 		InteractType:   interactType,
 	}
 	g.SendMsg(cmd.GadgetInteractRsp, player.PlayerID, player.ClientSeq, rsp)
+}
+
+func (g *Game) monsterDrop(player *model.Player, entity *Entity) {
+	sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
+	monsterConfig := sceneGroupConfig.MonsterMap[int32(entity.GetConfigId())]
+	monsterDropDataConfig := gdconf.GetMonsterDropDataByDropTagAndLevel(monsterConfig.DropTag, monsterConfig.Level)
+	if monsterDropDataConfig == nil {
+		logger.Error("get monster drop data config is nil, monsterConfig: %v, uid: %v", monsterConfig, player.PlayerID)
+		return
+	}
+	dropDataConfig := gdconf.GetDropDataById(monsterDropDataConfig.DropId)
+	if dropDataConfig == nil {
+		logger.Error("get drop data config is nil, dropId: %v, uid: %v", monsterDropDataConfig.DropId, player.PlayerID)
+		return
+	}
+	totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(monsterDropDataConfig.DropCount))
+	for itemId, count := range totalItemMap {
+		itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+		if itemDataConfig == nil {
+			logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
+			continue
+		}
+		g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
+	}
+}
+
+func (g *Game) chestDrop(player *model.Player, entity *Entity) {
+	sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
+	gadgetConfig := sceneGroupConfig.GadgetMap[int32(entity.GetConfigId())]
+	chestDropDataConfig := gdconf.GetChestDropDataByDropTagAndLevel(gadgetConfig.DropTag, gadgetConfig.Level)
+	if chestDropDataConfig == nil {
+		logger.Error("get chest drop data config is nil, gadgetConfig: %v, uid: %v", gadgetConfig, player.PlayerID)
+		return
+	}
+	dropDataConfig := gdconf.GetDropDataById(chestDropDataConfig.DropId)
+	if dropDataConfig == nil {
+		logger.Error("get drop data config is nil, dropId: %v, uid: %v", chestDropDataConfig.DropId, player.PlayerID)
+		return
+	}
+	totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(chestDropDataConfig.DropCount))
+	for itemId, count := range totalItemMap {
+		itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+		if itemDataConfig == nil {
+			logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
+			continue
+		}
+		g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
+	}
 }
 
 func (g *Game) doRandDropFullTimes(dropDataConfig *gdconf.DropData, times int) map[uint32]uint32 {

@@ -6,7 +6,7 @@ import (
 
 // ChestDropData 宝箱掉落配置表
 type ChestDropData struct {
-	Level     int32  `csv:"最小等级"`
+	MinLevel  int32  `csv:"最小等级"`
 	DropTag   string `csv:"总索引"`
 	DropId    int32  `csv:"掉落ID,omitempty"`
 	DropCount int32  `csv:"掉落次数,omitempty"`
@@ -21,7 +21,7 @@ func (g *GameDataConfig) loadChestDropData() {
 		if !exist {
 			g.ChestDropDataMap[chestDropData.DropTag] = make(map[int32]*ChestDropData)
 		}
-		g.ChestDropDataMap[chestDropData.DropTag][chestDropData.Level] = chestDropData
+		g.ChestDropDataMap[chestDropData.DropTag][chestDropData.MinLevel] = chestDropData
 	}
 	logger.Info("ChestDropData count: %v", len(g.ChestDropDataMap))
 }
@@ -31,7 +31,16 @@ func GetChestDropDataByDropTagAndLevel(dropTag string, level int32) *ChestDropDa
 	if !exist {
 		return nil
 	}
-	return value[level]
+	resultLevel := int32(0)
+	for minLevel := range value {
+		if level < minLevel {
+			continue
+		}
+		if minLevel > resultLevel {
+			resultLevel = minLevel
+		}
+	}
+	return value[resultLevel]
 }
 
 func GetChestDropDataMap() map[string]map[int32]*ChestDropData {

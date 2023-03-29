@@ -553,27 +553,7 @@ func (g *Game) KillEntity(player *model.Player, scene *Scene, entityId uint32, d
 		entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
 		g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
 		// 随机掉落
-		sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
-		monsterConfig := sceneGroupConfig.MonsterMap[int32(entity.GetConfigId())]
-		monsterDropDataConfig := gdconf.GetMonsterDropDataByDropTagAndLevel(monsterConfig.DropTag, monsterConfig.Level)
-		if monsterDropDataConfig == nil {
-			logger.Error("get monster drop data config is nil, monsterConfig: %v, uid: %v", monsterConfig, player.PlayerID)
-			return
-		}
-		dropDataConfig := gdconf.GetDropDataById(monsterDropDataConfig.DropId)
-		if dropDataConfig == nil {
-			logger.Error("get drop data config is nil, dropId: %v, uid: %v", monsterDropDataConfig.DropId, player.PlayerID)
-			return
-		}
-		totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(monsterDropDataConfig.DropCount))
-		for itemId, count := range totalItemMap {
-			itemDataConfig := gdconf.GetItemDataById(int32(itemId))
-			if itemDataConfig == nil {
-				logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
-				continue
-			}
-			g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
-		}
+		g.monsterDrop(player, entity)
 	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
 	ntf := &proto.LifeStateChangeNotify{
@@ -588,7 +568,6 @@ func (g *Game) KillEntity(player *model.Player, scene *Scene, entityId uint32, d
 	scene.DestroyEntity(entity.GetId())
 	group := scene.GetGroupById(entity.groupId)
 	if group == nil {
-		logger.Error("get scene group is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
 		return
 	}
 	group.DestroyEntity(entity.GetId())

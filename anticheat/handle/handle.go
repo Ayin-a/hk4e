@@ -7,6 +7,7 @@ import (
 	"hk4e/common/constant"
 	"hk4e/common/mq"
 	"hk4e/gate/kcp"
+	"hk4e/gdconf"
 	"hk4e/node/api"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -16,8 +17,10 @@ import (
 )
 
 const (
-	MoveVectorCacheNum = 100
-	MaxMoveSpeed       = 50.0
+	MoveVectorCacheNum = 10
+	MaxMoveSpeed       = 30.0
+	JumpDistance       = 100.0
+	PointDistance      = 10.0
 )
 
 type MoveVector struct {
@@ -26,15 +29,41 @@ type MoveVector struct {
 }
 
 type AnticheatContext struct {
+	sceneId        uint32
 	moveVectorList []*MoveVector
 }
 
-func (a *AnticheatContext) Move(pos *proto.Vector) {
+func (a *AnticheatContext) Move(pos *proto.Vector) bool {
 	now := time.Now().UnixMilli()
 	if len(a.moveVectorList) > 0 {
 		lastMoveVector := a.moveVectorList[len(a.moveVectorList)-1]
 		if now-lastMoveVector.time < 1000 {
-			return
+			return true
+		}
+		distance := GetDistance(pos, lastMoveVector.pos)
+		if distance > JumpDistance {
+			// 瞬时变化太大 判断是否为传送
+			scenePointMap := gdconf.GetScenePointMapBySceneId(int32(a.sceneId))
+			if scenePointMap == nil {
+				return true
+			}
+			isJump := true
+			for _, pointData := range scenePointMap {
+				d := GetDistance(pos, &proto.Vector{
+					X: float32(pointData.TranPos.X),
+					Y: float32(pointData.TranPos.Y),
+					Z: float32(pointData.TranPos.Z),
+				})
+				if d < PointDistance {
+					isJump = false
+					break
+				}
+			}
+			if isJump {
+				return false
+			} else {
+				a.moveVectorList = make([]*MoveVector, 0)
+			}
 		}
 	}
 	a.moveVectorList = append(a.moveVectorList, &MoveVector{
@@ -44,6 +73,7 @@ func (a *AnticheatContext) Move(pos *proto.Vector) {
 	if len(a.moveVectorList) > MoveVectorCacheNum {
 		a.moveVectorList = a.moveVectorList[len(a.moveVectorList)-MoveVectorCacheNum:]
 	}
+	return true
 }
 
 func (a *AnticheatContext) GetMoveSpeed() float32 {
@@ -57,11 +87,7 @@ func (a *AnticheatContext) GetMoveSpeed() float32 {
 		}
 		nextMoveVector := a.moveVectorList[index+1]
 		beforeMoveVector := a.moveVectorList[index]
-		dx := float32(math.Sqrt(
-			float64((nextMoveVector.pos.X-beforeMoveVector.pos.X)*(nextMoveVector.pos.X-beforeMoveVector.pos.X)) +
-				float64((nextMoveVector.pos.Y-beforeMoveVector.pos.Y)*(nextMoveVector.pos.Y-beforeMoveVector.pos.Y)) +
-				float64((nextMoveVector.pos.Z-beforeMoveVector.pos.Z)*(nextMoveVector.pos.Z-beforeMoveVector.pos.Z)),
-		))
+		dx := GetDistance(nextMoveVector.pos, beforeMoveVector.pos)
 		dt := float32(nextMoveVector.time-beforeMoveVector.time) / 1000.0
 		avgMoveSpeed += dx / dt
 	}
@@ -71,6 +97,7 @@ func (a *AnticheatContext) GetMoveSpeed() float32 {
 
 func NewAnticheatContext() *AnticheatContext {
 	r := &AnticheatContext{
+		sceneId:        0,
 		moveVectorList: make([]*MoveVector, 0),
 	}
 	return r
@@ -81,13 +108,16 @@ type Handle struct {
 	playerAcCtxMap map[uint32]*AnticheatContext
 }
 
+func (h *Handle) AddPlayerAcCtx(userId uint32) {
+	h.playerAcCtxMap[userId] = NewAnticheatContext()
+}
+
+func (h *Handle) DelPlayerAcCtx(userId uint32) {
+	delete(h.playerAcCtxMap, userId)
+}
+
 func (h *Handle) GetPlayerAcCtx(userId uint32) *AnticheatContext {
-	ctx, exist := h.playerAcCtxMap[userId]
-	if !exist {
-		ctx = NewAnticheatContext()
-		h.playerAcCtxMap[userId] = ctx
-	}
-	return ctx
+	return h.playerAcCtxMap[userId]
 }
 
 func NewHandle(messageQueue *mq.MessageQueue) (r *Handle) {
@@ -102,19 +132,31 @@ func (h *Handle) run() {
 	go func() {
 		for {
 			netMsg := <-h.messageQueue.GetNetMsg()
-			if netMsg.MsgType != mq.MsgTypeGame {
-				continue
-			}
-			if netMsg.EventId != mq.NormalMsg {
-				continue
-			}
-			if netMsg.OriginServerType != api.GATE {
-				continue
-			}
-			gameMsg := netMsg.GameMsg
-			switch gameMsg.CmdId {
-			case cmd.CombatInvocationsNotify:
-				h.CombatInvocationsNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+			switch netMsg.MsgType {
+			case mq.MsgTypeGame:
+				if netMsg.OriginServerType != api.GATE {
+					continue
+				}
+				if netMsg.EventId != mq.NormalMsg {
+					continue
+				}
+				gameMsg := netMsg.GameMsg
+				switch gameMsg.CmdId {
+				case cmd.CombatInvocationsNotify:
+					h.CombatInvocationsNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+				case cmd.ToTheMoonEnterSceneReq:
+					h.ToTheMoonEnterSceneReq(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+				}
+			case mq.MsgTypeServer:
+				serverMsg := netMsg.ServerMsg
+				switch netMsg.EventId {
+				case mq.ServerUserOnlineStateChangeNotify:
+					if serverMsg.IsOnline {
+						h.AddPlayerAcCtx(serverMsg.UserId)
+					} else {
+						h.DelPlayerAcCtx(serverMsg.UserId)
+					}
+				}
 			}
 		}
 	}()
@@ -133,21 +175,52 @@ func (h *Handle) CombatInvocationsNotify(userId uint32, gateAppId string, payloa
 			if GetEntityType(entityMoveInfo.EntityId) != constant.ENTITY_TYPE_AVATAR {
 				continue
 			}
+			if entityMoveInfo.MotionInfo.Pos != nil {
+				continue
+			}
 			// 玩家超速移动检测
 			ctx := h.GetPlayerAcCtx(userId)
-			ctx.Move(entityMoveInfo.MotionInfo.Pos)
+			if ctx == nil {
+				logger.Error("get player anticheat context is nil, uid: %v", userId)
+				continue
+			}
+			ok := ctx.Move(entityMoveInfo.MotionInfo.Pos)
+			if !ok {
+				logger.Warn("player move jump, pos: %v, uid: %v", entityMoveInfo.MotionInfo.Pos, userId)
+				h.KickPlayer(userId, gateAppId)
+				continue
+			}
 			moveSpeed := ctx.GetMoveSpeed()
 			logger.Debug("player move speed: %v, uid: %v", moveSpeed, userId)
 			if moveSpeed > MaxMoveSpeed {
 				logger.Warn("player move overspeed, speed: %v, uid: %v", moveSpeed, userId)
 				h.KickPlayer(userId, gateAppId)
+				continue
 			}
 		}
 	}
 }
 
+func (h *Handle) ToTheMoonEnterSceneReq(userId uint32, gateAppId string, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
+	ctx := h.GetPlayerAcCtx(userId)
+	if ctx == nil {
+		logger.Error("get player anticheat context is nil, uid: %v", userId)
+		return
+	}
+	ctx.sceneId = req.SceneId
+}
+
 func GetEntityType(entityId uint32) int {
 	return int(entityId >> 24)
+}
+
+func GetDistance(v1 *proto.Vector, v2 *proto.Vector) float32 {
+	return float32(math.Sqrt(
+		float64((v1.X-v2.X)*(v1.X-v2.X)) +
+			float64((v1.Y-v2.Y)*(v1.Y-v2.Y)) +
+			float64((v1.Z-v2.Z)*(v1.Z-v2.Z)),
+	))
 }
 
 func (h *Handle) KickPlayer(userId uint32, gateAppId string) {

@@ -12,6 +12,7 @@ import (
 	"hk4e/common/config"
 	"hk4e/common/mq"
 	"hk4e/common/rpc"
+	"hk4e/gdconf"
 	"hk4e/node/api"
 	"hk4e/pkg/logger"
 )
@@ -60,6 +61,8 @@ func Run(ctx context.Context, configFile string) error {
 	defer func() {
 		logger.CloseLogger()
 	}()
+
+	gdconf.InitGameDataConfig()
 
 	messageQueue := mq.NewMessageQueue(api.ANTICHEAT, APPID, client)
 	defer messageQueue.Close()

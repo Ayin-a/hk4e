@@ -124,21 +124,27 @@ func (k *KcpConnectManager) recvMsgHandle(protoMsg *ProtoMsg, session *Session) 
 		k.serverCmdProtoMap.PutProtoObjCache(protoMsg.CmdId, protoMsg.PayloadMessage)
 		gameMsg.PayloadMessageData = payloadMessageData
 		// 转发到寻路服务器
-		if session.pathfindingServerAppId != "" && (protoMsg.CmdId == cmd.QueryPathReq || protoMsg.CmdId == cmd.ObstacleModifyNotify) {
-			k.messageQueue.SendToPathfinding(session.pathfindingServerAppId, &mq.NetMsg{
-				MsgType: mq.MsgTypeGame,
-				EventId: mq.NormalMsg,
-				GameMsg: gameMsg,
-			})
-			return
+		if session.pathfindingServerAppId != "" {
+			if protoMsg.CmdId == cmd.QueryPathReq ||
+				protoMsg.CmdId == cmd.ObstacleModifyNotify {
+				k.messageQueue.SendToPathfinding(session.pathfindingServerAppId, &mq.NetMsg{
+					MsgType: mq.MsgTypeGame,
+					EventId: mq.NormalMsg,
+					GameMsg: gameMsg,
+				})
+				return
+			}
 		}
 		// 转发到反作弊服务器
-		if session.anticheatServerAppId != "" && protoMsg.CmdId == cmd.CombatInvocationsNotify {
-			k.messageQueue.SendToAnticheat(session.anticheatServerAppId, &mq.NetMsg{
-				MsgType: mq.MsgTypeGame,
-				EventId: mq.NormalMsg,
-				GameMsg: gameMsg,
-			})
+		if session.anticheatServerAppId != "" {
+			if protoMsg.CmdId == cmd.CombatInvocationsNotify ||
+				protoMsg.CmdId == cmd.ToTheMoonEnterSceneReq {
+				k.messageQueue.SendToAnticheat(session.anticheatServerAppId, &mq.NetMsg{
+					MsgType: mq.MsgTypeGame,
+					EventId: mq.NormalMsg,
+					GameMsg: gameMsg,
+				})
+			}
 		}
 		// 转发到GS
 		k.messageQueue.SendToGs(session.gsServerAppId, &mq.NetMsg{

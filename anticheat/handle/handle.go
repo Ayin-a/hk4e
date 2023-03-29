@@ -124,42 +124,42 @@ func NewHandle(messageQueue *mq.MessageQueue) (r *Handle) {
 	r = new(Handle)
 	r.messageQueue = messageQueue
 	r.playerAcCtxMap = make(map[uint32]*AnticheatContext)
-	r.run()
+	go r.run()
 	return r
 }
 
 func (h *Handle) run() {
-	go func() {
-		for {
-			netMsg := <-h.messageQueue.GetNetMsg()
-			switch netMsg.MsgType {
-			case mq.MsgTypeGame:
-				if netMsg.OriginServerType != api.GATE {
-					continue
-				}
-				if netMsg.EventId != mq.NormalMsg {
-					continue
-				}
-				gameMsg := netMsg.GameMsg
-				switch gameMsg.CmdId {
-				case cmd.CombatInvocationsNotify:
-					h.CombatInvocationsNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
-				case cmd.ToTheMoonEnterSceneReq:
-					h.ToTheMoonEnterSceneReq(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
-				}
-			case mq.MsgTypeServer:
-				serverMsg := netMsg.ServerMsg
-				switch netMsg.EventId {
-				case mq.ServerUserOnlineStateChangeNotify:
-					if serverMsg.IsOnline {
-						h.AddPlayerAcCtx(serverMsg.UserId)
-					} else {
-						h.DelPlayerAcCtx(serverMsg.UserId)
-					}
+	logger.Info("start handle")
+	for {
+		netMsg := <-h.messageQueue.GetNetMsg()
+		switch netMsg.MsgType {
+		case mq.MsgTypeGame:
+			if netMsg.OriginServerType != api.GATE {
+				continue
+			}
+			if netMsg.EventId != mq.NormalMsg {
+				continue
+			}
+			gameMsg := netMsg.GameMsg
+			switch gameMsg.CmdId {
+			case cmd.CombatInvocationsNotify:
+				h.CombatInvocationsNotify(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+			case cmd.ToTheMoonEnterSceneReq:
+				h.ToTheMoonEnterSceneReq(gameMsg.UserId, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
+			}
+		case mq.MsgTypeServer:
+			serverMsg := netMsg.ServerMsg
+			switch netMsg.EventId {
+			case mq.ServerUserOnlineStateChangeNotify:
+				logger.Info("player online state change, state: %v, uid: %v", serverMsg.IsOnline, serverMsg.UserId)
+				if serverMsg.IsOnline {
+					h.AddPlayerAcCtx(serverMsg.UserId)
+				} else {
+					h.DelPlayerAcCtx(serverMsg.UserId)
 				}
 			}
 		}
-	}()
+	}
 }
 
 func (h *Handle) CombatInvocationsNotify(userId uint32, gateAppId string, payloadMsg pb.Message) {
@@ -170,12 +170,13 @@ func (h *Handle) CombatInvocationsNotify(userId uint32, gateAppId string, payloa
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
 			if err != nil {
+				logger.Error("parse EntityMoveInfo error: %v, uid: %v", err, userId)
 				continue
 			}
 			if GetEntityType(entityMoveInfo.EntityId) != constant.ENTITY_TYPE_AVATAR {
 				continue
 			}
-			if entityMoveInfo.MotionInfo.Pos != nil {
+			if entityMoveInfo.MotionInfo.Pos == nil {
 				continue
 			}
 			// 玩家超速移动检测
@@ -209,6 +210,7 @@ func (h *Handle) ToTheMoonEnterSceneReq(userId uint32, gateAppId string, payload
 		return
 	}
 	ctx.sceneId = req.SceneId
+	logger.Info("player enter scene: %v, uid: %v", req.SceneId, userId)
 }
 
 func GetEntityType(entityId uint32) int {

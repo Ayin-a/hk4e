@@ -7,9 +7,9 @@ import (
 )
 
 type SubDrop struct {
-	Id         int32   // 子掉落ID
-	CountRange []int32 // 子掉落数量区间
-	Weight     int32   // 子掉落权重
+	Id         int32    // 子掉落ID
+	CountRange [2]int32 // 子掉落数量区间
+	Weight     int32    // 子掉落权重
 }
 
 const (
@@ -74,9 +74,11 @@ func (g *GameDataConfig) loadDropData() {
 			// 子掉落列合并
 			dropData.SubDropList = make([]*SubDrop, 0)
 			if dropData.SubDrop1Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop1CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop1CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop1CountRange[0]), int32(dropData.SubDrop1CountRange[0])}
+				} else if len(dropData.SubDrop1CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop1CountRange[0]), int32(dropData.SubDrop1CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop1Id,
@@ -85,9 +87,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop2Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop2CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop2CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop2CountRange[0]), int32(dropData.SubDrop2CountRange[0])}
+				} else if len(dropData.SubDrop2CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop2CountRange[0]), int32(dropData.SubDrop2CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop2Id,
@@ -96,9 +100,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop3Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop3CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop3CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop3CountRange[0]), int32(dropData.SubDrop3CountRange[0])}
+				} else if len(dropData.SubDrop3CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop3CountRange[0]), int32(dropData.SubDrop3CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop3Id,
@@ -107,9 +113,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop4Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop4CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop4CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop4CountRange[0]), int32(dropData.SubDrop4CountRange[0])}
+				} else if len(dropData.SubDrop4CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop4CountRange[0]), int32(dropData.SubDrop4CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop4Id,
@@ -118,9 +126,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop5Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop5CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop5CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop5CountRange[0]), int32(dropData.SubDrop5CountRange[0])}
+				} else if len(dropData.SubDrop5CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop5CountRange[0]), int32(dropData.SubDrop5CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop5Id,
@@ -129,9 +139,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop6Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop6CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop6CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop6CountRange[0]), int32(dropData.SubDrop6CountRange[0])}
+				} else if len(dropData.SubDrop6CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop6CountRange[0]), int32(dropData.SubDrop6CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop6Id,
@@ -140,9 +152,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop7Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop7CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop7CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop7CountRange[0]), int32(dropData.SubDrop7CountRange[0])}
+				} else if len(dropData.SubDrop7CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop7CountRange[0]), int32(dropData.SubDrop7CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop7Id,
@@ -151,9 +165,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop8Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop8CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop8CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop8CountRange[0]), int32(dropData.SubDrop8CountRange[0])}
+				} else if len(dropData.SubDrop8CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop8CountRange[0]), int32(dropData.SubDrop8CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop8Id,
@@ -162,9 +178,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop9Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop9CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop9CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop9CountRange[0]), int32(dropData.SubDrop9CountRange[0])}
+				} else if len(dropData.SubDrop9CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop9CountRange[0]), int32(dropData.SubDrop9CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop9Id,
@@ -173,9 +191,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop10Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop10CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop10CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop10CountRange[0]), int32(dropData.SubDrop10CountRange[0])}
+				} else if len(dropData.SubDrop10CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop10CountRange[0]), int32(dropData.SubDrop10CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop10Id,
@@ -184,9 +204,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop11Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop11CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop11CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop11CountRange[0]), int32(dropData.SubDrop11CountRange[0])}
+				} else if len(dropData.SubDrop11CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop11CountRange[0]), int32(dropData.SubDrop11CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop11Id,
@@ -195,9 +217,11 @@ func (g *GameDataConfig) loadDropData() {
 				})
 			}
 			if dropData.SubDrop12Id != 0 {
-				countRange := make([]int32, 0)
-				for _, v := range dropData.SubDrop12CountRange {
-					countRange = append(countRange, int32(v))
+				countRange := [2]int32{0, 0}
+				if len(dropData.SubDrop12CountRange) == 1 {
+					countRange = [2]int32{int32(dropData.SubDrop12CountRange[0]), int32(dropData.SubDrop12CountRange[0])}
+				} else if len(dropData.SubDrop12CountRange) == 2 {
+					countRange = [2]int32{int32(dropData.SubDrop12CountRange[0]), int32(dropData.SubDrop12CountRange[1])}
 				}
 				dropData.SubDropList = append(dropData.SubDropList, &SubDrop{
 					Id:         dropData.SubDrop12Id,

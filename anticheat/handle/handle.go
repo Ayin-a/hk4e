@@ -17,7 +17,7 @@ import (
 
 const (
 	MoveVectorCacheNum = 100
-	MaxMoveSpeed       = 10000.0
+	MaxMoveSpeed       = 50.0
 )
 
 type MoveVector struct {
@@ -30,9 +30,16 @@ type AnticheatContext struct {
 }
 
 func (a *AnticheatContext) Move(pos *proto.Vector) {
+	now := time.Now().UnixMilli()
+	if len(a.moveVectorList) > 0 {
+		lastMoveVector := a.moveVectorList[len(a.moveVectorList)-1]
+		if now-lastMoveVector.time < 1000 {
+			return
+		}
+	}
 	a.moveVectorList = append(a.moveVectorList, &MoveVector{
 		pos:  pos,
-		time: time.Now().UnixMilli(),
+		time: now,
 	})
 	if len(a.moveVectorList) > MoveVectorCacheNum {
 		a.moveVectorList = a.moveVectorList[len(a.moveVectorList)-MoveVectorCacheNum:]
@@ -41,6 +48,9 @@ func (a *AnticheatContext) Move(pos *proto.Vector) {
 
 func (a *AnticheatContext) GetMoveSpeed() float32 {
 	avgMoveSpeed := float32(0.0)
+	if len(a.moveVectorList) < MoveVectorCacheNum {
+		return avgMoveSpeed
+	}
 	for index := range a.moveVectorList {
 		if index+1 >= len(a.moveVectorList) {
 			break

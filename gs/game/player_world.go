@@ -404,11 +404,13 @@ func (g *Game) doRandDropFull(dropDataConfig *gdconf.DropData) map[uint32]uint32
 		dropMap := g.doRandDropOnce(dropList[0])
 		dropList = dropList[1:]
 		for dropId, count := range dropMap {
+			// 掉落id优先在掉落表里找 找不到就去道具表里找
 			subDropDataConfig := gdconf.GetDropDataById(dropId)
 			if subDropDataConfig != nil {
 				// 添加子掉落
 				dropList = append(dropList, subDropDataConfig)
 			} else {
+				// 添加道具
 				itemMap[uint32(dropId)] += uint32(count)
 			}
 		}

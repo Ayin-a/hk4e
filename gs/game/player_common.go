@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"time"
 
 	"hk4e/gate/kcp"
@@ -12,15 +13,14 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerSetPauseReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerSetPauseReq)
 	isPaused := req.IsPaused
 	player.Pause = isPaused
-
 	g.SendMsg(cmd.PlayerSetPauseRsp, player.PlayerID, player.ClientSeq, new(proto.PlayerSetPauseRsp))
 }
 
-func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) TowerAllDataReq(player *model.Player, payloadMsg pb.Message) {
 	towerAllDataRsp := &proto.TowerAllDataRsp{
 		TowerScheduleId:        29,
 		TowerFloorRecordList:   []*proto.TowerFloorRecord{{FloorId: 1001}},
@@ -37,34 +37,7 @@ func (g *GameManager) TowerAllDataReq(player *model.Player, payloadMsg pb.Messag
 	g.SendMsg(cmd.TowerAllDataRsp, player.PlayerID, player.ClientSeq, towerAllDataRsp)
 }
 
-func (g *GameManager) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
-	req := payloadMsg.(*proto.QueryPathReq)
-
-	queryPathRsp := &proto.QueryPathRsp{
-		QueryId:     req.QueryId,
-		QueryStatus: proto.QueryPathRsp_STATUS_SUCC,
-		Corners:     []*proto.Vector{req.DestinationPos[0]},
-	}
-	g.SendMsg(cmd.QueryPathRsp, player.PlayerID, player.ClientSeq, queryPathRsp)
-}
-
-func (g *GameManager) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Message) {
-	req := payloadMsg.(*proto.EntityAiSyncNotify)
-
-	entityAiSyncNotify := &proto.EntityAiSyncNotify{
-		InfoList: make([]*proto.AiSyncInfo, 0),
-	}
-	for _, monsterId := range req.LocalAvatarAlertedMonsterList {
-		entityAiSyncNotify.InfoList = append(entityAiSyncNotify.InfoList, &proto.AiSyncInfo{
-			EntityId:        monsterId,
-			HasPathToTarget: true,
-			IsSelfKilling:   false,
-		})
-	}
-	g.SendMsg(cmd.EntityAiSyncNotify, player.PlayerID, player.ClientSeq, entityAiSyncNotify)
-}
-
-func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
+func (g *Game) ClientRttNotify(userId uint32, clientRtt uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -74,23 +47,23 @@ func (g *GameManager) ClientRttNotify(userId uint32, clientRtt uint32) {
 	player.ClientRTT = clientRtt
 }
 
-func (g *GameManager) ClientTimeNotify(userId uint32, clientTime uint32) {
+func (g *Game) ClientTimeNotify(userId uint32, clientTime uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
 	player.ClientTime = clientTime
-	now := time.Now().Unix()
+	now := uint32(time.Now().Unix())
 	// 客户端与服务器时间相差太过严重
-	if now-int64(player.ClientTime) > 60 || int64(player.ClientTime)-now > 60 {
+	if math.Abs(float64(now-player.ClientTime)) > 60.0 {
 		g.KickPlayer(player.PlayerID, kcp.EnetServerKick)
-		logger.Error("abs of client time and server time above 60, uid: %v", userId)
+		logger.Error("abs of client time and server time above 60s, uid: %v", userId)
 	}
-	player.LastKeepaliveTime = uint32(now)
+	player.LastKeepaliveTime = now
 }
 
-func (g *GameManager) ServerAnnounceNotify(announceId uint32, announceMsg string) {
+func (g *Game) ServerAnnounceNotify(announceId uint32, announceMsg string) {
 	for _, onlinePlayer := range USER_MANAGER.GetAllOnlineUserList() {
 		now := uint32(time.Now().Unix())
 		serverAnnounceNotify := &proto.ServerAnnounceNotify{
@@ -106,7 +79,7 @@ func (g *GameManager) ServerAnnounceNotify(announceId uint32, announceMsg string
 	}
 }
 
-func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
+func (g *Game) ServerAnnounceRevokeNotify(announceId uint32) {
 	for _, onlinePlayer := range USER_MANAGER.GetAllOnlineUserList() {
 		serverAnnounceRevokeNotify := &proto.ServerAnnounceRevokeNotify{
 			ConfigIdList: []uint32{announceId},
@@ -115,27 +88,37 @@ func (g *GameManager) ServerAnnounceRevokeNotify(announceId uint32) {
 	}
 }
 
-func (g *GameManager) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ToTheMoonEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("player ttm enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.ToTheMoonEnterSceneReq)
 	_ = req
 	g.SendMsg(cmd.ToTheMoonEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.ToTheMoonEnterSceneRsp))
 }
 
-func (g *GameManager) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PathfindingEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("player pf enter scene, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.PathfindingEnterSceneReq)
 	_ = req
 	g.SendMsg(cmd.PathfindingEnterSceneRsp, player.PlayerID, player.ClientSeq, new(proto.PathfindingEnterSceneRsp))
 }
 
-func (g *GameManager) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {
-	logger.Debug("user set entity client data, uid: %v", player.PlayerID)
-	ntf := payloadMsg.(*proto.SetEntityClientDataNotify)
-	g.SendMsg(cmd.SetEntityClientDataNotify, player.PlayerID, player.ClientSeq, ntf)
+func (g *Game) QueryPathReq(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.QueryPathReq)
+	queryPathRsp := &proto.QueryPathRsp{
+		QueryId:     req.QueryId,
+		QueryStatus: proto.QueryPathRsp_STATUS_SUCC,
+		Corners:     []*proto.Vector{req.DestinationPos[0]},
+	}
+	g.SendMsg(cmd.QueryPathRsp, player.PlayerID, player.ClientSeq, queryPathRsp)
 }
 
-func (g *GameManager) ServerAppidBindNotify(userId uint32, anticheatAppId string, joinHostUserId uint32) {
+func (g *Game) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message) {
+	ntf := payloadMsg.(*proto.ObstacleModifyNotify)
+	_ = ntf
+	// logger.Debug("ObstacleModifyNotify: %v, uid: %v", ntf, player.PlayerID)
+}
+
+func (g *Game) ServerAppidBindNotify(userId uint32, anticheatAppId string, joinHostUserId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -160,10 +143,4 @@ func (g *GameManager) ServerAppidBindNotify(userId uint32, anticheatAppId string
 	player.SceneJump = true
 	player.SceneLoadState = model.SceneNone
 	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
-}
-
-func (g *GameManager) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message) {
-	ntf := payloadMsg.(*proto.ObstacleModifyNotify)
-	_ = ntf
-	// logger.Debug("ObstacleModifyNotify: %v, uid: %v", ntf, player.PlayerID)
 }

@@ -16,7 +16,7 @@ import (
 )
 
 // HandleAbilityStamina 处理来自ability的耐力消耗
-func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
+func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
 	switch entry.ArgumentType {
 	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
 		// 大剑重击 或 持续技能 耐力消耗
@@ -77,7 +77,7 @@ func (g *GameManager) HandleAbilityStamina(player *model.Player, entry *proto.Ab
 }
 
 // SceneAvatarStaminaStepReq 缓慢游泳或缓慢攀爬时消耗耐力
-func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneAvatarStaminaStepReq)
 
 	// 根据动作状态消耗耐力
@@ -122,7 +122,7 @@ func (g *GameManager) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg
 }
 
 // ImmediateStamina 处理即时耐力消耗
-func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.MotionState) {
+func (g *Game) ImmediateStamina(player *model.Player, motionState proto.MotionState) {
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
@@ -159,7 +159,7 @@ func (g *GameManager) ImmediateStamina(player *model.Player, motionState proto.M
 }
 
 // SkillSustainStamina 处理技能持续时的耐力消耗
-func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
+func (g *Game) SkillSustainStamina(player *model.Player, isSwim bool) {
 	staminaInfo := player.StaminaInfo
 	skillId := staminaInfo.LastSkillId
 
@@ -210,7 +210,7 @@ func (g *GameManager) SkillSustainStamina(player *model.Player, isSwim bool) {
 }
 
 // ChargedAttackStamina 处理重击技能即时耐力消耗
-func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
+func (g *Game) ChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
 	// 确保技能为重击
 	if !strings.Contains(skillData.AbilityName, "ExtraAttack") {
 		return
@@ -250,7 +250,7 @@ func (g *GameManager) ChargedAttackStamina(player *model.Player, worldAvatar *Wo
 }
 
 // SkillStartStamina 处理技能开始时的即时耐力消耗
-func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, skillId uint32) {
+func (g *Game) SkillStartStamina(player *model.Player, casterId uint32, skillId uint32) {
 	staminaInfo := player.StaminaInfo
 
 	// 获取该技能开始时所需消耗的耐力
@@ -276,7 +276,7 @@ func (g *GameManager) SkillStartStamina(player *model.Player, casterId uint32, s
 }
 
 // VehicleRestoreStaminaHandler 处理载具持续回复耐力
-func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
+func (g *Game) VehicleRestoreStaminaHandler(player *model.Player) {
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
@@ -307,7 +307,7 @@ func (g *GameManager) VehicleRestoreStaminaHandler(player *model.Player) {
 }
 
 // SustainStaminaHandler 处理持续耐力消耗
-func (g *GameManager) SustainStaminaHandler(player *model.Player) {
+func (g *Game) SustainStaminaHandler(player *model.Player) {
 	// 玩家暂停状态不更新耐力
 	if player.Pause {
 		return
@@ -337,7 +337,7 @@ func (g *GameManager) SustainStaminaHandler(player *model.Player) {
 
 // GetChangeStamina 获取变更的耐力
 // 当前耐力值 + 消耗的耐力值
-func (g *GameManager) GetChangeStamina(curStamina int32, maxStamina int32, staminaCost int32) uint32 {
+func (g *Game) GetChangeStamina(curStamina int32, maxStamina int32, staminaCost int32) uint32 {
 	// 即将更改为的耐力值
 	stamina := curStamina + staminaCost
 
@@ -351,7 +351,7 @@ func (g *GameManager) GetChangeStamina(curStamina int32, maxStamina int32, stami
 }
 
 // UpdateVehicleStamina 更新载具耐力
-func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity, staminaCost int32) {
+func (g *Game) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity, staminaCost int32) {
 	// 耐力消耗为0代表不更改 仍然执行后面的话会导致回复出问题
 	if staminaCost == 0 {
 		return
@@ -397,7 +397,7 @@ func (g *GameManager) UpdateVehicleStamina(player *model.Player, vehicleEntity *
 }
 
 // UpdatePlayerStamina 更新玩家耐力
-func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int32) {
+func (g *Game) UpdatePlayerStamina(player *model.Player, staminaCost int32) {
 	// 耐力消耗为0代表不更改 仍然执行后面的话会导致回复出问题
 	if staminaCost == 0 {
 		return
@@ -438,7 +438,7 @@ func (g *GameManager) UpdatePlayerStamina(player *model.Player, staminaCost int3
 }
 
 // DrownBackHandler 玩家溺水返回安全点
-func (g *GameManager) DrownBackHandler(player *model.Player) {
+func (g *Game) DrownBackHandler(player *model.Player) {
 	// 玩家暂停跳过
 	if player.Pause {
 		return
@@ -482,7 +482,7 @@ func (g *GameManager) DrownBackHandler(player *model.Player) {
 }
 
 // HandleDrown 处理玩家溺水
-func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
+func (g *Game) HandleDrown(player *model.Player, stamina uint32) {
 	// 溺水需要耐力等于0 返回延时不等于0代表已处理过溺水正在等待返回
 	if stamina != 0 || player.StaminaInfo.DrownBackDelay != 0 {
 		return
@@ -499,7 +499,7 @@ func (g *GameManager) HandleDrown(player *model.Player, stamina uint32) {
 }
 
 // SetVehicleStamina 设置载具耐力
-func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, stamina float32) {
+func (g *Game) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, stamina float32) {
 	// 设置载具的耐力
 	gadgetEntity := vehicleEntity.GetGadgetEntity()
 	gadgetEntity.GetGadgetVehicleEntity().SetCurStamina(stamina)
@@ -513,7 +513,7 @@ func (g *GameManager) SetVehicleStamina(player *model.Player, vehicleEntity *Ent
 }
 
 // SetPlayerStamina 设置玩家耐力
-func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
+func (g *Game) SetPlayerStamina(player *model.Player, stamina uint32) {
 	// 设置玩家的耐力
 	prop := constant.PLAYER_PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
@@ -523,7 +523,7 @@ func (g *GameManager) SetPlayerStamina(player *model.Player, stamina uint32) {
 	g.PlayerPropNotify(player, prop)
 }
 
-func (g *GameManager) PlayerPropNotify(player *model.Player, playerPropId uint16) {
+func (g *Game) PlayerPropNotify(player *model.Player, playerPropId uint16) {
 	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)
 	playerPropNotify.PropMap = make(map[uint32]*proto.PropValue)

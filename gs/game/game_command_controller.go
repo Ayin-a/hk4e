@@ -155,7 +155,7 @@ func (c *CommandManager) TeleportCommand(cmd *CommandMessage) {
 		// 如果玩家不与目标玩家同一世界或不同服务器
 		if target == nil || player.WorldId != target.WorldId {
 			// 请求进入目标玩家世界
-			GAME_MANAGER.UserApplyEnterWorld(player, targetUid)
+			GAME.UserApplyEnterWorld(player, targetUid)
 			// 发送消息给执行者
 			c.SendMessage(cmd.Executor, "已将玩家 UID：%v 请求加入目标玩家 UID：%v 的世界。", player.PlayerID, targetUid)
 		} else {
@@ -246,7 +246,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 	switch mode {
 	case "once":
 		// 判断是否为物品
-		_, ok := GAME_MANAGER.GetAllItemDataConfig()[int32(id)]
+		_, ok := GAME.GetAllItemDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家物品
 			c.gmCmd.GMAddUserItem(player.PlayerID, id, count)
@@ -254,7 +254,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 			return
 		}
 		// 判断是否为武器
-		_, ok = GAME_MANAGER.GetAllWeaponDataConfig()[int32(id)]
+		_, ok = GAME.GetAllWeaponDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家武器
 			c.gmCmd.GMAddUserWeapon(player.PlayerID, id, count)
@@ -263,7 +263,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 		}
 		// 判断是否为圣遗物
-		_, ok = GAME_MANAGER.GetAllReliquaryDataConfig()[int32(id)]
+		_, ok = GAME.GetAllReliquaryDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家圣遗物
 			c.gmCmd.GMAddUserReliquary(player.PlayerID, id, count)
@@ -272,7 +272,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 
 		}
 		// 判断是否为角色
-		_, ok = GAME_MANAGER.GetAllAvatarDataConfig()[int32(id)]
+		_, ok = GAME.GetAllAvatarDataConfig()[int32(id)]
 		if ok {
 			// 给予玩家角色
 			c.gmCmd.GMAddUserAvatar(player.PlayerID, id)
@@ -329,7 +329,7 @@ func (c *CommandManager) GiveCommand(cmd *CommandMessage) {
 // GcgCommand Gcg测试命令
 func (c *CommandManager) GcgCommand(cmd *CommandMessage) {
 	player := cmd.Executor.(*model.Player)
-	GAME_MANAGER.GCGStartChallenge(player)
+	GAME.GCGStartChallenge(player)
 	c.SendMessage(cmd.Executor, "收到命令")
 }
 

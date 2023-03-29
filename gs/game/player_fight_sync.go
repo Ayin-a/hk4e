@@ -33,19 +33,19 @@ func DoForward[IET model.InvokeEntryType](player *model.Player, invokeHandler *m
 	}
 	if invokeHandler.AllLen() > 0 {
 		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardAll)
-		GAME_MANAGER.SendToWorldA(world, cmdId, player.ClientSeq, newNtf)
+		GAME.SendToWorldA(world, cmdId, player.ClientSeq, newNtf)
 	}
 	if invokeHandler.AllExceptCurLen() > 0 {
 		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardAllExceptCur)
-		GAME_MANAGER.SendToWorldAEC(world, cmdId, player.ClientSeq, newNtf, player.PlayerID)
+		GAME.SendToWorldAEC(world, cmdId, player.ClientSeq, newNtf, player.PlayerID)
 	}
 	if invokeHandler.HostLen() > 0 {
 		reflection.SetStructFieldValue(newNtf, forwardField, invokeHandler.EntryListForwardHost)
-		GAME_MANAGER.SendToWorldH(world, cmdId, player.ClientSeq, newNtf)
+		GAME.SendToWorldH(world, cmdId, player.ClientSeq, newNtf)
 	}
 }
 
-func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) UnionCmdNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.UnionCmdNotify)
 	_ = req
 	if player.SceneLoadState != model.SceneEnterDone {
@@ -61,7 +61,7 @@ func (g *GameManager) UnionCmdNotify(player *model.Player, payloadMsg pb.Message
 	player.AbilityInvokeHandler.Clear()
 }
 
-func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) MassiveEntityElementOpBatchNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.MassiveEntityElementOpBatchNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -80,7 +80,7 @@ func (g *GameManager) MassiveEntityElementOpBatchNotify(player *model.Player, pa
 	g.SendToWorldA(world, cmd.MassiveEntityElementOpBatchNotify, player.ClientSeq, req)
 }
 
-func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.CombatInvocationsNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -232,7 +232,7 @@ func (g *GameManager) CombatInvocationsNotify(player *model.Player, payloadMsg p
 	}
 }
 
-func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
+func (g *Game) AoiPlayerMove(player *model.Player, oldPos *model.Vector, newPos *model.Vector) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get player world is nil, uid: %v", player.PlayerID)
@@ -303,7 +303,7 @@ func (g *GameManager) AoiPlayerMove(player *model.Player, oldPos *model.Vector, 
 	}
 }
 
-func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AbilityInvocationsNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -341,7 +341,7 @@ func (g *GameManager) AbilityInvocationsNotify(player *model.Player, payloadMsg 
 	}
 }
 
-func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ClientAbilityInitFinishNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ClientAbilityInitFinishNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -356,7 +356,7 @@ func (g *GameManager) ClientAbilityInitFinishNotify(player *model.Player, payloa
 		req, []string{"EntityId"})
 }
 
-func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ClientAbilityChangeNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -428,7 +428,7 @@ func (g *GameManager) ClientAbilityChangeNotify(player *model.Player, payloadMsg
 	}
 }
 
-func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtDoSkillSuccNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -438,7 +438,7 @@ func (g *GameManager) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.M
 	g.SkillStartStamina(player, req.CasterId, req.SkillId)
 }
 
-func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAvatarEnterFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -448,7 +448,7 @@ func (g *GameManager) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg
 	g.SendToWorldA(world, cmd.EvtAvatarEnterFocusNotify, player.ClientSeq, req)
 }
 
-func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAvatarUpdateFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -458,7 +458,7 @@ func (g *GameManager) EvtAvatarUpdateFocusNotify(player *model.Player, payloadMs
 	g.SendToWorldA(world, cmd.EvtAvatarUpdateFocusNotify, player.ClientSeq, req)
 }
 
-func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAvatarExitFocusNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -468,7 +468,7 @@ func (g *GameManager) EvtAvatarExitFocusNotify(player *model.Player, payloadMsg 
 	g.SendToWorldA(world, cmd.EvtAvatarExitFocusNotify, player.ClientSeq, req)
 }
 
-func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtEntityRenderersChangedNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtEntityRenderersChangedNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -478,7 +478,7 @@ func (g *GameManager) EvtEntityRenderersChangedNotify(player *model.Player, payl
 	g.SendToWorldA(world, cmd.EvtEntityRenderersChangedNotify, player.ClientSeq, req)
 }
 
-func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtCreateGadgetNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
@@ -505,38 +505,58 @@ func (g *GameManager) EvtCreateGadgetNotify(player *model.Player, payloadMsg pb.
 	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{req.EntityId}, true, true)
 }
 
-func (g *GameManager) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtDestroyGadgetNotify)
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
 	// logger.Debug("EvtDestroyGadgetNotify: %v", req)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
+	if world == nil {
+		logger.Error("world is nil, worldId: %v", player.WorldId)
 		return
 	}
+	scene := world.GetSceneById(player.SceneId)
 	scene.DestroyEntity(req.EntityId)
 	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_MISS, []uint32{req.EntityId})
 }
 
-func (g *GameManager) EvtAiSyncSkillCdNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtAiSyncSkillCdNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAiSyncSkillCdNotify)
 	_ = req
 }
 
-func (g *GameManager) EvtAiSyncCombatThreatInfoNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EvtAiSyncCombatThreatInfoNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAiSyncCombatThreatInfoNotify)
 	_ = req
 }
 
-func (g *GameManager) EntityConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EntityConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EntityConfigHashNotify)
 	_ = req
 }
 
-func (g *GameManager) MonsterAIConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) MonsterAIConfigHashNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.MonsterAIConfigHashNotify)
 	_ = req
+}
+
+func (g *Game) SetEntityClientDataNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.SetEntityClientDataNotify)
+	g.SendMsg(cmd.SetEntityClientDataNotify, player.PlayerID, player.ClientSeq, req)
+}
+
+func (g *Game) EntityAiSyncNotify(player *model.Player, payloadMsg pb.Message) {
+	req := payloadMsg.(*proto.EntityAiSyncNotify)
+	entityAiSyncNotify := &proto.EntityAiSyncNotify{
+		InfoList: make([]*proto.AiSyncInfo, 0),
+	}
+	for _, monsterId := range req.LocalAvatarAlertedMonsterList {
+		entityAiSyncNotify.InfoList = append(entityAiSyncNotify.InfoList, &proto.AiSyncInfo{
+			EntityId:        monsterId,
+			HasPathToTarget: true,
+			IsSelfKilling:   false,
+		})
+	}
+	g.SendMsg(cmd.EntityAiSyncNotify, player.PlayerID, player.ClientSeq, entityAiSyncNotify)
 }

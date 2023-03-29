@@ -9,7 +9,7 @@ import (
 )
 
 // HandlePlayerExpAdd 玩家冒险阅历增加处理
-func (g *GameManager) HandlePlayerExpAdd(userId uint32) {
+func (g *Game) HandlePlayerExpAdd(userId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)

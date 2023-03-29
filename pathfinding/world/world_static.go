@@ -71,6 +71,11 @@ func (w *WorldStatic) SetTerrain(x int16, y int16, z int16) {
 }
 
 func (w *WorldStatic) Pathfinding(startPos alg.MeshVector, endPos alg.MeshVector) (bool, []alg.MeshVector) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error("pathfinding error, panic, startPos: %v, endPos: %v", startPos, endPos)
+		}
+	}()
 	bfs := alg.NewBFS()
 	bfs.InitMap(
 		w.terrain,

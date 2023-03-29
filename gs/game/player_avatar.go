@@ -15,7 +15,7 @@ import (
 )
 
 // AvatarUpgradeReq 角色升级请求
-func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AvatarUpgradeReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
@@ -97,7 +97,7 @@ func (g *GameManager) AvatarUpgradeReq(player *model.Player, payloadMsg pb.Messa
 }
 
 // AvatarPromoteReq 角色突破请求
-func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AvatarPromoteReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AvatarPromoteReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.Guid].(*model.Avatar)
@@ -187,7 +187,7 @@ func (g *GameManager) AvatarPromoteReq(player *model.Player, payloadMsg pb.Messa
 }
 
 // AvatarPromoteGetRewardReq 角色突破获取奖励请求
-func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AvatarPromoteGetRewardReq)
 	// 是否拥有角色
 	avatar, ok := player.GameObjectGuidMap[req.AvatarGuid].(*model.Avatar)
@@ -237,7 +237,7 @@ func (g *GameManager) AvatarPromoteGetRewardReq(player *model.Player, payloadMsg
 }
 
 // AvatarWearFlycloakReq 角色装备风之翼请求
-func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AvatarWearFlycloakReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -288,7 +288,7 @@ func (g *GameManager) AvatarWearFlycloakReq(player *model.Player, payloadMsg pb.
 }
 
 // AvatarChangeCostumeReq 角色更换时装请求
-func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AvatarChangeCostumeReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -349,7 +349,7 @@ func (g *GameManager) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb
 	g.SendMsg(cmd.AvatarChangeCostumeRsp, player.PlayerID, player.ClientSeq, avatarChangeCostumeRsp)
 }
 
-func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
+func (g *Game) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 	isFocus := false
 	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
 		isFocus = true
@@ -425,7 +425,7 @@ func (g *GameManager) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
 }
 
 // PacketAvatarPropNotify 角色属性表更新通知
-func (g *GameManager) PacketAvatarPropNotify(avatar *model.Avatar) *proto.AvatarPropNotify {
+func (g *Game) PacketAvatarPropNotify(avatar *model.Avatar) *proto.AvatarPropNotify {
 	avatarPropNotify := &proto.AvatarPropNotify{
 		PropMap:    make(map[uint32]int64, 5),
 		AvatarGuid: avatar.Guid,
@@ -444,7 +444,7 @@ func (g *GameManager) PacketAvatarPropNotify(avatar *model.Avatar) *proto.Avatar
 	return avatarPropNotify
 }
 
-func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
+func (g *Game) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
 	allAvatarDataConfig := make(map[int32]*gdconf.AvatarData)
 	for avatarId, avatarData := range gdconf.GetAvatarDataMap() {
 		if avatarId <= 10000001 || avatarId >= 11000000 {
@@ -460,7 +460,7 @@ func (g *GameManager) GetAllAvatarDataConfig() map[int32]*gdconf.AvatarData {
 	return allAvatarDataConfig
 }
 
-func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
+func (g *Game) AddUserAvatar(userId uint32, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -496,7 +496,7 @@ func (g *GameManager) AddUserAvatar(userId uint32, avatarId uint32) {
 }
 
 // AddUserFlycloak 给予玩家风之翼
-func (g *GameManager) AddUserFlycloak(userId uint32, flyCloakId uint32) {
+func (g *Game) AddUserFlycloak(userId uint32, flyCloakId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -518,7 +518,7 @@ func (g *GameManager) AddUserFlycloak(userId uint32, flyCloakId uint32) {
 }
 
 // AddUserCostume 给予玩家时装
-func (g *GameManager) AddUserCostume(userId uint32, costumeId uint32) {
+func (g *Game) AddUserCostume(userId uint32, costumeId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -540,7 +540,7 @@ func (g *GameManager) AddUserCostume(userId uint32, costumeId uint32) {
 }
 
 // UpgradePlayerAvatar 玩家角色升级
-func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Avatar, expCount uint32) {
+func (g *Game) UpgradePlayerAvatar(player *model.Player, avatar *model.Avatar, expCount uint32) {
 	// 获取角色配置表
 	avatarDataConfig := gdconf.GetAvatarDataById(int32(avatar.AvatarId))
 	if avatarDataConfig == nil {
@@ -583,7 +583,7 @@ func (g *GameManager) UpgradePlayerAvatar(player *model.Player, avatar *model.Av
 	g.SendMsg(cmd.AvatarPropNotify, player.PlayerID, player.ClientSeq, g.PacketAvatarPropNotify(avatar))
 }
 
-func (g *GameManager) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) {
+func (g *Game) UpdateUserAvatarFightProp(userId uint32, avatarId uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)

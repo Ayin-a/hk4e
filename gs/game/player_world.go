@@ -7,6 +7,7 @@ import (
 	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
+	"hk4e/pkg/random"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
@@ -15,7 +16,7 @@ import (
 
 // 大地图模块 大世界相关的所有逻辑
 
-func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneTransToPointReq)
 	dbWorld := player.GetDbWorld()
 	dbScene := dbWorld.GetSceneById(req.SceneId)
@@ -52,7 +53,7 @@ func (g *GameManager) SceneTransToPointReq(player *model.Player, payloadMsg pb.M
 	g.SendMsg(cmd.SceneTransToPointRsp, player.PlayerID, player.ClientSeq, sceneTransToPointRsp)
 }
 
-func (g *GameManager) UnlockTransPointReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) UnlockTransPointReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.UnlockTransPointReq)
 
 	dbWorld := player.GetDbWorld()
@@ -78,7 +79,7 @@ func (g *GameManager) UnlockTransPointReq(player *model.Player, payloadMsg pb.Me
 	g.SendSucc(cmd.UnlockTransPointRsp, player, &proto.UnlockTransPointRsp{})
 }
 
-func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) GetScenePointReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.GetScenePointReq)
 
 	dbWorld := player.GetDbWorld()
@@ -111,7 +112,7 @@ func (g *GameManager) GetScenePointReq(player *model.Player, payloadMsg pb.Messa
 	g.SendMsg(cmd.GetScenePointRsp, player.PlayerID, player.ClientSeq, getScenePointRsp)
 }
 
-func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.MarkMapReq)
 	if req.Op == proto.MarkMapReq_ADD {
 		logger.Debug("user mark type: %v", req.Mark.PointType)
@@ -133,7 +134,7 @@ func (g *GameManager) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 	g.SendMsg(cmd.MarkMapRsp, player.PlayerID, player.ClientSeq, &proto.MarkMapRsp{})
 }
 
-func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) GetSceneAreaReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.GetSceneAreaReq)
 
 	getSceneAreaRsp := &proto.GetSceneAreaRsp{
@@ -165,7 +166,7 @@ func (g *GameManager) GetSceneAreaReq(player *model.Player, payloadMsg pb.Messag
 	g.SendMsg(cmd.GetSceneAreaRsp, player.PlayerID, player.ClientSeq, getSceneAreaRsp)
 }
 
-func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Message) {
 	logger.Debug("player enter world area, uid: %v", player.PlayerID)
 	req := payloadMsg.(*proto.EnterWorldAreaReq)
 
@@ -178,7 +179,7 @@ func (g *GameManager) EnterWorldAreaReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.EnterWorldAreaRsp, player.PlayerID, player.ClientSeq, enterWorldAreaRsp)
 }
 
-func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ChangeGameTimeReq)
 	gameTime := req.GameTime
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -203,7 +204,7 @@ func (g *GameManager) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.ChangeGameTimeRsp, player.PlayerID, player.ClientSeq, changeGameTimeRsp)
 }
 
-func (g *GameManager) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.NpcTalkReq)
 	rsp := &proto.NpcTalkRsp{
 		CurTalkId:   req.TalkId,
@@ -213,7 +214,7 @@ func (g *GameManager) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
 	g.SendMsg(cmd.NpcTalkRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
-func (g *GameManager) DungeonEntryInfoReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) DungeonEntryInfoReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.DungeonEntryInfoReq)
 	pointDataConfig := gdconf.GetScenePointBySceneIdAndPointId(int32(req.SceneId), int32(req.PointId))
 	if pointDataConfig == nil {
@@ -233,7 +234,7 @@ func (g *GameManager) DungeonEntryInfoReq(player *model.Player, payloadMsg pb.Me
 	g.SendMsg(cmd.DungeonEntryInfoRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
-func (g *GameManager) PlayerEnterDungeonReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerEnterDungeonReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerEnterDungeonReq)
 	dungeonDataConfig := gdconf.GetDungeonDataById(int32(req.DungeonId))
 	if dungeonDataConfig == nil {
@@ -262,7 +263,7 @@ func (g *GameManager) PlayerEnterDungeonReq(player *model.Player, payloadMsg pb.
 	g.SendMsg(cmd.PlayerEnterDungeonRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
-func (g *GameManager) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerQuitDungeonReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -284,7 +285,7 @@ func (g *GameManager) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.M
 	g.SendMsg(cmd.PlayerQuitDungeonRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
-func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.GadgetInteractReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -333,10 +334,31 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 	case constant.GADGET_TYPE_CHEST:
 		// 宝箱开启
 		interactType = proto.InteractType_INTERACT_OPEN_CHEST
+		// 宝箱交互结束 开启宝箱
 		if req.OpType == proto.InterOpType_INTER_OP_FINISH {
-			// 宝箱交互结束 开启宝箱
-			// TODO
-			g.CreateDropGadget(player, entity.pos, 70600055, 104003, 1)
+			// 随机掉落
+			sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
+			gadgetConfig := sceneGroupConfig.GadgetMap[int32(entity.GetConfigId())]
+			chestDropDataConfig := gdconf.GetChestDropDataByDropTagAndLevel(gadgetConfig.DropTag, gadgetConfig.Level)
+			if chestDropDataConfig == nil {
+				logger.Error("get chest drop data config is nil, gadgetConfig: %v, uid: %v", gadgetConfig, player.PlayerID)
+				return
+			}
+			dropDataConfig := gdconf.GetDropDataById(chestDropDataConfig.DropId)
+			if dropDataConfig == nil {
+				logger.Error("get drop data config is nil, dropId: %v, uid: %v", chestDropDataConfig.DropId, player.PlayerID)
+				return
+			}
+			totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(chestDropDataConfig.DropCount))
+			for itemId, count := range totalItemMap {
+				itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+				if itemDataConfig == nil {
+					logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
+					continue
+				}
+				g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
+			}
+			// 更新宝箱状态
 			g.SendMsg(cmd.WorldChestOpenNotify, player.PlayerID, player.ClientSeq, &proto.WorldChestOpenNotify{
 				GroupId:  entity.GetGroupId(),
 				SceneId:  scene.GetId(),
@@ -356,8 +378,73 @@ func (g *GameManager) GadgetInteractReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.GadgetInteractRsp, player.PlayerID, player.ClientSeq, rsp)
 }
 
+func (g *Game) doRandDropFullTimes(dropDataConfig *gdconf.DropData, times int) map[uint32]uint32 {
+	totalItemMap := make(map[uint32]uint32)
+	for i := 0; i < times; i++ {
+		itemMap := g.doRandDropFull(dropDataConfig)
+		if itemMap == nil {
+			continue
+		}
+		for itemId, count := range itemMap {
+			totalItemMap[itemId] += count
+		}
+	}
+	return totalItemMap
+}
+
+func (g *Game) doRandDropFull(dropDataConfig *gdconf.DropData) map[uint32]uint32 {
+	itemMap := make(map[uint32]uint32)
+	dropList := make([]*gdconf.DropData, 0)
+	dropList = append(dropList, dropDataConfig)
+	for i := 0; i < 1000; i++ {
+		if len(dropList) == 0 {
+			// 掉落结束
+			return itemMap
+		}
+		dropMap := g.doRandDropOnce(dropList[0])
+		dropList = dropList[1:]
+		for dropId, count := range dropMap {
+			subDropDataConfig := gdconf.GetDropDataById(dropId)
+			if subDropDataConfig != nil {
+				// 添加子掉落
+				dropList = append(dropList, subDropDataConfig)
+			} else {
+				itemMap[uint32(dropId)] += uint32(count)
+			}
+		}
+	}
+	logger.Error("drop overtimes, drop config: %v", dropDataConfig)
+	return nil
+}
+
+func (g *Game) doRandDropOnce(dropDataConfig *gdconf.DropData) map[int32]int32 {
+	dropMap := make(map[int32]int32)
+	switch dropDataConfig.RandomType {
+	case gdconf.RandomTypeChoose:
+		// RWS随机
+		randNum := random.GetRandomInt32(0, dropDataConfig.SubDropTotalWeight-1)
+		sumWeight := int32(0)
+		for _, subDrop := range dropDataConfig.SubDropList {
+			sumWeight += subDrop.Weight
+			if sumWeight > randNum {
+				dropMap[subDrop.Id] = random.GetRandomInt32(subDrop.CountRange[0], subDrop.CountRange[1])
+				break
+			}
+		}
+	case gdconf.RandomTypeIndep:
+		// 独立随机
+		randNum := random.GetRandomInt32(0, gdconf.RandomTypeIndepWeight-1)
+		for _, subDrop := range dropDataConfig.SubDropList {
+			if subDrop.Weight > randNum {
+				dropMap[subDrop.Id] += random.GetRandomInt32(subDrop.CountRange[0], subDrop.CountRange[1])
+			}
+		}
+	}
+	return dropMap
+}
+
 // TeleportPlayer 传送玩家至地图上的某个位置
-func (g *GameManager) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
+func (g *Game) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
 	// 传送玩家
 	newSceneId := sceneId
 	oldSceneId := player.SceneId

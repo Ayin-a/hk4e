@@ -93,7 +93,7 @@ func (t *TickManager) onUserTickMinute(userId uint32, now int64) {
 	}
 	if uint32(now/1000)-player.LastKeepaliveTime > 60 {
 		logger.Error("remove keepalive timeout user, uid: %v", userId)
-		GAME_MANAGER.OnUserOffline(userId, &ChangeGsInfo{
+		GAME.OnUserOffline(userId, &ChangeGsInfo{
 			IsChangeGs: false,
 		})
 	}
@@ -186,29 +186,29 @@ func (t *TickManager) onTickHour(now int64) {
 }
 
 func (t *TickManager) onTickMinute(now int64) {
-	// GAME_MANAGER.ServerAnnounceNotify(100, "test123")
+	// GAME.ServerAnnounceNotify(100, "test123")
 	gdconf.LuaStateLruRemove()
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
 		for _, player := range world.GetAllPlayer() {
 			// 随机物品
-			allItemDataConfig := GAME_MANAGER.GetAllItemDataConfig()
+			allItemDataConfig := GAME.GetAllItemDataConfig()
 			count := random.GetRandomInt32(0, 4)
 			i := int32(0)
 			for itemId := range allItemDataConfig {
 				num := random.GetRandomInt32(1, 9)
-				GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
+				GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: uint32(itemId), ChangeCount: uint32(num)}}, true, 0)
 				i++
 				if i > count {
 					break
 				}
 			}
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 102, ChangeCount: 30}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 201, ChangeCount: 10}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 202, ChangeCount: 100}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 203, ChangeCount: 10}}, true, 0)
 			// 蓝球粉球
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
-			GAME_MANAGER.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 223, ChangeCount: 1}}, true, 0)
+			GAME.AddUserItem(player.PlayerID, []*ChangeItem{{ItemId: 224, ChangeCount: 1}}, true, 0)
 		}
 	}
 }
@@ -222,7 +222,7 @@ func (t *TickManager) onTick10Second(now int64) {
 					SceneId:   player.SceneId,
 					SceneTime: uint64(scene.GetSceneTime()),
 				}
-				GAME_MANAGER.SendMsg(cmd.SceneTimeNotify, player.PlayerID, 0, sceneTimeNotify)
+				GAME.SendMsg(cmd.SceneTimeNotify, player.PlayerID, 0, sceneTimeNotify)
 			}
 		}
 		for _, player := range world.GetAllPlayer() {
@@ -231,7 +231,7 @@ func (t *TickManager) onTick10Second(now int64) {
 				PlayerTime: uint64(player.TotalOnlineTime),
 				ServerTime: uint64(time.Now().UnixMilli()),
 			}
-			GAME_MANAGER.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
+			GAME.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
 		}
 	}
 }
@@ -240,7 +240,7 @@ func (t *TickManager) onTick5Second(now int64) {
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
 		if WORLD_MANAGER.IsAiWorld(world) {
 			for applyUid := range world.owner.CoopApplyMap {
-				GAME_MANAGER.UserDealEnterWorld(world.owner, applyUid, true)
+				GAME.UserDealEnterWorld(world.owner, applyUid, true)
 			}
 		}
 		// 多人世界其他玩家的坐标位置广播
@@ -266,7 +266,7 @@ func (t *TickManager) onTick5Second(now int64) {
 			}
 			worldPlayerLocationNotify.PlayerWorldLocList = append(worldPlayerLocationNotify.PlayerWorldLocList, playerWorldLocationInfo)
 		}
-		GAME_MANAGER.SendToWorldA(world, cmd.WorldPlayerLocationNotify, 0, worldPlayerLocationNotify)
+		GAME.SendToWorldA(world, cmd.WorldPlayerLocationNotify, 0, worldPlayerLocationNotify)
 
 		for _, scene := range world.GetAllScene() {
 			scenePlayerLocationNotify := &proto.ScenePlayerLocationNotify{
@@ -320,7 +320,7 @@ func (t *TickManager) onTick5Second(now int64) {
 					}
 				}
 			}
-			GAME_MANAGER.SendToWorldA(world, cmd.ScenePlayerLocationNotify, 0, scenePlayerLocationNotify)
+			GAME.SendToWorldA(world, cmd.ScenePlayerLocationNotify, 0, scenePlayerLocationNotify)
 		}
 	}
 }
@@ -336,7 +336,7 @@ func (t *TickManager) onTickSecond(now int64) {
 				playerRTTInfo := &proto.PlayerRTTInfo{Uid: worldPlayer.PlayerID, Rtt: worldPlayer.ClientRTT}
 				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
 			}
-			GAME_MANAGER.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
+			GAME.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
 			// 玩家安全位置更新
 			switch player.StaminaInfo.State {
 			case proto.MotionState_MOTION_DANGER_RUN, proto.MotionState_MOTION_RUN,
@@ -360,9 +360,9 @@ func (t *TickManager) onTick200MilliSecond(now int64) {
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
 		for _, player := range world.GetAllPlayer() {
 			// 耐力消耗
-			GAME_MANAGER.SustainStaminaHandler(player)
-			GAME_MANAGER.VehicleRestoreStaminaHandler(player)
-			GAME_MANAGER.DrownBackHandler(player)
+			GAME.SustainStaminaHandler(player)
+			GAME.VehicleRestoreStaminaHandler(player)
+			GAME.DrownBackHandler(player)
 		}
 	}
 }
@@ -374,7 +374,7 @@ func (t *TickManager) onTick50MilliSecond(now int64) {
 	// 音乐播放器
 	for i := 0; i < len(AUDIO_CHAN); i++ {
 		world := WORLD_MANAGER.GetAiWorld()
-		GAME_MANAGER.SendToWorldA(world, cmd.SceneAudioNotify, 0, &proto.SceneAudioNotify{
+		GAME.SendToWorldA(world, cmd.SceneAudioNotify, 0, &proto.SceneAudioNotify{
 			Type:      5,
 			SourceUid: world.owner.PlayerID,
 			Param1:    []uint32{1, <-AUDIO_CHAN},

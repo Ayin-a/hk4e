@@ -10,7 +10,7 @@ import (
 	"hk4e/protocol/proto"
 )
 
-func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
+func (g *Game) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 	allReliquaryDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
 		if itemData.Type != constant.ITEM_TYPE_RELIQUARY {
@@ -21,7 +21,7 @@ func (g *GameManager) GetAllReliquaryDataConfig() map[int32]*gdconf.ItemData {
 	return allReliquaryDataConfig
 }
 
-func (g *GameManager) GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32) *gdconf.ReliquaryMainData {
+func (g *Game) GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32) *gdconf.ReliquaryMainData {
 	mainPropMap, exist := gdconf.GetReliquaryMainDataMap()[mainPropDepotId]
 	if !exist {
 		return nil
@@ -34,7 +34,7 @@ func (g *GameManager) GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32)
 	}
 	randNum := random.GetRandomInt32(0, weightAll-1)
 	sumWeight := int32(0)
-	// 轮盘选择法
+	// RWS随机
 	for _, data := range mainPropList {
 		sumWeight += data.RandomWeight
 		if sumWeight > randNum {
@@ -44,7 +44,7 @@ func (g *GameManager) GetReliquaryMainDataRandomByDepotId(mainPropDepotId int32)
 	return nil
 }
 
-func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
+func (g *Game) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -81,7 +81,7 @@ func (g *GameManager) AddUserReliquary(userId uint32, itemId uint32) uint64 {
 	return reliquaryId
 }
 
-func (g *GameManager) GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int32, excludeTypeList ...uint32) *gdconf.ReliquaryAffixData {
+func (g *Game) GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int32, excludeTypeList ...uint32) *gdconf.ReliquaryAffixData {
 	appendPropMap, exist := gdconf.GetReliquaryAffixDataMap()[appendPropDepotId]
 	if !exist {
 		return nil
@@ -105,7 +105,7 @@ func (g *GameManager) GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int
 	}
 	randNum := random.GetRandomInt32(0, weightAll-1)
 	sumWeight := int32(0)
-	// 轮盘选择法
+	// RWS随机
 	for _, data := range appendPropList {
 		sumWeight += data.RandomWeight
 		if sumWeight > randNum {
@@ -116,7 +116,7 @@ func (g *GameManager) GetReliquaryAffixDataRandomByDepotId(appendPropDepotId int
 }
 
 // AppendReliquaryProp 圣遗物追加属性
-func (g *GameManager) AppendReliquaryProp(reliquary *model.Reliquary, count int32) {
+func (g *Game) AppendReliquaryProp(reliquary *model.Reliquary, count int32) {
 	// 获取圣遗物配置表
 	reliquaryConfig := gdconf.GetItemDataById(int32(reliquary.ItemId))
 	if reliquaryConfig == nil {
@@ -155,7 +155,7 @@ func (g *GameManager) AppendReliquaryProp(reliquary *model.Reliquary, count int3
 	}
 }
 
-func (g *GameManager) CostUserReliquary(userId uint32, reliquaryIdList []uint64) {
+func (g *Game) CostUserReliquary(userId uint32, reliquaryIdList []uint64) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -177,7 +177,7 @@ func (g *GameManager) CostUserReliquary(userId uint32, reliquaryIdList []uint64)
 	g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)
 }
 
-func (g *GameManager) PacketStoreItemChangeNotifyByReliquary(reliquary *model.Reliquary) *proto.StoreItemChangeNotify {
+func (g *Game) PacketStoreItemChangeNotifyByReliquary(reliquary *model.Reliquary) *proto.StoreItemChangeNotify {
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
 		StoreType: proto.StoreType_STORE_PACK,
 		ItemList:  make([]*proto.Item, 0),

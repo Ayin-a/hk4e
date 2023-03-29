@@ -182,7 +182,7 @@ func BeginCameraSceneLook(luaState *lua.LState) int {
 	}
 	ntf := new(proto.BeginCameraSceneLookNotify)
 	gdconf.ParseLuaTableToObject(cameraLockInfo, ntf)
-	GAME_MANAGER.SendMsg(cmd.BeginCameraSceneLookNotify, player.PlayerID, player.ClientSeq, ntf)
+	GAME.SendMsg(cmd.BeginCameraSceneLookNotify, player.PlayerID, player.ClientSeq, ntf)
 	luaState.Push(lua.LNumber(0))
 	return 1
 }
@@ -237,7 +237,7 @@ func ChangeGroupGadget(luaState *lua.LState) int {
 	gadgetStateInfo := new(gdconf.Gadget)
 	gdconf.ParseLuaTableToObject(gadgetInfo, gadgetStateInfo)
 	entity := group.GetEntityByConfigId(uint32(gadgetStateInfo.ConfigId))
-	GAME_MANAGER.ChangeGadgetState(player, entity.GetId(), uint32(gadgetStateInfo.State))
+	GAME.ChangeGadgetState(player, entity.GetId(), uint32(gadgetStateInfo.State))
 	luaState.Push(lua.LNumber(0))
 	return 1
 }
@@ -261,7 +261,7 @@ func SetGadgetStateByConfigId(luaState *lua.LState) int {
 	configId := luaState.ToInt(2)
 	state := luaState.ToInt(3)
 	entity := group.GetEntityByConfigId(uint32(configId))
-	GAME_MANAGER.ChangeGadgetState(player, entity.GetId(), uint32(state))
+	GAME.ChangeGadgetState(player, entity.GetId(), uint32(state))
 	luaState.Push(lua.LNumber(0))
 	return 1
 }

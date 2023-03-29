@@ -16,7 +16,7 @@ import (
 
 // 进入世界
 
-func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerApplyEnterMpReq)
 	targetUid := req.TargetUid
 
@@ -28,7 +28,7 @@ func (g *GameManager) PlayerApplyEnterMpReq(player *model.Player, payloadMsg pb.
 	g.UserApplyEnterWorld(player, targetUid)
 }
 
-func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerApplyEnterMpResultReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerApplyEnterMpResultReq)
 	applyUid := req.ApplyUid
 	isAgreed := req.IsAgreed
@@ -42,7 +42,7 @@ func (g *GameManager) PlayerApplyEnterMpResultReq(player *model.Player, payloadM
 	g.UserDealEnterWorld(player, applyUid, isAgreed)
 }
 
-func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.JoinPlayerSceneReq)
 
 	joinPlayerSceneRsp := new(proto.JoinPlayerSceneRsp)
@@ -73,7 +73,7 @@ func (g *GameManager) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Mes
 	g.JoinOtherWorld(player, hostPlayer)
 }
 
-func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
+func (g *Game) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
 	hostWorld := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 	if hostPlayer.SceneLoadState == model.SceneEnterDone {
 		player.SceneJump = true
@@ -96,7 +96,7 @@ func (g *GameManager) JoinOtherWorld(player *model.Player, hostPlayer *model.Pla
 
 // 退出世界
 
-func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerGetForceQuitBanInfoReq(player *model.Player, payloadMsg pb.Message) {
 	ok := true
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	for _, worldPlayer := range world.GetAllPlayer() {
@@ -112,7 +112,7 @@ func (g *GameManager) PlayerGetForceQuitBanInfoReq(player *model.Player, payload
 	g.SendSucc(cmd.PlayerGetForceQuitBanInfoRsp, player, &proto.PlayerGetForceQuitBanInfoRsp{})
 }
 
-func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) BackMyWorldReq(player *model.Player, payloadMsg pb.Message) {
 	// 其他玩家
 	ok := g.UserLeaveWorld(player)
 
@@ -123,7 +123,7 @@ func (g *GameManager) BackMyWorldReq(player *model.Player, payloadMsg pb.Message
 	g.SendSucc(cmd.BackMyWorldRsp, player, &proto.BackMyWorldRsp{})
 }
 
-func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ChangeWorldToSingleModeReq(player *model.Player, payloadMsg pb.Message) {
 	// 房主
 	ok := g.UserLeaveWorld(player)
 
@@ -134,7 +134,7 @@ func (g *GameManager) ChangeWorldToSingleModeReq(player *model.Player, payloadMs
 	g.SendSucc(cmd.ChangeWorldToSingleModeRsp, player, &proto.ChangeWorldToSingleModeRsp{})
 }
 
-func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneKickPlayerReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if player.PlayerID != world.GetOwner().PlayerID {
@@ -167,7 +167,7 @@ func (g *GameManager) SceneKickPlayerReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.SceneKickPlayerRsp, player.PlayerID, player.ClientSeq, sceneKickPlayerRsp)
 }
 
-func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32) {
+func (g *Game) UserApplyEnterWorld(player *model.Player, targetUid uint32) {
 	applyFailNotify := func(reason proto.PlayerApplyEnterMpResultNotify_Reason) {
 		playerApplyEnterMpResultNotify := &proto.PlayerApplyEnterMpResultNotify{
 			TargetUid:      targetUid,
@@ -249,7 +249,7 @@ func (g *GameManager) UserApplyEnterWorld(player *model.Player, targetUid uint32
 	g.SendMsg(cmd.PlayerApplyEnterMpNotify, targetPlayer.PlayerID, targetPlayer.ClientSeq, playerApplyEnterMpNotify)
 }
 
-func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agree bool) {
+func (g *Game) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agree bool) {
 	applyTime, exist := hostPlayer.CoopApplyMap[otherUid]
 	if !exist || time.Now().UnixNano() > applyTime+int64(10*time.Second) {
 		return
@@ -308,7 +308,7 @@ func (g *GameManager) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 }
 
-func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
+func (g *Game) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
 	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 	if world.GetMultiplayer() {
 		return
@@ -351,7 +351,7 @@ func (g *GameManager) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32
 	g.RemoveSceneEntityNotifyToPlayer(hostPlayer, proto.VisionType_VISION_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(hostPlayer, activeAvatarId)})
 }
 
-func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
+func (g *Game) UserLeaveWorld(player *model.Player) bool {
 	oldWorld := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if !oldWorld.GetMultiplayer() {
 		return false
@@ -365,7 +365,7 @@ func (g *GameManager) UserLeaveWorld(player *model.Player) bool {
 	return true
 }
 
-func (g *GameManager) UserWorldAddPlayer(world *World, player *model.Player) {
+func (g *Game) UserWorldAddPlayer(world *World, player *model.Player) {
 	if !WORLD_MANAGER.IsBigWorld(world) && world.GetWorldPlayerNum() >= 4 {
 		return
 	}
@@ -380,7 +380,7 @@ func (g *GameManager) UserWorldAddPlayer(world *World, player *model.Player) {
 	}
 }
 
-func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) {
+func (g *Game) UserWorldRemovePlayer(world *World, player *model.Player) {
 	if world.GetMultiplayer() && player.PlayerID == world.GetOwner().PlayerID {
 		// 多人世界房主离开剔除所有其他玩家
 		for _, worldPlayer := range world.GetAllPlayer() {
@@ -427,7 +427,7 @@ func (g *GameManager) UserWorldRemovePlayer(world *World, player *model.Player) 
 	}
 }
 
-func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *model.Player) {
+func (g *Game) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *model.Player) {
 	for _, worldPlayer := range hostWorld.GetAllPlayer() {
 		if worldPlayer.PlayerID == excludePlayer.PlayerID {
 			continue
@@ -521,7 +521,7 @@ func (g *GameManager) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *mod
 
 // 跨服玩家多人世界相关请求
 
-func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string) {
+func (g *Game) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string) {
 	switch userMpInfo.OriginInfo.CmdName {
 	case "PlayerApplyEnterMpReq":
 		applyFailNotify := func(reason proto.PlayerApplyEnterMpResultNotify_Reason) {
@@ -623,7 +623,7 @@ func (g *GameManager) ServerUserMpReq(userMpInfo *mq.UserMpInfo, gsAppId string)
 	}
 }
 
-func (g *GameManager) ServerUserMpRsp(userMpInfo *mq.UserMpInfo) {
+func (g *Game) ServerUserMpRsp(userMpInfo *mq.UserMpInfo) {
 	switch userMpInfo.OriginInfo.CmdName {
 	case "PlayerApplyEnterMpReq":
 		player := USER_MANAGER.GetOnlineUser(userMpInfo.OriginInfo.UserId)

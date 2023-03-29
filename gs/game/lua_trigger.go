@@ -9,7 +9,7 @@ import (
 )
 
 // SceneRegionTriggerCheck 场景区域触发器检测
-func (g *GameManager) SceneRegionTriggerCheck(player *model.Player, scene *Scene, oldPos *model.Vector, newPos *model.Vector, entityId uint32) {
+func (g *Game) SceneRegionTriggerCheck(player *model.Player, scene *Scene, oldPos *model.Vector, newPos *model.Vector, entityId uint32) {
 	for groupId, group := range scene.GetAllGroup() {
 		groupConfig := gdconf.GetSceneGroup(int32(groupId))
 		if groupConfig == nil {
@@ -116,7 +116,7 @@ func (g *GameManager) SceneRegionTriggerCheck(player *model.Player, scene *Scene
 }
 
 // MonsterDieTriggerCheck 怪物死亡触发器检测
-func (g *GameManager) MonsterDieTriggerCheck(player *model.Player, groupId uint32, group *Group) {
+func (g *Game) MonsterDieTriggerCheck(player *model.Player, groupId uint32, group *Group) {
 	groupConfig := gdconf.GetSceneGroup(int32(groupId))
 	if groupConfig == nil {
 		logger.Error("get group config is nil, groupId: %v, uid: %v", groupId, player.PlayerID)

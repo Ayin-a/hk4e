@@ -12,7 +12,7 @@ import (
 )
 
 // VehicleDestroyMotion 载具销毁动作
-func (g *GameManager) VehicleDestroyMotion(player *model.Player, entity *Entity, state proto.MotionState) {
+func (g *Game) VehicleDestroyMotion(player *model.Player, entity *Entity, state proto.MotionState) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if scene == nil {
@@ -28,7 +28,7 @@ func (g *GameManager) VehicleDestroyMotion(player *model.Player, entity *Entity,
 }
 
 // CreateVehicleReq 创建载具
-func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) CreateVehicleReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.CreateVehicleReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -65,7 +65,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 		g.SendError(cmd.VehicleInteractRsp, player, &proto.VehicleInteractRsp{})
 		return
 	}
-	GAME_MANAGER.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
+	GAME.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
 	// 记录创建的载具信息
 	player.VehicleInfo.LastCreateEntityIdMap[req.VehicleId] = entityId
 	player.VehicleInfo.LastCreateTime = time.Now().UnixMilli()
@@ -79,7 +79,7 @@ func (g *GameManager) CreateVehicleReq(player *model.Player, payloadMsg pb.Messa
 }
 
 // IsPlayerInVehicle 判断玩家是否在载具中
-func (g *GameManager) IsPlayerInVehicle(player *model.Player, gadgetVehicleEntity *GadgetVehicleEntity) bool {
+func (g *Game) IsPlayerInVehicle(player *model.Player, gadgetVehicleEntity *GadgetVehicleEntity) bool {
 	if gadgetVehicleEntity == nil {
 		return false
 	}
@@ -92,7 +92,7 @@ func (g *GameManager) IsPlayerInVehicle(player *model.Player, gadgetVehicleEntit
 }
 
 // DestroyVehicleEntity 删除载具实体
-func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, vehicleId uint32, entityId uint32) {
+func (g *Game) DestroyVehicleEntity(player *model.Player, scene *Scene, vehicleId uint32, entityId uint32) {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return
@@ -124,7 +124,7 @@ func (g *GameManager) DestroyVehicleEntity(player *model.Player, scene *Scene, v
 }
 
 // EnterVehicle 进入载具
-func (g *GameManager) EnterVehicle(player *model.Player, entity *Entity, avatarGuid uint64) {
+func (g *Game) EnterVehicle(player *model.Player, entity *Entity, avatarGuid uint64) {
 	maxSlot := 1 // TODO 读取配置表
 	// 判断载具是否已满
 	gadgetEntity := entity.GetGadgetEntity()
@@ -162,7 +162,7 @@ func (g *GameManager) EnterVehicle(player *model.Player, entity *Entity, avatarG
 }
 
 // ExitVehicle 离开载具
-func (g *GameManager) ExitVehicle(player *model.Player, entity *Entity, avatarGuid uint64) {
+func (g *Game) ExitVehicle(player *model.Player, entity *Entity, avatarGuid uint64) {
 	// 玩家是否进入载具
 	gadgetEntity := entity.GetGadgetEntity()
 	if !g.IsPlayerInVehicle(player, gadgetEntity.GetGadgetVehicleEntity()) {
@@ -196,7 +196,7 @@ func (g *GameManager) ExitVehicle(player *model.Player, entity *Entity, avatarGu
 }
 
 // VehicleInteractReq 载具交互
-func (g *GameManager) VehicleInteractReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) VehicleInteractReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.VehicleInteractReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)

@@ -13,7 +13,7 @@ type ChangeItem struct {
 	ChangeCount uint32
 }
 
-func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
+func (g *Game) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	allItemDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
 		if itemData.Type == constant.ITEM_TYPE_WEAPON {
@@ -29,7 +29,7 @@ func (g *GameManager) GetAllItemDataConfig() map[int32]*gdconf.ItemData {
 	return allItemDataConfig
 }
 
-func (g *GameManager) GetPlayerItemCount(userId uint32, itemId uint32) uint32 {
+func (g *Game) GetPlayerItemCount(userId uint32, itemId uint32) uint32 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -47,7 +47,7 @@ func (g *GameManager) GetPlayerItemCount(userId uint32, itemId uint32) uint32 {
 }
 
 // AddUserItem 玩家添加物品
-func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint bool, hintReason uint16) bool {
+func (g *Game) AddUserItem(userId uint32, itemList []*ChangeItem, isHint bool, hintReason uint16) bool {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -122,7 +122,7 @@ func (g *GameManager) AddUserItem(userId uint32, itemList []*ChangeItem, isHint 
 	return true
 }
 
-func (g *GameManager) CostUserItem(userId uint32, itemList []*ChangeItem) bool {
+func (g *Game) CostUserItem(userId uint32, itemList []*ChangeItem) bool {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)

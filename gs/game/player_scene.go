@@ -25,7 +25,7 @@ const (
 	GROUP_LOAD_DISTANCE       = 250  // 场景组加载距离
 )
 
-func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EnterSceneReadyReq)
 	logger.Debug("player enter scene ready, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -62,7 +62,7 @@ func (g *GameManager) EnterSceneReadyReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.EnterSceneReadyRsp, player.PlayerID, player.ClientSeq, enterSceneReadyRsp)
 }
 
-func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SceneInitFinishReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneInitFinishReq)
 	logger.Debug("player scene init finish, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -265,7 +265,7 @@ func (g *GameManager) SceneInitFinishReq(player *model.Player, payloadMsg pb.Mes
 	player.SceneLoadState = model.SceneInitFinish
 }
 
-func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EnterSceneDoneReq)
 	logger.Debug("player enter scene done, uid: %v", player.PlayerID)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -340,7 +340,7 @@ func (g *GameManager) EnterSceneDoneReq(player *model.Player, payloadMsg pb.Mess
 	}
 }
 
-func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PostEnterSceneReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PostEnterSceneReq)
 	logger.Debug("player post enter scene, uid: %v", player.PlayerID)
 
@@ -350,7 +350,7 @@ func (g *GameManager) PostEnterSceneReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.PostEnterSceneRsp, player.PlayerID, player.ClientSeq, postEnterSceneRsp)
 }
 
-func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SceneEntityDrownReq)
 
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -366,7 +366,7 @@ func (g *GameManager) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Me
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
 }
 
-func (g *GameManager) AddSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityList []*proto.SceneEntityInfo) {
+func (g *Game) AddSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityList []*proto.SceneEntityInfo) {
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
 		AppearType: visionType,
 		EntityList: entityList,
@@ -376,7 +376,7 @@ func (g *GameManager) AddSceneEntityNotifyToPlayer(player *model.Player, visionT
 		player.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 }
 
-func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene *Scene, visionType proto.VisionType, entityList []*proto.SceneEntityInfo, aec bool) {
+func (g *Game) AddSceneEntityNotifyBroadcast(player *model.Player, scene *Scene, visionType proto.VisionType, entityList []*proto.SceneEntityInfo, aec bool) {
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
 		AppearType: visionType,
 		EntityList: entityList,
@@ -391,7 +391,7 @@ func (g *GameManager) AddSceneEntityNotifyBroadcast(player *model.Player, scene 
 	}
 }
 
-func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityIdList []uint32) {
+func (g *Game) RemoveSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityIdList []uint32) {
 	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
 		EntityList:    entityIdList,
 		DisappearType: visionType,
@@ -401,7 +401,7 @@ func (g *GameManager) RemoveSceneEntityNotifyToPlayer(player *model.Player, visi
 		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
-func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
+func (g *Game) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
 	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
 		EntityList:    entityIdList,
 		DisappearType: visionType,
@@ -413,7 +413,7 @@ func (g *GameManager) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType 
 	}
 }
 
-func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
+func (g *Game) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
 	if scene == nil {
@@ -471,7 +471,7 @@ func (g *GameManager) AddSceneEntityNotify(player *model.Player, visionType prot
 	}
 }
 
-func (g *GameManager) EntityFightPropUpdateNotifyBroadcast(world *World, entity *Entity) {
+func (g *Game) EntityFightPropUpdateNotifyBroadcast(world *World, entity *Entity) {
 	ntf := &proto.EntityFightPropUpdateNotify{
 		FightPropMap: entity.GetFightProp(),
 		EntityId:     entity.GetId(),
@@ -479,7 +479,7 @@ func (g *GameManager) EntityFightPropUpdateNotifyBroadcast(world *World, entity 
 	g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, 0, ntf)
 }
 
-func (g *GameManager) KillPlayerAvatar(player *model.Player, dieType proto.PlayerDieType) {
+func (g *Game) KillPlayerAvatar(player *model.Player, dieType proto.PlayerDieType) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -510,7 +510,7 @@ func (g *GameManager) KillPlayerAvatar(player *model.Player, dieType proto.Playe
 	g.SendToWorldA(world, cmd.AvatarLifeStateChangeNotify, 0, ntf)
 }
 
-func (g *GameManager) RevivePlayerAvatar(player *model.Player) {
+func (g *Game) RevivePlayerAvatar(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -543,7 +543,7 @@ func (g *GameManager) RevivePlayerAvatar(player *model.Player) {
 	g.SendToWorldA(world, cmd.AvatarLifeStateChangeNotify, 0, ntf)
 }
 
-func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId uint32, dieType proto.PlayerDieType) {
+func (g *Game) KillEntity(player *model.Player, scene *Scene, entityId uint32, dieType proto.PlayerDieType) {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return
@@ -552,8 +552,28 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 		// 设置血量
 		entity.fightProp[constant.FIGHT_PROP_CUR_HP] = 0
 		g.EntityFightPropUpdateNotifyBroadcast(scene.world, entity)
-		// TODO
-		g.CreateDropGadget(player, entity.pos, 70600055, 104003, 10)
+		// 随机掉落
+		sceneGroupConfig := gdconf.GetSceneGroup(int32(entity.GetGroupId()))
+		monsterConfig := sceneGroupConfig.MonsterMap[int32(entity.GetConfigId())]
+		monsterDropDataConfig := gdconf.GetMonsterDropDataByDropTagAndLevel(monsterConfig.DropTag, monsterConfig.Level)
+		if monsterDropDataConfig == nil {
+			logger.Error("get monster drop data config is nil, monsterConfig: %v, uid: %v", monsterConfig, player.PlayerID)
+			return
+		}
+		dropDataConfig := gdconf.GetDropDataById(monsterDropDataConfig.DropId)
+		if dropDataConfig == nil {
+			logger.Error("get drop data config is nil, dropId: %v, uid: %v", monsterDropDataConfig.DropId, player.PlayerID)
+			return
+		}
+		totalItemMap := g.doRandDropFullTimes(dropDataConfig, int(monsterDropDataConfig.DropCount))
+		for itemId, count := range totalItemMap {
+			itemDataConfig := gdconf.GetItemDataById(int32(itemId))
+			if itemDataConfig == nil {
+				logger.Error("get item data config is nil, itemId: %v, uid: %v", itemId, player.PlayerID)
+				continue
+			}
+			g.CreateDropGadget(player, entity.pos, uint32(itemDataConfig.GadgetId), itemId, count)
+		}
 	}
 	entity.lifeState = constant.LIFE_STATE_DEAD
 	ntf := &proto.LifeStateChangeNotify{
@@ -565,20 +585,20 @@ func (g *GameManager) KillEntity(player *model.Player, scene *Scene, entityId ui
 	g.SendToWorldA(scene.world, cmd.LifeStateChangeNotify, 0, ntf)
 	g.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_DIE, []uint32{entity.id})
 	// 删除实体
+	scene.DestroyEntity(entity.GetId())
 	group := scene.GetGroupById(entity.groupId)
 	if group == nil {
 		logger.Error("get scene group is nil, groupId: %v, uid: %v", entity.groupId, player.PlayerID)
 		return
 	}
 	group.DestroyEntity(entity.GetId())
-	scene.DestroyEntity(entity.GetId())
 	// 怪物死亡触发器检测
 	if entity.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
 		g.MonsterDieTriggerCheck(player, entity.GetGroupId(), group)
 	}
 }
 
-func (g *GameManager) ChangeGadgetState(player *model.Player, entityId uint32, state uint32) {
+func (g *Game) ChangeGadgetState(player *model.Player, entityId uint32, state uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get world is nil, worldId: %v", player.WorldId)
@@ -604,7 +624,7 @@ func (g *GameManager) ChangeGadgetState(player *model.Player, entityId uint32, s
 	g.SendMsg(cmd.GadgetStateNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint32]*Entity {
+func (g *Game) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint32]*Entity {
 	visionEntity := make(map[uint32]*Entity)
 	for _, entity := range scene.GetAllEntity() {
 		if math.Abs(pos.X-entity.pos.X) > ENTITY_VISION_DISTANCE ||
@@ -616,7 +636,7 @@ func (g *GameManager) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint3
 	return visionEntity
 }
 
-func (g *GameManager) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[uint32]*gdconf.Group {
+func (g *Game) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[uint32]*gdconf.Group {
 	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[sceneId]
 	if !exist {
 		logger.Error("scene not exist in aoi, sceneId: %v", sceneId)
@@ -638,7 +658,7 @@ func (g *GameManager) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[ui
 	return neighborGroup
 }
 
-func (g *GameManager) AddSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
+func (g *Game) AddSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
 	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
 	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
 		logger.Error("invalid init suite id: %v, uid: %v", initSuiteId, player.PlayerID)
@@ -652,7 +672,7 @@ func (g *GameManager) AddSceneGroup(player *model.Player, scene *Scene, groupCon
 	g.SendMsg(cmd.GroupSuiteNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
+func (g *Game) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
 	group := scene.GetGroupById(uint32(groupConfig.Id))
 	if group == nil {
 		logger.Error("group not exist, groupId: %v, uid: %v", groupConfig.Id, player.PlayerID)
@@ -668,15 +688,13 @@ func (g *GameManager) RemoveSceneGroup(player *model.Player, scene *Scene, group
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
-func (g *GameManager) CreateDropGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
+func (g *Game) CreateDropGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get world is nil, worldId: %v", player.WorldId)
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	pos.X += random.GetRandomFloat64(-5.0, 5.0)
-	pos.Z += random.GetRandomFloat64(-5.0, 5.0)
 	rot := new(model.Vector)
 	rot.Y = random.GetRandomFloat64(0.0, 360.0)
 	entityId := scene.CreateEntityGadgetNormal(
@@ -695,7 +713,7 @@ func (g *GameManager) CreateDropGadget(player *model.Player, pos *model.Vector, 
 
 var SceneTransactionSeq uint32 = 0
 
-func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
+func (g *Game) PacketPlayerEnterSceneNotifyLogin(player *model.Player, enterType proto.EnterType) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		logger.Error("get world is nil, worldId: %v", player.WorldId)
@@ -732,7 +750,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyLogin(player *model.Player, en
 	return playerEnterSceneNotify
 }
 
-func (g *GameManager) PacketPlayerEnterSceneNotifyTp(
+func (g *Game) PacketPlayerEnterSceneNotifyTp(
 	player *model.Player,
 	enterType proto.EnterType,
 	enterReason uint32,
@@ -743,7 +761,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyTp(
 	return g.PacketPlayerEnterSceneNotifyMp(player, player, enterType, enterReason, prevSceneId, prevPos, dungeonId)
 }
 
-func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
+func (g *Game) PacketPlayerEnterSceneNotifyMp(
 	player *model.Player,
 	targetPlayer *model.Player,
 	enterType proto.EnterType,
@@ -800,7 +818,7 @@ func (g *GameManager) PacketPlayerEnterSceneNotifyMp(
 	return playerEnterSceneNotify
 }
 
-func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint32]float32) []*proto.FightPropPair {
+func (g *Game) PacketFightPropMapToPbFightPropList(fightPropMap map[uint32]float32) []*proto.FightPropPair {
 	fightPropList := []*proto.FightPropPair{
 		{PropType: constant.FIGHT_PROP_BASE_HP, PropValue: fightPropMap[constant.FIGHT_PROP_BASE_HP]},
 		{PropType: constant.FIGHT_PROP_BASE_ATTACK, PropValue: fightPropMap[constant.FIGHT_PROP_BASE_ATTACK]},
@@ -816,7 +834,7 @@ func (g *GameManager) PacketFightPropMapToPbFightPropList(fightPropMap map[uint3
 	return fightPropList
 }
 
-func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneEntityInfo {
+func (g *Game) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(scene.GetWorld().GetPlayerWorldAvatarEntityId(player, avatarId))
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
@@ -912,7 +930,7 @@ func (g *GameManager) PacketSceneEntityInfoAvatar(scene *Scene, player *model.Pl
 	return sceneEntityInfo
 }
 
-func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
+func (g *Game) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
@@ -960,7 +978,7 @@ func (g *GameManager) PacketSceneEntityInfoMonster(scene *Scene, entityId uint32
 	return sceneEntityInfo
 }
 
-func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
+func (g *Game) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
@@ -1008,7 +1026,7 @@ func (g *GameManager) PacketSceneEntityInfoNpc(scene *Scene, entityId uint32) *p
 	return sceneEntityInfo
 }
 
-func (g *GameManager) PacketSceneEntityInfoGadget(player *model.Player, scene *Scene, entityId uint32) *proto.SceneEntityInfo {
+func (g *Game) PacketSceneEntityInfoGadget(player *model.Player, scene *Scene, entityId uint32) *proto.SceneEntityInfo {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
 		return new(proto.SceneEntityInfo)
@@ -1068,7 +1086,7 @@ func (g *GameManager) PacketSceneEntityInfoGadget(player *model.Player, scene *S
 	return sceneEntityInfo
 }
 
-func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
+func (g *Game) PacketSceneAvatarInfo(scene *Scene, player *model.Player, avatarId uint32) *proto.SceneAvatarInfo {
 	dbAvatar := player.GetDbAvatar()
 	avatar, ok := dbAvatar.AvatarMap[avatarId]
 	if !ok {
@@ -1118,7 +1136,7 @@ func (g *GameManager) PacketSceneAvatarInfo(scene *Scene, player *model.Player, 
 	return sceneAvatarInfo
 }
 
-func (g *GameManager) PacketSceneMonsterInfo(entity *Entity) *proto.SceneMonsterInfo {
+func (g *Game) PacketSceneMonsterInfo(entity *Entity) *proto.SceneMonsterInfo {
 	sceneMonsterInfo := &proto.SceneMonsterInfo{
 		MonsterId:       entity.GetMonsterEntity().GetMonsterId(),
 		AuthorityPeerId: 1,
@@ -1130,7 +1148,7 @@ func (g *GameManager) PacketSceneMonsterInfo(entity *Entity) *proto.SceneMonster
 	return sceneMonsterInfo
 }
 
-func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo {
+func (g *Game) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo {
 	sceneNpcInfo := &proto.SceneNpcInfo{
 		NpcId:         entity.NpcId,
 		RoomId:        entity.RoomId,
@@ -1140,7 +1158,7 @@ func (g *GameManager) PacketSceneNpcInfo(entity *NpcEntity) *proto.SceneNpcInfo 
 	return sceneNpcInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoNormal(player *model.Player, entity *Entity) *proto.SceneGadgetInfo {
+func (g *Game) PacketSceneGadgetInfoNormal(player *model.Player, entity *Entity) *proto.SceneGadgetInfo {
 	gadgetEntity := entity.GetGadgetEntity()
 	gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
 	if gadgetDataConfig == nil {
@@ -1180,7 +1198,7 @@ func (g *GameManager) PacketSceneGadgetInfoNormal(player *model.Player, entity *
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoClient(gadgetClientEntity *GadgetClientEntity) *proto.SceneGadgetInfo {
+func (g *Game) PacketSceneGadgetInfoClient(gadgetClientEntity *GadgetClientEntity) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId:         gadgetClientEntity.GetConfigId(),
 		OwnerEntityId:    gadgetClientEntity.GetOwnerEntityId(),
@@ -1199,7 +1217,7 @@ func (g *GameManager) PacketSceneGadgetInfoClient(gadgetClientEntity *GadgetClie
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVehicleEntity) *proto.SceneGadgetInfo {
+func (g *Game) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVehicleEntity) *proto.SceneGadgetInfo {
 	sceneGadgetInfo := &proto.SceneGadgetInfo{
 		GadgetId:         gadgetVehicleEntity.GetVehicleId(),
 		AuthorityPeerId:  WORLD_MANAGER.GetWorldByID(gadgetVehicleEntity.GetOwner().WorldId).GetPlayerPeerId(gadgetVehicleEntity.GetOwner()),
@@ -1215,7 +1233,7 @@ func (g *GameManager) PacketSceneGadgetInfoVehicle(gadgetVehicleEntity *GadgetVe
 	return sceneGadgetInfo
 }
 
-func (g *GameManager) PacketDelTeamEntityNotify(scene *Scene, player *model.Player) *proto.DelTeamEntityNotify {
+func (g *Game) PacketDelTeamEntityNotify(scene *Scene, player *model.Player) *proto.DelTeamEntityNotify {
 	delTeamEntityNotify := &proto.DelTeamEntityNotify{
 		SceneId:         player.SceneId,
 		DelEntityIdList: []uint32{scene.GetWorld().GetPlayerTeamEntityId(player)},

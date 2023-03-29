@@ -69,10 +69,10 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 		if playerLoginInfo.Player != nil {
 			USER_MANAGER.AddUser(playerLoginInfo.Player)
 		}
-		GAME_MANAGER.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId, false, playerLoginInfo.Player)
+		GAME.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId, false, playerLoginInfo.Player)
 	case CheckUserExistOnRegFromDbFinish:
 		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)
-		GAME_MANAGER.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
+		GAME.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
 	case ExitRunUserCopyAndSave:
 		fallthrough
 	case RunUserCopyAndSave:

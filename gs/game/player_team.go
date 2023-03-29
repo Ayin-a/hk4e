@@ -12,7 +12,7 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ChangeAvatarReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ChangeAvatarReq)
 	targetAvatarGuid := req.Guid
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -75,7 +75,7 @@ func (g *GameManager) ChangeAvatarReq(player *model.Player, payloadMsg pb.Messag
 	g.SendMsg(cmd.ChangeAvatarRsp, player.PlayerID, player.ClientSeq, changeAvatarRsp)
 }
 
-func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SetUpAvatarTeamReq)
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -152,7 +152,7 @@ func (g *GameManager) SetUpAvatarTeamReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.SetUpAvatarTeamRsp, player.PlayerID, player.ClientSeq, setUpAvatarTeamRsp)
 }
 
-func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ChooseCurAvatarTeamReq)
 	teamId := req.TeamId
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -182,7 +182,7 @@ func (g *GameManager) ChooseCurAvatarTeamReq(player *model.Player, payloadMsg pb
 	g.SendMsg(cmd.ChooseCurAvatarTeamRsp, player.PlayerID, player.ClientSeq, chooseCurAvatarTeamRsp)
 }
 
-func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ChangeMpTeamAvatarReq)
 	avatarGuidList := req.AvatarGuidList
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
@@ -226,7 +226,7 @@ func (g *GameManager) ChangeMpTeamAvatarReq(player *model.Player, payloadMsg pb.
 	g.SendMsg(cmd.ChangeMpTeamAvatarRsp, player.PlayerID, player.ClientSeq, changeMpTeamAvatarRsp)
 }
 
-func (g *GameManager) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeamUpdateNotify {
+func (g *Game) PacketSceneTeamUpdateNotify(world *World) *proto.SceneTeamUpdateNotify {
 	sceneTeamUpdateNotify := &proto.SceneTeamUpdateNotify{
 		IsInMp: world.GetMultiplayer(),
 	}

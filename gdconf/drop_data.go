@@ -21,7 +21,7 @@ const (
 // DropData 掉落配置表
 type DropData struct {
 	DropId              int32      `csv:"掉落ID"`
-	RandomType          int32      `csv:"随机方式,omitempty"` // 0:轮盘选择法掉落单个权重项 1:每个权重项独立随机(分母为10000)
+	RandomType          int32      `csv:"随机方式,omitempty"` // 0:轮盘赌选择法掉落单个权重项 1:每个权重项独立随机(分母为10000)
 	DropLayer           int32      `csv:"掉落层级,omitempty"`
 	SubDrop1Id          int32      `csv:"子掉落1ID,omitempty"`
 	SubDrop1CountRange  FloatArray `csv:"子掉落1数量区间,omitempty"`

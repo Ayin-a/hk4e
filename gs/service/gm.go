@@ -10,7 +10,7 @@ import (
 var _ api.GMNATSRPCServer = (*GMService)(nil)
 
 type GMService struct {
-	g *game.GameManager
+	g *game.Game
 }
 
 func (s *GMService) Cmd(ctx context.Context, req *api.CmdRequest) (*api.CmdReply, error) {

@@ -10,14 +10,14 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) GetShopmallDataReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) GetShopmallDataReq(player *model.Player, payloadMsg pb.Message) {
 	getShopmallDataRsp := &proto.GetShopmallDataRsp{
 		ShopTypeList: []uint32{900, 1052, 902, 1001, 903},
 	}
 	g.SendMsg(cmd.GetShopmallDataRsp, player.PlayerID, player.ClientSeq, getShopmallDataRsp)
 }
 
-func (g *GameManager) GetShopReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) GetShopReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.GetShopReq)
 	shopType := req.ShopType
 
@@ -64,7 +64,7 @@ func (g *GameManager) GetShopReq(player *model.Player, payloadMsg pb.Message) {
 	g.SendMsg(cmd.GetShopRsp, player.PlayerID, player.ClientSeq, getShopRsp)
 }
 
-func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.BuyGoodsReq)
 	buyItemId := req.Goods.GoodsItem.ItemId
 	buyItemCount := req.BuyCount
@@ -96,7 +96,7 @@ func (g *GameManager) BuyGoodsReq(player *model.Player, payloadMsg pb.Message) {
 	g.SendMsg(cmd.BuyGoodsRsp, player.PlayerID, player.ClientSeq, buyGoodsRsp)
 }
 
-func (g *GameManager) McoinExchangeHcoinReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) McoinExchangeHcoinReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.McoinExchangeHcoinReq)
 	if req.Hcoin != req.McoinCost {
 		return

@@ -15,14 +15,14 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) PlayerLoginReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+func (g *Game) PlayerLoginReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	logger.Info("user login req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.PlayerLoginReq)
 	logger.Debug("login data: %v", req)
 	g.OnLogin(userId, clientSeq, gateAppId, false, nil)
 }
 
-func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+func (g *Game) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	logger.Info("user reg req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("reg data: %v", req)
@@ -33,7 +33,7 @@ func (g *GameManager) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gate
 	g.OnReg(userId, clientSeq, gateAppId, req)
 }
 
-func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string, isReg bool, regPlayer *model.Player) {
+func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, isReg bool, regPlayer *model.Player) {
 	logger.Info("user login, uid: %v", userId)
 	if isReg {
 		g.OnLoginOk(userId, clientSeq, gateAppId, true, regPlayer)
@@ -45,7 +45,7 @@ func (g *GameManager) OnLogin(userId uint32, clientSeq uint32, gateAppId string,
 	}
 }
 
-func (g *GameManager) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isReg bool, player *model.Player) {
+func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isReg bool, player *model.Player) {
 	if player == nil {
 		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
 		return
@@ -121,7 +121,7 @@ func (g *GameManager) OnLoginOk(userId uint32, clientSeq uint32, gateAppId strin
 	SELF = nil
 }
 
-func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+func (g *Game) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	logger.Debug("user reg, uid: %v", userId)
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
 	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
@@ -131,7 +131,7 @@ func (g *GameManager) OnReg(userId uint32, clientSeq uint32, gateAppId string, p
 	}
 }
 
-func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32, gateAppId string) {
+func (g *Game) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32, gateAppId string) {
 	if exist {
 		logger.Error("recv reg req, but user is already exist, uid: %v", userId)
 		return
@@ -153,7 +153,7 @@ func (g *GameManager) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userI
 	g.OnLogin(userId, clientSeq, gateAppId, true, player)
 }
 
-func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {
+func (g *Game) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {
 	player := new(model.Player)
 	player.PlayerID = userId
 	player.NickName = nickName
@@ -212,7 +212,7 @@ func (g *GameManager) CreatePlayer(userId uint32, nickName string, mainCharAvata
 	return player
 }
 
-func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
+func (g *Game) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	logger.Info("user offline, uid: %v", userId)
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
@@ -231,7 +231,7 @@ func (g *GameManager) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, -1)
 }
 
-func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
+func (g *Game) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
 	g.SendMsg(cmd.PlayerDataNotify, userId, clientSeq, g.PacketPlayerDataNotify(player))
 	g.SendMsg(cmd.StoreWeightLimitNotify, userId, clientSeq, g.PacketStoreWeightLimitNotify())
 	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
@@ -254,7 +254,7 @@ func (g *GameManager) LoginNotify(userId uint32, player *model.Player, clientSeq
 	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
 }
 
-func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {
+func (g *Game) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {
 	playerDataNotify := &proto.PlayerDataNotify{
 		NickName:          player.NickName,
 		ServerTime:        uint64(time.Now().UnixMilli()),
@@ -273,7 +273,7 @@ func (g *GameManager) PacketPlayerDataNotify(player *model.Player) *proto.Player
 	return playerDataNotify
 }
 
-func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNotify {
+func (g *Game) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNotify {
 	storeWeightLimitNotify := &proto.StoreWeightLimitNotify{
 		StoreType: proto.StoreType_STORE_PACK,
 		// 背包容量限制
@@ -286,7 +286,7 @@ func (g *GameManager) PacketStoreWeightLimitNotify() *proto.StoreWeightLimitNoti
 	return storeWeightLimitNotify
 }
 
-func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
+func (g *Game) PacketPlayerStoreNotify(player *model.Player) *proto.PlayerStoreNotify {
 	dbItem := player.GetDbItem()
 	dbWeapon := player.GetDbWeapon()
 	dbReliquary := player.GetDbReliquary()
@@ -386,7 +386,7 @@ func (g *GameManager) PacketPlayerStoreNotify(player *model.Player) *proto.Playe
 	return playerStoreNotify
 }
 
-func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.AvatarDataNotify {
+func (g *Game) PacketAvatarDataNotify(player *model.Player) *proto.AvatarDataNotify {
 	dbAvatar := player.GetDbAvatar()
 	dbTeam := player.GetDbTeam()
 	avatarDataNotify := &proto.AvatarDataNotify{
@@ -415,7 +415,7 @@ func (g *GameManager) PacketAvatarDataNotify(player *model.Player) *proto.Avatar
 	return avatarDataNotify
 }
 
-func (g *GameManager) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify {
+func (g *Game) PacketOpenStateUpdateNotify() *proto.OpenStateUpdateNotify {
 	openStateUpdateNotify := &proto.OpenStateUpdateNotify{
 		OpenStateMap: make(map[uint32]uint32),
 	}

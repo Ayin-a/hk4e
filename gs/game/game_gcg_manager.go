@@ -253,7 +253,7 @@ func (g *GCGManager) PhaseMain(game *GCGGame) {
 		game.AddMsgPack(controller, 0, proto.GCGActionType_GCG_ACTION_NOTIFY_COST, game.GCGMsgCostRevise(controller))
 		// 如果玩家当前允许操作则发送技能预览信息
 		if controller.allow == 1 && controller.player != nil {
-			GAME_MANAGER.SendMsg(cmd.GCGSkillPreviewNotify, controller.player.PlayerID, controller.player.ClientSeq, GAME_MANAGER.PacketGCGSkillPreviewNotify(game, controller))
+			GAME.SendMsg(cmd.GCGSkillPreviewNotify, controller.player.PlayerID, controller.player.ClientSeq, GAME.PacketGCGSkillPreviewNotify(game, controller))
 		}
 	}
 }
@@ -631,7 +631,7 @@ func (g *GCGGame) onTick() {
 			gcgHeartBeatNotify := &proto.GCGHeartBeatNotify{
 				ServerSeq: controller.serverSeqCounter,
 			}
-			GAME_MANAGER.SendMsg(cmd.GCGHeartBeatNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgHeartBeatNotify)
+			GAME.SendMsg(cmd.GCGHeartBeatNotify, controller.player.PlayerID, controller.player.ClientSeq, gcgHeartBeatNotify)
 		}
 	}
 	g.gameTick++
@@ -724,7 +724,7 @@ func (g *GCGGame) SendMsgPack(controller *GCGController) {
 	// 游戏不处于运行状态仅记录历史消息包
 	if g.gameState == GCGGameState_Running {
 		controller.serverSeqCounter++
-		GAME_MANAGER.SendGCGMessagePackNotify(controller, controller.serverSeqCounter, controller.msgPackList)
+		GAME.SendGCGMessagePackNotify(controller, controller.serverSeqCounter, controller.msgPackList)
 	}
 	// 记录发送的历史消息包
 	for _, pack := range controller.msgPackList {
@@ -1168,4 +1168,64 @@ func (g *GCGGame) GetControllerByUserId(userId uint32) *GCGController {
 		}
 	}
 	return nil
+}
+
+type GCGAi struct {
+	game         *GCGGame // 所在的游戏
+	controllerId uint32   // 操控者Id
+}
+
+// ReceiveGCGMessagePackNotify 接收GCG消息包通知
+func (g *GCGAi) ReceiveGCGMessagePackNotify(notify *proto.GCGMessagePackNotify) {
+	// 获取玩家的操控者对象
+	gameController := g.game.controllerMap[g.controllerId]
+	if gameController == nil {
+		logger.Error("ai 角色 nil")
+		return
+	}
+
+	for _, pack := range notify.MsgPackList {
+		for _, message := range pack.MsgList {
+			switch message.Message.(type) {
+			case *proto.GCGMessage_PhaseChange:
+				// 阶段改变
+				msg := message.GetPhaseChange()
+				switch msg.AfterPhase {
+				case proto.GCGPhaseType_GCG_PHASE_ON_STAGE:
+					logger.Error("请选择你的英雄 hhh")
+					go func() {
+						time.Sleep(3 * 1000)
+						// 默认选第一张牌
+						cardInfo := gameController.cardMap[CardInfoType_Char][0]
+						// 操控者选择角色牌
+						g.game.ControllerSelectChar(gameController, cardInfo, []uint32{})
+					}()
+				case proto.GCGPhaseType_GCG_PHASE_MAIN:
+					if gameController.allow == 0 {
+						return
+					}
+					go func() {
+						time.Sleep(3 * 1000)
+						g.game.ControllerUseSkill(gameController, gameController.GetSelectedCharCard().skillList[0].skillId, []uint32{})
+					}()
+				}
+			case *proto.GCGMessage_DiceRoll:
+				// 摇完骰子
+				msg := message.GetDiceRoll()
+				if msg.ControllerId != g.controllerId {
+					return
+				}
+				logger.Error("敌方行动意图")
+				go func() {
+					time.Sleep(3 * 1000)
+					cardInfo1 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][0]
+					cardInfo2 := g.game.controllerMap[g.controllerId].cardMap[CardInfoType_Char][1]
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_NONE, g.game.GCGMsgPVEIntention(&proto.GCGMsgPVEIntention{CardGuid: cardInfo1.guid, SkillIdList: []uint32{cardInfo1.skillList[0].skillId}}, &proto.GCGMsgPVEIntention{CardGuid: cardInfo2.guid, SkillIdList: []uint32{cardInfo2.skillList[0].skillId}}))
+					g.game.SendAllMsgPack()
+					g.game.SetControllerAllow(g.game.controllerMap[g.controllerId], false, true)
+					g.game.AddAllMsgPack(0, proto.GCGActionType_GCG_ACTION_SEND_MESSAGE, g.game.GCGMsgPhaseContinue())
+				}()
+			}
+		}
+	}
 }

@@ -12,7 +12,7 @@ import (
 )
 
 // AddQuestContentProgressReq 添加任务内容进度请求
-func (g *GameManager) AddQuestContentProgressReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) AddQuestContentProgressReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.AddQuestContentProgressReq)
 	logger.Debug("AddQuestContentProgressReq: %v", req)
 
@@ -27,7 +27,7 @@ func (g *GameManager) AddQuestContentProgressReq(player *model.Player, payloadMs
 }
 
 // AddQuestProgress 添加任务进度
-func (g *GameManager) AddQuestProgress(player *model.Player, req *proto.AddQuestContentProgressReq) {
+func (g *Game) AddQuestProgress(player *model.Player, req *proto.AddQuestContentProgressReq) {
 	dbQuest := player.GetDbQuest()
 	updateQuestIdList := make([]uint32, 0)
 	for _, quest := range dbQuest.GetQuestMap() {
@@ -62,7 +62,7 @@ func (g *GameManager) AddQuestProgress(player *model.Player, req *proto.AddQuest
 }
 
 // AcceptQuest 接取当前条件下能接取到的全部任务
-func (g *GameManager) AcceptQuest(player *model.Player, notifyClient bool) {
+func (g *Game) AcceptQuest(player *model.Player, notifyClient bool) {
 	dbQuest := player.GetDbQuest()
 	addQuestIdList := make([]uint32, 0)
 	for _, questData := range gdconf.GetQuestDataMap() {
@@ -148,7 +148,7 @@ func (g *GameManager) AcceptQuest(player *model.Player, notifyClient bool) {
 }
 
 // TriggerQuest 触发任务
-func (g *GameManager) TriggerQuest(player *model.Player, cond int32, param ...int32) {
+func (g *Game) TriggerQuest(player *model.Player, cond int32, param ...int32) {
 	dbQuest := player.GetDbQuest()
 	updateQuestIdList := make([]uint32, 0)
 	for _, quest := range dbQuest.GetQuestMap() {
@@ -210,7 +210,7 @@ func (g *GameManager) TriggerQuest(player *model.Player, cond int32, param ...in
 }
 
 // PacketQuest 打包一个任务
-func (g *GameManager) PacketQuest(player *model.Player, questId uint32) *proto.Quest {
+func (g *Game) PacketQuest(player *model.Player, questId uint32) *proto.Quest {
 	dbQuest := player.GetDbQuest()
 	questDataConfig := gdconf.GetQuestDataById(int32(questId))
 	if questDataConfig == nil {
@@ -235,7 +235,7 @@ func (g *GameManager) PacketQuest(player *model.Player, questId uint32) *proto.Q
 }
 
 // PacketQuestListNotify 打包任务列表通知
-func (g *GameManager) PacketQuestListNotify(player *model.Player) *proto.QuestListNotify {
+func (g *Game) PacketQuestListNotify(player *model.Player) *proto.QuestListNotify {
 	questListNotify := &proto.QuestListNotify{
 		QuestList: make([]*proto.Quest, 0),
 	}

@@ -265,7 +265,7 @@ func (u *UserManager) autoSyncRemotePlayerMap() {
 }
 
 func (u *UserManager) syncRemotePlayerMap() {
-	rsp, err := GAME_MANAGER.discovery.GetGlobalGsOnlineMap(context.TODO(), nil)
+	rsp, err := GAME.discovery.GetGlobalGsOnlineMap(context.TODO(), nil)
 	if err != nil {
 		logger.Error("get global gs online map error: %v", err)
 		return

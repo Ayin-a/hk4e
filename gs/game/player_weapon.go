@@ -14,7 +14,7 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
+func (g *Game) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 	allWeaponDataConfig := make(map[int32]*gdconf.ItemData)
 	for itemId, itemData := range gdconf.GetItemDataMap() {
 		if itemData.Type != constant.ITEM_TYPE_WEAPON {
@@ -25,7 +25,7 @@ func (g *GameManager) GetAllWeaponDataConfig() map[int32]*gdconf.ItemData {
 	return allWeaponDataConfig
 }
 
-func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
+func (g *Game) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -47,7 +47,7 @@ func (g *GameManager) AddUserWeapon(userId uint32, itemId uint32) uint64 {
 	return weaponId
 }
 
-func (g *GameManager) CostUserWeapon(userId uint32, weaponIdList []uint64) {
+func (g *Game) CostUserWeapon(userId uint32, weaponIdList []uint64) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
@@ -69,7 +69,7 @@ func (g *GameManager) CostUserWeapon(userId uint32, weaponIdList []uint64) {
 	g.SendMsg(cmd.StoreItemDelNotify, userId, player.ClientSeq, storeItemDelNotify)
 }
 
-func (g *GameManager) PacketStoreItemChangeNotifyByWeapon(weapon *model.Weapon) *proto.StoreItemChangeNotify {
+func (g *Game) PacketStoreItemChangeNotifyByWeapon(weapon *model.Weapon) *proto.StoreItemChangeNotify {
 	storeItemChangeNotify := &proto.StoreItemChangeNotify{
 		StoreType: proto.StoreType_STORE_PACK,
 		ItemList:  make([]*proto.Item, 0),
@@ -101,7 +101,7 @@ func (g *GameManager) PacketStoreItemChangeNotifyByWeapon(weapon *model.Weapon) 
 }
 
 // WeaponAwakenReq 武器精炼请求
-func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) WeaponAwakenReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.WeaponAwakenReq)
 	// 确保精炼的武器与精炼材料不是同一个
 	if req.TargetWeaponGuid == req.ItemGuid {
@@ -259,7 +259,7 @@ func (g *GameManager) WeaponAwakenReq(player *model.Player, payloadMsg pb.Messag
 }
 
 // WeaponPromoteReq 武器突破请求
-func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) WeaponPromoteReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.WeaponPromoteReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
@@ -362,7 +362,7 @@ func (g *GameManager) WeaponPromoteReq(player *model.Player, payloadMsg pb.Messa
 }
 
 // GetWeaponUpgradeReturnMaterial 获取武器强化返回的材料
-func (g *GameManager) GetWeaponUpgradeReturnMaterial(overflowExp uint32) (returnItemList []*proto.ItemParam) {
+func (g *Game) GetWeaponUpgradeReturnMaterial(overflowExp uint32) (returnItemList []*proto.ItemParam) {
 	returnItemList = make([]*proto.ItemParam, 0, 0)
 	// 武器强化材料返还
 	type materialExpData struct {
@@ -411,7 +411,7 @@ func (g *GameManager) GetWeaponUpgradeReturnMaterial(overflowExp uint32) (return
 }
 
 // CalcWeaponUpgradeExpAndCoin 计算使用材料给武器强化后能获得的经验以及摩拉消耗
-func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemParamList []*proto.ItemParam, foodWeaponGuidList []uint64) (expCount uint32, coinCost uint32, success bool) {
+func (g *Game) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemParamList []*proto.ItemParam, foodWeaponGuidList []uint64) (expCount uint32, coinCost uint32, success bool) {
 	// 武器经验计算
 	for _, weaponGuid := range foodWeaponGuidList {
 		foodWeapon, ok := player.GameObjectGuidMap[weaponGuid].(*model.Weapon)
@@ -483,7 +483,7 @@ func (g *GameManager) CalcWeaponUpgradeExpAndCoin(player *model.Player, itemPara
 }
 
 // CalcWeaponUpgrade 计算使用材料给武器强化后的等级经验以及返回的矿石
-func (g *GameManager) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (weaponLevel uint8, weaponExp uint32, returnItemList []*proto.ItemParam, success bool) {
+func (g *Game) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (weaponLevel uint8, weaponExp uint32, returnItemList []*proto.ItemParam, success bool) {
 	// 获取武器配置表
 	weaponConfig := gdconf.GetItemDataById(int32(weapon.ItemId))
 	if weaponConfig == nil {
@@ -534,7 +534,7 @@ func (g *GameManager) CalcWeaponUpgrade(weapon *model.Weapon, expCount uint32) (
 }
 
 // WeaponUpgradeReq 武器升级请求
-func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.WeaponUpgradeReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)
@@ -674,7 +674,7 @@ func (g *GameManager) WeaponUpgradeReq(player *model.Player, payloadMsg pb.Messa
 }
 
 // CalcWeaponUpgradeReturnItemsReq 计算武器升级返回矿石请求
-func (g *GameManager) CalcWeaponUpgradeReturnItemsReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) CalcWeaponUpgradeReturnItemsReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.CalcWeaponUpgradeReturnItemsReq)
 	// 是否拥有武器
 	weapon, ok := player.GameObjectGuidMap[req.TargetWeaponGuid].(*model.Weapon)

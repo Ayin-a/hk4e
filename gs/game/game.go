@@ -31,7 +31,7 @@ const (
 	BigWorldAiSign   = "UnKownOwO"
 )
 
-var GAME_MANAGER *GameManager = nil
+var GAME *Game = nil
 var LOCAL_EVENT_MANAGER *LocalEventManager = nil
 var ROUTE_MANAGER *RouteManager = nil
 var USER_MANAGER *UserManager = nil
@@ -45,8 +45,8 @@ var ONLINE_PLAYER_NUM int32 = 0 // 当前在线玩家数
 
 var SELF *model.Player
 
-type GameManager struct {
-	discovery   *rpc.DiscoveryClient // node服务器客户端
+type Game struct {
+	discovery   *rpc.DiscoveryClient // node节点服务器的natsrpc客户端
 	dao         *dao.Dao
 	snowflake   *alg.SnowflakeWorker
 	gsId        uint32
@@ -55,8 +55,8 @@ type GameManager struct {
 	ai          *model.Player // 本服的Ai玩家对象
 }
 
-func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string, discovery *rpc.DiscoveryClient) (r *GameManager) {
-	r = new(GameManager)
+func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gsAppid string, mainGsAppid string, discovery *rpc.DiscoveryClient) (r *Game) {
+	r = new(Game)
 	r.discovery = discovery
 	r.dao = dao
 	MESSAGE_QUEUE = messageQueue
@@ -64,7 +64,7 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 	r.gsId = gsId
 	r.gsAppid = gsAppid
 	r.mainGsAppid = mainGsAppid
-	GAME_MANAGER = r
+	GAME = r
 	LOCAL_EVENT_MANAGER = NewLocalEventManager()
 	ROUTE_MANAGER = NewRouteManager()
 	USER_MANAGER = NewUserManager(dao)
@@ -118,31 +118,31 @@ func NewGameManager(dao *dao.Dao, messageQueue *mq.MessageQueue, gsId uint32, gs
 	return r
 }
 
-func (g *GameManager) GetGsId() uint32 {
+func (g *Game) GetGsId() uint32 {
 	return g.gsId
 }
 
-func (g *GameManager) GetGsAppid() string {
+func (g *Game) GetGsAppid() string {
 	return g.gsAppid
 }
 
-func (g *GameManager) GetMainGsAppid() string {
+func (g *Game) GetMainGsAppid() string {
 	return g.mainGsAppid
 }
 
-func (g *GameManager) IsMainGs() bool {
+func (g *Game) IsMainGs() bool {
 	// 目前的实现逻辑是当前GsId最小的Gs做MainGs
 	return g.gsAppid == g.mainGsAppid
 }
 
 // GetAi 获取本服的Ai玩家对象
-func (g *GameManager) GetAi() *model.Player {
+func (g *Game) GetAi() *model.Player {
 	return g.ai
 }
 
-func (g *GameManager) CreateRobot(uid uint32, name string, sign string) *model.Player {
-	GAME_MANAGER.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: name}, uid, 0, "")
-	GAME_MANAGER.ServerAppidBindNotify(uid, "", 0)
+func (g *Game) CreateRobot(uid uint32, name string, sign string) *model.Player {
+	GAME.OnRegOk(false, &proto.SetPlayerBornDataReq{AvatarId: 10000007, NickName: name}, uid, 0, "")
+	GAME.ServerAppidBindNotify(uid, "", 0)
 	robot := USER_MANAGER.GetOnlineUser(uid)
 	robot.DbState = model.DbNormal
 	robot.SceneLoadState = model.SceneEnterDone
@@ -150,11 +150,11 @@ func (g *GameManager) CreateRobot(uid uint32, name string, sign string) *model.P
 	return robot
 }
 
-func (g *GameManager) run() {
+func (g *Game) run() {
 	go g.gameMainLoopD()
 }
 
-func (g *GameManager) gameMainLoopD() {
+func (g *Game) gameMainLoopD() {
 	for times := 1; times <= 10000; times++ {
 		logger.Warn("start game main loop, times: %v", times)
 		g.gameMainLoop()
@@ -162,7 +162,7 @@ func (g *GameManager) gameMainLoopD() {
 	}
 }
 
-func (g *GameManager) gameMainLoop() {
+func (g *Game) gameMainLoop() {
 	// panic捕获
 	defer func() {
 		if err := recover(); err != nil {
@@ -173,7 +173,7 @@ func (g *GameManager) gameMainLoop() {
 				logger.Error("the motherfucker player uid: %v", SELF.PlayerID)
 				// info, _ := json.Marshal(SELF)
 				// logger.Error("the motherfucker player info: %v", string(info))
-				GAME_MANAGER.KickPlayer(SELF.PlayerID, kcp.EnetServerKick)
+				GAME.KickPlayer(SELF.PlayerID, kcp.EnetServerKick)
 			}
 		}
 	}()
@@ -246,7 +246,7 @@ func (g *GameManager) gameMainLoop() {
 
 var EXIT_SAVE_FIN_CHAN chan bool
 
-func (g *GameManager) Close() {
+func (g *Game) Close() {
 	// 保存玩家数据
 	onlinePlayerMap := USER_MANAGER.GetAllOnlineUserList()
 	saveUserIdList := make([]uint32, 0, len(onlinePlayerMap))
@@ -275,7 +275,7 @@ func (g *GameManager) Close() {
 }
 
 // SendMsgToGate 发送消息给客户端 指定网关
-func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
+func (g *Game) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
 	if userId < PlayerBaseUid {
 		return
 	}
@@ -303,7 +303,7 @@ func (g *GameManager) SendMsgToGate(cmdId uint16, userId uint32, clientSeq uint3
 }
 
 // SendMsg 发送消息给客户端
-func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
+func (g *Game) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, payloadMsg pb.Message) {
 	if userId < PlayerBaseUid {
 		return
 	}
@@ -335,7 +335,7 @@ func (g *GameManager) SendMsg(cmdId uint16, userId uint32, clientSeq uint32, pay
 }
 
 // SendError 通用返回错误码
-func (g *GameManager) SendError(cmdId uint16, player *model.Player, rsp pb.Message, retCode ...proto.Retcode) {
+func (g *Game) SendError(cmdId uint16, player *model.Player, rsp pb.Message, retCode ...proto.Retcode) {
 	if rsp == nil {
 		return
 	}
@@ -356,7 +356,7 @@ func (g *GameManager) SendError(cmdId uint16, player *model.Player, rsp pb.Messa
 }
 
 // SendSucc 通用返回成功
-func (g *GameManager) SendSucc(cmdId uint16, player *model.Player, rsp pb.Message) {
+func (g *Game) SendSucc(cmdId uint16, player *model.Player, rsp pb.Message) {
 	if rsp == nil {
 		return
 	}
@@ -368,32 +368,32 @@ func (g *GameManager) SendSucc(cmdId uint16, player *model.Player, rsp pb.Messag
 }
 
 // SendToWorldA 给世界内所有玩家发消息
-func (g *GameManager) SendToWorldA(world *World, cmdId uint16, seq uint32, msg pb.Message) {
+func (g *Game) SendToWorldA(world *World, cmdId uint16, seq uint32, msg pb.Message) {
 	for _, v := range world.GetAllPlayer() {
-		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
+		GAME.SendMsg(cmdId, v.PlayerID, seq, msg)
 	}
 }
 
 // SendToWorldAEC 给世界内除某玩家(一般是自己)以外的所有玩家发消息
-func (g *GameManager) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
+func (g *Game) SendToWorldAEC(world *World, cmdId uint16, seq uint32, msg pb.Message, uid uint32) {
 	for _, v := range world.GetAllPlayer() {
 		if uid == v.PlayerID {
 			continue
 		}
-		GAME_MANAGER.SendMsg(cmdId, v.PlayerID, seq, msg)
+		GAME.SendMsg(cmdId, v.PlayerID, seq, msg)
 	}
 }
 
 // SendToWorldH 给世界房主发消息
-func (g *GameManager) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Message) {
-	GAME_MANAGER.SendMsg(cmdId, world.GetOwner().PlayerID, seq, msg)
+func (g *Game) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Message) {
+	GAME.SendMsg(cmdId, world.GetOwner().PlayerID, seq, msg)
 }
 
-func (g *GameManager) ReLoginPlayer(userId uint32) {
+func (g *Game) ReLoginPlayer(userId uint32) {
 	g.SendMsg(cmd.ClientReconnectNotify, userId, 0, new(proto.ClientReconnectNotify))
 }
 
-func (g *GameManager) KickPlayer(userId uint32, reason uint32) {
+func (g *Game) KickPlayer(userId uint32, reason uint32) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		return

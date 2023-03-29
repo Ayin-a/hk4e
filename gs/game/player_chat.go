@@ -16,7 +16,7 @@ const (
 	MaxMsgListLen = 100 // 与某人的最大聊天记录条数
 )
 
-func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PullRecentChatReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PullRecentChatReq)
 	// 经研究发现 原神现网环境 客户端仅拉取最新的5条未读聊天消息 所以人太多的话小姐姐不回你消息是有原因的
 	// 因此 阿米你这样做真的合适吗 不过现在代码到了我手上我想怎么写就怎么写 我才不会重蹈覆辙
@@ -55,7 +55,7 @@ func (g *GameManager) PullRecentChatReq(player *model.Player, payloadMsg pb.Mess
 	g.SendMsg(cmd.PullRecentChatRsp, player.PlayerID, player.ClientSeq, pullRecentChatRsp)
 }
 
-func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PullPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PullPrivateChatReq)
 	targetUid := req.TargetUid
 	pullNum := req.PullNum
@@ -81,7 +81,7 @@ func (g *GameManager) PullPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 }
 
 // SendPrivateChat 发送私聊文本消息给玩家
-func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, content any) {
+func (g *Game) SendPrivateChat(player *model.Player, targetUid uint32, content any) {
 	chatMsg := &model.ChatMsg{
 		Sequence: 0,
 		Time:     uint32(time.Now().Unix()),
@@ -170,7 +170,7 @@ func (g *GameManager) SendPrivateChat(player *model.Player, targetUid uint32, co
 	}
 }
 
-func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PrivateChatReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PrivateChatReq)
 	targetUid := req.TargetUid
 	content := req.Content
@@ -198,7 +198,7 @@ func (g *GameManager) PrivateChatReq(player *model.Player, payloadMsg pb.Message
 	g.SendMsg(cmd.PrivateChatRsp, player.PlayerID, player.ClientSeq, new(proto.PrivateChatRsp))
 }
 
-func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.ReadPrivateChatReq)
 	targetUid := req.TargetUid
 
@@ -218,7 +218,7 @@ func (g *GameManager) ReadPrivateChatReq(player *model.Player, payloadMsg pb.Mes
 	g.SendMsg(cmd.ReadPrivateChatRsp, player.PlayerID, player.ClientSeq, new(proto.ReadPrivateChatRsp))
 }
 
-func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message) {
+func (g *Game) PlayerChatReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.PlayerChatReq)
 	channelId := req.ChannelId
 	chatInfo := req.ChatInfo
@@ -260,7 +260,7 @@ func (g *GameManager) PlayerChatReq(player *model.Player, payloadMsg pb.Message)
 	g.SendMsg(cmd.PlayerChatRsp, player.PlayerID, player.ClientSeq, new(proto.PlayerChatRsp))
 }
 
-func (g *GameManager) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *model.ChatMsg) {
+func (g *Game) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *model.ChatMsg) {
 	chatMsg = &model.ChatMsg{
 		Sequence: chatInfo.Sequence,
 		Time:     chatInfo.Time,
@@ -283,7 +283,7 @@ func (g *GameManager) ConvChatInfoToChatMsg(chatInfo *proto.ChatInfo) (chatMsg *
 	return chatMsg
 }
 
-func (g *GameManager) ConvChatMsgToChatInfo(chatMsg *model.ChatMsg) (chatInfo *proto.ChatInfo) {
+func (g *Game) ConvChatMsgToChatInfo(chatMsg *model.ChatMsg) (chatInfo *proto.ChatInfo) {
 	chatInfo = &proto.ChatInfo{
 		Time:     chatMsg.Time,
 		Sequence: chatMsg.Sequence,
@@ -308,7 +308,7 @@ func (g *GameManager) ConvChatMsgToChatInfo(chatMsg *model.ChatMsg) (chatInfo *p
 
 // 跨服玩家聊天通知
 
-func (g *GameManager) ServerChatMsgNotify(chatMsgInfo *mq.ChatMsgInfo) {
+func (g *Game) ServerChatMsgNotify(chatMsgInfo *mq.ChatMsgInfo) {
 	targetPlayer := USER_MANAGER.GetOnlineUser(chatMsgInfo.ToUid)
 	if targetPlayer == nil {
 		logger.Error("player is nil, uid: %v", chatMsgInfo.ToUid)

@@ -311,7 +311,7 @@ func UpdateFrame(rgb bool) {
 	for _, v := range SCREEN_ENTITY_ID_LIST {
 		scene.DestroyEntity(v)
 	}
-	GAME_MANAGER.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_REMOVE, SCREEN_ENTITY_ID_LIST)
+	GAME.RemoveSceneEntityNotifyBroadcast(scene, proto.VisionType_VISION_REMOVE, SCREEN_ENTITY_ID_LIST)
 	SCREEN_ENTITY_ID_LIST = make([]uint32, 0)
 	leftTopPos := &model.Vector{
 		X: BASE_POS.X + float64(SCREEN_WIDTH)*SCREEN_DPI/2,
@@ -346,5 +346,5 @@ func UpdateFrame(rgb bool) {
 			}
 		}
 	}
-	GAME_MANAGER.AddSceneEntityNotify(world.GetOwner(), proto.VisionType_VISION_BORN, SCREEN_ENTITY_ID_LIST, true, false)
+	GAME.AddSceneEntityNotify(world.GetOwner(), proto.VisionType_VISION_BORN, SCREEN_ENTITY_ID_LIST, true, false)
 }

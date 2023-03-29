@@ -18,7 +18,7 @@ import (
 
 const (
 	MoveVectorCacheNum = 10
-	MaxMoveSpeed       = 30.0
+	MaxMoveSpeed       = 50.0
 	JumpDistance       = 100.0
 	PointDistance      = 10.0
 )
@@ -49,6 +49,9 @@ func (a *AnticheatContext) Move(pos *proto.Vector) bool {
 			}
 			isJump := true
 			for _, pointData := range scenePointMap {
+				if pointData.TranPos == nil {
+					continue
+				}
 				d := GetDistance(pos, &proto.Vector{
 					X: float32(pointData.TranPos.X),
 					Y: float32(pointData.TranPos.Y),

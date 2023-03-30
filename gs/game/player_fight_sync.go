@@ -436,6 +436,7 @@ func (g *Game) EvtDoSkillSuccNotify(player *model.Player, payloadMsg pb.Message)
 	logger.Debug("EvtDoSkillSuccNotify: %v", req)
 	// 处理技能开始的耐力消耗
 	g.SkillStartStamina(player, req.CasterId, req.SkillId)
+	g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_SKILL, "", int32(req.SkillId))
 }
 
 func (g *Game) EvtAvatarEnterFocusNotify(player *model.Player, payloadMsg pb.Message) {

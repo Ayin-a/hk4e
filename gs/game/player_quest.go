@@ -147,8 +147,20 @@ func (g *Game) AcceptQuest(player *model.Player, notifyClient bool) {
 	}
 }
 
+func matchParamEqual(param1 []int32, param2 []int32, num int) bool {
+	if len(param1) != num || len(param2) != num {
+		return false
+	}
+	for i := 0; i < num; i++ {
+		if param1[i] != param2[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // TriggerQuest 触发任务
-func (g *Game) TriggerQuest(player *model.Player, cond int32, param ...int32) {
+func (g *Game) TriggerQuest(player *model.Player, cond int32, complexParam string, param ...int32) {
 	dbQuest := player.GetDbQuest()
 	updateQuestIdList := make([]uint32, 0)
 	for _, quest := range dbQuest.GetQuestMap() {
@@ -163,29 +175,31 @@ func (g *Game) TriggerQuest(player *model.Player, cond int32, param ...int32) {
 			switch cond {
 			case constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE:
 				// 场景触发器跳了 参数1:触发器id
-				if len(questCond.Param) != 1 {
-					continue
-				}
-				if len(param) != 1 {
-					continue
-				}
-				if questCond.Param[0] != param[0] {
+				ok := matchParamEqual(questCond.Param, param, 1)
+				if !ok {
 					continue
 				}
 				dbQuest.ForceFinishQuest(quest.QuestId)
 				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
 			case constant.QUEST_FINISH_COND_TYPE_UNLOCK_TRANS_POINT:
 				// 解锁传送锚点 参数1:场景id 参数2:传送锚点id
-				if len(questCond.Param) != 2 {
+				ok := matchParamEqual(questCond.Param, param, 2)
+				if !ok {
 					continue
 				}
-				if len(param) != 2 {
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
+			case constant.QUEST_FINISH_COND_TYPE_COMPLETE_TALK:
+				// 与NPC对话 参数1:对话id
+				ok := matchParamEqual(questCond.Param, param, 1)
+				if !ok {
 					continue
 				}
-				if questCond.Param[0] != param[0] {
-					continue
-				}
-				if questCond.Param[1] != param[1] {
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
+			case constant.QUEST_FINISH_COND_TYPE_LUA_NOTIFY:
+				// LUA侧通知 复杂参数
+				if questCond.ComplexParam != complexParam {
 					continue
 				}
 				dbQuest.ForceFinishQuest(quest.QuestId)

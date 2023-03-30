@@ -69,7 +69,7 @@ func (g *Game) UnlockTransPointReq(player *model.Player, payloadMsg pb.Message) 
 	}
 	dbScene.UnlockPoint(req.PointId)
 
-	g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_UNLOCK_TRANS_POINT, int32(req.SceneId), int32(req.PointId))
+	g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_UNLOCK_TRANS_POINT, "", int32(req.SceneId), int32(req.PointId))
 
 	g.SendMsg(cmd.ScenePointUnlockNotify, player.PlayerID, player.ClientSeq, &proto.ScenePointUnlockNotify{
 		SceneId:         req.SceneId,
@@ -206,6 +206,7 @@ func (g *Game) ChangeGameTimeReq(player *model.Player, payloadMsg pb.Message) {
 
 func (g *Game) NpcTalkReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.NpcTalkReq)
+	g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_COMPLETE_TALK, "", int32(req.TalkId))
 	rsp := &proto.NpcTalkRsp{
 		CurTalkId:   req.TalkId,
 		NpcEntityId: req.NpcEntityId,

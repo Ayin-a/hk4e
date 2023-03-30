@@ -79,7 +79,7 @@ func (g *Game) SceneRegionTriggerCheck(player *model.Player, scene *Scene, oldPo
 						}
 						for _, triggerDataConfig := range gdconf.GetTriggerDataMap() {
 							if triggerDataConfig.TriggerName == triggerConfig.Name {
-								g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE, triggerDataConfig.TriggerId)
+								g.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE, "", triggerDataConfig.TriggerId)
 							}
 						}
 					}

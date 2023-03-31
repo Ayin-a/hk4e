@@ -116,6 +116,8 @@ func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isRe
 	TICK_MANAGER.CreateUserGlobalTick(userId)
 	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100, player.NickName)
 
+	g.AcceptQuest(player, true)
+
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, 1)
 
 	SELF = nil

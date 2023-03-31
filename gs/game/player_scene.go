@@ -681,6 +681,8 @@ func (g *Game) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig 
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
+// TODO Group和Suite的初始化和加载卸载逻辑还没完全理清 所以现在这里写得略答辩
+
 func (g *Game) AddSceneGroupSuite(player *model.Player, groupId uint32, suiteId uint8) {
 	groupConfig := gdconf.GetSceneGroup(int32(groupId))
 	if groupConfig == nil {

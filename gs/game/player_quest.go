@@ -145,28 +145,32 @@ func (g *Game) AcceptQuest(player *model.Player, notifyClient bool) {
 			ntf.QuestList = append(ntf.QuestList, pbQuest)
 		}
 		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
-		// TODO 判断任务是否能开始
-		for _, questId := range addQuestIdList {
-			g.StartQuest(player, questId)
-		}
+	}
+	// TODO 判断任务是否能开始
+	for _, questId := range addQuestIdList {
+		g.StartQuest(player, questId, notifyClient)
 	}
 }
 
 // StartQuest 开始一个任务
-func (g *Game) StartQuest(player *model.Player, questId uint32) {
+func (g *Game) StartQuest(player *model.Player, questId uint32, notifyClient bool) {
 	dbQuest := player.GetDbQuest()
 	dbQuest.StartQuest(questId)
-	ntf := &proto.QuestListUpdateNotify{
-		QuestList: make([]*proto.Quest, 0),
-	}
-	pbQuest := g.PacketQuest(player, questId)
-	if pbQuest == nil {
-		return
-	}
-	ntf.QuestList = append(ntf.QuestList, pbQuest)
-	g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+
 	g.QuestExec(player, questId)
 	g.QuestStartTriggerCheck(player, questId)
+
+	if notifyClient {
+		ntf := &proto.QuestListUpdateNotify{
+			QuestList: make([]*proto.Quest, 0),
+		}
+		pbQuest := g.PacketQuest(player, questId)
+		if pbQuest == nil {
+			return
+		}
+		ntf.QuestList = append(ntf.QuestList, pbQuest)
+		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+	}
 }
 
 // QuestExec 任务开始执行触发操作

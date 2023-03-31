@@ -187,11 +187,14 @@ func (g *Game) QuestExec(player *model.Player, questId uint32) {
 				continue
 			}
 			split := strings.Split(questExec.Param[1], ",")
+			if len(split) != 2 {
+				continue
+			}
 			groupId, err := strconv.Atoi(split[0])
 			if err != nil {
 				continue
 			}
-			suiteId, err := strconv.Atoi(split[0])
+			suiteId, err := strconv.Atoi(split[1])
 			if err != nil {
 				continue
 			}

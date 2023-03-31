@@ -17,7 +17,7 @@ func (g *Game) SceneRegionTriggerCheck(player *model.Player, scene *Scene, oldPo
 			continue
 		}
 		for suiteId := range group.GetAllSuite() {
-			suiteConfig := groupConfig.SuiteList[suiteId-1]
+			suiteConfig := groupConfig.SuiteMap[int32(suiteId)]
 			for _, regionConfigId := range suiteConfig.RegionConfigIdList {
 				regionConfig := groupConfig.RegionMap[regionConfigId]
 				if regionConfig == nil {
@@ -115,7 +115,7 @@ func (g *Game) MonsterDieTriggerCheck(player *model.Player, groupId uint32, grou
 		return
 	}
 	for suiteId := range group.GetAllSuite() {
-		suiteConfig := groupConfig.SuiteList[suiteId-1]
+		suiteConfig := groupConfig.SuiteMap[int32(suiteId)]
 		for _, triggerName := range suiteConfig.TriggerNameList {
 			triggerConfig := groupConfig.TriggerMap[triggerName]
 			if triggerConfig.Event != constant.LUA_EVENT_ANY_MONSTER_DIE {
@@ -157,7 +157,7 @@ func (g *Game) QuestStartTriggerCheck(player *model.Player, questId uint32) {
 			continue
 		}
 		for suiteId := range group.GetAllSuite() {
-			suiteConfig := groupConfig.SuiteList[suiteId-1]
+			suiteConfig := groupConfig.SuiteMap[int32(suiteId)]
 			for _, triggerName := range suiteConfig.TriggerNameList {
 				triggerConfig := groupConfig.TriggerMap[triggerName]
 				if triggerConfig.Event != constant.LUA_EVENT_QUEST_START {

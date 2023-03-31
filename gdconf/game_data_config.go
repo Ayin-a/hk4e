@@ -59,6 +59,7 @@ type GameDataConfig struct {
 	ReliquaryMainDataMap    map[int32]map[int32]*ReliquaryMainData  // 圣遗物主属性
 	ReliquaryAffixDataMap   map[int32]map[int32]*ReliquaryAffixData // 圣遗物追加属性
 	QuestDataMap            map[int32]*QuestData                    // 任务
+	ParentQuestMap          map[int32]map[int32]*QuestData          // 父任务索引
 	DropDataMap             map[int32]*DropData                     // 掉落
 	MonsterDropDataMap      map[string]map[int32]*MonsterDropData   // 怪物掉落
 	ChestDropDataMap        map[string]map[int32]*ChestDropData     // 宝箱掉落

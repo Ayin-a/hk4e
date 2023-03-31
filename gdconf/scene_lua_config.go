@@ -65,7 +65,7 @@ type Group struct {
 	RegionMap       map[int32]*Region   `json:"-"` // 区域
 	TriggerMap      map[string]*Trigger `json:"-"` // 触发器
 	GroupInitConfig *GroupInitConfig    `json:"-"` // 初始化配置
-	SuiteList       []*Suite            `json:"-"` // 小组配置
+	SuiteMap        map[int32]*Suite    `json:"-"` // 小组配置
 	LuaStr          string              `json:"-"` // LUA原始字符串缓存
 	LuaState        *lua.LState         `json:"-"` // LUA虚拟机实例
 }
@@ -241,8 +241,8 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 	if len(suiteLuaTableList) == 0 {
 		// logger.Debug("get suites object is nil, sceneId: %v, blockId: %v, groupId: %v", sceneId, blockId, groupId)
 	}
-	group.SuiteList = make([]*Suite, 0)
-	for _, suiteLuaTable := range suiteLuaTableList {
+	group.SuiteMap = make(map[int32]*Suite)
+	for index, suiteLuaTable := range suiteLuaTableList {
 		suite := &Suite{
 			MonsterConfigIdList: make([]int32, 0),
 			GadgetConfigIdList:  make([]int32, 0),
@@ -274,7 +274,7 @@ func (g *GameDataConfig) loadGroup(group *Group, block *Block, sceneId int32, bl
 				suite.TriggerNameList = append(suite.TriggerNameList, nameAny.(string))
 			}
 		}
-		group.SuiteList = append(group.SuiteList, suite)
+		group.SuiteMap[int32(len(suiteLuaTableList)-index)] = suite
 	}
 	luaState.Close()
 	block.groupMapLoadLock.Lock()

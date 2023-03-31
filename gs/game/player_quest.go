@@ -19,7 +19,9 @@ func (g *Game) AddQuestContentProgressReq(player *model.Player, payloadMsg pb.Me
 	req := payloadMsg.(*proto.AddQuestContentProgressReq)
 	logger.Debug("AddQuestContentProgressReq: %v", req)
 
-	g.AddQuestProgress(player, req)
+	g.TriggerQuest(player, int32(req.ContentType), "", int32(req.Param))
+
+	// g.AddQuestProgress(player, req)
 
 	rsp := &proto.AddQuestContentProgressRsp{
 		ContentType: req.ContentType,
@@ -225,11 +227,23 @@ func (g *Game) TriggerQuest(player *model.Player, cond int32, complexParam strin
 		if questDataConfig == nil {
 			continue
 		}
+		// TODO 实在不知道客户端要在怎样的情况下 才会发长按10006这个技能 这里先临时改表解决了
+		// 是走ability体系计算出来的 操了
+		if questDataConfig.QuestId == 35303 {
+			questDataConfig.FinishCondList[0].Param[0] = 10067
+		}
 		for _, questCond := range questDataConfig.FinishCondList {
 			if questCond.Type != cond {
 				continue
 			}
 			switch cond {
+			case constant.QUEST_FINISH_COND_TYPE_FINISH_PLOT:
+				ok := matchParamEqual(questCond.Param, param, 1)
+				if !ok {
+					continue
+				}
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
 			case constant.QUEST_FINISH_COND_TYPE_TRIGGER_FIRE:
 				// 场景触发器跳了 参数1:触发器id
 				ok := matchParamEqual(questCond.Param, param, 1)
@@ -273,17 +287,63 @@ func (g *Game) TriggerQuest(player *model.Player, cond int32, complexParam strin
 		}
 	}
 	if len(updateQuestIdList) > 0 {
-		ntf := &proto.QuestListUpdateNotify{
-			QuestList: make([]*proto.Quest, 0),
-		}
+		questList := make([]*proto.Quest, 0)
 		for _, questId := range updateQuestIdList {
 			pbQuest := g.PacketQuest(player, questId)
 			if pbQuest == nil {
 				continue
 			}
-			ntf.QuestList = append(ntf.QuestList, pbQuest)
+			questList = append(questList, pbQuest)
 		}
-		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, &proto.QuestListUpdateNotify{
+			QuestList: questList,
+		})
+		parentQuestList := make([]*proto.ParentQuest, 0)
+		parentQuestMap := make(map[int32]bool)
+		for _, questId := range updateQuestIdList {
+			questDataConfig := gdconf.GetQuestDataById(int32(questId))
+			if questDataConfig == nil {
+				continue
+			}
+			_, exist := parentQuestMap[questDataConfig.ParentQuestId]
+			if exist {
+				continue
+			}
+			parentQuestMap[questDataConfig.ParentQuestId] = true
+			finishedParentQuest := true
+			subQuestDataMap := gdconf.GetQuestDataMapByParentQuestId(questDataConfig.ParentQuestId)
+			for _, subQuestData := range subQuestDataMap {
+				quest := dbQuest.GetQuestById(uint32(subQuestData.QuestId))
+				if quest == nil {
+					finishedParentQuest = false
+					break
+				}
+				if quest.State != constant.QUEST_STATE_FINISHED {
+					finishedParentQuest = false
+					break
+				}
+			}
+			if finishedParentQuest {
+				childQuestList := make([]*proto.ChildQuest, 0)
+				for _, subQuestData := range subQuestDataMap {
+					childQuestList = append(childQuestList, &proto.ChildQuest{
+						State:   constant.QUEST_STATE_FINISHED,
+						QuestId: uint32(subQuestData.QuestId),
+					})
+				}
+				parentQuestList = append(parentQuestList, &proto.ParentQuest{
+					ParentQuestId:    uint32(questDataConfig.ParentQuestId),
+					ParentQuestState: 1,
+					IsFinished:       true,
+					ChildQuestList:   childQuestList,
+				})
+			}
+		}
+		if len(parentQuestList) > 0 {
+			g.SendMsg(cmd.FinishedParentQuestUpdateNotify, player.PlayerID, player.ClientSeq, &proto.FinishedParentQuestUpdateNotify{
+				ParentQuestList: parentQuestList,
+			})
+		}
 		g.AcceptQuest(player, true)
 	}
 }
@@ -315,7 +375,7 @@ func (g *Game) PacketQuest(player *model.Player, questId uint32) *proto.Quest {
 
 // PacketQuestListNotify 打包任务列表通知
 func (g *Game) PacketQuestListNotify(player *model.Player) *proto.QuestListNotify {
-	questListNotify := &proto.QuestListNotify{
+	ntf := &proto.QuestListNotify{
 		QuestList: make([]*proto.Quest, 0),
 	}
 	dbQuest := player.GetDbQuest()
@@ -324,7 +384,56 @@ func (g *Game) PacketQuestListNotify(player *model.Player) *proto.QuestListNotif
 		if pbQuest == nil {
 			continue
 		}
-		questListNotify.QuestList = append(questListNotify.QuestList, pbQuest)
+		ntf.QuestList = append(ntf.QuestList, pbQuest)
 	}
-	return questListNotify
+	return ntf
+}
+
+// PacketFinishedParentQuestNotify 打包已完成父任务列表通知
+func (g *Game) PacketFinishedParentQuestNotify(player *model.Player) *proto.FinishedParentQuestNotify {
+	ntf := &proto.FinishedParentQuestNotify{
+		ParentQuestList: make([]*proto.ParentQuest, 0),
+	}
+	dbQuest := player.GetDbQuest()
+	parentQuestMap := make(map[int32]bool)
+	for questId := range dbQuest.GetQuestMap() {
+		questDataConfig := gdconf.GetQuestDataById(int32(questId))
+		if questDataConfig == nil {
+			continue
+		}
+		_, exist := parentQuestMap[questDataConfig.ParentQuestId]
+		if exist {
+			continue
+		}
+		parentQuestMap[questDataConfig.ParentQuestId] = true
+		finishedParentQuest := true
+		subQuestDataMap := gdconf.GetQuestDataMapByParentQuestId(questDataConfig.ParentQuestId)
+		for _, subQuestData := range subQuestDataMap {
+			quest := dbQuest.GetQuestById(uint32(subQuestData.QuestId))
+			if quest == nil {
+				finishedParentQuest = false
+				break
+			}
+			if quest.State != constant.QUEST_STATE_FINISHED {
+				finishedParentQuest = false
+				break
+			}
+		}
+		if finishedParentQuest {
+			childQuestList := make([]*proto.ChildQuest, 0)
+			for _, subQuestData := range subQuestDataMap {
+				childQuestList = append(childQuestList, &proto.ChildQuest{
+					State:   constant.QUEST_STATE_FINISHED,
+					QuestId: uint32(subQuestData.QuestId),
+				})
+			}
+			ntf.ParentQuestList = append(ntf.ParentQuestList, &proto.ParentQuest{
+				ParentQuestId:    uint32(questDataConfig.ParentQuestId),
+				ParentQuestState: 1,
+				IsFinished:       true,
+				ChildQuestList:   childQuestList,
+			})
+		}
+	}
+	return ntf
 }

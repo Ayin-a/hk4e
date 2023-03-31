@@ -651,8 +651,9 @@ func (g *Game) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[uint32]*g
 
 // AddSceneGroup 加载场景组
 func (g *Game) AddSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
-	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
-	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
+	initSuiteId := groupConfig.GroupInitConfig.Suite
+	_, exist := groupConfig.SuiteMap[initSuiteId]
+	if !exist {
 		logger.Error("invalid init suite id: %v, uid: %v", initSuiteId, player.PlayerID)
 		return
 	}
@@ -689,7 +690,8 @@ func (g *Game) AddSceneGroupSuite(player *model.Player, groupId uint32, suiteId 
 		logger.Error("get group config is nil, groupId: %v, uid: %v", groupId, player.PlayerID)
 		return
 	}
-	if suiteId < 1 || suiteId > uint8(len(groupConfig.SuiteList)) {
+	_, exist := groupConfig.SuiteMap[int32(suiteId)]
+	if !exist {
 		logger.Error("invalid suite id: %v, uid: %v", suiteId, player.PlayerID)
 		return
 	}
@@ -719,8 +721,9 @@ func (g *Game) AddSceneGroupMonster(player *model.Player, groupId uint32, monste
 		logger.Error("get group config is nil, groupId: %v, uid: %v", groupId, player.PlayerID)
 		return
 	}
-	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
-	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
+	initSuiteId := groupConfig.GroupInitConfig.Suite
+	_, exist := groupConfig.SuiteMap[initSuiteId]
+	if !exist {
 		logger.Error("invalid init suite id: %v, uid: %v", initSuiteId, player.PlayerID)
 		return
 	}

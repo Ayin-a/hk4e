@@ -373,6 +373,15 @@ func (g *GameDataConfig) loadQuestData() {
 			g.QuestDataMap[questData.QuestId] = questData
 		}
 	}
+	g.ParentQuestMap = make(map[int32]map[int32]*QuestData)
+	for _, questData := range g.QuestDataMap {
+		questMap, exist := g.ParentQuestMap[questData.ParentQuestId]
+		if !exist {
+			questMap = make(map[int32]*QuestData)
+			g.ParentQuestMap[questData.ParentQuestId] = questMap
+		}
+		questMap[questData.QuestId] = questData
+	}
 	logger.Info("QuestData count: %v", len(g.QuestDataMap))
 }
 
@@ -382,4 +391,8 @@ func GetQuestDataById(questId int32) *QuestData {
 
 func GetQuestDataMap() map[int32]*QuestData {
 	return CONF.QuestDataMap
+}
+
+func GetQuestDataMapByParentQuestId(parentQuestId int32) map[int32]*QuestData {
+	return CONF.ParentQuestMap[parentQuestId]
 }

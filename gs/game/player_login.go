@@ -116,8 +116,6 @@ func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isRe
 	TICK_MANAGER.CreateUserGlobalTick(userId)
 	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100, player.NickName)
 
-	g.AcceptQuest(player, true)
-
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, 1)
 
 	SELF = nil
@@ -240,6 +238,7 @@ func (g *Game) LoginNotify(userId uint32, player *model.Player, clientSeq uint32
 	g.SendMsg(cmd.AvatarDataNotify, userId, clientSeq, g.PacketAvatarDataNotify(player))
 	g.SendMsg(cmd.OpenStateUpdateNotify, userId, clientSeq, g.PacketOpenStateUpdateNotify())
 	g.SendMsg(cmd.QuestListNotify, userId, clientSeq, g.PacketQuestListNotify(player))
+	g.SendMsg(cmd.FinishedParentQuestNotify, userId, clientSeq, g.PacketFinishedParentQuestNotify(player))
 	// g.GCGLogin(player) // 发送GCG登录相关的通知包
 	playerLoginRsp := &proto.PlayerLoginRsp{
 		IsUseAbilityHash:        true,

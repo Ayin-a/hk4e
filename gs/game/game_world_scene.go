@@ -337,12 +337,11 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 		logger.Error("get scene group config is nil, groupId: %v", groupId)
 		return
 	}
-	suiteIndex := suiteId - 1
-	if int(suiteIndex) >= len(groupConfig.SuiteList) {
+	suiteConfig, exist := groupConfig.SuiteMap[int32(suiteId)]
+	if !exist {
 		logger.Error("invalid suiteId: %v", suiteId)
 		return
 	}
-	suiteConfig := groupConfig.SuiteList[suiteIndex]
 	suite := &Suite{
 		entityMap: make(map[uint32]*Entity),
 	}
@@ -459,9 +458,9 @@ func getTempFightPropMap() map[uint32]float32 {
 		constant.FIGHT_PROP_CUR_ATTACK:        float32(50.0),
 		constant.FIGHT_PROP_BASE_DEFENSE:      float32(500.0),
 		constant.FIGHT_PROP_CUR_DEFENSE:       float32(500.0),
-		constant.FIGHT_PROP_BASE_HP:           float32(10000.0),
-		constant.FIGHT_PROP_CUR_HP:            float32(10000.0),
-		constant.FIGHT_PROP_MAX_HP:            float32(10000.0),
+		constant.FIGHT_PROP_BASE_HP:           float32(5000.0),
+		constant.FIGHT_PROP_CUR_HP:            float32(5000.0),
+		constant.FIGHT_PROP_MAX_HP:            float32(5000.0),
 		constant.FIGHT_PROP_PHYSICAL_SUB_HURT: float32(0.1),
 		constant.FIGHT_PROP_ICE_SUB_HURT:      float32(0.1),
 		constant.FIGHT_PROP_FIRE_SUB_HURT:     float32(0.1),

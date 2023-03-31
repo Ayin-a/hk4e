@@ -316,6 +316,13 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 		// logger.Debug("AbilityInvocationsNotify: %v", entry, player.PlayerID)
 		switch entry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
+			modifierChange := new(proto.AbilityMetaModifierChange)
+			err := pb.Unmarshal(entry.AbilityData, modifierChange)
+			if err != nil {
+				logger.Error("parse AbilityMetaModifierChange error: %v", err)
+				continue
+			}
+			// logger.Error("MC: %v", modifierChange)
 			worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
 			if worldAvatar != nil {
 				for _, ability := range worldAvatar.abilityList {

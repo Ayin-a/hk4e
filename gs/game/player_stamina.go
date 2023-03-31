@@ -53,6 +53,7 @@ func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityIn
 			hashCode := endec.Hk4eAbilityHashCode(avatarSkillData.AbilityName)
 			if uint32(hashCode) == abilityNameHashCode {
 				avatarAbility = avatarSkillData
+				break
 			}
 		}
 		if avatarAbility == nil {

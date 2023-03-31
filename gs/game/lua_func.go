@@ -112,6 +112,8 @@ func RegLuaScriptLibFunc() {
 	gdconf.RegScriptLibFunc("ChangeGroupGadget", ChangeGroupGadget)
 	gdconf.RegScriptLibFunc("SetGadgetStateByConfigId", SetGadgetStateByConfigId)
 	gdconf.RegScriptLibFunc("MarkPlayerAction", MarkPlayerAction)
+	gdconf.RegScriptLibFunc("AddQuestProgress", AddQuestProgress)
+	gdconf.RegScriptLibFunc("CreateMonster", CreateMonster)
 }
 
 func GetEntityType(luaState *lua.LState) int {
@@ -281,6 +283,57 @@ func MarkPlayerAction(luaState *lua.LState) int {
 	param2 := luaState.ToInt(3)
 	param3 := luaState.ToInt(4)
 	logger.Debug("[MarkPlayerAction] [%v %v %v] [UID: %v]", param1, param2, param3, player.PlayerID)
+	luaState.Push(lua.LNumber(0))
+	return 1
+}
+
+func AddQuestProgress(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := GetContextPlayer(ctx, luaState)
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	complexParam := luaState.ToString(2)
+	GAME.TriggerQuest(player, constant.QUEST_FINISH_COND_TYPE_LUA_NOTIFY, complexParam)
+	luaState.Push(lua.LNumber(0))
+	return 1
+}
+
+type CreateMonsterInfo struct {
+	ConfigId  int32 `json:"config_id"`
+	DelayTime int32 `json:"delay_time"`
+}
+
+func CreateMonster(luaState *lua.LState) int {
+	ctx, ok := luaState.Get(1).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	player := GetContextPlayer(ctx, luaState)
+	if player == nil {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	groupId, ok := luaState.GetField(ctx, "groupId").(lua.LNumber)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	createMonsterInfoTable, ok := luaState.Get(2).(*lua.LTable)
+	if !ok {
+		luaState.Push(lua.LNumber(-1))
+		return 1
+	}
+	createMonsterInfo := new(CreateMonsterInfo)
+	gdconf.ParseLuaTableToObject[*CreateMonsterInfo](createMonsterInfoTable, createMonsterInfo)
+	TICK_MANAGER.CreateUserTimer(player.PlayerID, UserTimerActionLuaCreateMonster, uint32(createMonsterInfo.DelayTime),
+		uint32(groupId), uint32(createMonsterInfo.ConfigId))
 	luaState.Push(lua.LNumber(0))
 	return 1
 }

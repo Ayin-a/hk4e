@@ -62,8 +62,8 @@ func (q *DbQuest) AddQuest(questId uint32) {
 	}
 }
 
-// ExecQuest 开始执行一个任务
-func (q *DbQuest) ExecQuest(questId uint32) {
+// StartQuest 开始执行一个任务
+func (q *DbQuest) StartQuest(questId uint32) {
 	quest, exist := q.QuestMap[questId]
 	if !exist {
 		logger.Error("get quest is nil, questId: %v", questId)

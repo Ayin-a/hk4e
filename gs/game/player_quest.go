@@ -1,6 +1,9 @@
 package game
 
 import (
+	"strconv"
+	"strings"
+
 	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
@@ -127,8 +130,6 @@ func (g *Game) AcceptQuest(player *model.Player, notifyClient bool) {
 		}
 		if canAccept {
 			dbQuest.AddQuest(uint32(questData.QuestId))
-			// TODO 判断任务是否能开始执行
-			dbQuest.ExecQuest(uint32(questData.QuestId))
 			addQuestIdList = append(addQuestIdList, uint32(questData.QuestId))
 		}
 	}
@@ -144,9 +145,58 @@ func (g *Game) AcceptQuest(player *model.Player, notifyClient bool) {
 			ntf.QuestList = append(ntf.QuestList, pbQuest)
 		}
 		g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+		// TODO 判断任务是否能开始
+		for _, questId := range addQuestIdList {
+			g.StartQuest(player, questId)
+		}
 	}
 }
 
+// StartQuest 开始一个任务
+func (g *Game) StartQuest(player *model.Player, questId uint32) {
+	dbQuest := player.GetDbQuest()
+	dbQuest.StartQuest(questId)
+	ntf := &proto.QuestListUpdateNotify{
+		QuestList: make([]*proto.Quest, 0),
+	}
+	pbQuest := g.PacketQuest(player, questId)
+	if pbQuest == nil {
+		return
+	}
+	ntf.QuestList = append(ntf.QuestList, pbQuest)
+	g.SendMsg(cmd.QuestListUpdateNotify, player.PlayerID, player.ClientSeq, ntf)
+	g.QuestExec(player, questId)
+	g.QuestStartTriggerCheck(player, questId)
+}
+
+// QuestExec 任务开始执行触发操作
+func (g *Game) QuestExec(player *model.Player, questId uint32) {
+	questDataConfig := gdconf.GetQuestDataById(int32(questId))
+	if questDataConfig == nil {
+		return
+	}
+	for _, questExec := range questDataConfig.StartExecList {
+		switch questExec.Type {
+		case constant.QUEST_EXEC_TYPE_NOTIFY_GROUP_LUA:
+		case constant.QUEST_EXEC_TYPE_REFRESH_GROUP_SUITE:
+			if len(questExec.Param) != 2 {
+				continue
+			}
+			split := strings.Split(questExec.Param[1], ",")
+			groupId, err := strconv.Atoi(split[0])
+			if err != nil {
+				continue
+			}
+			suiteId, err := strconv.Atoi(split[0])
+			if err != nil {
+				continue
+			}
+			g.AddSceneGroupSuite(player, uint32(groupId), uint8(suiteId))
+		}
+	}
+}
+
+// 通用参数匹配
 func matchParamEqual(param1 []int32, param2 []int32, num int) bool {
 	if len(param1) != num || len(param2) != num {
 		return false
@@ -200,6 +250,14 @@ func (g *Game) TriggerQuest(player *model.Player, cond int32, complexParam strin
 			case constant.QUEST_FINISH_COND_TYPE_LUA_NOTIFY:
 				// LUA侧通知 复杂参数
 				if questCond.ComplexParam != complexParam {
+					continue
+				}
+				dbQuest.ForceFinishQuest(quest.QuestId)
+				updateQuestIdList = append(updateQuestIdList, quest.QuestId)
+			case constant.QUEST_FINISH_COND_TYPE_SKILL:
+				// 使用技能 参数1:技能id
+				ok := matchParamEqual(questCond.Param, param, 1)
+				if !ok {
 					continue
 				}
 				dbQuest.ForceFinishQuest(quest.QuestId)

@@ -11,6 +11,11 @@ type QuestCond struct {
 	Count        int32
 }
 
+type QuestExec struct {
+	Type  int32
+	Param []string
+}
+
 // QuestData 任务配置表
 type QuestData struct {
 	QuestId       int32 `csv:"子任务ID"`
@@ -51,23 +56,52 @@ type QuestData struct {
 	FailCondCompose           int32  `csv:"[失败条件]组合,omitempty"`
 	FailCondType1             int32  `csv:"[失败条件]1类型,omitempty"`
 	FailCondType1Param1       int32  `csv:"[失败条件]1参数1,omitempty"`
-	FailCondType1Param2       int32  `csv:"[失败条件]1参数2,omitempty"`
 	FailCondType1ComplexParam string `csv:"[失败条件]1复杂参数,omitempty"`
 	FailCondType1Count        int32  `csv:"[失败条件]1次数,omitempty"`
 	FailCondType2             int32  `csv:"[失败条件]2类型,omitempty"`
 	FailCondType2Param1       int32  `csv:"[失败条件]2参数1,omitempty"`
-	FailCondType2Param2       int32  `csv:"[失败条件]2参数2,omitempty"`
 	FailCondType2ComplexParam string `csv:"[失败条件]2复杂参数,omitempty"`
 	FailCondType2Count        int32  `csv:"[失败条件]2次数,omitempty"`
-	FailCondType3             int32  `csv:"[失败条件]3类型,omitempty"`
-	FailCondType3Param1       int32  `csv:"[失败条件]3参数1,omitempty"`
-	FailCondType3Param2       int32  `csv:"[失败条件]3参数2,omitempty"`
-	FailCondType3ComplexParam string `csv:"[失败条件]3复杂参数,omitempty"`
-	FailCondType3Count        int32  `csv:"[失败条件]3次数,omitempty"`
+	// 执行
+	ExecType1       int32  `csv:"[执行]1类型,omitempty"`
+	ExecType1Param1 string `csv:"[执行]1参数1,omitempty"`
+	ExecType1Param2 string `csv:"[执行]1参数2,omitempty"`
+	ExecType2       int32  `csv:"[执行]2类型,omitempty"`
+	ExecType2Param1 string `csv:"[执行]2参数1,omitempty"`
+	ExecType2Param2 string `csv:"[执行]2参数2,omitempty"`
+	ExecType3       int32  `csv:"[执行]3类型,omitempty"`
+	ExecType3Param1 string `csv:"[执行]3参数1,omitempty"`
+	ExecType3Param2 string `csv:"[执行]3参数2,omitempty"`
+	ExecType4       int32  `csv:"[执行]4类型,omitempty"`
+	ExecType4Param1 string `csv:"[执行]4参数1,omitempty"`
+	ExecType4Param2 string `csv:"[执行]4参数2,omitempty"`
+	// 失败执行
+	FailExecType1       int32  `csv:"[失败执行]1类型,omitempty"`
+	FailExecType1Param1 string `csv:"[失败执行]1参数1,omitempty"`
+	FailExecType1Param2 string `csv:"[失败执行]1参数2,omitempty"`
+	FailExecType2       int32  `csv:"[失败执行]2类型,omitempty"`
+	FailExecType2Param1 string `csv:"[失败执行]2参数1,omitempty"`
+	FailExecType2Param2 string `csv:"[失败执行]2参数2,omitempty"`
+	FailExecType3       int32  `csv:"[失败执行]3类型,omitempty"`
+	FailExecType3Param1 string `csv:"[失败执行]3参数1,omitempty"`
+	FailExecType3Param2 string `csv:"[失败执行]3参数2,omitempty"`
+	// 开始执行
+	StartExecType1       int32  `csv:"[开始执行]1类型,omitempty"`
+	StartExecType1Param1 string `csv:"[开始执行]1参数1,omitempty"`
+	StartExecType1Param2 string `csv:"[开始执行]1参数2,omitempty"`
+	StartExecType2       int32  `csv:"[开始执行]2类型,omitempty"`
+	StartExecType2Param1 string `csv:"[开始执行]2参数1,omitempty"`
+	StartExecType2Param2 string `csv:"[开始执行]2参数2,omitempty"`
+	StartExecType3       int32  `csv:"[开始执行]3类型,omitempty"`
+	StartExecType3Param1 string `csv:"[开始执行]3参数1,omitempty"`
+	StartExecType3Param2 string `csv:"[开始执行]3参数2,omitempty"`
 
 	AcceptCondList []*QuestCond // 领取条件
 	FinishCondList []*QuestCond // 完成条件
 	FailCondList   []*QuestCond // 失败条件
+	ExecList       []*QuestExec // 执行
+	FailExecList   []*QuestExec // 失败执行
+	StartExecList  []*QuestExec // 开始执行
 }
 
 func (g *GameDataConfig) loadQuestData() {
@@ -175,6 +209,167 @@ func (g *GameDataConfig) loadQuestData() {
 				})
 			}
 			// 失败条件
+			questData.FailCondList = make([]*QuestCond, 0)
+			if questData.FailCondType1 != 0 {
+				paramList := make([]int32, 0)
+				if questData.FailCondType1Param1 != 0 {
+					paramList = append(paramList, questData.FailCondType1Param1)
+				}
+				questData.FailCondList = append(questData.FailCondList, &QuestCond{
+					Type:         questData.FailCondType1,
+					Param:        paramList,
+					ComplexParam: questData.FailCondType1ComplexParam,
+					Count:        questData.FailCondType1Count,
+				})
+			}
+			if questData.FailCondType2 != 0 {
+				paramList := make([]int32, 0)
+				if questData.FailCondType2Param1 != 0 {
+					paramList = append(paramList, questData.FailCondType2Param1)
+				}
+				questData.FailCondList = append(questData.FailCondList, &QuestCond{
+					Type:         questData.FailCondType2,
+					Param:        paramList,
+					ComplexParam: questData.FailCondType2ComplexParam,
+					Count:        questData.FailCondType2Count,
+				})
+			}
+			// 执行
+			questData.ExecList = make([]*QuestExec, 0)
+			if questData.ExecType1 != 0 {
+				paramList := make([]string, 0)
+				if questData.ExecType1Param1 != "" {
+					paramList = append(paramList, questData.ExecType1Param1)
+				}
+				if questData.ExecType1Param2 != "" {
+					paramList = append(paramList, questData.ExecType1Param2)
+				}
+				questData.ExecList = append(questData.ExecList, &QuestExec{
+					Type:  questData.ExecType1,
+					Param: paramList,
+				})
+			}
+			if questData.ExecType2 != 0 {
+				paramList := make([]string, 0)
+				if questData.ExecType2Param1 != "" {
+					paramList = append(paramList, questData.ExecType2Param1)
+				}
+				if questData.ExecType2Param2 != "" {
+					paramList = append(paramList, questData.ExecType2Param2)
+				}
+				questData.ExecList = append(questData.ExecList, &QuestExec{
+					Type:  questData.ExecType2,
+					Param: paramList,
+				})
+			}
+			if questData.ExecType3 != 0 {
+				paramList := make([]string, 0)
+				if questData.ExecType3Param1 != "" {
+					paramList = append(paramList, questData.ExecType3Param1)
+				}
+				if questData.ExecType3Param2 != "" {
+					paramList = append(paramList, questData.ExecType3Param2)
+				}
+				questData.ExecList = append(questData.ExecList, &QuestExec{
+					Type:  questData.ExecType3,
+					Param: paramList,
+				})
+			}
+			if questData.ExecType4 != 0 {
+				paramList := make([]string, 0)
+				if questData.ExecType4Param1 != "" {
+					paramList = append(paramList, questData.ExecType4Param1)
+				}
+				if questData.ExecType4Param2 != "" {
+					paramList = append(paramList, questData.ExecType4Param2)
+				}
+				questData.ExecList = append(questData.ExecList, &QuestExec{
+					Type:  questData.ExecType4,
+					Param: paramList,
+				})
+			}
+			// 失败执行
+			questData.FailExecList = make([]*QuestExec, 0)
+			if questData.FailExecType1 != 0 {
+				paramList := make([]string, 0)
+				if questData.FailExecType1Param1 != "" {
+					paramList = append(paramList, questData.FailExecType1Param1)
+				}
+				if questData.FailExecType1Param2 != "" {
+					paramList = append(paramList, questData.FailExecType1Param2)
+				}
+				questData.FailExecList = append(questData.FailExecList, &QuestExec{
+					Type:  questData.FailExecType1,
+					Param: paramList,
+				})
+			}
+			if questData.FailExecType2 != 0 {
+				paramList := make([]string, 0)
+				if questData.FailExecType2Param1 != "" {
+					paramList = append(paramList, questData.FailExecType2Param1)
+				}
+				if questData.FailExecType2Param2 != "" {
+					paramList = append(paramList, questData.FailExecType2Param2)
+				}
+				questData.FailExecList = append(questData.FailExecList, &QuestExec{
+					Type:  questData.FailExecType2,
+					Param: paramList,
+				})
+			}
+			if questData.FailExecType3 != 0 {
+				paramList := make([]string, 0)
+				if questData.FailExecType3Param1 != "" {
+					paramList = append(paramList, questData.FailExecType3Param1)
+				}
+				if questData.FailExecType3Param2 != "" {
+					paramList = append(paramList, questData.FailExecType3Param2)
+				}
+				questData.FailExecList = append(questData.FailExecList, &QuestExec{
+					Type:  questData.FailExecType3,
+					Param: paramList,
+				})
+			}
+			// 开始执行
+			questData.StartExecList = make([]*QuestExec, 0)
+			if questData.StartExecType1 != 0 {
+				paramList := make([]string, 0)
+				if questData.StartExecType1Param1 != "" {
+					paramList = append(paramList, questData.StartExecType1Param1)
+				}
+				if questData.StartExecType1Param2 != "" {
+					paramList = append(paramList, questData.StartExecType1Param2)
+				}
+				questData.StartExecList = append(questData.StartExecList, &QuestExec{
+					Type:  questData.StartExecType1,
+					Param: paramList,
+				})
+			}
+			if questData.StartExecType2 != 0 {
+				paramList := make([]string, 0)
+				if questData.StartExecType2Param1 != "" {
+					paramList = append(paramList, questData.StartExecType2Param1)
+				}
+				if questData.StartExecType2Param2 != "" {
+					paramList = append(paramList, questData.StartExecType2Param2)
+				}
+				questData.StartExecList = append(questData.StartExecList, &QuestExec{
+					Type:  questData.StartExecType2,
+					Param: paramList,
+				})
+			}
+			if questData.StartExecType3 != 0 {
+				paramList := make([]string, 0)
+				if questData.StartExecType3Param1 != "" {
+					paramList = append(paramList, questData.StartExecType3Param1)
+				}
+				if questData.StartExecType3Param2 != "" {
+					paramList = append(paramList, questData.StartExecType3Param2)
+				}
+				questData.StartExecList = append(questData.StartExecList, &QuestExec{
+					Type:  questData.StartExecType3,
+					Param: paramList,
+				})
+			}
 			g.QuestDataMap[questData.QuestId] = questData
 		}
 	}

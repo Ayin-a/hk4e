@@ -21,6 +21,7 @@ const (
 type UserTimer struct {
 	timer  *time.Timer
 	action int
+	data   []any
 }
 
 type UserTick struct {
@@ -67,7 +68,7 @@ func (t *TickManager) DestroyUserGlobalTick(userId uint32) {
 }
 
 // CreateUserTimer 创建玩家定时任务
-func (t *TickManager) CreateUserTimer(userId uint32, action int, delay uint32) {
+func (t *TickManager) CreateUserTimer(userId uint32, action int, delay uint32, data ...any) {
 	userTick, exist := t.userTickMap[userId]
 	if !exist {
 		logger.Error("user not exist, uid: %v", userId)
@@ -77,6 +78,7 @@ func (t *TickManager) CreateUserTimer(userId uint32, action int, delay uint32) {
 	userTick.timerMap[userTick.timerIdCounter] = &UserTimer{
 		timer:  time.NewTimer(time.Second * time.Duration(delay)),
 		action: action,
+		data:   data,
 	}
 	logger.Debug("create user timer, uid: %v, action: %v, time: %v",
 		userId, action, time.Now().Add(time.Second*time.Duration(delay)).Format("2006-01-02 15:04:05"))
@@ -103,12 +105,22 @@ func (t *TickManager) onUserTickMinute(userId uint32, now int64) {
 
 const (
 	UserTimerActionTest = iota
+	UserTimerActionLuaCreateMonster
 )
 
-func (t *TickManager) userTimerHandle(userId uint32, action int) {
+func (t *TickManager) userTimerHandle(userId uint32, action int, data []any) {
+	player := USER_MANAGER.GetOnlineUser(userId)
+	if player == nil {
+		return
+	}
 	switch action {
 	case UserTimerActionTest:
-		logger.Debug("UserTimerActionTest, uid: %v", userId)
+		logger.Debug("UserTimerActionTest, data: %v, uid: %v", data[0], userId)
+	case UserTimerActionLuaCreateMonster:
+		logger.Debug("UserTimerActionLuaCreateMonster, groupId: %v, monsterConfigId: %v, uid: %v", data[0], data[1], userId)
+		groupId := data[0].(uint32)
+		monsterConfigId := data[1].(uint32)
+		GAME.AddSceneGroupMonster(player, groupId, monsterConfigId)
 	}
 }
 
@@ -168,7 +180,7 @@ func (t *TickManager) OnGameServerTick() {
 			<-timer.timer.C
 			timer.timer.Stop()
 			delete(userTick.timerMap, timerId)
-			t.userTimerHandle(userId, timer.action)
+			t.userTimerHandle(userId, timer.action, timer.data)
 		}
 	}
 }

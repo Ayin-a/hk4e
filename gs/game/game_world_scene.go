@@ -304,6 +304,33 @@ func (s *Scene) GetEntity(entityId uint32) *Entity {
 	return s.entityMap[entityId]
 }
 
+func (s *Scene) AddGroupSuiteMonster(groupId uint32, suiteId uint8, monsterConfigId uint32) uint32 {
+	group, exist := s.groupMap[groupId]
+	if !exist {
+		logger.Error("group not exist, groupId: %v", groupId)
+		return 0
+	}
+	suite, exist := group.suiteMap[suiteId]
+	if !exist {
+		logger.Error("suite not exist, suiteId: %v", suiteId)
+		return 0
+	}
+	groupConfig := gdconf.GetSceneGroup(int32(groupId))
+	if groupConfig == nil {
+		logger.Error("get scene group config is nil, groupId: %v", groupId)
+		return 0
+	}
+	monsterConfig, exist := groupConfig.MonsterMap[int32(monsterConfigId)]
+	if !exist {
+		logger.Error("monster config not exist, monsterConfigId: %v", monsterConfigId)
+		return 0
+	}
+	entityId := s.createConfigEntity(uint32(groupConfig.Id), monsterConfig)
+	entity := s.GetEntity(entityId)
+	suite.entityMap[entityId] = entity
+	return entityId
+}
+
 func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 	groupConfig := gdconf.GetSceneGroup(int32(groupId))
 	if groupConfig == nil {
@@ -320,27 +347,27 @@ func (s *Scene) AddGroupSuite(groupId uint32, suiteId uint8) {
 		entityMap: make(map[uint32]*Entity),
 	}
 	for _, monsterConfigId := range suiteConfig.MonsterConfigIdList {
-		monster, exist := groupConfig.MonsterMap[monsterConfigId]
+		monsterConfig, exist := groupConfig.MonsterMap[monsterConfigId]
 		if !exist {
 			logger.Error("monster config not exist, monsterConfigId: %v", monsterConfigId)
 			continue
 		}
-		entityId := s.createConfigEntity(uint32(groupConfig.Id), monster)
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), monsterConfig)
 		entity := s.GetEntity(entityId)
 		suite.entityMap[entityId] = entity
 	}
 	for _, gadgetConfigId := range suiteConfig.GadgetConfigIdList {
-		gadget, exist := groupConfig.GadgetMap[gadgetConfigId]
+		gadgetConfig, exist := groupConfig.GadgetMap[gadgetConfigId]
 		if !exist {
 			logger.Error("gadget config not exist, gadgetConfigId: %v", gadgetConfigId)
 			continue
 		}
-		entityId := s.createConfigEntity(uint32(groupConfig.Id), gadget)
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), gadgetConfig)
 		entity := s.GetEntity(entityId)
 		suite.entityMap[entityId] = entity
 	}
-	for _, npc := range groupConfig.NpcMap {
-		entityId := s.createConfigEntity(uint32(groupConfig.Id), npc)
+	for _, npcConfig := range groupConfig.NpcMap {
+		entityId := s.createConfigEntity(uint32(groupConfig.Id), npcConfig)
 		entity := s.GetEntity(entityId)
 		suite.entityMap[entityId] = entity
 	}

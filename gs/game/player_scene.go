@@ -366,6 +366,7 @@ func (g *Game) SceneEntityDrownReq(player *model.Player, payloadMsg pb.Message) 
 	g.SendMsg(cmd.SceneEntityDrownRsp, player.PlayerID, player.ClientSeq, sceneEntityDrownRsp)
 }
 
+// AddSceneEntityNotifyToPlayer 添加的场景实体同步给玩家
 func (g *Game) AddSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityList []*proto.SceneEntityInfo) {
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
 		AppearType: visionType,
@@ -376,6 +377,7 @@ func (g *Game) AddSceneEntityNotifyToPlayer(player *model.Player, visionType pro
 		player.PlayerID, sceneEntityAppearNotify.AppearType, len(sceneEntityAppearNotify.EntityList))
 }
 
+// AddSceneEntityNotifyBroadcast 添加的场景实体广播
 func (g *Game) AddSceneEntityNotifyBroadcast(player *model.Player, scene *Scene, visionType proto.VisionType, entityList []*proto.SceneEntityInfo, aec bool) {
 	sceneEntityAppearNotify := &proto.SceneEntityAppearNotify{
 		AppearType: visionType,
@@ -391,6 +393,7 @@ func (g *Game) AddSceneEntityNotifyBroadcast(player *model.Player, scene *Scene,
 	}
 }
 
+// RemoveSceneEntityNotifyToPlayer 移除的场景实体同步给玩家
 func (g *Game) RemoveSceneEntityNotifyToPlayer(player *model.Player, visionType proto.VisionType, entityIdList []uint32) {
 	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
 		EntityList:    entityIdList,
@@ -401,6 +404,7 @@ func (g *Game) RemoveSceneEntityNotifyToPlayer(player *model.Player, visionType 
 		player.PlayerID, sceneEntityDisappearNotify.DisappearType, len(sceneEntityDisappearNotify.EntityList))
 }
 
+// RemoveSceneEntityNotifyBroadcast 移除的场景实体广播
 func (g *Game) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.VisionType, entityIdList []uint32) {
 	sceneEntityDisappearNotify := &proto.SceneEntityDisappearNotify{
 		EntityList:    entityIdList,
@@ -413,6 +417,7 @@ func (g *Game) RemoveSceneEntityNotifyBroadcast(scene *Scene, visionType proto.V
 	}
 }
 
+// AddSceneEntityNotify 添加的场景实体同步 封装接口
 func (g *Game) AddSceneEntityNotify(player *model.Player, visionType proto.VisionType, entityIdList []uint32, broadcast bool, aec bool) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	scene := world.GetSceneById(player.SceneId)
@@ -471,6 +476,7 @@ func (g *Game) AddSceneEntityNotify(player *model.Player, visionType proto.Visio
 	}
 }
 
+// EntityFightPropUpdateNotifyBroadcast 场景实体战斗属性变更通知广播
 func (g *Game) EntityFightPropUpdateNotifyBroadcast(world *World, entity *Entity) {
 	ntf := &proto.EntityFightPropUpdateNotify{
 		FightPropMap: entity.GetFightProp(),
@@ -479,6 +485,7 @@ func (g *Game) EntityFightPropUpdateNotifyBroadcast(world *World, entity *Entity
 	g.SendToWorldA(world, cmd.EntityFightPropUpdateNotify, 0, ntf)
 }
 
+// KillPlayerAvatar 杀死玩家活跃角色实体
 func (g *Game) KillPlayerAvatar(player *model.Player, dieType proto.PlayerDieType) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -510,6 +517,7 @@ func (g *Game) KillPlayerAvatar(player *model.Player, dieType proto.PlayerDieTyp
 	g.SendToWorldA(world, cmd.AvatarLifeStateChangeNotify, 0, ntf)
 }
 
+// RevivePlayerAvatar 复活玩家活跃角色实体
 func (g *Game) RevivePlayerAvatar(player *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -543,6 +551,7 @@ func (g *Game) RevivePlayerAvatar(player *model.Player) {
 	g.SendToWorldA(world, cmd.AvatarLifeStateChangeNotify, 0, ntf)
 }
 
+// KillEntity 杀死实体
 func (g *Game) KillEntity(player *model.Player, scene *Scene, entityId uint32, dieType proto.PlayerDieType) {
 	entity := scene.GetEntity(entityId)
 	if entity == nil {
@@ -577,6 +586,7 @@ func (g *Game) KillEntity(player *model.Player, scene *Scene, entityId uint32, d
 	}
 }
 
+// ChangeGadgetState 改变物件实体状态
 func (g *Game) ChangeGadgetState(player *model.Player, entityId uint32, state uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -603,6 +613,7 @@ func (g *Game) ChangeGadgetState(player *model.Player, entityId uint32, state ui
 	g.SendMsg(cmd.GadgetStateNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
+// GetVisionEntity 获取某位置视野内的全部实体
 func (g *Game) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint32]*Entity {
 	visionEntity := make(map[uint32]*Entity)
 	for _, entity := range scene.GetAllEntity() {
@@ -615,6 +626,7 @@ func (g *Game) GetVisionEntity(scene *Scene, pos *model.Vector) map[uint32]*Enti
 	return visionEntity
 }
 
+// GetNeighborGroup 获取某位置附近的场景组
 func (g *Game) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[uint32]*gdconf.Group {
 	aoiManager, exist := WORLD_MANAGER.GetSceneBlockAoiMap()[sceneId]
 	if !exist {
@@ -637,6 +649,7 @@ func (g *Game) GetNeighborGroup(sceneId uint32, pos *model.Vector) map[uint32]*g
 	return neighborGroup
 }
 
+// AddSceneGroup 加载场景组
 func (g *Game) AddSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
 	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
 	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
@@ -651,6 +664,7 @@ func (g *Game) AddSceneGroup(player *model.Player, scene *Scene, groupConfig *gd
 	g.SendMsg(cmd.GroupSuiteNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
+// RemoveSceneGroup 卸载场景组
 func (g *Game) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig *gdconf.Group) {
 	group := scene.GetGroupById(uint32(groupConfig.Id))
 	if group == nil {
@@ -667,6 +681,58 @@ func (g *Game) RemoveSceneGroup(player *model.Player, scene *Scene, groupConfig 
 	g.SendMsg(cmd.GroupUnloadNotify, player.PlayerID, player.ClientSeq, ntf)
 }
 
+func (g *Game) AddSceneGroupSuite(player *model.Player, groupId uint32, suiteId uint8) {
+	groupConfig := gdconf.GetSceneGroup(int32(groupId))
+	if groupConfig == nil {
+		logger.Error("get group config is nil, groupId: %v, uid: %v", groupId, player.PlayerID)
+		return
+	}
+	if suiteId < 1 || suiteId > uint8(len(groupConfig.SuiteList)) {
+		logger.Error("invalid suite id: %v, uid: %v", suiteId, player.PlayerID)
+		return
+	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	scene.AddGroupSuite(uint32(groupConfig.Id), suiteId)
+	ntf := &proto.GroupSuiteNotify{
+		GroupMap: make(map[uint32]uint32),
+	}
+	ntf.GroupMap[uint32(groupConfig.Id)] = uint32(suiteId)
+	g.SendMsg(cmd.GroupSuiteNotify, player.PlayerID, player.ClientSeq, ntf)
+	group := scene.GetGroupById(groupId)
+	suite := group.GetSuiteById(suiteId)
+	entityIdList := make([]uint32, 0)
+	for _, entity := range suite.GetAllEntity() {
+		entityIdList = append(entityIdList, entity.GetId())
+	}
+	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, entityIdList, true, false)
+}
+
+func (g *Game) AddSceneGroupMonster(player *model.Player, groupId uint32, monsterConfigId uint32) {
+	groupConfig := gdconf.GetSceneGroup(int32(groupId))
+	if groupConfig == nil {
+		logger.Error("get group config is nil, groupId: %v, uid: %v", groupId, player.PlayerID)
+		return
+	}
+	initSuiteId := int(groupConfig.GroupInitConfig.Suite)
+	if initSuiteId < 1 || initSuiteId > len(groupConfig.SuiteList) {
+		logger.Error("invalid init suite id: %v, uid: %v", initSuiteId, player.PlayerID)
+		return
+	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		logger.Error("get world is nil, worldId: %v", player.WorldId)
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
+	entityId := scene.AddGroupSuiteMonster(groupId, uint8(initSuiteId), monsterConfigId)
+	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
+}
+
+// CreateDropGadget 创建掉落物的物件实体
 func (g *Game) CreateDropGadget(player *model.Player, pos *model.Vector, gadgetId, itemId, count uint32) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
@@ -689,6 +755,8 @@ func (g *Game) CreateDropGadget(player *model.Player, pos *model.Vector, gadgetI
 	)
 	g.AddSceneEntityNotify(player, proto.VisionType_VISION_BORN, []uint32{entityId}, true, false)
 }
+
+// 打包相关封装函数
 
 var SceneTransactionSeq uint32 = 0
 

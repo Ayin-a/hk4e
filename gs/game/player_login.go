@@ -253,6 +253,12 @@ func (g *Game) LoginNotify(userId uint32, player *model.Player, clientSeq uint32
 		Birthday:                "2000-01-01",
 	}
 	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
+	playerTimeNotify := &proto.PlayerTimeNotify{
+		IsPaused:   player.Pause,
+		PlayerTime: uint64(player.TotalOnlineTime),
+		ServerTime: uint64(time.Now().UnixMilli()),
+	}
+	g.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
 }
 
 func (g *Game) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {

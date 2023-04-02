@@ -87,7 +87,15 @@ func (g *Game) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
 		player.Rot.Z = hostPlayer.Rot.Z
 		g.UserWorldAddPlayer(hostWorld, player)
 
-		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_OTHER)
+		playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyMp(
+			player,
+			hostPlayer,
+			proto.EnterType_ENTER_OTHER,
+			proto.EnterReason_ENTER_REASON_TEAM_JOIN,
+			0,
+			new(model.Vector),
+			0,
+		)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 	} else {
 		hostWorld.AddWaitPlayer(player.PlayerID)
@@ -258,7 +266,7 @@ func (g *Game) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agr
 	if !agree {
 		return
 	}
-	g.HostEnterMpWorld(hostPlayer, otherUid)
+	g.HostEnterMpWorld(hostPlayer)
 
 	otherPlayer := USER_MANAGER.GetOnlineUser(otherUid)
 	if otherPlayer == nil {
@@ -308,7 +316,7 @@ func (g *Game) UserDealEnterWorld(hostPlayer *model.Player, otherUid uint32, agr
 	g.SendMsg(cmd.PlayerApplyEnterMpResultNotify, otherPlayer.PlayerID, otherPlayer.ClientSeq, playerApplyEnterMpResultNotify)
 }
 
-func (g *Game) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
+func (g *Game) HostEnterMpWorld(hostPlayer *model.Player) {
 	world := WORLD_MANAGER.GetWorldByID(hostPlayer.WorldId)
 	if world.GetMultiplayer() {
 		return
@@ -333,18 +341,12 @@ func (g *Game) HostEnterMpWorld(hostPlayer *model.Player, otherUid uint32) {
 		hostPlayer,
 		hostPlayer,
 		proto.EnterType_ENTER_GOTO,
-		uint32(proto.EnterReason_ENTER_REASON_HOST_FROM_SINGLE_TO_MP),
+		proto.EnterReason_ENTER_REASON_HOST_FROM_SINGLE_TO_MP,
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
 		0,
 	)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, hostPlayerEnterSceneNotify)
-
-	guestBeginEnterSceneNotify := &proto.GuestBeginEnterSceneNotify{
-		SceneId: hostPlayer.SceneId,
-		Uid:     otherUid,
-	}
-	g.SendMsg(cmd.GuestBeginEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, guestBeginEnterSceneNotify)
 
 	// 仅仅把当前的场上角色的实体消失掉
 	activeAvatarId := world.GetPlayerActiveAvatarId(hostPlayer)
@@ -361,7 +363,7 @@ func (g *Game) UserLeaveWorld(player *model.Player) bool {
 			return false
 		}
 	}
-	g.ReLoginPlayer(player.PlayerID)
+	g.ReLoginPlayer(player.PlayerID, true)
 	return true
 }
 
@@ -393,14 +395,12 @@ func (g *Game) UserWorldRemovePlayer(world *World, player *model.Player) {
 		}
 	}
 	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
 
-	// 仅仅把当前的场上角色的实体消失掉
-	activeAvatarId := world.GetPlayerActiveAvatarId(player)
-	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, []uint32{world.GetPlayerWorldAvatarEntityId(player, activeAvatarId)})
+	entityIdList := make([]uint32, 0)
+	for _, entity := range scene.GetAllEntity() {
+		entityIdList = append(entityIdList, entity.GetId())
+	}
+	g.RemoveSceneEntityNotifyToPlayer(player, proto.VisionType_VISION_MISS, entityIdList)
 
 	delTeamEntityNotify := g.PacketDelTeamEntityNotify(scene, player)
 	g.SendMsg(cmd.DelTeamEntityNotify, player.PlayerID, player.ClientSeq, delTeamEntityNotify)
@@ -433,13 +433,6 @@ func (g *Game) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *model.Play
 			continue
 		}
 
-		playerPreEnterMpNotify := &proto.PlayerPreEnterMpNotify{
-			State:    proto.PlayerPreEnterMpNotify_START,
-			Uid:      excludePlayer.PlayerID,
-			Nickname: excludePlayer.NickName,
-		}
-		g.SendMsg(cmd.PlayerPreEnterMpNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, playerPreEnterMpNotify)
-
 		worldPlayerInfoNotify := &proto.WorldPlayerInfoNotify{
 			PlayerInfoList: make([]*proto.OnlinePlayerInfo, 0),
 			PlayerUidList:  make([]uint32, 0),
@@ -466,57 +459,61 @@ func (g *Game) UpdateWorldPlayerInfo(hostWorld *World, excludePlayer *model.Play
 		}
 		g.SendMsg(cmd.ServerTimeNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, serverTimeNotify)
 
-		scenePlayerInfoNotify := &proto.ScenePlayerInfoNotify{
-			PlayerInfoList: make([]*proto.ScenePlayerInfo, 0),
-		}
-		for _, worldPlayer := range hostWorld.GetAllPlayer() {
-			onlinePlayerInfo := &proto.OnlinePlayerInfo{
-				Uid:                 worldPlayer.PlayerID,
-				Nickname:            worldPlayer.NickName,
-				PlayerLevel:         worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
-				MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
-				NameCardId:          worldPlayer.NameCard,
-				Signature:           worldPlayer.Signature,
-				ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
-				CurPlayerNumInWorld: uint32(hostWorld.GetWorldPlayerNum()),
-			}
-			scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
-				Uid:              worldPlayer.PlayerID,
-				PeerId:           hostWorld.GetPlayerPeerId(worldPlayer),
-				Name:             worldPlayer.NickName,
-				SceneId:          worldPlayer.SceneId,
-				OnlinePlayerInfo: onlinePlayerInfo,
-			})
-		}
-		g.SendMsg(cmd.ScenePlayerInfoNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, scenePlayerInfoNotify)
-
-		sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(hostWorld)
-		g.SendMsg(cmd.SceneTeamUpdateNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, sceneTeamUpdateNotify)
-
-		syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
-			SceneId:            worldPlayer.SceneId,
-			TeamEntityInfoList: make([]*proto.TeamEntityInfo, 0),
-		}
-		if hostWorld.GetMultiplayer() {
-			for _, worldPlayer := range hostWorld.GetAllPlayer() {
-				if worldPlayer.PlayerID == worldPlayer.PlayerID {
-					continue
-				}
-				teamEntityInfo := &proto.TeamEntityInfo{
-					TeamEntityId:    hostWorld.GetPlayerTeamEntityId(worldPlayer),
-					AuthorityPeerId: hostWorld.GetPlayerPeerId(worldPlayer),
-					TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
-				}
-				syncTeamEntityNotify.TeamEntityInfoList = append(syncTeamEntityNotify.TeamEntityInfoList, teamEntityInfo)
-			}
-		}
-		g.SendMsg(cmd.SyncTeamEntityNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, syncTeamEntityNotify)
-
-		syncScenePlayTeamEntityNotify := &proto.SyncScenePlayTeamEntityNotify{
-			SceneId: worldPlayer.SceneId,
-		}
-		g.SendMsg(cmd.SyncScenePlayTeamEntityNotify, worldPlayer.PlayerID, worldPlayer.ClientSeq, syncScenePlayTeamEntityNotify)
+		g.UpdateWorldScenePlayerInfo(worldPlayer, hostWorld)
 	}
+}
+
+func (g *Game) UpdateWorldScenePlayerInfo(player *model.Player, world *World) {
+	scenePlayerInfoNotify := &proto.ScenePlayerInfoNotify{
+		PlayerInfoList: make([]*proto.ScenePlayerInfo, 0),
+	}
+	for _, worldPlayer := range world.GetAllPlayer() {
+		onlinePlayerInfo := &proto.OnlinePlayerInfo{
+			Uid:                 worldPlayer.PlayerID,
+			Nickname:            worldPlayer.NickName,
+			PlayerLevel:         worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_LEVEL],
+			MpSettingType:       proto.MpSettingType(worldPlayer.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE]),
+			NameCardId:          worldPlayer.NameCard,
+			Signature:           worldPlayer.Signature,
+			ProfilePicture:      &proto.ProfilePicture{AvatarId: worldPlayer.HeadImage},
+			CurPlayerNumInWorld: uint32(world.GetWorldPlayerNum()),
+		}
+		scenePlayerInfoNotify.PlayerInfoList = append(scenePlayerInfoNotify.PlayerInfoList, &proto.ScenePlayerInfo{
+			Uid:              worldPlayer.PlayerID,
+			PeerId:           world.GetPlayerPeerId(worldPlayer),
+			Name:             worldPlayer.NickName,
+			SceneId:          worldPlayer.SceneId,
+			OnlinePlayerInfo: onlinePlayerInfo,
+		})
+	}
+	g.SendMsg(cmd.ScenePlayerInfoNotify, player.PlayerID, player.ClientSeq, scenePlayerInfoNotify)
+
+	sceneTeamUpdateNotify := g.PacketSceneTeamUpdateNotify(world)
+	g.SendMsg(cmd.SceneTeamUpdateNotify, player.PlayerID, player.ClientSeq, sceneTeamUpdateNotify)
+
+	syncTeamEntityNotify := &proto.SyncTeamEntityNotify{
+		SceneId:            player.SceneId,
+		TeamEntityInfoList: make([]*proto.TeamEntityInfo, 0),
+	}
+	if world.GetMultiplayer() {
+		for _, worldPlayer := range world.GetAllPlayer() {
+			if worldPlayer.PlayerID == player.PlayerID {
+				continue
+			}
+			teamEntityInfo := &proto.TeamEntityInfo{
+				TeamEntityId:    world.GetPlayerTeamEntityId(worldPlayer),
+				AuthorityPeerId: world.GetPlayerPeerId(worldPlayer),
+				TeamAbilityInfo: new(proto.AbilitySyncStateInfo),
+			}
+			syncTeamEntityNotify.TeamEntityInfoList = append(syncTeamEntityNotify.TeamEntityInfoList, teamEntityInfo)
+		}
+	}
+	g.SendMsg(cmd.SyncTeamEntityNotify, player.PlayerID, player.ClientSeq, syncTeamEntityNotify)
+
+	syncScenePlayTeamEntityNotify := &proto.SyncScenePlayTeamEntityNotify{
+		SceneId: player.SceneId,
+	}
+	g.SendMsg(cmd.SyncScenePlayTeamEntityNotify, player.PlayerID, player.ClientSeq, syncScenePlayTeamEntityNotify)
 }
 
 // 跨服玩家多人世界相关请求

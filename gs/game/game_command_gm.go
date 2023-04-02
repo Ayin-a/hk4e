@@ -25,7 +25,7 @@ func (g *GMCmd) GMTeleportPlayer(userId, sceneId, dungeonId uint32, posX, posY, 
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_GM), sceneId, &model.Vector{
+	GAME.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_GM, sceneId, &model.Vector{
 		X: posX,
 		Y: posY,
 		Z: posZ,
@@ -141,6 +141,8 @@ func (g *GMCmd) GMAddUserAllEvery(userId, itemCount uint32) {
 	g.GMAddUserAllCostume(userId)
 	// 给予玩家所有风之翼
 	g.GMAddUserAllFlycloak(userId)
+
+	GAME.LogoutPlayer(userId)
 }
 
 // GMAddQuest 添加任务

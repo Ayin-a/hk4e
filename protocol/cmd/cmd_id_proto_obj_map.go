@@ -42,8 +42,9 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(PlayerLoginRsp, func() any { return new(proto.PlayerLoginRsp) })                             // 玩家登录响应
 	c.regMsg(PlayerForceExitReq, func() any { return new(proto.PlayerForceExitReq) })                     // 退出游戏请求
 	c.regMsg(PlayerForceExitRsp, func() any { return new(proto.PlayerForceExitRsp) })                     // 退出游戏响应
-	c.regMsg(ServerDisconnectClientNotify, func() any { return new(proto.ServerDisconnectClientNotify) }) // 服务器断开连接通知
-	c.regMsg(ClientReconnectNotify, func() any { return new(proto.ClientReconnectNotify) })               // 在线重连通知
+	c.regMsg(ServerDisconnectClientNotify, func() any { return new(proto.ServerDisconnectClientNotify) }) // 断开连接通知
+	c.regMsg(ClientReconnectNotify, func() any { return new(proto.ClientReconnectNotify) })               // 重连通知
+	c.regMsg(PlayerLogoutNotify, func() any { return new(proto.PlayerLogoutNotify) })                     // 退出登录通知
 
 	// 基础相关
 	c.regMsg(UnionCmdNotify, func() any { return new(proto.UnionCmdNotify) })                         // 聚合消息
@@ -58,6 +59,8 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(WindSeedClientNotify, func() any { return new(proto.WindSeedClientNotify) })             // 客户端XLUA调试通知
 	c.regMsg(ServerAnnounceNotify, func() any { return new(proto.ServerAnnounceNotify) })             // 服务器公告通知
 	c.regMsg(ServerAnnounceRevokeNotify, func() any { return new(proto.ServerAnnounceRevokeNotify) }) // 服务器公告撤销通知
+	c.regMsg(TowerAllDataReq, func() any { return new(proto.TowerAllDataReq) })                       // 深渊数据请求
+	c.regMsg(TowerAllDataRsp, func() any { return new(proto.TowerAllDataRsp) })                       // 深渊数据响应
 
 	// 场景
 	c.regMsg(PlayerSetPauseReq, func() any { return new(proto.PlayerSetPauseReq) })                           // 玩家暂停请求
@@ -150,12 +153,12 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(EvtEntityRenderersChangedNotify, func() any { return new(proto.EvtEntityRenderersChangedNotify) })     // 实体可视状态改变通知 服务器转发
 	c.regMsg(EvtCreateGadgetNotify, func() any { return new(proto.EvtCreateGadgetNotify) })                         // 创建实体通知
 	c.regMsg(EvtDestroyGadgetNotify, func() any { return new(proto.EvtDestroyGadgetNotify) })                       // 销毁实体通知
-	// c.regMsg(EvtAnimatorParameterNotify, func() any { return new(proto.EvtAnimatorParameterNotify) })               // 动画参数通知
-	// c.regMsg(EvtAnimatorStateChangedNotify, func() any { return new(proto.EvtAnimatorStateChangedNotify) })         // 动画状态通知
-	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })                   // 通知
-	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) }) // 通知
-	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })                   // 通知
-	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })             // 通知
+	c.regMsg(EvtAnimatorParameterNotify, func() any { return new(proto.EvtAnimatorParameterNotify) })               // 动画参数通知
+	c.regMsg(EvtAnimatorStateChangedNotify, func() any { return new(proto.EvtAnimatorStateChangedNotify) })         // 动画状态通知
+	c.regMsg(EvtAiSyncSkillCdNotify, func() any { return new(proto.EvtAiSyncSkillCdNotify) })                       // 通知
+	c.regMsg(EvtAiSyncCombatThreatInfoNotify, func() any { return new(proto.EvtAiSyncCombatThreatInfoNotify) })     // 通知
+	c.regMsg(EntityConfigHashNotify, func() any { return new(proto.EntityConfigHashNotify) })                       // 通知
+	c.regMsg(MonsterAIConfigHashNotify, func() any { return new(proto.MonsterAIConfigHashNotify) })                 // 通知
 
 	// 队伍
 	c.regMsg(ChangeAvatarReq, func() any { return new(proto.ChangeAvatarReq) })                             // 更换角色请求 切人
@@ -340,9 +343,27 @@ func (c *CmdProtoMap) registerAllMessage() {
 	c.regMsg(QuestProgressUpdateNotify, func() any { return new(proto.QuestProgressUpdateNotify) })                     // 任务进度更新通知
 	c.regMsg(QuestGlobalVarNotify, func() any { return new(proto.QuestGlobalVarNotify) })                               // 任务全局变量通知
 
-	// 乱七八糟
-	c.regMsg(TowerAllDataReq, func() any { return new(proto.TowerAllDataReq) }) // 深渊数据请求
-	c.regMsg(TowerAllDataRsp, func() any { return new(proto.TowerAllDataRsp) }) // 深渊数据响应
+	// 家园
+	c.regMsg(GetPlayerHomeCompInfoReq, func() any { return new(proto.GetPlayerHomeCompInfoReq) })         // 请求
+	c.regMsg(HomeGetBasicInfoReq, func() any { return new(proto.HomeGetBasicInfoReq) })                   // 请求
+	c.regMsg(GetHomeExchangeWoodInfoReq, func() any { return new(proto.GetHomeExchangeWoodInfoReq) })     // 请求
+	c.regMsg(GetHomeExchangeWoodInfoRsp, func() any { return new(proto.GetHomeExchangeWoodInfoRsp) })     // 响应
+	c.regMsg(HomeGetOnlineStatusReq, func() any { return new(proto.HomeGetOnlineStatusReq) })             // 请求
+	c.regMsg(HomeGetOnlineStatusRsp, func() any { return new(proto.HomeGetOnlineStatusRsp) })             // 响应
+	c.regMsg(TryEnterHomeReq, func() any { return new(proto.TryEnterHomeReq) })                           // 请求
+	c.regMsg(TryEnterHomeRsp, func() any { return new(proto.TryEnterHomeRsp) })                           // 响应
+	c.regMsg(HomeGetArrangementInfoReq, func() any { return new(proto.HomeGetArrangementInfoReq) })       // 请求
+	c.regMsg(HomeGetArrangementInfoRsp, func() any { return new(proto.HomeGetArrangementInfoRsp) })       // 响应
+	c.regMsg(HomeSceneInitFinishReq, func() any { return new(proto.HomeSceneInitFinishReq) })             // 请求
+	c.regMsg(HomeSceneInitFinishRsp, func() any { return new(proto.HomeSceneInitFinishRsp) })             // 响应
+	c.regMsg(HomeGetBlueprintSlotInfoReq, func() any { return new(proto.HomeGetBlueprintSlotInfoReq) })   // 请求
+	c.regMsg(HomeGetBlueprintSlotInfoRsp, func() any { return new(proto.HomeGetBlueprintSlotInfoRsp) })   // 响应
+	c.regMsg(HomeChangeEditModeReq, func() any { return new(proto.HomeChangeEditModeReq) })               // 请求
+	c.regMsg(HomeChangeEditModeRsp, func() any { return new(proto.HomeChangeEditModeRsp) })               // 响应
+	c.regMsg(HomeEnterEditModeFinishReq, func() any { return new(proto.HomeEnterEditModeFinishReq) })     // 请求
+	c.regMsg(HomeEnterEditModeFinishRsp, func() any { return new(proto.HomeEnterEditModeFinishRsp) })     // 响应
+	c.regMsg(HomeUpdateArrangementInfoReq, func() any { return new(proto.HomeUpdateArrangementInfoReq) }) // 请求
+	c.regMsg(HomeUpdateArrangementInfoRsp, func() any { return new(proto.HomeUpdateArrangementInfoRsp) }) // 响应
 }
 
 func (c *CmdProtoMap) regMsg(cmdId uint16, protoObjNewFunc func() any) {

@@ -3,7 +3,6 @@ package game
 import (
 	"time"
 
-	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/random"
@@ -14,8 +13,8 @@ import (
 // 游戏服务器定时帧管理器
 
 const (
-	ServerTickTime = 20   // 服务器全局tick最小间隔毫秒
-	UserTickTime   = 1000 // 玩家自身tick最小间隔毫秒
+	ServerTickTime = 20  // 服务器全局tick最小间隔毫秒
+	UserTickTime   = 100 // 玩家自身tick最小间隔毫秒
 )
 
 type UserTimer struct {
@@ -227,24 +226,8 @@ func (t *TickManager) onTickMinute(now int64) {
 
 func (t *TickManager) onTick10Second(now int64) {
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
-		for _, scene := range world.GetAllScene() {
-			for _, player := range scene.GetAllPlayer() {
-
-				sceneTimeNotify := &proto.SceneTimeNotify{
-					SceneId:   player.SceneId,
-					SceneTime: uint64(scene.GetSceneTime()),
-				}
-				GAME.SendMsg(cmd.SceneTimeNotify, player.PlayerID, 0, sceneTimeNotify)
-			}
-		}
-		for _, player := range world.GetAllPlayer() {
-			playerTimeNotify := &proto.PlayerTimeNotify{
-				IsPaused:   player.Pause,
-				PlayerTime: uint64(player.TotalOnlineTime),
-				ServerTime: uint64(time.Now().UnixMilli()),
-			}
-			GAME.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
-		}
+		GAME.SceneTimeNotify(world)
+		GAME.PlayerTimeNotify(world)
 	}
 }
 
@@ -256,111 +239,15 @@ func (t *TickManager) onTick5Second(now int64) {
 			}
 		}
 		// 多人世界其他玩家的坐标位置广播
-		worldPlayerLocationNotify := &proto.WorldPlayerLocationNotify{
-			PlayerWorldLocList: make([]*proto.PlayerWorldLocationInfo, 0),
-		}
-		for _, worldPlayer := range world.GetAllPlayer() {
-			playerWorldLocationInfo := &proto.PlayerWorldLocationInfo{
-				SceneId: worldPlayer.SceneId,
-				PlayerLoc: &proto.PlayerLocationInfo{
-					Uid: worldPlayer.PlayerID,
-					Pos: &proto.Vector{
-						X: float32(worldPlayer.Pos.X),
-						Y: float32(worldPlayer.Pos.Y),
-						Z: float32(worldPlayer.Pos.Z),
-					},
-					Rot: &proto.Vector{
-						X: float32(worldPlayer.Rot.X),
-						Y: float32(worldPlayer.Rot.Y),
-						Z: float32(worldPlayer.Rot.Z),
-					},
-				},
-			}
-			worldPlayerLocationNotify.PlayerWorldLocList = append(worldPlayerLocationNotify.PlayerWorldLocList, playerWorldLocationInfo)
-		}
-		GAME.SendToWorldA(world, cmd.WorldPlayerLocationNotify, 0, worldPlayerLocationNotify)
-
-		for _, scene := range world.GetAllScene() {
-			scenePlayerLocationNotify := &proto.ScenePlayerLocationNotify{
-				SceneId:        scene.id,
-				PlayerLocList:  make([]*proto.PlayerLocationInfo, 0),
-				VehicleLocList: make([]*proto.VehicleLocationInfo, 0),
-			}
-			for _, scenePlayer := range scene.GetAllPlayer() {
-				// 玩家位置
-				playerLocationInfo := &proto.PlayerLocationInfo{
-					Uid: scenePlayer.PlayerID,
-					Pos: &proto.Vector{
-						X: float32(scenePlayer.Pos.X),
-						Y: float32(scenePlayer.Pos.Y),
-						Z: float32(scenePlayer.Pos.Z),
-					},
-					Rot: &proto.Vector{
-						X: float32(scenePlayer.Rot.X),
-						Y: float32(scenePlayer.Rot.Y),
-						Z: float32(scenePlayer.Rot.Z),
-					},
-				}
-				scenePlayerLocationNotify.PlayerLocList = append(scenePlayerLocationNotify.PlayerLocList, playerLocationInfo)
-				// 载具位置
-				for _, entityId := range scenePlayer.VehicleInfo.LastCreateEntityIdMap {
-					entity := scene.GetEntity(entityId)
-					// 确保实体类型是否为载具
-					if entity != nil && entity.GetEntityType() == constant.ENTITY_TYPE_GADGET && entity.gadgetEntity.gadgetVehicleEntity != nil {
-						vehicleLocationInfo := &proto.VehicleLocationInfo{
-							Rot: &proto.Vector{
-								X: float32(entity.rot.X),
-								Y: float32(entity.rot.Y),
-								Z: float32(entity.rot.Z),
-							},
-							EntityId: entity.id,
-							CurHp:    entity.fightProp[constant.FIGHT_PROP_CUR_HP],
-							OwnerUid: entity.gadgetEntity.gadgetVehicleEntity.owner.PlayerID,
-							Pos: &proto.Vector{
-								X: float32(entity.pos.X),
-								Y: float32(entity.pos.Y),
-								Z: float32(entity.pos.Z),
-							},
-							UidList:  make([]uint32, 0, len(entity.gadgetEntity.gadgetVehicleEntity.memberMap)),
-							GadgetId: entity.gadgetEntity.gadgetVehicleEntity.vehicleId,
-							MaxHp:    entity.fightProp[constant.FIGHT_PROP_MAX_HP],
-						}
-						for _, p := range entity.gadgetEntity.gadgetVehicleEntity.memberMap {
-							vehicleLocationInfo.UidList = append(vehicleLocationInfo.UidList, p.PlayerID)
-						}
-						scenePlayerLocationNotify.VehicleLocList = append(scenePlayerLocationNotify.VehicleLocList, vehicleLocationInfo)
-					}
-				}
-			}
-			GAME.SendToWorldA(world, cmd.ScenePlayerLocationNotify, 0, scenePlayerLocationNotify)
-		}
+		GAME.WorldPlayerLocationNotify(world)
+		GAME.ScenePlayerLocationNotify(world)
 	}
 }
 
 func (t *TickManager) onTickSecond(now int64) {
 	for _, world := range WORLD_MANAGER.GetAllWorld() {
-		for _, player := range world.GetAllPlayer() {
-			// 世界里所有玩家的网络延迟广播
-			worldPlayerRTTNotify := &proto.WorldPlayerRTTNotify{
-				PlayerRttList: make([]*proto.PlayerRTTInfo, 0),
-			}
-			for _, worldPlayer := range world.GetAllPlayer() {
-				playerRTTInfo := &proto.PlayerRTTInfo{Uid: worldPlayer.PlayerID, Rtt: worldPlayer.ClientRTT}
-				worldPlayerRTTNotify.PlayerRttList = append(worldPlayerRTTNotify.PlayerRttList, playerRTTInfo)
-			}
-			GAME.SendMsg(cmd.WorldPlayerRTTNotify, player.PlayerID, 0, worldPlayerRTTNotify)
-			// 玩家安全位置更新
-			switch player.StaminaInfo.State {
-			case proto.MotionState_MOTION_DANGER_RUN, proto.MotionState_MOTION_RUN,
-				proto.MotionState_MOTION_DANGER_STANDBY_MOVE, proto.MotionState_MOTION_DANGER_STANDBY, proto.MotionState_MOTION_LADDER_TO_STANDBY, proto.MotionState_MOTION_STANDBY_MOVE, proto.MotionState_MOTION_STANDBY,
-				proto.MotionState_MOTION_DANGER_WALK, proto.MotionState_MOTION_WALK,
-				proto.MotionState_MOTION_DASH:
-				// 仅在陆地时更新玩家安全位置
-				player.SafePos.X = player.Pos.X
-				player.SafePos.Y = player.Pos.Y
-				player.SafePos.Z = player.Pos.Z
-			}
-		}
+		// 世界里所有玩家的网络延迟广播
+		GAME.WorldPlayerRTTNotify(world)
 	}
 	// // GCG游戏Tick
 	// for _, game := range GCG_MANAGER.gameMap {

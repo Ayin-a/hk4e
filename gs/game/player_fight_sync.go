@@ -1,7 +1,10 @@
 package game
 
 import (
+	"strings"
+
 	"hk4e/common/constant"
+	"hk4e/gdconf"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/pkg/reflection"
@@ -90,11 +93,8 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 		return
 	}
 	scene := world.GetSceneById(player.SceneId)
-	if scene == nil {
-		logger.Error("scene is nil, sceneId: %v", player.SceneId)
-		return
-	}
 	for _, entry := range req.InvokeList {
+		player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
 			evtBeingHitInfo := new(proto.EvtBeingHitInfo)
@@ -114,30 +114,42 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
 				continue
 			}
-			attackResult.Damage *= 100
-			damage := attackResult.Damage
-			attackerId := attackResult.AttackerId
-			_ = attackerId
-			currHp := float32(0)
 			fightProp := target.GetFightProp()
-			if fightProp != nil {
-				currHp = fightProp[constant.FIGHT_PROP_CUR_HP]
-				currHp -= damage
-				if currHp < 0 {
-					currHp = 0
-				}
-				fightProp[constant.FIGHT_PROP_CUR_HP] = currHp
+			currHp := fightProp[constant.FIGHT_PROP_CUR_HP]
+			currHp -= attackResult.Damage
+			if currHp < 0 {
+				currHp = 0
 			}
+			fightProp[constant.FIGHT_PROP_CUR_HP] = currHp
 			g.EntityFightPropUpdateNotifyBroadcast(world, target)
-			if currHp == 0 && target.GetEntityType() == constant.ENTITY_TYPE_MONSTER {
-				g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
+			switch target.GetEntityType() {
+			case constant.ENTITY_TYPE_AVATAR:
+			case constant.ENTITY_TYPE_MONSTER:
+				if currHp == 0 {
+					g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
+				}
+			case constant.ENTITY_TYPE_GADGET:
+				gadgetEntity := target.GetGadgetEntity()
+				gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
+				if gadgetDataConfig == nil {
+					logger.Error("get gadget data config is nil, gadgetId: %v", gadgetEntity.GetGadgetId())
+					continue
+				}
+				logger.Debug("[EvtBeingHit] GadgetData: %+v, uid: %v", gadgetDataConfig, player.PlayerID)
+				// TODO 临时的解决方案
+				switch gadgetDataConfig.ServerLuaScript {
+				case "SubfieldDrop_WoodenObject_Broken":
+					g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
+				case "SetGadgetState":
+					g.ChangeGadgetState(player, target.GetId(), constant.GADGET_STATE_GEAR_START)
+				}
+				if strings.Contains(gadgetDataConfig.ServerLuaScript, "SubfieldDrop_Ore_") {
+					g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
+				}
+				if strings.Contains(gadgetDataConfig.ServerLuaScript, "Controller") {
+					g.ChangeGadgetState(player, target.GetId(), constant.GADGET_STATE_GEAR_START)
+				}
 			}
-			combatData, err := pb.Marshal(evtBeingHitInfo)
-			if err != nil {
-				logger.Error("create combat invocations entity hit info error: %v", err)
-			}
-			entry.CombatData = combatData
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_ENTITY_MOVE:
 			entityMoveInfo := new(proto.EntityMoveInfo)
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
@@ -174,7 +186,23 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				player.Rot.X = float64(motionInfo.Rot.X)
 				player.Rot.Y = float64(motionInfo.Rot.Y)
 				player.Rot.Z = float64(motionInfo.Rot.Z)
-
+				// 玩家安全位置更新
+				switch motionInfo.State {
+				case proto.MotionState_MOTION_DANGER_RUN,
+					proto.MotionState_MOTION_RUN,
+					proto.MotionState_MOTION_DANGER_STANDBY_MOVE,
+					proto.MotionState_MOTION_DANGER_STANDBY,
+					proto.MotionState_MOTION_LADDER_TO_STANDBY,
+					proto.MotionState_MOTION_STANDBY_MOVE,
+					proto.MotionState_MOTION_STANDBY,
+					proto.MotionState_MOTION_DANGER_WALK,
+					proto.MotionState_MOTION_WALK,
+					proto.MotionState_MOTION_DASH:
+					// 仅在陆地时更新玩家安全位置
+					player.SafePos.X = player.Pos.X
+					player.SafePos.Y = player.Pos.Y
+					player.SafePos.Z = player.Pos.Z
+				}
 				// 处理耐力消耗
 				g.ImmediateStamina(player, motionInfo.State)
 			} else {
@@ -207,7 +235,6 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				// 只要转发了这两个包的其中之一 客户端的动画就会被打断
 				continue
 			}
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_PARAMETER_CHANGED:
 			evtAnimatorParameterInfo := new(proto.EvtAnimatorParameterInfo)
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorParameterInfo)
@@ -216,7 +243,6 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				continue
 			}
 			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
 			evtAnimatorStateChangedInfo := new(proto.EvtAnimatorStateChangedInfo)
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
@@ -225,9 +251,6 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				continue
 			}
 			// logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
-		default:
-			player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		}
 	}
 }

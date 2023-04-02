@@ -134,9 +134,10 @@ func (i *InvokeHandler[T]) AddEntry(forward proto.ForwardType, entry *T) {
 		i.EntryListForwardAllExceptCur = append(i.EntryListForwardAllExceptCur, entry)
 	case proto.ForwardType_FORWARD_TO_HOST:
 		i.EntryListForwardHost = append(i.EntryListForwardHost, entry)
+	case proto.ForwardType_FORWARD_TO_PEER:
+		i.EntryListForwardAllExceptCur = append(i.EntryListForwardAllExceptCur, entry)
 	case proto.ForwardType_FORWARD_ONLY_SERVER:
 		i.EntryListForwardServer = append(i.EntryListForwardServer, entry)
-		// logger.Error("forward server entry: %v", entry)
 	default:
 		logger.Error("forward type: %v, entry: %v", forward, entry)
 	}

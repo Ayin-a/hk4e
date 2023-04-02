@@ -17,6 +17,7 @@ import (
 
 const (
 	SceneGroupLoaderLimit = 4 // 加载文件的并发数 此操作很耗内存 调大之前请确保你的机器内存足够
+	LuaStateLruKeepNum    = 100
 )
 
 type SceneLuaConfig struct {
@@ -405,10 +406,6 @@ func GetSceneGroup(groupId int32) *Group {
 	}
 	return groupConfig
 }
-
-const (
-	LuaStateLruKeepNum = 10
-)
 
 type LuaStateLru struct {
 	GroupId    int32

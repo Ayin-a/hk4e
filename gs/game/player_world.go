@@ -36,7 +36,7 @@ func (g *Game) SceneTransToPointReq(player *model.Player, payloadMsg pb.Message)
 	}
 
 	// 传送玩家
-	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_TRANS_POINT), req.SceneId, &model.Vector{
+	g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_TRANS_POINT, req.SceneId, &model.Vector{
 		X: pointDataConfig.TranPos.X,
 		Y: pointDataConfig.TranPos.Y,
 		Z: pointDataConfig.TranPos.Z,
@@ -124,7 +124,7 @@ func (g *Game) MarkMapReq(player *model.Player, payloadMsg pb.Message) {
 				posYInt = 300
 			}
 			// 传送玩家
-			g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_GM), req.Mark.SceneId, &model.Vector{
+			g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_GM, req.Mark.SceneId, &model.Vector{
 				X: float64(req.Mark.Pos.X),
 				Y: float64(posYInt),
 				Z: float64(req.Mark.Pos.Z),
@@ -247,7 +247,7 @@ func (g *Game) PlayerEnterDungeonReq(player *model.Player, payloadMsg pb.Message
 		logger.Error("get scene lua config is nil, sceneId: %v, uid: %v", dungeonDataConfig.SceneId, player.PlayerID)
 		return
 	}
-	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER), uint32(dungeonDataConfig.SceneId), &model.Vector{
+	g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_DUNGEON_ENTER, uint32(dungeonDataConfig.SceneId), &model.Vector{
 		X: float64(sceneLuaConfig.SceneConfig.BornPos.X),
 		Y: float64(sceneLuaConfig.SceneConfig.BornPos.Y),
 		Z: float64(sceneLuaConfig.SceneConfig.BornPos.Z),
@@ -274,7 +274,7 @@ func (g *Game) PlayerQuitDungeonReq(player *model.Player, payloadMsg pb.Message)
 	if ctx == nil {
 		return
 	}
-	g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_DUNGEON_QUIT), 3, &model.Vector{
+	g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_DUNGEON_QUIT, 3, &model.Vector{
 		X: ctx.OldPos.X,
 		Y: ctx.OldPos.Y,
 		Z: ctx.OldPos.Z,
@@ -309,6 +309,7 @@ func (g *Game) GadgetInteractReq(player *model.Player, payloadMsg pb.Message) {
 		logger.Error("get gadget data config is nil, gadgetId: %v, uid: %v", gadgetEntity.GetGadgetId(), player.PlayerID)
 		return
 	}
+	logger.Debug("[GadgetInteractReq] GadgetData: %+v, uid: %v", gadgetDataConfig, player.PlayerID)
 	interactType := proto.InteractType_INTERACT_NONE
 	switch gadgetDataConfig.Type {
 	case constant.GADGET_TYPE_GADGET:
@@ -475,7 +476,7 @@ func (g *Game) doRandDropOnce(dropDataConfig *gdconf.DropData) map[int32]int32 {
 }
 
 // TeleportPlayer 传送玩家至地图上的某个位置
-func (g *Game) TeleportPlayer(player *model.Player, enterReason uint16, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
+func (g *Game) TeleportPlayer(player *model.Player, enterReason proto.EnterReason, sceneId uint32, pos, rot *model.Vector, dungeonId uint32) {
 	// 传送玩家
 	newSceneId := sceneId
 	oldSceneId := player.SceneId
@@ -522,7 +523,7 @@ func (g *Game) TeleportPlayer(player *model.Player, enterReason uint16, sceneId 
 	if jumpScene {
 		logger.Debug("player jump scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_JUMP
-		if enterReason == uint16(proto.EnterReason_ENTER_REASON_DUNGEON_ENTER) {
+		if enterReason == proto.EnterReason_ENTER_REASON_DUNGEON_ENTER {
 			logger.Debug("player tp to dungeon scene, sceneId: %v, pos: %v", player.SceneId, player.Pos)
 			enterType = proto.EnterType_ENTER_DUNGEON
 		}
@@ -530,6 +531,6 @@ func (g *Game) TeleportPlayer(player *model.Player, enterReason uint16, sceneId 
 		logger.Debug("player goto scene, scene: %v, pos: %v", player.SceneId, player.Pos)
 		enterType = proto.EnterType_ENTER_GOTO
 	}
-	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, uint32(enterReason), oldSceneId, oldPos, dungeonId)
+	playerEnterSceneNotify := g.PacketPlayerEnterSceneNotifyTp(player, enterType, enterReason, oldSceneId, oldPos, dungeonId)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 }

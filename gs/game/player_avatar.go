@@ -350,12 +350,8 @@ func (g *Game) AvatarChangeCostumeReq(player *model.Player, payloadMsg pb.Messag
 }
 
 func (g *Game) PacketAvatarInfo(avatar *model.Avatar) *proto.AvatarInfo {
-	isFocus := false
-	if avatar.AvatarId == 10000005 || avatar.AvatarId == 10000007 {
-		isFocus = true
-	}
 	pbAvatar := &proto.AvatarInfo{
-		IsFocus:  isFocus,
+		IsFocus:  false,
 		AvatarId: avatar.AvatarId,
 		Guid:     avatar.Guid,
 		PropMap: map[uint32]*proto.PropValue{

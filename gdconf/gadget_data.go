@@ -6,9 +6,13 @@ import (
 
 // GadgetData 物件配置表
 type GadgetData struct {
-	GadgetId    int32 `csv:"ID"`
-	Type        int32 `csv:"类型,omitempty"`
-	DefaultCamp int32 `csv:"默认阵营,omitempty"`
+	GadgetId        int32  `csv:"ID"`
+	Name            string `csv:"名称$text_name_Name,omitempty"`
+	DefaultCamp     int32  `csv:"默认阵营,omitempty"`
+	Type            int32  `csv:"类型,omitempty"`
+	CanInteract     int32  `csv:"能否交互,omitempty"`
+	VisionLevel     int32  `csv:"视距等级,omitempty"`
+	ServerLuaScript string `csv:"服务器脚本,omitempty"`
 }
 
 func (g *GameDataConfig) loadGadgetData() {

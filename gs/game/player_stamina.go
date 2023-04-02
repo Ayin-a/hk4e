@@ -474,7 +474,7 @@ func (g *Game) DrownBackHandler(player *model.Player) {
 			Z: player.SafePos.Z,
 		}
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, uint16(proto.EnterReason_ENTER_REASON_REVIVAL), player.SceneId, pos, new(model.Vector), 0)
+		g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_REVIVAL, player.SceneId, pos, new(model.Vector), 0)
 	}
 	// 防止重置后又被修改
 	if player.StaminaInfo.DrownBackDelay != 0 {

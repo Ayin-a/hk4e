@@ -389,8 +389,18 @@ func (g *Game) SendToWorldH(world *World, cmdId uint16, seq uint32, msg pb.Messa
 	GAME.SendMsg(cmdId, world.GetOwner().PlayerID, seq, msg)
 }
 
-func (g *Game) ReLoginPlayer(userId uint32) {
-	g.SendMsg(cmd.ClientReconnectNotify, userId, 0, new(proto.ClientReconnectNotify))
+func (g *Game) ReLoginPlayer(userId uint32, isQuitMp bool) {
+	reason := proto.ClientReconnectReason_CLIENT_RECONNNECT_NONE
+	if isQuitMp {
+		reason = proto.ClientReconnectReason_CLIENT_RECONNNECT_QUIT_MP
+	}
+	g.SendMsg(cmd.ClientReconnectNotify, userId, 0, &proto.ClientReconnectNotify{
+		Reason: reason,
+	})
+}
+
+func (g *Game) LogoutPlayer(userId uint32) {
+	g.SendMsg(cmd.PlayerLogoutNotify, userId, 0, &proto.PlayerLogoutNotify{})
 }
 
 func (g *Game) KickPlayer(userId uint32, reason uint32) {

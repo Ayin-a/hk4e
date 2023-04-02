@@ -94,25 +94,24 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 	}
 	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.InvokeList {
-		player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 		switch entry.ArgumentType {
 		case proto.CombatTypeArgument_COMBAT_EVT_BEING_HIT:
 			evtBeingHitInfo := new(proto.EvtBeingHitInfo)
 			err := pb.Unmarshal(entry.CombatData, evtBeingHitInfo)
 			if err != nil {
 				logger.Error("parse EvtBeingHitInfo error: %v", err)
-				continue
+				break
 			}
 			// logger.Debug("EvtBeingHitInfo: %v, ForwardType: %v", evtBeingHitInfo, entry.ForwardType)
 			attackResult := evtBeingHitInfo.AttackResult
 			if attackResult == nil {
 				logger.Error("attackResult is nil")
-				continue
+				break
 			}
 			target := scene.GetEntity(attackResult.DefenseId)
 			if target == nil {
 				logger.Error("could not found target, defense id: %v", attackResult.DefenseId)
-				continue
+				break
 			}
 			fightProp := target.GetFightProp()
 			currHp := fightProp[constant.FIGHT_PROP_CUR_HP]
@@ -133,7 +132,7 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				gadgetDataConfig := gdconf.GetGadgetDataById(int32(gadgetEntity.GetGadgetId()))
 				if gadgetDataConfig == nil {
 					logger.Error("get gadget data config is nil, gadgetId: %v", gadgetEntity.GetGadgetId())
-					continue
+					break
 				}
 				logger.Debug("[EvtBeingHit] GadgetData: %+v, uid: %v", gadgetDataConfig, player.PlayerID)
 				// TODO 临时的解决方案
@@ -155,16 +154,16 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 			err := pb.Unmarshal(entry.CombatData, entityMoveInfo)
 			if err != nil {
 				logger.Error("parse EntityMoveInfo error: %v", err)
-				continue
+				break
 			}
 			// logger.Debug("EntityMoveInfo: %v, ForwardType: %v", entityMoveInfo, entry.ForwardType)
 			motionInfo := entityMoveInfo.MotionInfo
 			if motionInfo.Pos == nil || motionInfo.Rot == nil {
-				continue
+				break
 			}
 			sceneEntity := scene.GetEntity(entityMoveInfo.EntityId)
 			if sceneEntity == nil {
-				continue
+				break
 			}
 			if sceneEntity.GetEntityType() == constant.ENTITY_TYPE_AVATAR {
 				// 玩家实体在移动
@@ -240,7 +239,7 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorParameterInfo)
 			if err != nil {
 				logger.Error("parse EvtAnimatorParameterInfo error: %v", err)
-				continue
+				break
 			}
 			// logger.Debug("EvtAnimatorParameterInfo: %v, ForwardType: %v", evtAnimatorParameterInfo, entry.ForwardType)
 		case proto.CombatTypeArgument_COMBAT_ANIMATOR_STATE_CHANGED:
@@ -248,10 +247,11 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 			err := pb.Unmarshal(entry.CombatData, evtAnimatorStateChangedInfo)
 			if err != nil {
 				logger.Error("parse EvtAnimatorStateChangedInfo error: %v", err)
-				continue
+				break
 			}
 			// logger.Debug("EvtAnimatorStateChangedInfo: %v, ForwardType: %v", evtAnimatorStateChangedInfo, entry.ForwardType)
 		}
+		player.CombatInvokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 }
 

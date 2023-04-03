@@ -398,15 +398,24 @@ func (k *KcpConnectManager) getPlayerToken(req *proto.GetPlayerTokenReq, session
 			return nil
 		case <-regFinishNotifyChan:
 		}
-		// 顶号
-		connCtrlMsg := new(mq.ConnCtrlMsg)
-		connCtrlMsg.KickUserId = uid
-		connCtrlMsg.KickReason = kcp.EnetServerRelogin
-		k.messageQueue.SendToAll(&mq.NetMsg{
-			MsgType:     mq.MsgTypeConnCtrl,
-			EventId:     mq.KickPlayerNotify,
-			ConnCtrlMsg: connCtrlMsg,
-		})
+		oldSession := k.GetSessionByUserId(uid)
+		if oldSession != nil {
+			// 本地顶号
+			k.kcpEventInput <- &KcpEvent{
+				ConvId:  oldSession.conn.GetConv(),
+				EventId: KcpConnRelogin,
+			}
+		} else {
+			// 远程顶号
+			connCtrlMsg := new(mq.ConnCtrlMsg)
+			connCtrlMsg.KickUserId = uid
+			connCtrlMsg.KickReason = kcp.EnetServerRelogin
+			k.messageQueue.SendToAll(&mq.NetMsg{
+				MsgType:     mq.MsgTypeConnCtrl,
+				EventId:     mq.KickPlayerNotify,
+				ConnCtrlMsg: connCtrlMsg,
+			})
+		}
 		// 顶号等待
 		logger.Info("run global interrupt login kick wait, uid: %v", uid)
 		timer = time.NewTimer(time.Second * 10)

@@ -68,7 +68,7 @@ func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message)
 
 func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, player *model.Player, joinHostUserId uint32) {
 	if player == nil {
-		player := g.CreatePlayer(userId)
+		player = g.CreatePlayer(userId)
 		USER_MANAGER.ChangeUserDbState(player, model.DbInsert)
 	}
 	USER_MANAGER.AddUser(player)

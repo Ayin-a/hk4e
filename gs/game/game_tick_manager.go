@@ -152,12 +152,6 @@ func (t *TickManager) OnGameServerTick() {
 	if t.globalTickCount%(60000*60/ServerTickTime) == 0 {
 		t.onTickHour(now)
 	}
-	if t.globalTickCount%(60000*60*24/ServerTickTime) == 0 {
-		t.onTickDay(now)
-	}
-	if t.globalTickCount%(60000*60*24*7/ServerTickTime) == 0 {
-		t.onTickWeek(now)
-	}
 	for userId, userTick := range t.userTickMap {
 		if len(userTick.globalTick.C) == 0 {
 			// 跳过还没到时间的定时器
@@ -182,14 +176,6 @@ func (t *TickManager) OnGameServerTick() {
 			t.userTimerHandle(userId, timer.action, timer.data)
 		}
 	}
-}
-
-func (t *TickManager) onTickWeek(now int64) {
-	logger.Info("on tick week, time: %v", now)
-}
-
-func (t *TickManager) onTickDay(now int64) {
-	logger.Info("on tick day, time: %v", now)
 }
 
 func (t *TickManager) onTickHour(now int64) {

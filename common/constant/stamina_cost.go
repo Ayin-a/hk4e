@@ -22,9 +22,4 @@ const (
 	STAMINA_COST_POWERED_SKIFF int32 = 500  // 浪船加速(风圈等) (回复耐力)
 	STAMINA_COST_IN_SKIFF      int32 = 500  // 处于浪船中回复角色耐力 (回复耐力)
 	STAMINA_COST_SKIFF_NOBODY  int32 = 500  // 浪船无人时回复载具耐力 (回复耐力)
-	// 武器消耗默认值
-	STAMINA_COST_FIGHT_SWORD_ONE_HAND int32 = -2000 // 单手剑
-	STAMINA_COST_FIGHT_POLE           int32 = -2500 // 长枪
-	STAMINA_COST_FIGHT_CATALYST       int32 = -5000 // 法器
-	STAMINA_COST_FIGHT_CLAYMORE_PER   int32 = -4000 // 双手剑 (每秒消耗)
 )

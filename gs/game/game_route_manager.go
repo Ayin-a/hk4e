@@ -54,6 +54,7 @@ func (r *RouteManager) doRoute(cmdId uint16, userId uint32, clientSeq uint32, pa
 }
 
 func (r *RouteManager) initRoute() {
+	r.registerRouter(cmd.SetPlayerBornDataReq, GAME.SetPlayerBornDataReq)
 	r.registerRouter(cmd.QueryPathReq, GAME.QueryPathReq)
 	r.registerRouter(cmd.UnionCmdNotify, GAME.UnionCmdNotify)
 	r.registerRouter(cmd.MassiveEntityElementOpBatchNotify, GAME.MassiveEntityElementOpBatchNotify)
@@ -164,10 +165,6 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 				GAME.PlayerLoginReq(gameMsg.UserId, gameMsg.ClientSeq, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
 				return
 			}
-			if gameMsg.CmdId == cmd.SetPlayerBornDataReq {
-				GAME.SetPlayerBornDataReq(gameMsg.UserId, gameMsg.ClientSeq, netMsg.OriginServerAppId, gameMsg.PayloadMessage)
-				return
-			}
 			r.doRoute(gameMsg.CmdId, gameMsg.UserId, gameMsg.ClientSeq, gameMsg.PayloadMessage)
 		}
 	case mq.MsgTypeConnCtrl:
@@ -192,7 +189,7 @@ func (r *RouteManager) RouteHandle(netMsg *mq.NetMsg) {
 			logger.Debug("remote user online state change, uid: %v, online: %v", serverMsg.UserId, serverMsg.IsOnline)
 			USER_MANAGER.SetRemoteUserOnlineState(serverMsg.UserId, serverMsg.IsOnline, netMsg.OriginServerAppId)
 		case mq.ServerAppidBindNotify:
-			GAME.ServerAppidBindNotify(serverMsg.UserId, serverMsg.AnticheatServerAppId, serverMsg.JoinHostUserId)
+			GAME.ServerAppidBindNotify(serverMsg.UserId, serverMsg.AnticheatServerAppId)
 		case mq.ServerUserMpReq:
 			GAME.ServerUserMpReq(serverMsg.UserMpInfo, netMsg.OriginServerAppId)
 		case mq.ServerUserMpRsp:

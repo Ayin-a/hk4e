@@ -372,7 +372,7 @@ func (g *Game) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnable bool
 		return false, 0
 	}
 	// 找到卡池对应的掉落组
-	dropGroupDataConfig := gdconf.CONF.GachaDropGroupDataMap[int32(gachaType)]
+	dropGroupDataConfig := gdconf.GetGachaDropGroupDataByDropId(int32(gachaType))
 	if dropGroupDataConfig == nil {
 		logger.Error("drop group not found, drop id: %v", gachaType)
 		return false, 0
@@ -511,7 +511,7 @@ func (g *Game) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnable bool
 			// 替换本次结果为5星大保底
 			if gachaPoolInfo.MustGetUpOrange {
 				logger.Debug("trigger must get up orange, uid: %v", userId)
-				upOrangeDropGroupDataConfig := gdconf.CONF.GachaDropGroupDataMap[upOrangeDropId]
+				upOrangeDropGroupDataConfig := gdconf.GetGachaDropGroupDataByDropId(upOrangeDropId)
 				if upOrangeDropGroupDataConfig == nil {
 					logger.Error("drop group not found, drop id: %v", upOrangeDropId)
 					return false, 0
@@ -538,7 +538,7 @@ func (g *Game) doGachaOnce(userId uint32, gachaType uint32, mustGetUpEnable bool
 			// 替换本次结果为4星大保底
 			if gachaPoolInfo.MustGetUpPurple {
 				logger.Debug("trigger must get up purple, uid: %v", userId)
-				upPurpleDropGroupDataConfig := gdconf.CONF.GachaDropGroupDataMap[upPurpleDropId]
+				upPurpleDropGroupDataConfig := gdconf.GetGachaDropGroupDataByDropId(upPurpleDropId)
 				if upPurpleDropGroupDataConfig == nil {
 					logger.Error("drop group not found, drop id: %v", upPurpleDropId)
 					return false, 0
@@ -574,7 +574,7 @@ func (g *Game) doGachaRandDropFull(gachaDropGroupDataConfig *gdconf.GachaDropGro
 			return true, drop
 		}
 		// 进行下一步掉落流程
-		gachaDropGroupDataConfig = gdconf.CONF.GachaDropGroupDataMap[drop.Result]
+		gachaDropGroupDataConfig = gdconf.GetGachaDropGroupDataByDropId(drop.Result)
 		if gachaDropGroupDataConfig == nil {
 			logger.Error("drop config error, drop id: %v", drop.Result)
 			return false, nil

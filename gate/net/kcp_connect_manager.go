@@ -52,8 +52,7 @@ type KcpConnectManager struct {
 	serverCmdProtoMap *cmd.CmdProtoMap
 	clientCmdProtoMap *client_proto.ClientCmdProtoMap
 	// 输入输出管道
-	messageQueue   *mq.MessageQueue
-	localMsgOutput chan *ProtoMsg
+	messageQueue *mq.MessageQueue
 	// 密钥
 	dispatchKey  []byte
 	signRsaKey   []byte
@@ -77,7 +76,6 @@ func NewKcpConnectManager(messageQueue *mq.MessageQueue, discovery *rpc.Discover
 		r.clientCmdProtoMap = client_proto.NewClientCmdProtoMap()
 	}
 	r.messageQueue = messageQueue
-	r.localMsgOutput = make(chan *ProtoMsg, 1000)
 	r.run()
 	return r
 }
@@ -166,8 +164,6 @@ func (k *KcpConnectManager) acceptHandle(listener *kcp.Listener) {
 			gsServerAppId:          "",
 			anticheatServerAppId:   "",
 			pathfindingServerAppId: "",
-			changeGameServer:       false,
-			joinHostUserId:         0,
 			useMagicSeed:           false,
 		}
 		go k.recvHandle(session)
@@ -282,8 +278,6 @@ type Session struct {
 	gsServerAppId          string
 	anticheatServerAppId   string
 	pathfindingServerAppId string
-	changeGameServer       bool
-	joinHostUserId         uint32
 	useMagicSeed           bool
 }
 

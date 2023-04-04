@@ -19,37 +19,60 @@ func (g *Game) PlayerLoginReq(userId uint32, clientSeq uint32, gateAppId string,
 	logger.Info("user login req, uid: %v, gateAppId: %v", userId, gateAppId)
 	req := payloadMsg.(*proto.PlayerLoginReq)
 	logger.Debug("login data: %v", req)
-	g.OnLogin(userId, clientSeq, gateAppId, false, nil)
+	USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId, req.TargetUid)
 }
 
-func (g *Game) SetPlayerBornDataReq(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
-	logger.Info("user reg req, uid: %v, gateAppId: %v", userId, gateAppId)
+func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.SetPlayerBornDataReq)
-	logger.Debug("reg data: %v", req)
-	if userId < PlayerBaseUid {
-		logger.Error("uid can not less than player base uid, reg req uid: %v", userId)
+	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
+
+	if player.IsBorn {
+		logger.Error("player is already born, uid: %v", player.PlayerID)
 		return
 	}
-	g.OnReg(userId, clientSeq, gateAppId, req)
-}
 
-func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, isReg bool, regPlayer *model.Player) {
-	logger.Info("user login, uid: %v", userId)
-	if isReg {
-		g.OnLoginOk(userId, clientSeq, gateAppId, true, regPlayer)
+	mainCharAvatarId := req.AvatarId
+	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
+		logger.Error("invalid main char avatar id: %v", mainCharAvatarId)
 		return
 	}
-	player, isRobot := USER_MANAGER.OnlineUser(userId, clientSeq, gateAppId)
-	if isRobot {
-		g.OnLoginOk(userId, clientSeq, gateAppId, false, player)
+	player.NickName = req.NickName
+	player.HeadImage = mainCharAvatarId
+
+	dbAvatar := player.GetDbAvatar()
+	dbAvatar.MainCharAvatarId = mainCharAvatarId
+	// 添加选定的主角
+	dbAvatar.AddAvatar(player, dbAvatar.MainCharAvatarId)
+	// 添加主角初始武器
+	avatarDataConfig := gdconf.GetAvatarDataById(int32(dbAvatar.MainCharAvatarId))
+	if avatarDataConfig == nil {
+		logger.Error("get avatar data config is nil, avatarId: %v", dbAvatar.MainCharAvatarId)
+		return
 	}
+	weaponId := uint64(g.snowflake.GenId())
+	dbWeapon := player.GetDbWeapon()
+	dbWeapon.AddWeapon(player, uint32(avatarDataConfig.InitialWeapon), weaponId)
+	weapon := dbWeapon.WeaponMap[weaponId]
+	dbAvatar.WearWeapon(dbAvatar.MainCharAvatarId, weapon)
+	dbTeam := player.GetDbTeam()
+	dbTeam.GetActiveTeam().SetAvatarIdList([]uint32{dbAvatar.MainCharAvatarId})
+
+	g.AcceptQuest(player, false)
+
+	g.SendMsg(cmd.SetPlayerBornDataRsp, player.PlayerID, player.ClientSeq, new(proto.SetPlayerBornDataRsp))
+
+	g.LoginNotify(player.PlayerID, player.ClientSeq, player)
+
+	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
 }
 
-func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isReg bool, player *model.Player) {
+func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, player *model.Player, joinHostUserId uint32) {
 	if player == nil {
-		g.SendMsgToGate(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, gateAppId, new(proto.DoSetPlayerBornDataNotify))
-		return
+		player := g.CreatePlayer(userId)
+		USER_MANAGER.ChangeUserDbState(player, model.DbInsert)
 	}
+	USER_MANAGER.AddUser(player)
+
 	SELF = player
 
 	player.OnlineTime = uint32(time.Now().UnixMilli())
@@ -67,27 +90,6 @@ func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isRe
 	dbItem := player.GetDbItem()
 	dbItem.InitAllItem(player)
 
-	if isReg {
-		// 添加选定的主角
-		dbAvatar.AddAvatar(player, dbAvatar.MainCharAvatarId)
-		// 添加主角初始武器
-		avatarDataConfig := gdconf.GetAvatarDataById(int32(dbAvatar.MainCharAvatarId))
-		if avatarDataConfig == nil {
-			logger.Error("get avatar data config is nil, avatarId: %v", dbAvatar.MainCharAvatarId)
-			return
-		}
-		weaponId := uint64(g.snowflake.GenId())
-		dbWeapon := player.GetDbWeapon()
-		dbWeapon.AddWeapon(player, uint32(avatarDataConfig.InitialWeapon), weaponId)
-		weapon := dbWeapon.WeaponMap[weaponId]
-		dbAvatar.WearWeapon(dbAvatar.MainCharAvatarId, weapon)
-
-		dbTeam := player.GetDbTeam()
-		dbTeam.GetActiveTeam().SetAvatarIdList([]uint32{dbAvatar.MainCharAvatarId})
-
-		g.AcceptQuest(player, false)
-	}
-
 	// 确保玩家位置安全
 	player.Pos.X = player.SafePos.X
 	player.Pos.Y = player.SafePos.Y
@@ -98,11 +100,54 @@ func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isRe
 		player.Rot = &model.Vector{X: 0, Y: 307, Z: 0}
 	}
 
+	TICK_MANAGER.CreateUserGlobalTick(userId)
+	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100, player.NickName)
+
+	if player.IsBorn {
+		g.LoginNotify(userId, clientSeq, player)
+	}
+
+	if joinHostUserId != 0 {
+		hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
+		if hostPlayer == nil {
+			logger.Error("player is nil, uid: %v", joinHostUserId)
+		} else {
+			g.JoinOtherWorld(player, hostPlayer)
+		}
+	} else {
+		// 创建世界
+		world := WORLD_MANAGER.CreateWorld(player)
+		world.AddPlayer(player, player.SceneId)
+		player.WorldId = world.GetId()
+		// 进入场景
+		player.SceneJump = true
+		player.SceneLoadState = model.SceneNone
+		if player.IsBorn {
+			g.SendMsg(cmd.PlayerEnterSceneNotify, userId, clientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
+		}
+	}
+
+	if !player.IsBorn {
+		g.SendMsg(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, new(proto.DoSetPlayerBornDataNotify))
+	}
+
+	playerLoginRsp := &proto.PlayerLoginRsp{
+		IsUseAbilityHash:        true,
+		AbilityHashCode:         0,
+		IsEnableClientHashDebug: true,
+		IsScOpen:                false,
+		ScInfo:                  []byte{},
+		TotalTickTime:           0.0,
+		GameBiz:                 "hk4e_global",
+		RegisterCps:             "mihoyo",
+		CountryCode:             "US",
+		Birthday:                "2000-01-01",
+	}
+	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
+
 	if userId < PlayerBaseUid {
 		return
 	}
-
-	g.LoginNotify(userId, player, clientSeq)
 
 	MESSAGE_QUEUE.SendToAll(&mq.NetMsg{
 		MsgType: mq.MsgTypeServer,
@@ -112,53 +157,17 @@ func (g *Game) OnLoginOk(userId uint32, clientSeq uint32, gateAppId string, isRe
 			IsOnline: true,
 		},
 	})
-
-	TICK_MANAGER.CreateUserGlobalTick(userId)
-	TICK_MANAGER.CreateUserTimer(userId, UserTimerActionTest, 100, player.NickName)
-
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, 1)
 
 	SELF = nil
 }
 
-func (g *Game) OnReg(userId uint32, clientSeq uint32, gateAppId string, payloadMsg pb.Message) {
-	logger.Debug("user reg, uid: %v", userId)
-	req := payloadMsg.(*proto.SetPlayerBornDataReq)
-	logger.Debug("avatar id: %v, nickname: %v", req.AvatarId, req.NickName)
-	exist, asyncWait := USER_MANAGER.CheckUserExistOnReg(userId, req, clientSeq, gateAppId)
-	if !asyncWait {
-		g.OnRegOk(exist, req, userId, clientSeq, gateAppId)
-	}
-}
-
-func (g *Game) OnRegOk(exist bool, req *proto.SetPlayerBornDataReq, userId uint32, clientSeq uint32, gateAppId string) {
-	if exist {
-		logger.Error("recv reg req, but user is already exist, uid: %v", userId)
-		return
-	}
-	nickName := req.NickName
-	mainCharAvatarId := req.GetAvatarId()
-	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
-		logger.Error("invalid main char avatar id: %v", mainCharAvatarId)
-		return
-	}
-	player := g.CreatePlayer(userId, nickName, mainCharAvatarId)
-	if player == nil {
-		logger.Error("player is nil, uid: %v", userId)
-		return
-	}
-	USER_MANAGER.ChangeUserDbState(player, model.DbInsert)
-	USER_MANAGER.AddUser(player)
-	g.SendMsgToGate(cmd.SetPlayerBornDataRsp, userId, clientSeq, gateAppId, new(proto.SetPlayerBornDataRsp))
-	g.OnLogin(userId, clientSeq, gateAppId, true, player)
-}
-
-func (g *Game) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uint32) *model.Player {
+func (g *Game) CreatePlayer(userId uint32) *model.Player {
 	player := new(model.Player)
 	player.PlayerID = userId
-	player.NickName = nickName
+	player.NickName = ""
 	player.Signature = ""
-	player.HeadImage = mainCharAvatarId
+	player.HeadImage = 0
 	player.Birthday = []uint8{0, 0}
 	player.NameCard = 210001
 	player.NameCardList = make([]uint32, 0)
@@ -185,10 +194,13 @@ func (g *Game) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uin
 	player.PropertiesMap[constant.PLAYER_PROP_PLAYER_MP_SETTING_TYPE] = 2
 	player.PropertiesMap[constant.PLAYER_PROP_IS_MP_MODE_AVAILABLE] = 1
 
+	player.SafePos = new(model.Vector)
+	player.Pos = new(model.Vector)
+	player.Rot = new(model.Vector)
 	sceneLuaConfig := gdconf.GetSceneLuaConfigById(int32(player.SceneId))
 	if sceneLuaConfig == nil {
 		logger.Error("get scene lua config is nil, sceneId: %v, uid: %v", player.SceneId, player.PlayerID)
-		return nil
+		return player
 	}
 	player.SafePos = &model.Vector{
 		X: float64(sceneLuaConfig.SceneConfig.BornPos.X),
@@ -205,9 +217,6 @@ func (g *Game) CreatePlayer(userId uint32, nickName string, mainCharAvatarId uin
 		Y: float64(sceneLuaConfig.SceneConfig.BornRot.Y),
 		Z: float64(sceneLuaConfig.SceneConfig.BornRot.Z),
 	}
-
-	dbAvatar := player.GetDbAvatar()
-	dbAvatar.MainCharAvatarId = mainCharAvatarId
 
 	return player
 }
@@ -231,7 +240,7 @@ func (g *Game) OnUserOffline(userId uint32, changeGsInfo *ChangeGsInfo) {
 	atomic.AddInt32(&ONLINE_PLAYER_NUM, -1)
 }
 
-func (g *Game) LoginNotify(userId uint32, player *model.Player, clientSeq uint32) {
+func (g *Game) LoginNotify(userId uint32, clientSeq uint32, player *model.Player) {
 	g.SendMsg(cmd.PlayerDataNotify, userId, clientSeq, g.PacketPlayerDataNotify(player))
 	g.SendMsg(cmd.StoreWeightLimitNotify, userId, clientSeq, g.PacketStoreWeightLimitNotify())
 	g.SendMsg(cmd.PlayerStoreNotify, userId, clientSeq, g.PacketPlayerStoreNotify(player))
@@ -240,25 +249,6 @@ func (g *Game) LoginNotify(userId uint32, player *model.Player, clientSeq uint32
 	g.SendMsg(cmd.QuestListNotify, userId, clientSeq, g.PacketQuestListNotify(player))
 	g.SendMsg(cmd.FinishedParentQuestNotify, userId, clientSeq, g.PacketFinishedParentQuestNotify(player))
 	// g.GCGLogin(player) // 发送GCG登录相关的通知包
-	playerLoginRsp := &proto.PlayerLoginRsp{
-		IsUseAbilityHash:        true,
-		AbilityHashCode:         0,
-		IsEnableClientHashDebug: true,
-		IsScOpen:                false,
-		ScInfo:                  []byte{},
-		TotalTickTime:           0.0,
-		GameBiz:                 "hk4e_global",
-		RegisterCps:             "mihoyo",
-		CountryCode:             "US",
-		Birthday:                "2000-01-01",
-	}
-	g.SendMsg(cmd.PlayerLoginRsp, userId, clientSeq, playerLoginRsp)
-	playerTimeNotify := &proto.PlayerTimeNotify{
-		IsPaused:   player.Pause,
-		PlayerTime: uint64(player.TotalOnlineTime),
-		ServerTime: uint64(time.Now().UnixMilli()),
-	}
-	g.SendMsg(cmd.PlayerTimeNotify, player.PlayerID, 0, playerTimeNotify)
 }
 
 func (g *Game) PacketPlayerDataNotify(player *model.Player) *proto.PlayerDataNotify {

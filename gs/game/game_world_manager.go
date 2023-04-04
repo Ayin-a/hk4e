@@ -421,6 +421,15 @@ func (w *WorldAvatar) GetAbilityList() []*proto.AbilityAppliedAbility {
 	return w.abilityList
 }
 
+func (w *WorldAvatar) GetAbilityByInstanceId(instanceId uint32) *proto.AbilityAppliedAbility {
+	for _, ability := range w.abilityList {
+		if ability.InstancedAbilityId == instanceId {
+			return ability
+		}
+	}
+	return nil
+}
+
 func (w *WorldAvatar) SetAbilityList(abilityList []*proto.AbilityAppliedAbility) {
 	w.abilityList = abilityList
 }

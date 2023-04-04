@@ -136,14 +136,8 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 				}
 				logger.Debug("[EvtBeingHit] GadgetData: %+v, uid: %v", gadgetDataConfig, player.PlayerID)
 				// TODO 临时的解决方案
-				switch gadgetDataConfig.ServerLuaScript {
-				case "SubfieldDrop_WoodenObject_Broken":
-					g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
-				case "SetGadgetState":
+				if strings.Contains(gadgetDataConfig.ServerLuaScript, "SetGadgetState") {
 					g.ChangeGadgetState(player, target.GetId(), constant.GADGET_STATE_GEAR_START)
-				}
-				if strings.Contains(gadgetDataConfig.ServerLuaScript, "SubfieldDrop_Ore_") {
-					g.KillEntity(player, scene, target.GetId(), proto.PlayerDieType_PLAYER_DIE_GM)
 				}
 				if strings.Contains(gadgetDataConfig.ServerLuaScript, "Controller") {
 					g.ChangeGadgetState(player, target.GetId(), constant.GADGET_STATE_GEAR_START)
@@ -331,12 +325,8 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		return
-	}
 	for _, entry := range req.Invokes {
-		// logger.Debug("AbilityInvocationsNotify: %v", entry, player.PlayerID)
+		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 		switch entry.ArgumentType {
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 			modifierChange := new(proto.AbilityMetaModifierChange)
@@ -345,29 +335,50 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaModifierChange error: %v", err)
 				continue
 			}
-			// logger.Error("MC: %v", modifierChange)
-			worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
-			if worldAvatar != nil {
-				for _, ability := range worldAvatar.abilityList {
-					if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
-						// logger.Error("A: %v", ability)
-					}
-				}
-				for _, modifier := range worldAvatar.modifierList {
-					if modifier.InstancedAbilityId == entry.Head.InstancedAbilityId {
-						// logger.Error("B: %v", modifier)
-					}
-				}
-				for _, modifier := range worldAvatar.modifierList {
-					if modifier.InstancedModifierId == entry.Head.InstancedModifierId {
-						// logger.Error("C: %v", modifier)
-					}
-				}
+			// logger.Debug("entry: %v, ModifierChange: %v", entry, modifierChange)
+			// 处理耐力消耗
+			g.HandleAbilityStamina(player, entry)
+		case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
+			costStamina := new(proto.AbilityMixinCostStamina)
+			err := pb.Unmarshal(entry.AbilityData, costStamina)
+			if err != nil {
+				logger.Error("parse AbilityMixinCostStamina error: %v", err)
+				continue
 			}
+			logger.Debug("entry: %v, MixinCostStamina: %v", entry, costStamina)
+			// 处理耐力消耗
+			g.HandleAbilityStamina(player, entry)
+		case proto.AbilityInvokeArgument_ABILITY_ACTION_DEDUCT_STAMINA:
+			deductStamina := new(proto.AbilityActionDeductStamina)
+			err := pb.Unmarshal(entry.AbilityData, deductStamina)
+			if err != nil {
+				logger.Error("parse AbilityActionDeductStamina error: %v", err)
+				continue
+			}
+			logger.Debug("entry: %v, ActionDeductStamina: %v", entry, deductStamina)
+			// 处理耐力消耗
+			g.HandleAbilityStamina(player, entry)
+		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_DURABILITY_CHANGE:
+			modifierDurabilityChange := new(proto.AbilityMetaModifierDurabilityChange)
+			err := pb.Unmarshal(entry.AbilityData, modifierDurabilityChange)
+			if err != nil {
+				logger.Error("parse AbilityMetaModifierDurabilityChange error: %v", err)
+				continue
+			}
+			logger.Debug("entry: %v, DurabilityChange: %v", entry, modifierDurabilityChange)
+		case proto.AbilityInvokeArgument_ABILITY_META_DURABILITY_IS_ZERO:
+			durabilityIsZero := new(proto.AbilityMetaDurabilityIsZero)
+			err := pb.Unmarshal(entry.AbilityData, durabilityIsZero)
+			if err != nil {
+				logger.Error("parse AbilityMetaDurabilityIsZero error: %v", err)
+				continue
+			}
+			logger.Debug("entry: %v, DurabilityIsZero: %v", entry, durabilityIsZero)
+		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELITE_SHIELD:
+		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELEMENT_SHIELD:
+		case proto.AbilityInvokeArgument_ABILITY_MIXIN_GLOBAL_SHIELD:
+		case proto.AbilityInvokeArgument_ABILITY_MIXIN_SHIELD_BAR:
 		}
-		// 处理耐力消耗
-		g.HandleAbilityStamina(player, entry)
-		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 }
 
@@ -394,13 +405,11 @@ func (g *Game) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Mes
 	invokeHandler := model.NewInvokeHandler[proto.AbilityInvokeEntry]()
 	for _, entry := range req.Invokes {
 		// logger.Debug("ClientAbilityChangeNotify: %v", entry)
-
 		invokeHandler.AddEntry(entry.ForwardType, entry)
 	}
 	DoForward[proto.AbilityInvokeEntry](player, invokeHandler,
 		cmd.ClientAbilityChangeNotify, new(proto.ClientAbilityChangeNotify), "Invokes",
 		req, []string{"IsInitHash", "EntityId"})
-
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
 	if world == nil {
 		return
@@ -453,7 +462,6 @@ func (g *Game) ClientAbilityChangeNotify(player *model.Player, payloadMsg pb.Mes
 			modifierList := worldAvatar.GetModifierList()
 			modifierList = append(modifierList, abilityAppliedModifier)
 			worldAvatar.SetModifierList(modifierList)
-		default:
 		}
 	}
 }

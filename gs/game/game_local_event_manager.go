@@ -16,13 +16,12 @@ import (
 // 本地事件队列管理器
 
 const (
-	LoadLoginUserFromDbFinish       = iota // 玩家登录从数据库加载完成回调
-	CheckUserExistOnRegFromDbFinish        // 玩家注册从数据库查询是否已存在完成回调
-	RunUserCopyAndSave                     // 执行一次在线玩家内存数据复制到数据库写入协程
-	ExitRunUserCopyAndSave                 // 停服时执行全部玩家保存操作
-	UserOfflineSaveToDbFinish              // 玩家离线保存完成
-	ReloadGameDataConfig                   // 执行热更表
-	ReloadGameDataConfigFinish             // 热更表完成
+	LoadLoginUserFromDbFinish  = iota // 玩家登录从数据库加载完成回调
+	RunUserCopyAndSave                // 执行一次在线玩家内存数据复制到数据库写入协程
+	ExitRunUserCopyAndSave            // 停服时执行全部玩家保存操作
+	UserOfflineSaveToDbFinish         // 玩家离线保存完成
+	ReloadGameDataConfig              // 执行热更表
+	ReloadGameDataConfigFinish        // 热更表完成
 )
 
 const (
@@ -66,13 +65,7 @@ func (l *LocalEventManager) LocalEventHandle(localEvent *LocalEvent) {
 	switch localEvent.EventId {
 	case LoadLoginUserFromDbFinish:
 		playerLoginInfo := localEvent.Msg.(*PlayerLoginInfo)
-		if playerLoginInfo.Player != nil {
-			USER_MANAGER.AddUser(playerLoginInfo.Player)
-		}
-		GAME.OnLoginOk(playerLoginInfo.UserId, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId, false, playerLoginInfo.Player)
-	case CheckUserExistOnRegFromDbFinish:
-		playerRegInfo := localEvent.Msg.(*PlayerRegInfo)
-		GAME.OnRegOk(playerRegInfo.Exist, playerRegInfo.Req, playerRegInfo.UserId, playerRegInfo.ClientSeq, playerRegInfo.GateAppId)
+		GAME.OnLogin(playerLoginInfo.UserId, playerLoginInfo.ClientSeq, playerLoginInfo.GateAppId, playerLoginInfo.Player, playerLoginInfo.JoinHostUserId)
 	case ExitRunUserCopyAndSave:
 		fallthrough
 	case RunUserCopyAndSave:

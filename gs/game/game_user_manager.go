@@ -8,14 +8,12 @@ import (
 	"hk4e/gs/dao"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
-	"hk4e/protocol/proto"
 
 	"github.com/vmihailenco/msgpack/v5"
 )
 
 // 玩家管理器
 
-// 玩家注册 从db查询对应uid是否存在并异步回调返回结果
 // 玩家登录 从db查询出来然后写入redis并异步回调返回玩家对象
 // 玩家离线 写入db和redis
 // 玩家定时保存 写入db和redis
@@ -78,42 +76,6 @@ func (u *UserManager) GetAllOnlineUserList() map[uint32]*model.Player {
 	return onlinePlayerMap
 }
 
-type PlayerRegInfo struct {
-	Exist     bool
-	Req       *proto.SetPlayerBornDataReq
-	UserId    uint32
-	ClientSeq uint32
-	GateAppId string
-}
-
-// CheckUserExistOnReg 玩家注册检查是否已存在
-func (u *UserManager) CheckUserExistOnReg(userId uint32,
-	req *proto.SetPlayerBornDataReq, clientSeq uint32, gateAppId string) (exist bool, asyncWait bool) {
-	_, exist = u.playerMap[userId]
-	if exist {
-		return true, false
-	} else {
-		go func() {
-			player := u.LoadUserFromDbSync(userId)
-			exist = false
-			if player != nil {
-				exist = true
-			}
-			LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
-				EventId: CheckUserExistOnRegFromDbFinish,
-				Msg: &PlayerRegInfo{
-					Exist:     exist,
-					Req:       req,
-					UserId:    userId,
-					ClientSeq: clientSeq,
-					GateAppId: gateAppId,
-				},
-			}
-		}()
-		return false, true
-	}
-}
-
 // AddUser 向内存玩家数据里添加一个玩家
 func (u *UserManager) AddUser(player *model.Player) {
 	if player == nil {
@@ -128,55 +90,51 @@ func (u *UserManager) DeleteUser(userId uint32) {
 }
 
 type PlayerLoginInfo struct {
-	UserId    uint32
-	Player    *model.Player
-	ClientSeq uint32
-	GateAppId string
+	UserId         uint32
+	Player         *model.Player
+	ClientSeq      uint32
+	GateAppId      string
+	JoinHostUserId uint32
 }
 
 // OnlineUser 玩家上线
-func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId string) (*model.Player, bool) {
-	player, exist := u.playerMap[userId]
-	if userId > PlayerBaseUid {
-		// 正常登录
-		if exist {
-			// 每次玩家上线必须从数据库加载最新的档 如果之前存在于内存则删掉
-			u.DeleteUser(userId)
-		}
-		go func() {
-			// 加离线玩家数据分布式锁
-			ok := u.dao.DistLockSync(userId)
-			if !ok {
-				logger.Error("lock redis offline player data error, uid: %v", userId)
-				return
-			}
-			player := u.LoadUserFromDbSync(userId)
-			if player != nil {
-				u.SaveUserToRedisSync(player)
-			}
-			// 解离线玩家数据分布式锁
-			u.dao.DistUnlock(userId)
-			if player != nil {
-				u.ChangeUserDbState(player, model.DbNormal)
-				player.ChatMsgMap = u.LoadUserChatMsgFromDbSync(userId)
-			} else {
-				logger.Error("can not find user from db, uid: %v", userId)
-			}
-			LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
-				EventId: LoadLoginUserFromDbFinish,
-				Msg: &PlayerLoginInfo{
-					UserId:    userId,
-					Player:    player,
-					ClientSeq: clientSeq,
-					GateAppId: gateAppId,
-				},
-			}
-		}()
-		return nil, false
-	} else {
-		// 机器人
-		return player, true
+func (u *UserManager) OnlineUser(userId uint32, clientSeq uint32, gateAppId string, joinHostUserId uint32) {
+	_, exist := u.playerMap[userId]
+	// 正常登录
+	if exist {
+		// 每次玩家上线必须从数据库加载最新的档 如果之前存在于内存则删掉
+		u.DeleteUser(userId)
 	}
+	go func() {
+		// 加离线玩家数据分布式锁
+		ok := u.dao.DistLockSync(userId)
+		if !ok {
+			logger.Error("lock redis offline player data error, uid: %v", userId)
+			return
+		}
+		player := u.LoadUserFromDbSync(userId)
+		if player != nil {
+			u.SaveUserToRedisSync(player)
+		}
+		// 解离线玩家数据分布式锁
+		u.dao.DistUnlock(userId)
+		if player != nil {
+			u.ChangeUserDbState(player, model.DbNormal)
+			player.ChatMsgMap = u.LoadUserChatMsgFromDbSync(userId)
+		} else {
+			logger.Error("can not find user from db, uid: %v", userId)
+		}
+		LOCAL_EVENT_MANAGER.GetLocalEventChan() <- &LocalEvent{
+			EventId: LoadLoginUserFromDbFinish,
+			Msg: &PlayerLoginInfo{
+				UserId:         userId,
+				Player:         player,
+				ClientSeq:      clientSeq,
+				GateAppId:      gateAppId,
+				JoinHostUserId: joinHostUserId,
+			},
+		}
+	}()
 }
 
 type ChangeGsInfo struct {

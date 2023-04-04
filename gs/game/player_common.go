@@ -119,31 +119,14 @@ func (g *Game) ObstacleModifyNotify(player *model.Player, payloadMsg pb.Message)
 	// logger.Debug("ObstacleModifyNotify: %v, uid: %v", ntf, player.PlayerID)
 }
 
-func (g *Game) ServerAppidBindNotify(userId uint32, anticheatAppId string, joinHostUserId uint32) {
+func (g *Game) ServerAppidBindNotify(userId uint32, anticheatAppId string) {
 	player := USER_MANAGER.GetOnlineUser(userId)
 	if player == nil {
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	if joinHostUserId != 0 {
-		hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
-		if hostPlayer == nil {
-			logger.Error("player is nil, uid: %v", joinHostUserId)
-			return
-		}
-		g.JoinOtherWorld(player, hostPlayer)
-		return
-	}
 	logger.Debug("server appid bind notify, uid: %v, anticheatAppId: %v", userId, anticheatAppId)
 	player.AnticheatAppId = anticheatAppId
-	// 创建世界
-	world := WORLD_MANAGER.CreateWorld(player)
-	world.AddPlayer(player, player.SceneId)
-	player.WorldId = world.GetId()
-	// 进入场景
-	player.SceneJump = true
-	player.SceneLoadState = model.SceneNone
-	g.SendMsg(cmd.PlayerEnterSceneNotify, userId, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
 }
 
 // WorldPlayerRTTNotify 世界里所有玩家的网络延迟广播

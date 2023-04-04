@@ -40,3 +40,7 @@ func (g *GameDataConfig) loadGachaDropGroupData() {
 	}
 	logger.Info("GachaDropGroupData count: %v", len(g.GachaDropGroupDataMap))
 }
+
+func GetGachaDropGroupDataByDropId(dropId int32) *GachaDropGroupData {
+	return CONF.GachaDropGroupDataMap[dropId]
+}

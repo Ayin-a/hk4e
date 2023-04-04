@@ -27,6 +27,7 @@ type Player struct {
 	// 离线数据 请尽量不要定义接口等复杂数据结构
 	ID              primitive.ObjectID `bson:"_id,omitempty"`
 	PlayerID        uint32             `bson:"PlayerID"` // 玩家uid
+	IsBorn          bool               // 是否完成开场动画
 	NickName        string             // 昵称
 	Signature       string             // 签名
 	HeadImage       uint32             // 头像

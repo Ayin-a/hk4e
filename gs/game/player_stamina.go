@@ -1,81 +1,17 @@
 package game
 
 import (
-	"strings"
 	"time"
 
 	"hk4e/common/constant"
 	"hk4e/gdconf"
 	"hk4e/gs/model"
-	"hk4e/pkg/endec"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
 	"hk4e/protocol/proto"
 
 	pb "google.golang.org/protobuf/proto"
 )
-
-// HandleAbilityStamina 处理来自ability的耐力消耗
-func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
-	switch entry.ArgumentType {
-	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
-		// 大剑重击 或 持续技能 耐力消耗
-		costStamina := new(proto.AbilityMixinCostStamina)
-		err := pb.Unmarshal(entry.AbilityData, costStamina)
-		if err != nil {
-			logger.Error("parse AbilityMixinCostStamina error: %v", err)
-			return
-		}
-		// 处理持续耐力消耗
-		g.SkillSustainStamina(player, costStamina.IsSwim)
-	case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
-		// 普通角色重击耐力消耗
-		world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-		// 获取世界中的角色实体
-		worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
-		if worldAvatar == nil {
-			return
-		}
-		// 查找是不是属于该角色实体的ability id
-		abilityNameHashCode := uint32(0)
-		for _, ability := range worldAvatar.GetAbilityList() {
-			if ability.InstancedAbilityId == entry.Head.InstancedAbilityId {
-				// logger.Error("%v", ability)
-				abilityNameHashCode = ability.AbilityName.GetHash()
-			}
-		}
-		if abilityNameHashCode == 0 {
-			return
-		}
-		// 根据ability name查找到对应的技能表里的技能配置
-		var avatarAbility *gdconf.AvatarSkillData = nil
-		for _, avatarSkillData := range gdconf.GetAvatarSkillDataMap() {
-			hashCode := endec.Hk4eAbilityHashCode(avatarSkillData.AbilityName)
-			if uint32(hashCode) == abilityNameHashCode {
-				avatarAbility = avatarSkillData
-				break
-			}
-		}
-		if avatarAbility == nil {
-			return
-		}
-		// 距离技能开始过去的时间
-		startPastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillTime
-		// 距离上次技能消耗的时间
-		changePastTime := time.Now().UnixMilli() - player.StaminaInfo.LastSkillChargeTime
-		// 法器角色轻击也会算触发重击消耗 胡桃等角色重击一次会多次消耗
-		// 所以通过策略判断 必须距离技能开始过去200ms才算重击 两次技能耐力消耗之间需间隔500ms
-
-		// 暂时就这样实现重击消耗 以后应该还会有更好的办法~
-		if player.StaminaInfo.LastSkillId == uint32(avatarAbility.AvatarSkillId) && startPastTime > 200 && changePastTime > 500 {
-			// 重击对应的耐力消耗
-			g.ChargedAttackStamina(player, worldAvatar, avatarAbility)
-			player.StaminaInfo.LastSkillChargeTime = time.Now().UnixMilli()
-		}
-	default:
-		break
-	}
-}
 
 // SceneAvatarStaminaStepReq 缓慢游泳或缓慢攀爬时消耗耐力
 func (g *Game) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg pb.Message) {
@@ -115,11 +51,60 @@ func (g *Game) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg pb.Mes
 		g.UpdatePlayerStamina(player, constant.STAMINA_COST_SWIMMING)
 	}
 
-	// PacketSceneAvatarStaminaStepRsp
 	sceneAvatarStaminaStepRsp := new(proto.SceneAvatarStaminaStepRsp)
 	sceneAvatarStaminaStepRsp.UseClientRot = true
 	sceneAvatarStaminaStepRsp.Rot = req.Rot
 	g.SendMsg(cmd.SceneAvatarStaminaStepRsp, player.PlayerID, player.ClientSeq, sceneAvatarStaminaStepRsp)
+}
+
+// HandleAbilityStamina 处理来自ability的耐力消耗
+func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	// 获取世界中的角色实体
+	worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
+	if worldAvatar == nil {
+		return
+	}
+	// 查找是不是属于该角色实体的ability id
+	ability := worldAvatar.GetAbilityByInstanceId(entry.Head.InstancedAbilityId)
+	abilityNameHashCode := ability.AbilityName.GetHash()
+	if abilityNameHashCode == 0 {
+		return
+	}
+	// 根据ability name查找到对应的技能表里的技能配置
+	staminaDataConfig := gdconf.GetSkillStaminaDataByAbilityHashCode(int32(abilityNameHashCode))
+	if staminaDataConfig == nil {
+		return
+	}
+	staminaInfo := player.StaminaInfo
+	switch entry.ArgumentType {
+	case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
+		// 普通角色重击耐力消耗
+		// 距离技能开始过去的时间
+		startPastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+		// 距离上次技能消耗的时间
+		changePastTime := time.Now().UnixMilli() - staminaInfo.LastSkillChargeTime
+		// 法器角色轻击也会算触发重击消耗 胡桃等角色重击一次会多次消耗
+		// 所以通过策略判断 必须距离技能开始过去200ms才算重击 两次技能耐力消耗之间需间隔500ms
+		// 暂时就这样实现重击消耗 以后应该还会有更好的办法~
+		if startPastTime > 200 && changePastTime > 500 {
+			costStamina := -(staminaDataConfig.CostStamina * 100)
+			logger.Debug("stamina cost, skillId: %v, cost: %v", staminaDataConfig.AvatarSkillId, costStamina)
+			g.UpdatePlayerStamina(player, costStamina)
+			staminaInfo.LastSkillChargeTime = time.Now().UnixMilli()
+		}
+	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
+		// 大剑重击 或 持续技能 耐力消耗
+		// 根据配置以及距离上次的时间计算消耗的耐力
+		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+		costStamina := -(staminaDataConfig.CostStamina * 100)
+		costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
+		logger.Debug("stamina cost, skillId: %v, cost: %v", staminaDataConfig.AvatarSkillId, costStamina)
+		g.UpdatePlayerStamina(player, costStamina)
+		// 记录最后释放技能的时间
+		staminaInfo.LastSkillTime = time.Now().UnixMilli()
+	case proto.AbilityInvokeArgument_ABILITY_ACTION_DEDUCT_STAMINA:
+	}
 }
 
 // ImmediateStamina 处理即时耐力消耗
@@ -130,18 +115,14 @@ func (g *Game) ImmediateStamina(player *model.Player, motionState proto.MotionSt
 	}
 	staminaInfo := player.StaminaInfo
 	// logger.Debug("stamina handle, uid: %v, motionState: %v", player.PlayerID, motionState)
-
 	// 设置用于持续消耗或恢复耐力的值
 	staminaInfo.SetStaminaCost(motionState)
-
 	// 未改变状态不执行后面 有些仅在动作开始消耗耐力
 	if motionState == staminaInfo.State {
 		return
 	}
-
 	// 记录玩家的动作状态
 	staminaInfo.State = motionState
-
 	// 根据玩家的状态立刻消耗耐力
 	switch motionState {
 	case proto.MotionState_MOTION_CLIMB:
@@ -159,120 +140,10 @@ func (g *Game) ImmediateStamina(player *model.Player, motionState proto.MotionSt
 	}
 }
 
-// SkillSustainStamina 处理技能持续时的耐力消耗
-func (g *Game) SkillSustainStamina(player *model.Player, isSwim bool) {
-	staminaInfo := player.StaminaInfo
-	skillId := staminaInfo.LastSkillId
-
-	// 读取技能配置表
-	avatarSkillConfig := gdconf.GetAvatarSkillDataById(int32(skillId))
-	if avatarSkillConfig == nil {
-		logger.Error("avatarSkillConfig error, skillId: %v", skillId)
-		return
-	}
-	// 获取释放技能者的角色Id
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	// 获取世界中的角色实体
-	worldAvatar := world.GetWorldAvatarByEntityId(staminaInfo.LastCasterId)
-	if worldAvatar == nil {
-		return
-	}
-	// 获取现行角色的配置表
-	avatarDataConfig := gdconf.GetAvatarDataById(int32(worldAvatar.GetAvatarId()))
-	if avatarDataConfig == nil {
-		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
-		return
-	}
-
-	// 需要消耗的耐力值
-	var costStamina int32
-
-	// 如果为0代表使用默认值
-	if avatarSkillConfig.CostStamina == 0 {
-		// 大剑持续耐力消耗默认值
-		if avatarDataConfig.WeaponType == constant.WEAPON_TYPE_CLAYMORE {
-			costStamina = constant.STAMINA_COST_FIGHT_CLAYMORE_PER
-		}
-	} else {
-		costStamina = -(avatarSkillConfig.CostStamina * 100)
-	}
-
-	// 距离上次执行过去的时间
-	pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
-	// 根据配置以及距离上次的时间计算消耗的耐力
-	costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
-	logger.Debug("stamina skill sustain, skillId: %v, cost: %v, isSwim: %v", skillId, costStamina, isSwim)
-
-	// 根据配置以及距离上次的时间计算消耗的耐力
-	g.UpdatePlayerStamina(player, costStamina)
-
-	// 记录最后释放技能的时间
-	player.StaminaInfo.LastSkillTime = time.Now().UnixMilli()
-}
-
-// ChargedAttackStamina 处理重击技能即时耐力消耗
-func (g *Game) ChargedAttackStamina(player *model.Player, worldAvatar *WorldAvatar, skillData *gdconf.AvatarSkillData) {
-	// 确保技能为重击
-	if !strings.Contains(skillData.AbilityName, "ExtraAttack") {
-		return
-	}
-	// 获取现行角色的配置表
-	avatarDataConfig := gdconf.GetAvatarDataById(int32(worldAvatar.GetAvatarId()))
-	if avatarDataConfig == nil {
-		logger.Error("avatarDataConfig error, avatarId: %v", worldAvatar.GetAvatarId())
-		return
-	}
-
-	// 需要消耗的耐力值
-	var costStamina int32
-
-	// 如果为0代表使用默认值
-	if skillData.CostStamina == 0 {
-		// 使用武器对应默认耐力消耗
-		// 双手剑为持续耐力消耗不在这里处理
-		switch avatarDataConfig.WeaponType {
-		case constant.WEAPON_TYPE_SWORD_ONE_HAND:
-			// 单手剑
-			costStamina = constant.STAMINA_COST_FIGHT_SWORD_ONE_HAND
-		case constant.WEAPON_TYPE_POLE:
-			// 长枪
-			costStamina = constant.STAMINA_COST_FIGHT_POLE
-		case constant.WEAPON_TYPE_CATALYST:
-			// 法器
-			costStamina = constant.STAMINA_COST_FIGHT_CATALYST
-		}
-	} else {
-		costStamina = -(skillData.CostStamina * 100)
-	}
-	logger.Debug("charged attack stamina, skillId: %v, cost: %v", skillData.AvatarSkillId, costStamina)
-
-	// 根据配置消耗耐力
-	g.UpdatePlayerStamina(player, costStamina)
-}
-
 // SkillStartStamina 处理技能开始时的即时耐力消耗
 func (g *Game) SkillStartStamina(player *model.Player, casterId uint32, skillId uint32) {
 	staminaInfo := player.StaminaInfo
-
-	// 获取该技能开始时所需消耗的耐力
-	avatarSkillDataConfig := gdconf.GetAvatarSkillDataById(int32(skillId))
-
-	// 配置表确保存在技能开始对应的耐力消耗
-	if avatarSkillDataConfig != nil && avatarSkillDataConfig.CostStamina != 0 {
-		// 距离上次处理技能开始耐力消耗过去的时间
-		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillStartTime
-		// 上次触发的技能相同则每400ms触发一次消耗
-		if staminaInfo.LastSkillId != skillId || pastTime > 400 {
-			logger.Debug("skill start stamina, skillId: %v, cost: %v", skillId, avatarSkillDataConfig.CostStamina)
-			// 根据配置消耗耐力
-			g.UpdatePlayerStamina(player, avatarSkillDataConfig.CostStamina)
-			staminaInfo.LastSkillStartTime = time.Now().UnixMilli()
-		}
-	}
-
 	// 记录最后释放的技能
-	staminaInfo.LastCasterId = casterId
-	staminaInfo.LastSkillId = skillId
 	staminaInfo.LastSkillTime = time.Now().UnixMilli()
 }
 
@@ -341,7 +212,6 @@ func (g *Game) SustainStaminaHandler(player *model.Player) {
 func (g *Game) GetChangeStamina(curStamina int32, maxStamina int32, staminaCost int32) uint32 {
 	// 即将更改为的耐力值
 	stamina := curStamina + staminaCost
-
 	// 确保耐力值不超出范围
 	if stamina > maxStamina {
 		stamina = maxStamina
@@ -371,12 +241,10 @@ func (g *Game) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity,
 		// logger.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.VehicleRestoreDelay)
 		staminaInfo.VehicleRestoreDelay = 0
 	}
-
 	// 确保载具实体存在
 	if vehicleEntity == nil {
 		return
 	}
-
 	// 因为载具的耐力需要换算
 	// 这里先*100后面要用的时候再换算 为了确保精度
 	// 最大耐力值
@@ -384,15 +252,12 @@ func (g *Game) UpdateVehicleStamina(player *model.Player, vehicleEntity *Entity,
 	maxStamina := int32(gadgetEntity.GetGadgetVehicleEntity().GetMaxStamina() * 100)
 	// 现行耐力值
 	curStamina := int32(gadgetEntity.GetGadgetVehicleEntity().GetCurStamina() * 100)
-
 	// 将被变更的耐力
 	stamina := g.GetChangeStamina(curStamina, maxStamina, staminaCost)
-
 	// 当前无变动不要频繁发包
 	if uint32(curStamina) == stamina {
 		return
 	}
-
 	// 更改载具耐力 (换算)
 	g.SetVehicleStamina(player, vehicleEntity, float32(stamina)/100)
 }
@@ -417,23 +282,18 @@ func (g *Game) UpdatePlayerStamina(player *model.Player, staminaCost int32) {
 		// logger.Debug("stamina delay reset, restoreDelay: %v", player.StaminaInfo.RestoreDelay)
 		staminaInfo.PlayerRestoreDelay = 0
 	}
-
 	// 最大耐力值
 	maxStamina := int32(player.PropertiesMap[constant.PLAYER_PROP_MAX_STAMINA])
 	// 现行耐力值
 	curStamina := int32(player.PropertiesMap[constant.PLAYER_PROP_CUR_PERSIST_STAMINA])
-
 	// 将被变更的耐力
 	stamina := g.GetChangeStamina(curStamina, maxStamina, staminaCost)
-
 	// 检测玩家是否没耐力后执行溺水
 	g.HandleDrown(player, stamina)
-
 	// 当前无变动不要频繁发包
 	if uint32(curStamina) == stamina {
 		return
 	}
-
 	// 更改玩家的耐力
 	g.SetPlayerStamina(player, stamina)
 }
@@ -488,7 +348,6 @@ func (g *Game) HandleDrown(player *model.Player, stamina uint32) {
 	if stamina != 0 || player.StaminaInfo.DrownBackDelay != 0 {
 		return
 	}
-
 	// 确保玩家正在游泳
 	if player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_MOVE || player.StaminaInfo.State == proto.MotionState_MOTION_SWIM_DASH {
 		logger.Debug("player drown, curStamina: %v, state: %v", stamina, player.StaminaInfo.State)
@@ -506,7 +365,6 @@ func (g *Game) SetVehicleStamina(player *model.Player, vehicleEntity *Entity, st
 	gadgetEntity.GetGadgetVehicleEntity().SetCurStamina(stamina)
 	// logger.Debug("vehicle stamina set, stamina: %v", stamina)
 
-	// PacketVehicleStaminaNotify
 	vehicleStaminaNotify := new(proto.VehicleStaminaNotify)
 	vehicleStaminaNotify.EntityId = vehicleEntity.GetId()
 	vehicleStaminaNotify.CurStamina = stamina
@@ -519,13 +377,10 @@ func (g *Game) SetPlayerStamina(player *model.Player, stamina uint32) {
 	prop := constant.PLAYER_PROP_CUR_PERSIST_STAMINA
 	player.PropertiesMap[prop] = stamina
 	// logger.Debug("player stamina set, stamina: %v", stamina)
-
-	// PacketPlayerPropNotify
 	g.PlayerPropNotify(player, prop)
 }
 
 func (g *Game) PlayerPropNotify(player *model.Player, playerPropId uint16) {
-	// PacketPlayerPropNotify
 	playerPropNotify := new(proto.PlayerPropNotify)
 	playerPropNotify.PropMap = make(map[uint32]*proto.PropValue)
 	playerPropNotify.PropMap[uint32(playerPropId)] = &proto.PropValue{

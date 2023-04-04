@@ -25,11 +25,32 @@ func (g *GMCmd) GMTeleportPlayer(userId, sceneId, dungeonId uint32, posX, posY, 
 		logger.Error("player is nil, uid: %v", userId)
 		return
 	}
-	GAME.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_GM, sceneId, &model.Vector{
-		X: posX,
-		Y: posY,
-		Z: posZ,
-	}, new(model.Vector), dungeonId)
+	dungeonPointId := uint32(0)
+	end := false
+	for _, pointData := range gdconf.GetScenePointMapBySceneId(int32(sceneId)) {
+		if end {
+			break
+		}
+		for _, v := range pointData.DungeonIds {
+			if uint32(v) == dungeonId {
+				dungeonPointId = uint32(pointData.Id)
+				end = true
+				break
+			}
+		}
+	}
+	if dungeonPointId == 0 {
+		return
+	}
+	GAME.TeleportPlayer(
+		player,
+		proto.EnterReason_ENTER_REASON_GM,
+		sceneId,
+		&model.Vector{X: posX, Y: posY, Z: posZ},
+		new(model.Vector),
+		dungeonId,
+		dungeonPointId,
+	)
 }
 
 // GMAddUserItem 给予玩家物品

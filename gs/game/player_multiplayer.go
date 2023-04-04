@@ -70,6 +70,8 @@ func (g *Game) JoinPlayerSceneReq(player *model.Player, payloadMsg pb.Message) {
 		return
 	}
 
+	g.LoginNotify(player.PlayerID, player.ClientSeq, player)
+
 	g.JoinOtherWorld(player, hostPlayer)
 }
 
@@ -94,7 +96,6 @@ func (g *Game) JoinOtherWorld(player *model.Player, hostPlayer *model.Player) {
 			proto.EnterReason_ENTER_REASON_TEAM_JOIN,
 			0,
 			new(model.Vector),
-			0,
 		)
 		g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, playerEnterSceneNotify)
 	} else {
@@ -344,7 +345,6 @@ func (g *Game) HostEnterMpWorld(hostPlayer *model.Player) {
 		proto.EnterReason_ENTER_REASON_HOST_FROM_SINGLE_TO_MP,
 		hostPlayer.SceneId,
 		hostPlayer.Pos,
-		0,
 	)
 	g.SendMsg(cmd.PlayerEnterSceneNotify, hostPlayer.PlayerID, hostPlayer.ClientSeq, hostPlayerEnterSceneNotify)
 

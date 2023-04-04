@@ -766,8 +766,9 @@ func (g *Game) PacketPlayerEnterSceneNotifyTp(
 	prevSceneId uint32,
 	prevPos *model.Vector,
 	dungeonId uint32,
+	dungeonPointId uint32,
 ) *proto.PlayerEnterSceneNotify {
-	return g.PacketPlayerEnterSceneNotifyCore(player, player, enterType, enterReason, prevSceneId, prevPos, dungeonId)
+	return g.PacketPlayerEnterSceneNotifyCore(player, player, enterType, enterReason, prevSceneId, prevPos, dungeonId, dungeonPointId)
 }
 
 func (g *Game) PacketPlayerEnterSceneNotifyMp(
@@ -777,9 +778,8 @@ func (g *Game) PacketPlayerEnterSceneNotifyMp(
 	enterReason proto.EnterReason,
 	prevSceneId uint32,
 	prevPos *model.Vector,
-	dungeonId uint32,
 ) *proto.PlayerEnterSceneNotify {
-	return g.PacketPlayerEnterSceneNotifyCore(player, targetPlayer, enterType, enterReason, prevSceneId, prevPos, dungeonId)
+	return g.PacketPlayerEnterSceneNotifyCore(player, targetPlayer, enterType, enterReason, prevSceneId, prevPos, 0, 0)
 }
 
 func (g *Game) PacketPlayerEnterSceneNotifyCore(
@@ -790,6 +790,7 @@ func (g *Game) PacketPlayerEnterSceneNotifyCore(
 	prevSceneId uint32,
 	prevPos *model.Vector,
 	dungeonId uint32,
+	dungeonPointId uint32,
 ) *proto.PlayerEnterSceneNotify {
 	world := WORLD_MANAGER.GetWorldByID(targetPlayer.WorldId)
 	scene := world.GetSceneById(targetPlayer.SceneId)
@@ -800,8 +801,8 @@ func (g *Game) PacketPlayerEnterSceneNotifyCore(
 			Y: prevPos.Y,
 			Z: prevPos.Z,
 		},
-		OldDungeonId: dungeonId,
-		Uid:          player.PlayerID,
+		OldDungeonPointId: dungeonPointId,
+		Uid:               player.PlayerID,
 	})
 	playerEnterSceneNotify := &proto.PlayerEnterSceneNotify{
 		PrevSceneId:     prevSceneId,

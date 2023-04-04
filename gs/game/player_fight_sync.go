@@ -134,7 +134,7 @@ func (g *Game) CombatInvocationsNotify(player *model.Player, payloadMsg pb.Messa
 					logger.Error("get gadget data config is nil, gadgetId: %v", gadgetEntity.GetGadgetId())
 					break
 				}
-				logger.Debug("[EvtBeingHit] GadgetData: %+v, uid: %v", gadgetDataConfig, player.PlayerID)
+				logger.Debug("[EvtBeingHit] GadgetData: %+v, EntityId: %v, uid: %v", gadgetDataConfig, target.GetId(), player.PlayerID)
 				// TODO 临时的解决方案
 				if strings.Contains(gadgetDataConfig.ServerLuaScript, "SetGadgetState") {
 					g.ChangeGadgetState(player, target.GetId(), constant.GADGET_STATE_GEAR_START)
@@ -325,12 +325,6 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
-	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
-	if world == nil {
-		logger.Error("get player world is nil, uid: %v", player.PlayerID)
-		return
-	}
-	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.Invokes {
 		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 		switch entry.ArgumentType {
@@ -341,7 +335,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaModifierChange error: %v", err)
 				continue
 			}
-			logger.Debug("EntityId: %v, ModifierChange: %v", entry.EntityId, modifierChange)
+			// logger.Debug("EntityId: %v, ModifierChange: %v", entry.EntityId, modifierChange)
 			// 处理耐力消耗
 			g.HandleAbilityStamina(player, entry)
 		case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
@@ -351,17 +345,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMixinCostStamina error: %v", err)
 				continue
 			}
-			logger.Debug("EntityId: %v, MixinCostStamina: %v", entry.EntityId, costStamina)
-			// 处理耐力消耗
-			g.HandleAbilityStamina(player, entry)
-		case proto.AbilityInvokeArgument_ABILITY_ACTION_DEDUCT_STAMINA:
-			deductStamina := new(proto.AbilityActionDeductStamina)
-			err := pb.Unmarshal(entry.AbilityData, deductStamina)
-			if err != nil {
-				logger.Error("parse AbilityActionDeductStamina error: %v", err)
-				continue
-			}
-			logger.Debug("EntityId: %v, ActionDeductStamina: %v", entry.EntityId, deductStamina)
+			// logger.Debug("EntityId: %v, MixinCostStamina: %v", entry.EntityId, costStamina)
 			// 处理耐力消耗
 			g.HandleAbilityStamina(player, entry)
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_DURABILITY_CHANGE:
@@ -371,20 +355,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaModifierDurabilityChange error: %v", err)
 				continue
 			}
-			logger.Debug("EntityId: %v, DurabilityChange: %v", entry.EntityId, modifierDurabilityChange)
-		case proto.AbilityInvokeArgument_ABILITY_META_DURABILITY_IS_ZERO:
-			durabilityIsZero := new(proto.AbilityMetaDurabilityIsZero)
-			err := pb.Unmarshal(entry.AbilityData, durabilityIsZero)
-			if err != nil {
-				logger.Error("parse AbilityMetaDurabilityIsZero error: %v", err)
-				continue
-			}
-			logger.Debug("EntityId: %v, DurabilityIsZero: %v", entry.EntityId, durabilityIsZero)
-			g.KillEntity(player, scene, entry.EntityId, proto.PlayerDieType_PLAYER_DIE_GM)
-		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELITE_SHIELD:
-		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELEMENT_SHIELD:
-		case proto.AbilityInvokeArgument_ABILITY_MIXIN_GLOBAL_SHIELD:
-		case proto.AbilityInvokeArgument_ABILITY_MIXIN_SHIELD_BAR:
+			// logger.Debug("EntityId: %v, DurabilityChange: %v", entry.EntityId, modifierDurabilityChange)
 		}
 	}
 }
@@ -569,12 +540,22 @@ func (g *Game) EvtDestroyGadgetNotify(player *model.Player, payloadMsg pb.Messag
 
 func (g *Game) EvtAiSyncSkillCdNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAiSyncSkillCdNotify)
-	_ = req
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
+	// logger.Debug("EvtAiSyncSkillCdNotify: %v", req)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	g.SendToWorldA(world, cmd.EvtAiSyncSkillCdNotify, player.ClientSeq, req)
 }
 
 func (g *Game) EvtAiSyncCombatThreatInfoNotify(player *model.Player, payloadMsg pb.Message) {
 	req := payloadMsg.(*proto.EvtAiSyncCombatThreatInfoNotify)
-	_ = req
+	if player.SceneLoadState != model.SceneEnterDone {
+		return
+	}
+	// logger.Debug("EvtAiSyncCombatThreatInfoNotify: %v", req)
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	g.SendToWorldA(world, cmd.EvtAiSyncCombatThreatInfoNotify, player.ClientSeq, req)
 }
 
 func (g *Game) EntityConfigHashNotify(player *model.Player, payloadMsg pb.Message) {

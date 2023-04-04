@@ -60,8 +60,6 @@ func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message)
 
 	g.AcceptQuest(player, false)
 
-	g.SendMsg(cmd.SetPlayerBornDataRsp, player.PlayerID, player.ClientSeq, new(proto.SetPlayerBornDataRsp))
-
 	g.LoginNotify(player.PlayerID, player.ClientSeq, player)
 
 	// 创建世界
@@ -73,6 +71,8 @@ func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message)
 	player.SceneLoadState = model.SceneNone
 
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
+
+	g.SendMsg(cmd.SetPlayerBornDataRsp, player.PlayerID, player.ClientSeq, new(proto.SetPlayerBornDataRsp))
 }
 
 func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, player *model.Player, joinHostUserId uint32) {
@@ -116,10 +116,10 @@ func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, player
 		g.LoginNotify(userId, clientSeq, player)
 		if joinHostUserId != 0 {
 			hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
-			if hostPlayer == nil {
-				logger.Error("player is nil, uid: %v", joinHostUserId)
-			} else {
+			if hostPlayer != nil {
 				g.JoinOtherWorld(player, hostPlayer)
+			} else {
+				logger.Error("player is nil, uid: %v", joinHostUserId)
 			}
 		} else {
 			// 创建世界

@@ -83,13 +83,14 @@ func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityIn
 		return
 	}
 	staminaInfo := player.StaminaInfo
+	now := time.Now().UnixMilli()
 	switch entry.ArgumentType {
 	case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_CHANGE:
 		// 普通角色重击耐力消耗
 		// 距离技能开始过去的时间
-		startPastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+		startPastTime := now - staminaInfo.LastSkillTime
 		// 距离上次技能消耗的时间
-		changePastTime := time.Now().UnixMilli() - staminaInfo.LastSkillChargeTime
+		changePastTime := now - staminaInfo.LastCostStaminaTime
 		// 法器角色轻击也会算触发重击消耗 胡桃等角色重击一次会多次消耗
 		// 所以通过策略判断 必须距离技能开始过去200ms才算重击 两次技能耐力消耗之间需间隔500ms
 		// 暂时就这样实现重击消耗 以后应该还会有更好的办法~
@@ -97,19 +98,22 @@ func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityIn
 			costStamina := -(staminaDataConfig.CostStamina * 100)
 			logger.Debug("stamina cost, skillId: %v, cost: %v", staminaDataConfig.AvatarSkillId, costStamina)
 			g.UpdatePlayerStamina(player, costStamina)
-			staminaInfo.LastSkillChargeTime = time.Now().UnixMilli()
+			staminaInfo.LastCostStaminaTime = now
 		}
 	case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
 		// 大剑重击 或 持续技能 耐力消耗
 		// 根据配置以及距离上次的时间计算消耗的耐力
-		pastTime := time.Now().UnixMilli() - staminaInfo.LastSkillTime
+		pastTime := now - staminaInfo.LastCostStaminaTime
+		if pastTime > 500 {
+			staminaInfo.LastCostStaminaTime = now
+			pastTime = 0
+		}
 		costStamina := -(staminaDataConfig.CostStamina * 100)
 		costStamina = int32(float64(pastTime) / 1000 * float64(costStamina))
 		logger.Debug("stamina cost, skillId: %v, cost: %v", staminaDataConfig.AvatarSkillId, costStamina)
 		g.UpdatePlayerStamina(player, costStamina)
 		// 记录最后释放技能的时间
-		staminaInfo.LastSkillTime = time.Now().UnixMilli()
-	case proto.AbilityInvokeArgument_ABILITY_ACTION_DEDUCT_STAMINA:
+		staminaInfo.LastCostStaminaTime = now
 	}
 }
 
@@ -340,7 +344,15 @@ func (g *Game) DrownBackHandler(player *model.Player) {
 			Z: player.SafePos.Z,
 		}
 		// 传送玩家至安全位置
-		g.TeleportPlayer(player, proto.EnterReason_ENTER_REASON_REVIVAL, player.SceneId, pos, new(model.Vector), 0)
+		g.TeleportPlayer(
+			player,
+			proto.EnterReason_ENTER_REASON_REVIVAL,
+			player.SceneId,
+			pos,
+			new(model.Vector),
+			0,
+			0,
+		)
 	}
 	// 防止重置后又被修改
 	if player.StaminaInfo.DrownBackDelay != 0 {

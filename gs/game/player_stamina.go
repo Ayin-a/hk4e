@@ -60,6 +60,9 @@ func (g *Game) SceneAvatarStaminaStepReq(player *model.Player, payloadMsg pb.Mes
 // HandleAbilityStamina 处理来自ability的耐力消耗
 func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityInvokeEntry) {
 	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		return
+	}
 	// 获取世界中的角色实体
 	worldAvatar := world.GetWorldAvatarByEntityId(entry.EntityId)
 	if worldAvatar == nil {
@@ -67,6 +70,9 @@ func (g *Game) HandleAbilityStamina(player *model.Player, entry *proto.AbilityIn
 	}
 	// 查找是不是属于该角色实体的ability id
 	ability := worldAvatar.GetAbilityByInstanceId(entry.Head.InstancedAbilityId)
+	if ability == nil {
+		return
+	}
 	abilityNameHashCode := ability.AbilityName.GetHash()
 	if abilityNameHashCode == 0 {
 		return

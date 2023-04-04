@@ -325,6 +325,12 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 	if player.SceneLoadState != model.SceneEnterDone {
 		return
 	}
+	world := WORLD_MANAGER.GetWorldByID(player.WorldId)
+	if world == nil {
+		logger.Error("get player world is nil, uid: %v", player.PlayerID)
+		return
+	}
+	scene := world.GetSceneById(player.SceneId)
 	for _, entry := range req.Invokes {
 		player.AbilityInvokeHandler.AddEntry(entry.ForwardType, entry)
 		switch entry.ArgumentType {
@@ -335,7 +341,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaModifierChange error: %v", err)
 				continue
 			}
-			// logger.Debug("entry: %v, ModifierChange: %v", entry, modifierChange)
+			logger.Debug("EntityId: %v, ModifierChange: %v", entry.EntityId, modifierChange)
 			// 处理耐力消耗
 			g.HandleAbilityStamina(player, entry)
 		case proto.AbilityInvokeArgument_ABILITY_MIXIN_COST_STAMINA:
@@ -345,7 +351,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMixinCostStamina error: %v", err)
 				continue
 			}
-			logger.Debug("entry: %v, MixinCostStamina: %v", entry, costStamina)
+			logger.Debug("EntityId: %v, MixinCostStamina: %v", entry.EntityId, costStamina)
 			// 处理耐力消耗
 			g.HandleAbilityStamina(player, entry)
 		case proto.AbilityInvokeArgument_ABILITY_ACTION_DEDUCT_STAMINA:
@@ -355,7 +361,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityActionDeductStamina error: %v", err)
 				continue
 			}
-			logger.Debug("entry: %v, ActionDeductStamina: %v", entry, deductStamina)
+			logger.Debug("EntityId: %v, ActionDeductStamina: %v", entry.EntityId, deductStamina)
 			// 处理耐力消耗
 			g.HandleAbilityStamina(player, entry)
 		case proto.AbilityInvokeArgument_ABILITY_META_MODIFIER_DURABILITY_CHANGE:
@@ -365,7 +371,7 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaModifierDurabilityChange error: %v", err)
 				continue
 			}
-			logger.Debug("entry: %v, DurabilityChange: %v", entry, modifierDurabilityChange)
+			logger.Debug("EntityId: %v, DurabilityChange: %v", entry.EntityId, modifierDurabilityChange)
 		case proto.AbilityInvokeArgument_ABILITY_META_DURABILITY_IS_ZERO:
 			durabilityIsZero := new(proto.AbilityMetaDurabilityIsZero)
 			err := pb.Unmarshal(entry.AbilityData, durabilityIsZero)
@@ -373,7 +379,8 @@ func (g *Game) AbilityInvocationsNotify(player *model.Player, payloadMsg pb.Mess
 				logger.Error("parse AbilityMetaDurabilityIsZero error: %v", err)
 				continue
 			}
-			logger.Debug("entry: %v, DurabilityIsZero: %v", entry, durabilityIsZero)
+			logger.Debug("EntityId: %v, DurabilityIsZero: %v", entry.EntityId, durabilityIsZero)
+			g.KillEntity(player, scene, entry.EntityId, proto.PlayerDieType_PLAYER_DIE_GM)
 		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELITE_SHIELD:
 		case proto.AbilityInvokeArgument_ABILITY_MIXIN_ELEMENT_SHIELD:
 		case proto.AbilityInvokeArgument_ABILITY_MIXIN_GLOBAL_SHIELD:

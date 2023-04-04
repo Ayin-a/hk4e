@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"hk4e/common/constant"
-	"hk4e/gate/kcp"
 	"hk4e/gs/model"
 	"hk4e/pkg/logger"
 	"hk4e/protocol/cmd"
@@ -58,7 +57,6 @@ func (g *Game) ClientTimeNotify(userId uint32, clientTime uint32) {
 	now := uint32(time.Now().Unix())
 	// 客户端与服务器时间相差太过严重
 	if math.Abs(float64(now-player.ClientTime)) > 60.0 {
-		g.KickPlayer(player.PlayerID, kcp.EnetServerKick)
 		logger.Error("abs of client time and server time above 60s, uid: %v", userId)
 	}
 	player.LastKeepaliveTime = now

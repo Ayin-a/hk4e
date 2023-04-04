@@ -30,6 +30,7 @@ func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message)
 		logger.Error("player is already born, uid: %v", player.PlayerID)
 		return
 	}
+	player.IsBorn = true
 
 	mainCharAvatarId := req.AvatarId
 	if mainCharAvatarId != 10000005 && mainCharAvatarId != 10000007 {
@@ -62,6 +63,14 @@ func (g *Game) SetPlayerBornDataReq(player *model.Player, payloadMsg pb.Message)
 	g.SendMsg(cmd.SetPlayerBornDataRsp, player.PlayerID, player.ClientSeq, new(proto.SetPlayerBornDataRsp))
 
 	g.LoginNotify(player.PlayerID, player.ClientSeq, player)
+
+	// 创建世界
+	world := WORLD_MANAGER.CreateWorld(player)
+	world.AddPlayer(player, player.SceneId)
+	player.WorldId = world.GetId()
+	// 进入场景
+	player.SceneJump = true
+	player.SceneLoadState = model.SceneNone
 
 	g.SendMsg(cmd.PlayerEnterSceneNotify, player.PlayerID, player.ClientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
 }
@@ -105,29 +114,24 @@ func (g *Game) OnLogin(userId uint32, clientSeq uint32, gateAppId string, player
 
 	if player.IsBorn {
 		g.LoginNotify(userId, clientSeq, player)
-	}
-
-	if joinHostUserId != 0 {
-		hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
-		if hostPlayer == nil {
-			logger.Error("player is nil, uid: %v", joinHostUserId)
+		if joinHostUserId != 0 {
+			hostPlayer := USER_MANAGER.GetOnlineUser(joinHostUserId)
+			if hostPlayer == nil {
+				logger.Error("player is nil, uid: %v", joinHostUserId)
+			} else {
+				g.JoinOtherWorld(player, hostPlayer)
+			}
 		} else {
-			g.JoinOtherWorld(player, hostPlayer)
-		}
-	} else {
-		// 创建世界
-		world := WORLD_MANAGER.CreateWorld(player)
-		world.AddPlayer(player, player.SceneId)
-		player.WorldId = world.GetId()
-		// 进入场景
-		player.SceneJump = true
-		player.SceneLoadState = model.SceneNone
-		if player.IsBorn {
+			// 创建世界
+			world := WORLD_MANAGER.CreateWorld(player)
+			world.AddPlayer(player, player.SceneId)
+			player.WorldId = world.GetId()
+			// 进入场景
+			player.SceneJump = true
+			player.SceneLoadState = model.SceneNone
 			g.SendMsg(cmd.PlayerEnterSceneNotify, userId, clientSeq, g.PacketPlayerEnterSceneNotifyLogin(player, proto.EnterType_ENTER_SELF))
 		}
-	}
-
-	if !player.IsBorn {
+	} else {
 		g.SendMsg(cmd.DoSetPlayerBornDataNotify, userId, clientSeq, new(proto.DoSetPlayerBornDataNotify))
 	}
 
